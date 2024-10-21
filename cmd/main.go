@@ -20,7 +20,6 @@ func main() {
 	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("./web"))))
 
 	http.HandleFunc("/", handlers.GenericHandler)
-	http.HandleFunc("/chapters", handlers.GenericHandler)
 	http.HandleFunc("/modules", handlers.GenericHandler)
 	http.HandleFunc("/books", handlers.GenericHandler)
 	http.HandleFunc("/major-tests", handlers.GenericHandler)
@@ -44,6 +43,7 @@ func main() {
 	gradesHandler := handlers.NewGradesHandler(gradesService)
 	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
 
+	http.HandleFunc("/chapters", chaptersHandler.LoadChapters)
 	http.HandleFunc("/api/curriculums", curriculumsHandler.GetCurriculums)
 	http.HandleFunc("/api/grades", gradesHandler.GetGrades)
 	http.HandleFunc("/api/subjects", subjectsHandler.GetSubjects)

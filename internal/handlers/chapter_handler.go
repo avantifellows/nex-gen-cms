@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
+	"strings"
 
+	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
@@ -18,7 +21,8 @@ const SUBJECT_DROPDOWN_NAME = "subject-dropdown"
 
 const chaptersEndPoint = "/chapter"
 const chaptersKey = "chapters"
-const chaptersTemplate = "chapter_row.html"
+const chaptersTemplate = "chapters.html"
+const chapterRowTemplate = "chapter_row.html"
 const baseTemplate = "home.html"
 const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
@@ -40,6 +44,34 @@ func NewChaptersHandler(chaptersService *services.ChapterService,
 type HomeChapterData struct {
 	InitialLoad bool
 	ChapterPtr  *models.Chapter
+}
+
+type SortState struct {
+	Column string
+	Order  constants.SortOrder
+}
+
+var sortState = SortState{
+	Column: "0",
+	Order:  constants.SortOrderAsc,
+}
+
+func (h *ChaptersHandler) LoadChapters(w http.ResponseWriter, r *http.Request) {
+	sortColumn := r.URL.Query().Get("sortColumn")
+
+	// if same column is clicked, toggle the order
+	if sortColumn == sortState.Column {
+		if sortState.Order == constants.SortOrderAsc {
+			sortState.Order = constants.SortOrderDesc
+		} else {
+			sortState.Order = constants.SortOrderAsc
+		}
+	} else {
+		// If a new column is clicked, default to ascending order
+		sortState.Column = sortColumn
+		sortState.Order = constants.SortOrderAsc
+	}
+	local_repo.ExecuteTemplate(chaptersTemplate, w, sortState)
 }
 
 func (h *ChaptersHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
@@ -66,8 +98,9 @@ func (h *ChaptersHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
 	} else {
 		associateTopicsWithChapters(typecastedChapters, *topics)
 	}
+	sortChapters(typecastedChapters)
 
-	local_repo.ExecuteTemplate(chaptersTemplate, w, typecastedChapters)
+	local_repo.ExecuteTemplate(chapterRowTemplate, w, typecastedChapters)
 }
 
 func (h *ChaptersHandler) EditChapter(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +187,7 @@ func (h *ChaptersHandler) AddChapter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chapterPtrs := []*models.Chapter{newChapterPtr}
-	local_repo.ExecuteTemplate(chaptersTemplate, w, chapterPtrs)
+	local_repo.ExecuteTemplate(chapterRowTemplate, w, chapterPtrs)
 }
 
 func (h *ChaptersHandler) DeleteChapter(w http.ResponseWriter, r *http.Request) {
@@ -176,6 +209,8 @@ func associateTopicsWithChapters(chapterPtrs []*models.Chapter, topicPtrs []*mod
 	// Fill the map with the address of each chapter
 	for _, chapterPtr := range chapterPtrs {
 		chapterPtrsMap[chapterPtr.ID] = chapterPtr
+		// clear topics data, because it will be refilled in next step based on latest data
+		chapterPtr.Topics = chapterPtr.Topics[:0]
 	}
 
 	// Loop through each topic and assign it to the corresponding chapter
@@ -201,4 +236,25 @@ func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
 		fmt.Println("Selected Subject is invalid")
 	}
 	return curriculumId, gradeId, subjectId
+}
+
+func sortChapters(chapterPtrs []*models.Chapter) {
+	slices.SortStableFunc(chapterPtrs, func(c1, c2 *models.Chapter) int {
+		var sortResult int
+		switch sortState.Column {
+		case "1":
+			sortResult = strings.Compare(c1.Code, c2.Code)
+		case "2":
+			sortResult = strings.Compare(c1.Name, c2.Name)
+		case "3":
+			sortResult = int(c1.TopicCount() - c2.TopicCount())
+		default:
+			sortResult = 0
+		}
+
+		if sortState.Order == constants.SortOrderDesc {
+			sortResult = -sortResult
+		}
+		return sortResult
+	})
 }

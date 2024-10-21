@@ -3,9 +3,36 @@
         <table class="min-w-full bg-white">
             <thead>
                 <tr class="bg-gray-200 text-gray-600 text-sm">
-                    <th class="py-3 px-6">Code</th>
-                    <th class="px-6">Name</th>
-                    <th class="px-6 text-center">Topics</th>
+                    <th class="py-3 px-6">
+                        <a href="#" hx-get="/chapters?sortColumn=1" hx-target="#content">
+                            Code <i class="fas 
+                            {{ if eq .Column "1" }}
+                                {{ if eq .Order "asc" }} fa-sort-up
+                                {{ else if eq .Order "desc" }} fa-sort-down
+                                {{ else }} fa-sort {{ end }}
+                            {{ else }} fa-sort {{ end }}"></i>
+                        </a>
+                    </th>
+                    <th class="px-6">
+                        <a href="#" hx-get="/chapters?sortColumn=2" hx-target="#content">
+                            Name <i class="fas 
+                            {{ if eq .Column "2" }}
+                                {{ if eq .Order "asc" }} fa-sort-up
+                                {{ else if eq .Order "desc" }} fa-sort-down
+                                {{ else }} fa-sort {{ end }}
+                            {{ else }} fa-sort {{ end }}"></i>
+                        </a>
+                    </th>
+                    <th class="px-6 text-center">
+                        <a href="#" hx-get="/chapters?sortColumn=3" hx-target="#content">
+                            Topics <i class="fas
+                            {{ if eq .Column "3" }}
+                                {{ if eq .Order "asc" }} fa-sort-up
+                                {{ else if eq .Order "desc" }} fa-sort-down
+                                {{ else }} fa-sort {{ end }}
+                            {{ else }} fa-sort {{ end }}"></i>
+                        </a>
+                    </th>
                     <th class="px-6 text-center">Chapter Tests</th>
                     <th class="px-6 text-center">PSV</th>
                     <th class="px-6 text-center">MOD</th>
@@ -28,7 +55,8 @@
     <!-- Form to add new chapter -->
     <div class="mt-4">
         <h4 id="addChapterLink" class="text-sm font-semibold text-blue-500 hover:underline" onclick="toggleForm(event)">
-            <a href="#">Add New Chapter</a></h4>
+            <a href="#">Add New Chapter</a>
+        </h4>
     </div>
 
     <script>
