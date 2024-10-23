@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/avantifellows/nex-gen-cms/internal/constants"
 )
 
 /*
@@ -31,7 +33,7 @@ func GenericHandler(w http.ResponseWriter, r *http.Request) {
 	// All urls contain -, which are replaced by _ in file names, hence replace hyphens by underscores
 	filename := strings.ReplaceAll(path, "-", "_")
 	// Define the template file path
-	filePath := filepath.Join("web/html", filename+".html")
+	filePath := filepath.Join(constants.GetHtmlFolderPath(), filename+".html")
 
 	// Parse the template
 	tmpl, err := template.ParseFiles(filePath)
