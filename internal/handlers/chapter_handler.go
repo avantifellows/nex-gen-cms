@@ -248,7 +248,15 @@ func sortChapters(chapterPtrs []*models.Chapter) {
 		var sortResult int
 		switch sortState.Column {
 		case "1":
-			sortResult = strings.Compare(c1.Code, c2.Code)
+			c1Suffix := utils.ExtractNumericSuffix(c1.Code)
+			c2Suffix := utils.ExtractNumericSuffix(c2.Code)
+			// if numeric suffix found for both chapters then perform their integer comparison
+			if c1Suffix > 0 && c2Suffix > 0 {
+				sortResult = c1Suffix - c2Suffix
+			} else {
+				// perform string comparison of codes, because numeric suffixes could not be found
+				sortResult = strings.Compare(c1.Code, c2.Code)
+			}
 		case "2":
 			sortResult = strings.Compare(c1.Name, c2.Name)
 		case "3":
