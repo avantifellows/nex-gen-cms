@@ -10,7 +10,7 @@ import (
 
 /*
 Handles loading html template files having same name as that of path passed
-in request. Path containing only '/' is considered as "/home" resulting in
+in request. Path containing only '/' is considered as "/home", resulting in
 loading web/html/home.html file
 */
 func GenericHandler(w http.ResponseWriter, r *http.Request) {

@@ -197,9 +197,14 @@ func (h *ChaptersHandler) DeleteChapter(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid Chapter ID", http.StatusBadRequest)
 		return
 	}
-	h.chaptersService.DeleteObject(chapterIdStr, func(c *models.Chapter) bool {
+	err = h.chaptersService.DeleteObject(chapterIdStr, func(c *models.Chapter) bool {
 		return c.ID != chapterId
 	}, chaptersKey, chaptersEndPoint)
+
+	// If http error is thrown from here then target row won't be removed by htmx code
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func associateTopicsWithChapters(chapterPtrs []*models.Chapter, topicPtrs []*models.Topic) {
