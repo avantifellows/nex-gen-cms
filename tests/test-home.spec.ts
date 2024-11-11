@@ -1,27 +1,14 @@
 import { test, expect } from '@playwright/test';
-
-const HOME_PAGE_URL = 'http://localhost:8080';
+import { dropdowns, HOME_PAGE_URL } from './utils';
+import { mockDropdownApi, mockTabContentApi } from './mock';
 
 test.describe('Homepage Load', () => {
-
-    const dropdowns = [
-        { name: 'curriculum-dropdown', urlPattern: /\/api\/curriculums/, content: ['c1', 'c2'], key: 'selectedCurriculum', selectedVal: 'c2' },
-        { name: 'grade-dropdown', urlPattern: /\/api\/grades/, content: ['g1', 'g2'], key: 'selectedGrade', selectedVal: 'g1' },
-        { name: 'subject-dropdown', urlPattern: /\/api\/subjects/, content: ['s1', 's2'], key: 'selectedSubject', selectedVal: 's2' },
-    ];
 
     test.beforeEach(async ({ page }) => {
         // intercept request to mock response
         dropdowns.forEach(async function ({ urlPattern, content }) {
-            await page.route(urlPattern, async route => {
-                await route.fulfill({
-                    status: 200,
-                    body: `<option value="${content[0]}">${content[0]}</option><option value="${content[1]}">${content[1]}</option>`,
-                    headers: { 'Content-Type': 'text/html' }
-                })
-            })
+            await mockDropdownApi(page, urlPattern, content);
         });
-
         await page.goto(HOME_PAGE_URL);
     });
 
@@ -75,7 +62,6 @@ test.describe('Homepage Load', () => {
             await context.addInitScript(() => {
                 const pollForHTMX = () => {
                     if (window.htmx && window.htmx.trigger) {
-                        console.log('poll if');
                         // Save original trigger function
                         const originalTrigger = window.htmx.trigger;
 
@@ -97,13 +83,7 @@ test.describe('Homepage Load', () => {
             const page = await context.newPage();
 
             // mock response for new page creted above
-            await page.route(urlPattern, async route => {
-                await route.fulfill({
-                    status: 200,
-                    body: `<option value="${content[0]}">${content[0]}</option><option value="${content[1]}">${content[1]}</option>`,
-                    headers: { 'Content-Type': 'text/html' }
-                })
-            })
+            await mockDropdownApi(page, urlPattern, content);
 
             await page.goto(HOME_PAGE_URL);
 
@@ -130,25 +110,23 @@ test.describe('Homepage Load', () => {
 });
 
 test.describe('Tabs', () => {
-    test.beforeEach(async ({ page }) => {
-        await page.goto(HOME_PAGE_URL);
-
-        // Wait for the initial request to complete (on page load)
-        page.waitForRequest(request =>
-            request.url().includes('/chapters') && request.method() === 'GET');
-    });
 
     test('Clicking Chapters tab makes GET api call to /chapters', async ({ page }) => {
         // Function to check if the request is for /chapters
         const isChaptersRequest = (request) =>
             request.url().includes('/chapters') && request.method() === 'GET';
 
+        // Start waiting for the initial request (on page load)
+        let reqPromise = page.waitForRequest(isChaptersRequest);
+        await page.goto(HOME_PAGE_URL);
+        await reqPromise;
+
+        // Start waiting for request before clicking
+        reqPromise = page.waitForRequest(isChaptersRequest);
         // Click on the "Chapters" tab
         await page.click('#chapters-tab');
-
         // Wait for the 2nd request to be made
-        const requestPromise = page.waitForRequest(isChaptersRequest);
-        const request = await requestPromise;
+        const request = await reqPromise;
 
         // Verify that the request was made
         expect(request.url()).toContain('/chapters');
@@ -164,13 +142,9 @@ test.describe('Tabs', () => {
     tabs.forEach(function ({ name, urlPattern, content }) {
         test(`Clicking ${name} tab loads ${urlPattern} api response in div having id content`, async ({ page }) => {
             // Intercept the HTMX GET request to mock response
-            await page.route(urlPattern, async route => {
-                await route.fulfill({
-                    status: 200,
-                    body: `<p>${content}</p>`,
-                    headers: { 'Content-Type': 'text/html' }
-                });
-            });
+            await mockTabContentApi(page, urlPattern, content);
+
+            await page.goto(HOME_PAGE_URL);
 
             // Click on the tab
             await page.click(`#${name}-tab`);
@@ -178,5 +152,43 @@ test.describe('Tabs', () => {
             // Verify that the content is updated in the target element
             await expect(page.locator('#content')).toHaveText(content);
         });
+    });
+});
+
+dropdowns.forEach(function ({ name, key, selectedVal }) {
+
+    test(`on changing selection in the ${name}, it is updated in session storage and chapters are reloaded`, async ({ page }) => {
+        // mock response for dropdown values apis
+        dropdowns.forEach(async function ({ urlPattern, content }) {
+            await mockDropdownApi(page, urlPattern, content);
+        });
+
+        // Set up the network interceptor to capture the request to /api/chapters
+        const apiRequestPromise = page.waitForRequest(request => {
+            if (request.url().includes('/api/chapters') && request.method() === 'GET') {
+                const url = new URL(request.url());
+                const params = url.searchParams;
+                // return true if changed parameter value is present
+                return params.get(name) == selectedVal;
+            }
+            return false;
+        });
+        // Navigate to the page with the dropdown
+        await page.goto(HOME_PAGE_URL);
+
+        const dropdown = page.locator(`#${name}`);
+        // Select a specific option by value
+        await dropdown.selectOption({ value: selectedVal });
+
+        // Verify if the correct option is selected
+        expect(dropdown).toHaveValue(selectedVal);
+
+        // Check sessionStorage value for corresponding key
+        const storedSelectedVal = await page.evaluate((key) => sessionStorage.getItem(key), key);
+        expect(storedSelectedVal).toBe(selectedVal);
+
+        const apiReq = await apiRequestPromise;
+        // Verify the API request was made
+        expect(apiReq).toBeTruthy();
     });
 });
