@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { dropdowns, HOME_PAGE_URL } from "./utils";
-import { mockChaptersApi, mockDropdownApi } from "./mock";
+import * as mock from "./mock";
 
 test('verify that all table headers, add new chapter link are available and form is hidden', async ({ page }) => {
 
@@ -56,7 +56,6 @@ test('verify correct fa-sort icon for columns', async ({ page }) => {
     ];
 
     page.goto(HOME_PAGE_URL);
-    await mockChaptersApi(page);
 
     // Loop over each column header to perform the checks
     for (const column of columns) {
@@ -89,4 +88,52 @@ test('verify correct fa-sort icon for columns', async ({ page }) => {
             }
         }
     }
+});
+
+test('verify delete chapter functionality', async ({ page }) => {
+    // mock dropdown apis to trigger chapter list loading
+    dropdowns.forEach(async function ({ urlPattern, content }) {
+        await mock.mockDropdownApi(page, urlPattern, content);
+    });
+    // mock chapter list api
+    await mock.mockChaptersApiUsingHtml(page, 'web/html/chapter_row.html');
+
+    page.goto(HOME_PAGE_URL);
+
+    // Set up a listener to capture the dialog
+    page.once('dialog', async dialog => {
+        // verify the dialog message
+        expect(dialog.message()).toBe('Are you sure you want to delete chapter {{.Name}}?');
+
+        // dismiss dialog
+        await dialog.dismiss();
+    });
+
+    // locate delete button for the chapter row (we have one row only in mocked response, 
+    // hence no need to select specific row)
+    const deleteBtn = page.locator('tbody tr td button[hx-delete]');
+    await deleteBtn.click();
+
+    // verify row is not deleted
+    let row = page.locator('tbody tr');
+    await expect(row).toBeVisible();
+
+    // Set up a listener again to capture the dialog, but this time press positive button
+    page.once('dialog', async dialog => {
+        // press ok
+        await dialog.accept();
+    });
+    mock.mockDeleteChapterApi(page);
+    const apiReqPromise = page.waitForRequest((request) =>
+        request.url().includes('/delete-chapter') && request.method() === 'DELETE'
+    );
+
+    await deleteBtn.click();
+    // Await the API request and verify it was made
+    const apiRequest = await apiReqPromise;
+    expect(apiRequest).toBeTruthy();
+
+    // verify that row is deleted
+    row = page.locator('tbody tr');
+    await expect(row).toBeHidden();
 });

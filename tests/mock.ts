@@ -1,4 +1,5 @@
 import { Page } from "@playwright/test"
+import * as fs from "fs";
 
 export async function mockDropdownApi(page: Page, urlPattern: RegExp, content: string[]) {
     await page.route(urlPattern, async route => {
@@ -32,12 +33,33 @@ export async function mockChaptersApi(page: Page) {
     });
 }
 
+export async function mockChaptersApiUsingHtml(page: Page, filepath: string) {
+    const htmlData = fs.readFileSync(filepath, 'utf-8');
+
+    // Intercept the API request and respond with the HTML data
+    await page.route(/\/api\/chapters/, async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            body: htmlData,
+        });
+    });
+}
+
 export async function mockCreateChapterApi(page: Page, chptrCode: string, chptrName: string) {
     await page.route(/\/create-chapter/, async route => {
         await route.fulfill({
             status: 200,
             body: `<tr><td>${chptrCode}</td><td>${chptrName}</td></tr>`,
             headers: { 'Content-Type': 'text/html' }
+        });
+    });    
+}
+
+export async function mockDeleteChapterApi(page: Page) {
+    await page.route(/\/delete-chapter/, async route => {
+        await route.fulfill({
+            status: 200
         });
     });    
 }
