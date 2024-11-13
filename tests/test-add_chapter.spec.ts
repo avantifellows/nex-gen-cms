@@ -47,7 +47,7 @@ test.describe('Add Chapter', () => {
         const postData = apiRequest.postDataJSON();
         expect(postData).toMatchObject({
             code: chptrCode,
-            name: chptrName,
+            name: chptrName
         });
         // Check for additional parameters, verifying they exist but not checking values
         expect(postData).toHaveProperty('curriculum-dropdown');

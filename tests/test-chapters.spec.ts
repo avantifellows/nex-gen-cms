@@ -90,50 +90,127 @@ test('verify correct fa-sort icon for columns', async ({ page }) => {
     }
 });
 
-test('verify delete chapter functionality', async ({ page }) => {
-    // mock dropdown apis to trigger chapter list loading
-    dropdowns.forEach(async function ({ urlPattern, content }) {
-        await mock.mockDropdownApi(page, urlPattern, content);
+test.describe('Chapter list Row', () => {
+
+    const chapterObj = {
+        id: '1',
+        name: 'n1',
+        code: 'c1'
+    };
+
+    test.beforeEach(async ({ page }) => {
+        // mock dropdown apis to trigger chapter list loading
+        dropdowns.forEach(async function ({ urlPattern, content }) {
+            await mock.mockDropdownApi(page, urlPattern, content);
+        });
+        // mock chapter list api
+        await mock.mockChaptersApiUsingHtml(page, 'web/html/chapter_row.html', chapterObj);
+
+        page.goto(HOME_PAGE_URL);
     });
-    // mock chapter list api
-    await mock.mockChaptersApiUsingHtml(page, 'web/html/chapter_row.html');
 
-    page.goto(HOME_PAGE_URL);
+    test('verify delete chapter functionality', async ({ page }) => {
 
-    // Set up a listener to capture the dialog
-    page.once('dialog', async dialog => {
-        // verify the dialog message
-        expect(dialog.message()).toBe('Are you sure you want to delete chapter {{.Name}}?');
+        // Set up a listener to capture the dialog
+        page.once('dialog', async dialog => {
+            // verify the dialog message
+            expect(dialog.message()).toBe('Are you sure you want to delete chapter {{.Name}}?');
 
-        // dismiss dialog
-        await dialog.dismiss();
+            // dismiss dialog
+            await dialog.dismiss();
+        });
+
+        // locate delete button for the chapter row (we have one row only in mocked response, 
+        // hence no need to select specific row)
+        const deleteBtn = page.locator('tbody tr td button[hx-delete]');
+        await deleteBtn.click();
+
+        // verify row is not deleted
+        let row = page.locator('tbody tr');
+        await expect(row).toBeVisible();
+
+        // Set up a listener again to capture the dialog, but this time press positive button
+        page.once('dialog', async dialog => {
+            // press ok
+            await dialog.accept();
+        });
+        mock.mockDeleteChapterApi(page);
+        const apiReqPromise = page.waitForRequest((request) =>
+            request.url().includes('/delete-chapter') && request.method() === 'DELETE'
+        );
+
+        await deleteBtn.click();
+        // Await the API request and verify it was made
+        const apiRequest = await apiReqPromise;
+        expect(apiRequest).toBeTruthy();
+
+        // verify that row is deleted
+        row = page.locator('tbody tr');
+        await expect(row).toBeHidden();
     });
 
-    // locate delete button for the chapter row (we have one row only in mocked response, 
-    // hence no need to select specific row)
-    const deleteBtn = page.locator('tbody tr td button[hx-delete]');
-    await deleteBtn.click();
+    test('verify edit chapter functionality', async ({ page }) => {
+        const row = page.locator('tbody tr');
+        // Verify initial chapter code & name on chapter list screen row
+        await expect(row).toContainText(chapterObj.code);
+        await expect(row).toContainText(chapterObj.name);
 
-    // verify row is not deleted
-    let row = page.locator('tbody tr');
-    await expect(row).toBeVisible();
+        mock.mockEditChapterUsingHtml(page, 'web/html/edit_chapter.html', 'web/html/home.html', chapterObj);
 
-    // Set up a listener again to capture the dialog, but this time press positive button
-    page.once('dialog', async dialog => {
-        // press ok
-        await dialog.accept();
+        let apiReqPromise = page.waitForRequest((request) =>
+            request.url().includes('/edit-chapter') && request.method() === 'GET'
+        );
+
+        // locate edit button for the chapter row (we have one row only in mocked response, 
+        // hence no need to select specific row)
+        const editBtn = page.locator('tbody tr td button[hx-get]');
+        await editBtn.click();
+
+        // Await the API request and verify it was made
+        let apiRequest = await apiReqPromise;
+        expect(apiRequest).toBeTruthy();
+
+        // verify default chapter code and name in edit screen
+        const inputName = page.locator('#name');
+        await expect(inputName).toBeVisible();
+        const nameValue = await inputName.inputValue();
+        expect(nameValue).toBe(chapterObj.name);
+
+        const inputCode = page.locator('#code');
+        await expect(inputCode).toBeVisible();
+        const codeValue = await inputCode.inputValue();
+        expect(codeValue).toBe(chapterObj.code);
+
+        mock.mockUpdateChapterUsingHtml(page, 'web/html/update_success.html');
+
+        // update name and code
+        chapterObj.name = 'new name';
+        chapterObj.code = 'new code';
+        await inputName.fill(chapterObj.name);
+        await inputCode.fill(chapterObj.code);
+
+        // Intercept and wait for the PATCH request
+        apiReqPromise = page.waitForRequest(request =>
+            request.url().includes('/update-chapter') && request.method() === 'PATCH'
+        );
+        await page.click('button[type="submit"]');
+        
+        // Await the API request and verify it was made
+        apiRequest = await apiReqPromise;
+        expect(apiRequest).toBeTruthy();
+
+        // verify the request payload
+        const postData = apiRequest.postDataJSON();
+        expect(postData).toMatchObject({
+            code: chapterObj.code,
+            name: chapterObj.name
+        });
+
+        // mock chapters api again to have updated chapter values
+        await mock.mockChaptersApiUsingHtml(page, 'web/html/chapter_row.html', chapterObj);
+
+        // Verify updated chapter code & name on chapter list screen row
+        await expect(row).toContainText(chapterObj.code);
+        await expect(row).toContainText(chapterObj.name);
     });
-    mock.mockDeleteChapterApi(page);
-    const apiReqPromise = page.waitForRequest((request) =>
-        request.url().includes('/delete-chapter') && request.method() === 'DELETE'
-    );
-
-    await deleteBtn.click();
-    // Await the API request and verify it was made
-    const apiRequest = await apiReqPromise;
-    expect(apiRequest).toBeTruthy();
-
-    // verify that row is deleted
-    row = page.locator('tbody tr');
-    await expect(row).toBeHidden();
 });
