@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom styles using @apply */
+.nav {
+    @apply flex flex-wrap pl-0 mb-0 list-none;
+}
+.nav-tabs {
+    @apply border-b border-gray-300;
+}
+.nav-link {
+    @apply block px-4 py-2 text-blue-600 no-underline transition-colors duration-150 ease-in-out;
+}
+.nav-link:focus {
+    @apply text-blue-700;
+}
+.nav-link:hover {
+    @apply text-blue-700;
+}
+.nav-tabs .nav-link {
+    @apply -mb-px border border-transparent rounded-t-md;
+}
+.nav-tabs .nav-link:focus {
+    @apply border-t border-t-gray-100 border-r border-r-gray-100 border-b border-b-gray-200 border-l border-l-gray-100 isolate;
+}
+.nav-tabs .nav-link:hover {
+    @apply border-t border-t-gray-100 border-r border-r-gray-100 border-b border-b-gray-200 border-l border-l-gray-100 isolate;
+}
+.nav-tabs .nav-link.active {
+    @apply text-gray-600 bg-white border border-t-gray-200 border-r-gray-200 border-b-white border-l-gray-200;
+}
+
