@@ -1,6 +1,6 @@
 module github.com/avantifellows/nex-gen-cms
 
-go 1.22.5
+go 1.23
 
 require github.com/joho/godotenv v1.5.1
 
