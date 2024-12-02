@@ -6,10 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/patrickmn/go-cache"
 )
-
-const htmlFolder = "web/html"
 
 // CacheRepository wraps go-cache functionality
 type CacheRepository struct {
@@ -39,14 +38,15 @@ func (r *CacheRepository) Delete(key string) {
 }
 
 func ExecuteTemplate(filename string, w http.ResponseWriter, data any) {
-	tmplPath := filepath.Join(htmlFolder, filename)
+	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), filename)
 	tmpl := template.Must(template.ParseFiles(tmplPath))
 	tmpl.Execute(w, data)
 }
 
 func ExecuteTemplates(baseFileName string, contentFileName string, w http.ResponseWriter, data any) {
-	baseTmplPath := filepath.Join(htmlFolder, baseFileName)
-	contentTmplPath := filepath.Join(htmlFolder, contentFileName)
+	htmlFolderPath := constants.GetHtmlFolderPath()
+	baseTmplPath := filepath.Join(htmlFolderPath, baseFileName)
+	contentTmplPath := filepath.Join(htmlFolderPath, contentFileName)
 	tmpl := template.Must(template.ParseFiles(baseTmplPath, contentTmplPath))
 	tmpl.Execute(w, data)
 }

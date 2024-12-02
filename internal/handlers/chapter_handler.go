@@ -57,20 +57,26 @@ var sortState = SortState{
 }
 
 func (h *ChaptersHandler) LoadChapters(w http.ResponseWriter, r *http.Request) {
-	sortColumn := r.URL.Query().Get("sortColumn")
+	urlVals := r.URL.Query()
+	const queryParam = "sortColumn"
 
-	// if same column is clicked, toggle the order
-	if sortColumn == sortState.Column {
-		if sortState.Order == constants.SortOrderAsc {
-			sortState.Order = constants.SortOrderDesc
+	if urlVals.Has(queryParam) {
+		sortColumn := urlVals.Get("sortColumn")
+
+		// if same column is clicked, toggle the order
+		if sortColumn == sortState.Column {
+			if sortState.Order == constants.SortOrderAsc {
+				sortState.Order = constants.SortOrderDesc
+			} else {
+				sortState.Order = constants.SortOrderAsc
+			}
 		} else {
+			// If a new column is clicked, default to ascending order
+			sortState.Column = sortColumn
 			sortState.Order = constants.SortOrderAsc
 		}
-	} else {
-		// If a new column is clicked, default to ascending order
-		sortState.Column = sortColumn
-		sortState.Order = constants.SortOrderAsc
 	}
+
 	local_repo.ExecuteTemplate(chaptersTemplate, w, sortState)
 }
 
