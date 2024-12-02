@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 )
 
@@ -46,4 +47,18 @@ func StringToIntType[T IntType](str string) (T, error) {
 	}
 
 	return result, nil
+}
+
+func ExtractNumericSuffix(s string) int {
+	// Define a regular expression to find the numeric suffix
+	re := regexp.MustCompile(`[0-9]+$`)
+	match := re.FindString(s)
+
+	// Convert the matched string to an integer
+	if match != "" {
+		num := StringToInt(match)
+		return num
+	}
+	// return 0 if no numeric suffix is found
+	return 0
 }

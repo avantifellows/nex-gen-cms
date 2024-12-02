@@ -6,8 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avanti Next Generation CMS</title>
     <script src="https://unpkg.com/htmx.org@2.0.2"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
     <!-- For tailwind css library -->
     <link href="/web/static/css/output.css" rel="stylesheet">
     <!-- For Font Awesome library -->
@@ -15,18 +13,18 @@
 </head>
 
 <body>
-    <div class="bs-tabs">
+    <div>
         <nav>
-            <div class="nav nav-tabs" id="nav-tab" role="tablist">
-                <button class="nav-link active" id="chapters-tab" hx-trigger="click" hx-get="/chapters"
-                    hx-target="#content" data-bs-toggle="tab">Chapters</button>
+            <div class="nav nav-tabs" id="nav-tab">
+                <button class="nav-link active" id="chapters-tab" hx-get="/chapters"
+                    hx-target="#content" data-toggle="tab" onclick="updateTabState(this)">Chapters</button>
                 <div {{ if .InitialLoad }} hx-trigger="load" hx-get="/chapters" {{ end }} hx-target="#content"></div>
                 <button class="nav-link" id="modules-tab" hx-get="/modules" hx-target="#content"
-                    data-bs-toggle="tab">Modules</button>
+                    data-toggle="tab" onclick="updateTabState(this)">Modules</button>
                 <button class="nav-link" id="books-tab" hx-get="/books" hx-target="#content"
-                    data-bs-toggle="tab">Books</button>
+                    data-toggle="tab" onclick="updateTabState(this)">Books</button>
                 <button class="nav-link" id="major-tests-tab" hx-get="/major-tests" hx-target="#content"
-                    data-bs-toggle="tab">Major Tests</button>
+                    data-toggle="tab" onclick="updateTabState(this)">Major Tests</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
@@ -51,16 +49,12 @@
             </div>
         </nav>
 
-        <div class="tab-content m-3" id="nav-tabContent">
-            <div class="tab-pane fade show active" id="content" hx-history-elt>
+        <div class="m-7" id="nav-tabContent">
+            <div id="content" hx-history-elt>
                 {{ block "content" . }}<p>Select a tab to load content.</p>{{ end }}
             </div>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
-        crossorigin="anonymous"></script>
 
     <script>
         function afterDropdownReq(dropdown, initialLoad) {
@@ -91,6 +85,12 @@
             if (selectedValue) {
                 dropdown.value = selectedValue;
             }
+        }
+
+        function updateTabState(tabBtn, event) {
+            const tabBtns = document.querySelectorAll('[data-toggle="tab"]');
+            tabBtns.forEach(tabBtn => tabBtn.classList.remove("active"));  
+            tabBtn.classList.add("active");       
         }
 
         // Function to go back after delay

@@ -1,9 +1,9 @@
-<div class="container">
+<div>
     <div class="shadow-md my-6 overflow-x-auto">
         <table class="min-w-full bg-white">
             <thead>
                 <tr class="bg-gray-200 text-gray-600 text-sm">
-                    <th class="py-3 px-6">
+                    <th class="py-4 px-6 text-left">
                         <a href="#" hx-get="/chapters?sortColumn=1" hx-target="#content">
                             Code <i class="fas 
                             {{ if eq .Column "1" }}
@@ -13,7 +13,7 @@
                             {{ else }} fa-sort {{ end }}"></i>
                         </a>
                     </th>
-                    <th class="px-6">
+                    <th class="px-6 text-left">
                         <a href="#" hx-get="/chapters?sortColumn=2" hx-target="#content">
                             Name <i class="fas 
                             {{ if eq .Column "2" }}

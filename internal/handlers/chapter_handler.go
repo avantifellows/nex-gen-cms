@@ -203,9 +203,14 @@ func (h *ChaptersHandler) DeleteChapter(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "Invalid Chapter ID", http.StatusBadRequest)
 		return
 	}
-	h.chaptersService.DeleteObject(chapterIdStr, func(c *models.Chapter) bool {
+	err = h.chaptersService.DeleteObject(chapterIdStr, func(c *models.Chapter) bool {
 		return c.ID != chapterId
 	}, chaptersKey, chaptersEndPoint)
+
+	// If http error is thrown from here then target row won't be removed by htmx code
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func associateTopicsWithChapters(chapterPtrs []*models.Chapter, topicPtrs []*models.Topic) {
@@ -249,7 +254,15 @@ func sortChapters(chapterPtrs []*models.Chapter) {
 		var sortResult int
 		switch sortState.Column {
 		case "1":
-			sortResult = strings.Compare(c1.Code, c2.Code)
+			c1Suffix := utils.ExtractNumericSuffix(c1.Code)
+			c2Suffix := utils.ExtractNumericSuffix(c2.Code)
+			// if numeric suffix found for both chapters then perform their integer comparison
+			if c1Suffix > 0 && c2Suffix > 0 {
+				sortResult = c1Suffix - c2Suffix
+			} else {
+				// perform string comparison of codes, because numeric suffixes could not be found
+				sortResult = strings.Compare(c1.Code, c2.Code)
+			}
 		case "2":
 			sortResult = strings.Compare(c1.Name, c2.Name)
 		case "3":
