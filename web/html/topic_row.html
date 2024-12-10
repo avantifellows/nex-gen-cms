@@ -1,0 +1,22 @@
+{{ range . }}
+<tr class="border-b hover:bg-gray-100">
+    <td class="py-4 px-6">{{.Code}}</td>
+    <td class="px-6 text-blue-500 hover:underline"><a href="#">{{.Name}}</a></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td class="space-x-4">
+        <button class="text-blue-500 hover:text-red-500 hover:scale-110" hx-get="/edit-topic?id={{.ID}}"
+            hx-target="#subContent" hx-push-url="/edit-topic?id={{.ID}}" hx-boost="true">
+            <i class="fa-solid fa-pencil"></i>
+        </button>
+        <button class="text-blue-500 hover:text-red-500 hover:scale-110" hx-delete="/delete-topic?id={{.ID}}"
+            hx-confirm="Are you sure you want to delete topic {{.Name}}?" hx-target="closest tr">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    </td>
+</tr>
+{{ end }}

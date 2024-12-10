@@ -1,0 +1,8 @@
+<!-- Form to add new topic -->
+<form id="addTopicForm" class="mt-2 space-x-2" hx-post="/create-topic?chapter_id={{.}}" hx-target="#topicTableBody"
+    hx-swap="beforeend" hx-include="#curriculum-dropdown"
+    hx-on::after-request="if(event.detail.successful) this.reset()">
+    <input type="text" name="code" placeholder="Code" class="border p-2">
+    <input type="text" name="name" placeholder="Name" class="border p-2 w-1/3">
+    <button type="submit" class="bg-blue-500 text-white p-2 rounded">Create New Topic</button>
+</form>

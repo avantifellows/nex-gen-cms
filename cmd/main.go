@@ -59,8 +59,18 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/api/grades", appComponentPtr.GradesHandler.GetGrades)
 	muxHandler.HandleFunc("/api/subjects", appComponentPtr.SubjectsHandler.GetSubjects)
 	muxHandler.HandleFunc("/api/chapters", chaptersHandler.GetChapters)
-	muxHandler.HandleFunc("/edit-chapter", chaptersHandler.EditChapter)
+	muxHandler.Handle("/edit-chapter", handlers.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter)))
 	muxHandler.HandleFunc("/update-chapter", chaptersHandler.UpdateChapter)
 	muxHandler.HandleFunc("/create-chapter", chaptersHandler.AddChapter)
 	muxHandler.HandleFunc("/delete-chapter", chaptersHandler.DeleteChapter)
+	muxHandler.HandleFunc("/chapter", chaptersHandler.GetChapter)
+	muxHandler.HandleFunc("/topics", chaptersHandler.LoadTopics)
+	muxHandler.HandleFunc("/api/topics", chaptersHandler.GetTopics)
+
+	topicsHandler := appComponentPtr.TopicsHandler
+	muxHandler.HandleFunc("/add-topic", topicsHandler.OpenAddTopic)
+	muxHandler.HandleFunc("/create-topic", topicsHandler.AddTopic)
+	muxHandler.HandleFunc("/delete-topic", topicsHandler.DeleteTopic)
+	muxHandler.Handle("/edit-topic", handlers.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
+	muxHandler.HandleFunc("/update-topic", topicsHandler.UpdateTopic)
 }

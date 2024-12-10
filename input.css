@@ -30,4 +30,15 @@
 .nav-tabs .nav-link.active {
     @apply text-gray-600 bg-white border border-t-gray-200 border-r-gray-200 border-b-white border-l-gray-200;
 }
-
+.sub-tab {
+    @apply text-gray-600 bg-white px-4 py-2;
+}
+.sub-tab:focus {
+    @apply text-white bg-red-400 rounded;
+}
+.sub-tab:hover {
+    @apply text-white bg-red-400 rounded;
+}
+.sub-tab.active {
+    @apply text-white bg-red-500 rounded;
+}
