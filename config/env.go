@@ -7,10 +7,27 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func LoadEnv() {
-	err := godotenv.Load()
+// Use a variable for log.Fatalf so that we can change its value while testing
+var fatalf = log.Fatalf
+
+// EnvLoader interface defines a method to load environment variables
+type EnvLoader interface {
+	Load() error
+}
+
+// this will implement EnvLoader
+type Env struct{}
+
+// Env implements EnvLoader here to load the environment variables using godotenv
+func (p *Env) Load() error {
+	return godotenv.Load()
+}
+
+// LoadEnv loads environment variables using the provided EnvLoader
+func LoadEnv(loader EnvLoader) {
+	err := loader.Load()
 	if err != nil {
-		log.Fatalf("Error loading .env file")
+		fatalf("Error loading .env file")
 	}
 }
 

@@ -2,64 +2,75 @@ package main
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/avantifellows/nex-gen-cms/config"
+	"github.com/avantifellows/nex-gen-cms/di"
+	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers"
-	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
-	remote_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/remote"
-	"github.com/avantifellows/nex-gen-cms/internal/services"
 )
 
 func main() {
+	// New mux object is created here instead of using Default via http, so that we can create its mock in testing
+	mux := http.NewServeMux()
+	appComponentPtr, err := di.NewAppComponent()
+	if err != nil {
+		panic(err)
+	}
+
+	setup(new(Config), mux, appComponentPtr)
+	http.ListenAndServe(":8080", mux)
+}
+
+type ConfigLoader interface {
+	LoadEnv(loader config.EnvLoader)
+}
+
+type Config struct{}
+
+// Config implements ConfigLoader.
+func (c *Config) LoadEnv(loader config.EnvLoader) {
+	config.LoadEnv(loader)
+}
+
+// Created to make setup() function testable (by implementing this interface for its Mock MockServeMux in main_test.go)
+type MuxHandler interface {
+	Handle(pattern string, handler http.Handler)
+	HandleFunc(string, func(http.ResponseWriter, *http.Request))
+}
+
+func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di.AppComponent) {
+	constants.InitRuntimeConstant()
+
 	// Load environment variables
-	config.LoadEnv()
+	configLoader.LoadEnv(new(config.Env))
 
 	// this is for output.css file used in home.html
-	http.Handle("/web/", http.StripPrefix("/web/", http.FileServer(http.Dir("./web"))))
+	muxHandler.Handle("/web/", appComponentPtr.CssPathHandler)
 
-	http.HandleFunc("/", handlers.GenericHandler)
-	http.HandleFunc("/modules", handlers.GenericHandler)
-	http.HandleFunc("/books", handlers.GenericHandler)
-	http.HandleFunc("/major-tests", handlers.GenericHandler)
-	http.HandleFunc("/add-chapter", handlers.GenericHandler)
+	muxHandler.HandleFunc("/", handlers.GenericHandler)
+	muxHandler.HandleFunc("/modules", handlers.GenericHandler)
+	muxHandler.HandleFunc("/books", handlers.GenericHandler)
+	muxHandler.HandleFunc("/major-tests", handlers.GenericHandler)
+	muxHandler.HandleFunc("/add-chapter", handlers.GenericHandler)
 
-	// Initialize repositories
-	cacheRepo := local_repo.NewCacheRepository(5*time.Minute, 10*time.Minute)
-	apiRepo := remote_repo.NewAPIRepository()
+	chaptersHandler := appComponentPtr.ChaptersHandler
+	muxHandler.HandleFunc("/chapters", chaptersHandler.LoadChapters)
+	muxHandler.HandleFunc("/api/curriculums", appComponentPtr.CurriculumsHandler.GetCurriculums)
+	muxHandler.HandleFunc("/api/grades", appComponentPtr.GradesHandler.GetGrades)
+	muxHandler.HandleFunc("/api/subjects", appComponentPtr.SubjectsHandler.GetSubjects)
+	muxHandler.HandleFunc("/api/chapters", chaptersHandler.GetChapters)
+	muxHandler.Handle("/edit-chapter", handlers.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter)))
+	muxHandler.HandleFunc("/update-chapter", chaptersHandler.UpdateChapter)
+	muxHandler.HandleFunc("/create-chapter", chaptersHandler.AddChapter)
+	muxHandler.HandleFunc("/delete-chapter", chaptersHandler.DeleteChapter)
+	muxHandler.HandleFunc("/chapter", chaptersHandler.GetChapter)
+	muxHandler.HandleFunc("/topics", chaptersHandler.LoadTopics)
+	muxHandler.HandleFunc("/api/topics", chaptersHandler.GetTopics)
 
-	// Initialize service
-	topicsService := services.NewService[models.Topic](cacheRepo, apiRepo)
-	chaptersService := services.NewService[models.Chapter](cacheRepo, apiRepo)
-	curriculumsService := services.NewService[models.Curriculum](cacheRepo, apiRepo)
-	gradesService := services.NewService[models.Grade](cacheRepo, apiRepo)
-	subjectsService := services.NewService[models.Subject](cacheRepo, apiRepo)
-
-	// Initialize handlers
-	topicsHandler := handlers.NewTopicsHandler(topicsService)
-	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
-	curriculumsHandler := handlers.NewCurriculumsHandler(curriculumsService)
-	gradesHandler := handlers.NewGradesHandler(gradesService)
-	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
-
-	http.HandleFunc("/chapters", chaptersHandler.LoadChapters)
-	http.HandleFunc("/api/curriculums", curriculumsHandler.GetCurriculums)
-	http.HandleFunc("/api/grades", gradesHandler.GetGrades)
-	http.HandleFunc("/api/subjects", subjectsHandler.GetSubjects)
-	http.HandleFunc("/api/chapters", chaptersHandler.GetChapters)
-	http.Handle("/edit-chapter", handlers.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter)))
-	http.HandleFunc("/update-chapter", chaptersHandler.UpdateChapter)
-	http.HandleFunc("/create-chapter", chaptersHandler.AddChapter)
-	http.HandleFunc("/delete-chapter", chaptersHandler.DeleteChapter)
-	http.HandleFunc("/chapter", chaptersHandler.GetChapter)
-	http.HandleFunc("/topics", chaptersHandler.LoadTopics)
-	http.HandleFunc("/api/topics", chaptersHandler.GetTopics)
-	http.HandleFunc("/add-topic", topicsHandler.OpenAddTopic)
-	http.HandleFunc("/create-topic", topicsHandler.AddTopic)
-	http.HandleFunc("/delete-topic", topicsHandler.DeleteTopic)
-	http.Handle("/edit-topic", handlers.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
-	http.HandleFunc("/update-topic", topicsHandler.UpdateTopic)
-
-	http.ListenAndServe(":8080", nil)
+	topicsHandler := appComponentPtr.TopicsHandler
+	muxHandler.HandleFunc("/add-topic", topicsHandler.OpenAddTopic)
+	muxHandler.HandleFunc("/create-topic", topicsHandler.AddTopic)
+	muxHandler.HandleFunc("/delete-topic", topicsHandler.DeleteTopic)
+	muxHandler.Handle("/edit-topic", handlers.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
+	muxHandler.HandleFunc("/update-topic", topicsHandler.UpdateTopic)
 }
