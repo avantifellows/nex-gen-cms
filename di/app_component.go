@@ -14,6 +14,7 @@ import (
 type AppComponent struct {
 	CssPathHandler     http.Handler
 	ChaptersHandler    *handlers.ChaptersHandler
+	TopicsHandler      *handlers.TopicsHandler
 	CurriculumsHandler *handlers.CurriculumsHandler
 	GradesHandler      *handlers.GradesHandler
 	SubjectsHandler    *handlers.SubjectsHandler
@@ -26,7 +27,7 @@ func NewAppComponent() (*AppComponent, error) {
 
 	// Initialize service
 	topicsService := services.NewService[models.Topic](cacheRepo, apiRepo)
-	chaptersService := services.NewChapterService(cacheRepo, apiRepo)
+	chaptersService := services.NewService[models.Chapter](cacheRepo, apiRepo)
 	curriculumsService := services.NewService[models.Curriculum](cacheRepo, apiRepo)
 	gradesService := services.NewService[models.Grade](cacheRepo, apiRepo)
 	subjectsService := services.NewService[models.Subject](cacheRepo, apiRepo)
@@ -34,7 +35,7 @@ func NewAppComponent() (*AppComponent, error) {
 	// Initialize handlers
 	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
-	// topicsHandler := handlers.NewTopicsHandler(topicsService)
+	topicsHandler := handlers.NewTopicsHandler(topicsService)
 	curriculumsHandler := handlers.NewCurriculumsHandler(curriculumsService)
 	gradesHandler := handlers.NewGradesHandler(gradesService)
 	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
@@ -42,6 +43,7 @@ func NewAppComponent() (*AppComponent, error) {
 	return &AppComponent{
 		CssPathHandler:     cssPathHandler,
 		ChaptersHandler:    chaptersHandler,
+		TopicsHandler:      topicsHandler,
 		CurriculumsHandler: curriculumsHandler,
 		GradesHandler:      gradesHandler,
 		SubjectsHandler:    subjectsHandler,
