@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 )
@@ -50,14 +51,45 @@ func GenericHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Singleton structure to hold the middleware
+type HTMXMiddleware struct {
+	handler http.Handler
+	lock    sync.RWMutex
+}
+
+// Set the next handler
+func (m *HTMXMiddleware) SetNext(next http.Handler) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	m.handler = next
+}
+
+// ServeHTTP handles the request
+func (m *HTMXMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	// Check if the request is from HTMX
+	if r.Header.Get("HX-Request") == "" {
+		// If the request is NOT from HTMX, redirect to the home page
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Call the next handler if set
+	if m.handler != nil {
+		m.handler.ServeHTTP(w, r)
+	}
+}
+
+// RequireHTMX returns the same middleware instance
+var instance *HTMXMiddleware
+var once sync.Once
+
 func RequireHTMX(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Check if the request is from HTMX (using the HX-Request header)
-		if r.Header.Get("HX-Request") == "" {
-			// If the request is NOT from HTMX, redirect to the home page
-			http.Redirect(w, r, "/", http.StatusSeeOther)
-			return
-		}
-		next.ServeHTTP(w, r)
+	once.Do(func() {
+		instance = &HTMXMiddleware{}
 	})
+	instance.SetNext(next)
+	return instance
 }

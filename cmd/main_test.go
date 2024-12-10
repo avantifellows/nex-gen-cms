@@ -57,6 +57,7 @@ func TestSetup(t *testing.T) {
 	mockServeMux := NewMockServeMux()
 	appComponentPtr, _ := di.NewAppComponent()
 	chaptersHandler := appComponentPtr.ChaptersHandler
+	topicsHandler := appComponentPtr.TopicsHandler
 
 	expectedRouteHandlers := []struct {
 		pattern string
@@ -73,10 +74,18 @@ func TestSetup(t *testing.T) {
 		{"/api/grades", http.HandlerFunc(appComponentPtr.GradesHandler.GetGrades)},
 		{"/api/subjects", http.HandlerFunc(appComponentPtr.SubjectsHandler.GetSubjects)},
 		{"/api/chapters", http.HandlerFunc(chaptersHandler.GetChapters)},
-		{"/edit-chapter", http.HandlerFunc(chaptersHandler.EditChapter)},
+		{"/edit-chapter", handlers.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter))},
 		{"/update-chapter", http.HandlerFunc(chaptersHandler.UpdateChapter)},
 		{"/create-chapter", http.HandlerFunc(chaptersHandler.AddChapter)},
 		{"/delete-chapter", http.HandlerFunc(chaptersHandler.DeleteChapter)},
+		{"/chapter", http.HandlerFunc(chaptersHandler.GetChapter)},
+		{"/topics", http.HandlerFunc(chaptersHandler.LoadTopics)},
+		{"/api/topics", http.HandlerFunc(chaptersHandler.GetTopics)},
+		{"/add-topic", http.HandlerFunc(topicsHandler.OpenAddTopic)},
+		{"/create-topic", http.HandlerFunc(topicsHandler.AddTopic)},
+		{"/delete-topic", http.HandlerFunc(topicsHandler.DeleteTopic)},
+		{"/edit-topic", handlers.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic))},
+		{"/update-topic", http.HandlerFunc(topicsHandler.UpdateTopic)},
 	}
 
 	setup(mockConfig, mockServeMux, appComponentPtr)
