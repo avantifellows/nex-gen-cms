@@ -16,32 +16,35 @@
     <div>
         <nav>
             <div class="nav nav-tabs" id="nav-tab">
-                <button class="nav-link active" id="chapters-tab" hx-get="/chapters"
-                    hx-target="#content" data-toggle="tab" onclick="updateTabState(this)">Chapters</button>
+                <button class="nav-link active" hx-get="/chapters" hx-target="#content" data-toggle="tab"
+                    onclick="updateTabState(this)">Chapters</button>
                 <div {{ if .InitialLoad }} hx-trigger="load" hx-get="/chapters" {{ end }} hx-target="#content"></div>
-                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-target="#content"
-                    data-toggle="tab" onclick="updateTabState(this)">Modules</button>
-                <button class="nav-link" id="books-tab" hx-get="/books" hx-target="#content"
-                    data-toggle="tab" onclick="updateTabState(this)">Books</button>
-                <button class="nav-link" id="major-tests-tab" hx-get="/major-tests" hx-target="#content"
-                    data-toggle="tab" onclick="updateTabState(this)">Major Tests</button>
+                <button class="nav-link" hx-get="/modules" hx-target="#content" data-toggle="tab"
+                    onclick="updateTabState(this)">Modules</button>
+                <button class="nav-link" hx-get="/books" hx-target="#content" data-toggle="tab"
+                    onclick="updateTabState(this)">Books</button>
+                <button class="nav-link" hx-get="/major-tests" hx-target="#content" data-toggle="tab"
+                    onclick="updateTabState(this)">Major Tests</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
                 <select class="ms-8" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
-                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }})"
+                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }}, 
+                    {{ if .ChapterPtr }}{{ .ChapterPtr.CurriculumID }}{{ else }}null{{ end }})"
                     onchange="sessionStorage.setItem('selectedCurriculum', this.value)">
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading curriculums...</option>
                 </select>
                 <select class="ms-4" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
-                    hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }})"
+                    hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }}, 
+                    {{ if .ChapterPtr }}{{ .ChapterPtr.GradeID }}{{ else }}null{{ end }})"
                     onchange="sessionStorage.setItem('selectedGrade', this.value)">
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading grades...</option>
                 </select>
                 <select class="ms-4" id="subject-dropdown" name="subject-dropdown" hx-get="/api/subjects"
-                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }})"
+                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }}, 
+                    {{ if .ChapterPtr }}{{ .ChapterPtr.SubjectID }}{{ else }}null{{ end }})"
                     onchange="sessionStorage.setItem('selectedSubject', this.value)">
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading subjects...</option>
@@ -50,14 +53,14 @@
         </nav>
 
         <div class="m-7" id="nav-tabContent">
-            <div id="content" hx-history-elt>
+            <div id="content">
                 {{ block "content" . }}<p>Select a tab to load content.</p>{{ end }}
             </div>
         </div>
     </div>
 
     <script>
-        function afterDropdownReq(dropdown, initialLoad) {
+        function afterDropdownReq(dropdown, initialLoad, selectedValue) {
             // trigger event to reload chapters if needed [not needed when moving to edit chapter screen]
             if (initialLoad) {
                 htmx.trigger('#' + dropdown.id, 'onLoaded');
@@ -81,7 +84,10 @@
                 default:
                     break;
             }
-            var selectedValue = sessionStorage.getItem(sessionStorageKey);
+            if (!selectedValue) {
+                // if dropdown selection is not known from url then get it from sessionStorage
+                selectedValue = sessionStorage.getItem(sessionStorageKey);
+            } 
             if (selectedValue) {
                 dropdown.value = selectedValue;
             }
@@ -89,8 +95,8 @@
 
         function updateTabState(tabBtn, event) {
             const tabBtns = document.querySelectorAll('[data-toggle="tab"]');
-            tabBtns.forEach(tabBtn => tabBtn.classList.remove("active"));  
-            tabBtn.classList.add("active");       
+            tabBtns.forEach(tabBtn => tabBtn.classList.remove("active"));
+            tabBtn.classList.add("active");
         }
 
         // Function to go back after delay

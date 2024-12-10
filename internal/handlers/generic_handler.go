@@ -47,3 +47,15 @@ func GenericHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error executing template: %s", err)
 	}
 }
+
+func RequireHTMX(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Check if the request is from HTMX (using the HX-Request header)
+		if r.Header.Get("HX-Request") == "" {
+			// If the request is NOT from HTMX, redirect to the home page
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}

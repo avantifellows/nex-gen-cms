@@ -77,7 +77,8 @@ func (s *Service[T]) GetObject(objIdStr string, objFindingPredicate func(*T) boo
 	return objPtr, nil
 }
 
-func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any) (*T, error) {
+func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any, cacheKey string,
+	objFindingPredicate func(*T) bool) (*T, error) {
 
 	respBytes, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodPatch, body)
 	if err != nil {
@@ -88,6 +89,13 @@ func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any)
 	// Unmarshal the response bytes into pointer to object
 	if err := json.Unmarshal(respBytes, objPtr); err != nil {
 		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	// Update in cache
+	list, _ := s.GetList(urlEndPoint, cacheKey, true)
+	if list != nil {
+		selectedObjPtr := funk.Find(*list, objFindingPredicate).(*T)
+		*selectedObjPtr = *objPtr
 	}
 
 	return objPtr, nil

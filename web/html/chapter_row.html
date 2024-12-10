@@ -1,7 +1,8 @@
 {{ range . }}
 <tr class="border-b hover:bg-gray-100">
     <td class="py-4 px-6">{{.Code}}</td>
-    <td class="px-6 text-blue-500 hover:underline"><a href="#">{{.Name}}</a></td>
+    <td class="px-6 text-blue-500 hover:underline"><a href="#" hx-get="/chapter?id={{.ID}}" hx-target="body"
+        hx-push-url="/chapter?id={{.ID}}">{{.Name}}</a></td>
     <td class="px-6 text-center text-blue-500 hover:underline"><a href="#">{{.TopicCount}}</a></td>
     <td></td>
     <td></td>

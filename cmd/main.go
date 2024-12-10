@@ -31,13 +31,13 @@ func main() {
 
 	// Initialize service
 	topicsService := services.NewService[models.Topic](cacheRepo, apiRepo)
-	chaptersService := services.NewChapterService(cacheRepo, apiRepo)
+	chaptersService := services.NewService[models.Chapter](cacheRepo, apiRepo)
 	curriculumsService := services.NewService[models.Curriculum](cacheRepo, apiRepo)
 	gradesService := services.NewService[models.Grade](cacheRepo, apiRepo)
 	subjectsService := services.NewService[models.Subject](cacheRepo, apiRepo)
 
 	// Initialize handlers
-	// topicsHandler := handlers.NewTopicsHandler(topicsService)
+	topicsHandler := handlers.NewTopicsHandler(topicsService)
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
 	curriculumsHandler := handlers.NewCurriculumsHandler(curriculumsService)
 	gradesHandler := handlers.NewGradesHandler(gradesService)
@@ -48,10 +48,18 @@ func main() {
 	http.HandleFunc("/api/grades", gradesHandler.GetGrades)
 	http.HandleFunc("/api/subjects", subjectsHandler.GetSubjects)
 	http.HandleFunc("/api/chapters", chaptersHandler.GetChapters)
-	http.HandleFunc("/edit-chapter", chaptersHandler.EditChapter)
+	http.Handle("/edit-chapter", handlers.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter)))
 	http.HandleFunc("/update-chapter", chaptersHandler.UpdateChapter)
 	http.HandleFunc("/create-chapter", chaptersHandler.AddChapter)
 	http.HandleFunc("/delete-chapter", chaptersHandler.DeleteChapter)
+	http.HandleFunc("/chapter", chaptersHandler.GetChapter)
+	http.HandleFunc("/topics", chaptersHandler.LoadTopics)
+	http.HandleFunc("/api/topics", chaptersHandler.GetTopics)
+	http.HandleFunc("/add-topic", topicsHandler.OpenAddTopic)
+	http.HandleFunc("/create-topic", topicsHandler.AddTopic)
+	http.HandleFunc("/delete-topic", topicsHandler.DeleteTopic)
+	http.Handle("/edit-topic", handlers.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
+	http.HandleFunc("/update-topic", topicsHandler.UpdateTopic)
 
 	http.ListenAndServe(":8080", nil)
 }

@@ -20,20 +20,23 @@ const GRADE_DROPDOWN_NAME = "grade-dropdown"
 const SUBJECT_DROPDOWN_NAME = "subject-dropdown"
 
 const chaptersEndPoint = "/chapter"
+
 const chaptersKey = "chapters"
+
 const chaptersTemplate = "chapters.html"
 const chapterRowTemplate = "chapter_row.html"
 const baseTemplate = "home.html"
 const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
+const chapterTemplate = "chapter.html"
 
 type ChaptersHandler struct {
-	chaptersService *services.ChapterService
+	chaptersService *services.Service[models.Chapter]
 	topicsService   *services.Service[models.Topic]
 }
 
 // NewChaptersHandler creates a new instance of ChaptersHandler
-func NewChaptersHandler(chaptersService *services.ChapterService,
+func NewChaptersHandler(chaptersService *services.Service[models.Chapter],
 	topicsService *services.Service[models.Topic]) *ChaptersHandler {
 	return &ChaptersHandler{
 		chaptersService: chaptersService,
@@ -51,27 +54,47 @@ type SortState struct {
 	Order  constants.SortOrder
 }
 
-var sortState = SortState{
+var chapterSortState = SortState{
+	Column: "0",
+	Order:  constants.SortOrderAsc,
+}
+
+type TopicsData struct {
+	ChapterId       string
+	TopicsSortState SortState
+}
+
+var topicSortState = SortState{
 	Column: "0",
 	Order:  constants.SortOrderAsc,
 }
 
 func (h *ChaptersHandler) LoadChapters(w http.ResponseWriter, r *http.Request) {
-	sortColumn := r.URL.Query().Get("sortColumn")
+	updateSortState(r, &chapterSortState)
+	local_repo.ExecuteTemplate(chaptersTemplate, w, chapterSortState)
+}
 
-	// if same column is clicked, toggle the order
-	if sortColumn == sortState.Column {
-		if sortState.Order == constants.SortOrderAsc {
-			sortState.Order = constants.SortOrderDesc
+func updateSortState(r *http.Request, sortState *SortState) {
+	urlVals := r.URL.Query()
+	const queryParam = "sortColumn"
+
+	// change sort state if it is called due to click on any column header
+	if urlVals.Has(queryParam) {
+		sortColumn := urlVals.Get(queryParam)
+
+		// if same column is clicked, toggle the order
+		if sortColumn == sortState.Column {
+			if sortState.Order == constants.SortOrderAsc {
+				sortState.Order = constants.SortOrderDesc
+			} else {
+				sortState.Order = constants.SortOrderAsc
+			}
 		} else {
+			// If a new column is clicked, default to ascending order
+			sortState.Column = sortColumn
 			sortState.Order = constants.SortOrderAsc
 		}
-	} else {
-		// If a new column is clicked, default to ascending order
-		sortState.Column = sortColumn
-		sortState.Order = constants.SortOrderAsc
 	}
-	local_repo.ExecuteTemplate(chaptersTemplate, w, sortState)
 }
 
 func (h *ChaptersHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
@@ -87,43 +110,49 @@ func (h *ChaptersHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	filteredChapters := funk.Filter(*chapters, func(chapter *models.Chapter) bool {
-		return (*chapter).CurriculumID == curriculumId && (*chapter).GradeId == gradeId &&
+		return (*chapter).CurriculumID == curriculumId && (*chapter).GradeID == gradeId &&
 			(*chapter).SubjectID == subjectId
 	})
 	typecastedChapters := filteredChapters.([]*models.Chapter)
 
-	topics, err := h.topicsService.GetList(getTopicsEndPoint, topicsKey, false)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
-	} else {
-		associateTopicsWithChapters(typecastedChapters, *topics)
-	}
+	h.getTopics(w, typecastedChapters)
 	sortChapters(typecastedChapters)
 
 	local_repo.ExecuteTemplate(chapterRowTemplate, w, typecastedChapters)
 }
 
+func (h *ChaptersHandler) getTopics(w http.ResponseWriter, chapterPtrs []*models.Chapter) {
+	topics, err := h.topicsService.GetList(topicsEndPoint, topicsKey, false)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
+	} else {
+		associateTopicsWithChapters(chapterPtrs, *topics)
+	}
+}
+
+func associateTopicsWithChapters(chapterPtrs []*models.Chapter, topicPtrs []*models.Topic) {
+	// Create a map to quickly lookup chapters by their ID
+	chapterPtrsMap := make(map[int16]*models.Chapter)
+
+	// Fill the map with the address of each chapter
+	for _, chapterPtr := range chapterPtrs {
+		chapterPtrsMap[chapterPtr.ID] = chapterPtr
+		// clear topics data, because it will be refilled in next step based on latest data
+		chapterPtr.Topics = chapterPtr.Topics[:0]
+	}
+
+	// Loop through each topic and assign it to the corresponding chapter
+	for _, topicPtr := range topicPtrs {
+		if chapterPtr, exists := chapterPtrsMap[topicPtr.ChapterID]; exists {
+			chapterPtr.Topics = append(chapterPtr.Topics, *topicPtr)
+		}
+	}
+}
+
 func (h *ChaptersHandler) EditChapter(w http.ResponseWriter, r *http.Request) {
-	// Check if the request is from HTMX (using the HX-Request header)
-	if r.Header.Get("HX-Request") == "" {
-		// If the request is NOT from HTMX, redirect to the home page
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-
-	chapterIdStr := r.URL.Query().Get("id")
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	selectedChapterPtr, code, err := h.getChapter(r)
 	if err != nil {
-		http.Error(w, "Invalid Chapter ID", http.StatusBadRequest)
-		return
-	}
-
-	selectedChapterPtr, err := h.chaptersService.GetObject(chapterIdStr,
-		func(chapter *models.Chapter) bool {
-			return (*chapter).ID == chapterId
-		}, chaptersKey, chaptersEndPoint)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching chapter: %v", err), http.StatusInternalServerError)
+		http.Error(w, err.Error(), code)
 		return
 	}
 
@@ -145,16 +174,19 @@ func (h *ChaptersHandler) UpdateChapter(w http.ResponseWriter, r *http.Request) 
 	chapterName := r.FormValue("name")
 	chapterCode := r.FormValue("code")
 
-	_, err = h.chaptersService.UpdateChapter(chapterIdStr, chapterCode, chapterName, chaptersKey,
+	dummyChapterPtr := &models.Chapter{}
+	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName)
+
+	_, err = h.chaptersService.UpdateObject(chapterIdStr, chaptersEndPoint, chapterMap, chaptersKey,
 		func(chapter *models.Chapter) bool {
 			return (*chapter).ID == chapterId
-		}, chaptersEndPoint)
+		})
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error updating chapter: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	local_repo.ExecuteTemplate(updateSuccessTemplate, w, nil)
+	local_repo.ExecuteTemplate(updateSuccessTemplate, w, "Chapter")
 }
 
 func (h *ChaptersHandler) AddChapter(w http.ResponseWriter, r *http.Request) {
@@ -207,25 +239,6 @@ func (h *ChaptersHandler) DeleteChapter(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func associateTopicsWithChapters(chapterPtrs []*models.Chapter, topicPtrs []*models.Topic) {
-	// Create a map to quickly lookup chapters by their ID
-	chapterPtrsMap := make(map[int16]*models.Chapter)
-
-	// Fill the map with the address of each chapter
-	for _, chapterPtr := range chapterPtrs {
-		chapterPtrsMap[chapterPtr.ID] = chapterPtr
-		// clear topics data, because it will be refilled in next step based on latest data
-		chapterPtr.Topics = chapterPtr.Topics[:0]
-	}
-
-	// Loop through each topic and assign it to the corresponding chapter
-	for _, topicPtr := range topicPtrs {
-		if chapterPtr, exists := chapterPtrsMap[topicPtr.ChapterID]; exists {
-			chapterPtr.Topics = append(chapterPtr.Topics, *topicPtr)
-		}
-	}
-}
-
 func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
 	// these query parameters can be queried by element names only, not ids
 	curriculumId, err := utils.StringToIntType[int16](urlValues.Get(CURRICULUM_DROPDOWN_NAME))
@@ -246,7 +259,7 @@ func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
 func sortChapters(chapterPtrs []*models.Chapter) {
 	slices.SortStableFunc(chapterPtrs, func(c1, c2 *models.Chapter) int {
 		var sortResult int
-		switch sortState.Column {
+		switch chapterSortState.Column {
 		case "1":
 			c1Suffix := utils.ExtractNumericSuffix(c1.Code)
 			c2Suffix := utils.ExtractNumericSuffix(c2.Code)
@@ -265,9 +278,65 @@ func sortChapters(chapterPtrs []*models.Chapter) {
 			sortResult = 0
 		}
 
-		if sortState.Order == constants.SortOrderDesc {
+		if chapterSortState.Order == constants.SortOrderDesc {
 			sortResult = -sortResult
 		}
 		return sortResult
 	})
+}
+
+func (h *ChaptersHandler) getChapter(r *http.Request) (*models.Chapter, int, error) {
+	chapterIdStr := r.URL.Query().Get("id")
+	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid Chapter ID: %w", err)
+	}
+
+	selectedChapterPtr, err := h.chaptersService.GetObject(chapterIdStr,
+		func(chapter *models.Chapter) bool {
+			return (*chapter).ID == chapterId
+		}, chaptersKey, chaptersEndPoint)
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching chapter: %v", err)
+	}
+
+	return selectedChapterPtr, http.StatusOK, nil
+}
+
+func (h *ChaptersHandler) GetChapter(w http.ResponseWriter, r *http.Request) {
+	selectedChapterPtr, code, err := h.getChapter(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+
+	data := HomeChapterData{
+		false,
+		selectedChapterPtr,
+	}
+	local_repo.ExecuteTemplates(baseTemplate, chapterTemplate, w, data)
+}
+
+func (h *ChaptersHandler) LoadTopics(w http.ResponseWriter, r *http.Request) {
+	chapterIdStr := r.URL.Query().Get("id")
+	updateSortState(r, &topicSortState)
+
+	data := TopicsData{
+		ChapterId:       chapterIdStr,
+		TopicsSortState: topicSortState,
+	}
+	local_repo.ExecuteTemplate(topicsTemplate, w, data)
+}
+
+func (h *ChaptersHandler) GetTopics(w http.ResponseWriter, r *http.Request) {
+	selectedChapterPtr, code, err := h.getChapter(r)
+	if err != nil {
+		http.Error(w, err.Error(), code)
+		return
+	}
+	if len(selectedChapterPtr.Topics) == 0 {
+		h.getTopics(w, []*models.Chapter{selectedChapterPtr})
+	}
+	sortTopics(selectedChapterPtr.Topics)
+	local_repo.ExecuteTemplate(topicRowTemplate, w, selectedChapterPtr.Topics)
 }
