@@ -32,12 +32,12 @@ resource "aws_eip_association" "cms_eip_association" {
 }
 
 resource "cloudflare_record" "ec2_domain" {
-  zone_id = var.cloudflare_zone_id                            # Zone ID for your domain in Cloudflare
+  zone_id = var.cloudflare_zone_id                            # Zone ID for our domain in Cloudflare
   name    = "content"                                         # Subdomain (e.g., 'content' for 'content.domain.com')
   type    = "A"                                               # A record
   content = aws_eip_association.cms_eip_association.public_ip # Elastic IP of the EC2 instance
   ttl     = 1                                                 # Set TTL to automatic
-  proxied = false                                             # Set to true if you want to use Cloudflare proxy (orange cloud)
+  proxied = false                                             # Set to true if we want to use Cloudflare proxy (orange cloud)
 }
 
 # to restart instance if stopped
@@ -143,18 +143,7 @@ resource "null_resource" "run_commands" {
       "  echo 'Project directory does not exist. Cloning the repository...'",
       "  git clone $REPO_URL $PROJECT_DIR",
       "else",
-      "  echo 'Project directory exists. Pulling latest changes...'",
-      "  cd $PROJECT_DIR",
-
-      # Ensure we're on the main branch
-      "  CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)",
-      "  if [ \"$CURRENT_BRANCH\" != \"main\" ]; then",
-      "    echo 'Switching to the main branch...'",
-      "    git checkout main",
-      "  fi",
-
-      # Pull the latest changes
-      "  git pull origin main",
+      "  echo 'Project directory exists.'",
       "fi",
 
       # Install Go if not already installed
@@ -169,10 +158,6 @@ resource "null_resource" "run_commands" {
       "  source ~/.bashrc || true",
       "  source ~/.profile || true",
       "fi",
-
-      "nohup go run cmd/main.go > app.log 2>&1 &",
-      # without sleep only go run cmd/main.go works, but not the above full command
-      "sleep 1"
     ]
   }
 
