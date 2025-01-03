@@ -13,30 +13,35 @@ jobs:
     steps:
       # Checkout the repository
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # Setup Terraform
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+      # Set up SSH
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          terraform_version: 1.10.3
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }} 
 
-      # Configure AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-south-1
+      # SSH into EC2 and deploy
+      - name: SSH into EC2 and deploy
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          # Define EC2 details
+          EC2_USER="ec2-user"   # EC2 username (e.g., ubuntu, ec2-user, etc.)
+          EC2_DIR="/home/ec2-user/nex-gen-cms"  # Path to project on the EC2 instance
 
-      # Initialize Terraform
-      - name: Initialize Terraform
-        run: terraform init
+          # SSH into EC2 instance and execute deployment commands
+          ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'EOF'
+            # Navigate to the project directory
+            cd ${EC2_DIR}
+            
+            # Pull the latest changes from the main branch
+            git fetch origin
+            git checkout main
+            git pull origin main
 
-      # Plan Terraform
-      - name: Plan Terraform
-        run: terraform plan
+            # Run the Go service
+            nohup go run cmd/main.go > app.log 2>&1 &
 
-      # Apply Terraform
-      - name: Apply Terraform
-        run: terraform apply -auto-approve
+            echo "Deployment complete."
+          EOF
