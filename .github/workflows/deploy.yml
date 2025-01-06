@@ -28,15 +28,15 @@ jobs:
         run: |
           # Define EC2 details
           EC2_USER="ec2-user"   # EC2 username (e.g., ubuntu, ec2-user, etc.)
-          EC2_DIR="/home/ec2-user/nex-gen-cms"  # Path to project on the EC2 instance
           echo "The vars b4 ssh are: $EC2_DIR $EC2_USER $EC2_HOST"
 
           # SSH into EC2 instance and execute deployment commands
           ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'EOF'
             set -e  # Exit on error
 
+            EC2_DIR="/home/ec2-user/nex-gen-cms"  # Path to project on the EC2 instance
             # Echo the project directory
-            echo "The vars after ssh are: $EC2_DIR $EC2_USER $EC2_HOST"
+            echo "The vars after ssh are: $EC2_DIR"
 
             # Navigate to the project directory
             cd ${EC2_DIR}
