@@ -32,6 +32,11 @@ jobs:
 
           # SSH into EC2 instance and execute deployment commands
           ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} << 'EOF'
+            set -e  # Exit on error
+
+            # Echo the project directory
+            echo "The project directory is: $EC2_DIR $EC2_USER EC2_HOST"
+
             # Navigate to the project directory
             cd ${EC2_DIR}
             
