@@ -4,7 +4,7 @@ resource "aws_instance" "cms" {
   key_name      = var.key_name
 
   tags = {
-    Name = "CMS"
+    Name = var.ec2_name
   }
 
   lifecycle {
@@ -27,21 +27,31 @@ data "aws_eip" "existing_eip" {
 }
 
 resource "aws_eip_association" "cms_eip_association" {
+  # Don't create this resource for staging, because of elastic ip limit reached to max 10
+  count = terraform.workspace == "production" ? 1 : 0
+
   instance_id   = aws_instance.cms.id
   allocation_id = data.aws_eip.existing_eip.id
 }
 
 resource "cloudflare_record" "ec2_domain" {
-  zone_id = var.cloudflare_zone_id                            # Zone ID for our domain in Cloudflare
-  name    = "content"                                         # Subdomain (e.g., 'content' for 'content.domain.com')
-  type    = "A"                                               # A record
-  content = aws_eip_association.cms_eip_association.public_ip # Elastic IP of the EC2 instance
-  ttl     = 1                                                 # Set TTL to automatic
-  proxied = false                                             # Set to true if we want to use Cloudflare proxy (orange cloud)
+  zone_id = var.cloudflare_zone_id # Zone ID for our domain in Cloudflare
+  name    = var.subdomain          # Subdomain (e.g., 'content' for 'content.domain.com')
+  type    = "A"                    # A record
+  content = (terraform.workspace == "production"
+    ? aws_eip_association.cms_eip_association[0].public_ip # Elastic IP of the EC2 instance for production
+  : aws_instance.cms.public_ip)                            # Public IP of the EC2 instance for staging
+
+  ttl     = 1     # Set TTL to automatic
+  proxied = false # Set to true if we want to use Cloudflare proxy (orange cloud)
 }
 
 # to restart instance if stopped
 resource "null_resource" "start_instance" {
+
+  # depends on cloudflare_record
+  depends_on = [cloudflare_record.ec2_domain]
+
   provisioner "local-exec" {
     # interpreter: Forces the provisioner to use Bash instead of the default Windows Command Prompt.
     interpreter = ["bash", "-c"]
@@ -73,17 +83,16 @@ resource "null_resource" "start_instance" {
 }
 
 resource "null_resource" "run_commands" {
-  # Ensures that this runs after start_instance & upload_env complete
+  # Ensures that this runs after start_instance complete
   depends_on = [
-    null_resource.start_instance,
-    null_resource.upload_env
+    null_resource.start_instance
   ]
 
   connection {
     type        = "ssh"
     user        = "ec2-user"
     private_key = file("D:/Avanti/cms-key.pem")
-    host        = aws_instance.cms.public_ip
+    host        = terraform.workspace == "production" ? data.aws_eip.existing_eip.public_ip : aws_instance.cms.public_ip
   }
 
   provisioner "remote-exec" {
@@ -101,12 +110,12 @@ resource "null_resource" "run_commands" {
       "fi",
 
       # Create Nginx configuration for the domain if not already present
-      "if ! grep -q 'server_name content.avantifellows.org;' /etc/nginx/conf.d/content.conf; then",
-      "  echo 'Creating Nginx configuration for content.avantifellows.org...'",
-      "  sudo bash -c 'cat > /etc/nginx/conf.d/content.conf <<EOF",
+      "if ! grep -q 'server_name ${var.subdomain}.avantifellows.org;' /etc/nginx/conf.d/${var.subdomain}.conf; then",
+      "  echo 'Creating Nginx configuration for ${var.subdomain}.avantifellows.org...'",
+      "  sudo bash -c 'cat > /etc/nginx/conf.d/${var.subdomain}.conf <<EOF",
       "server {",
       "    listen 80;",
-      "    server_name content.avantifellows.org;",
+      "    server_name ${var.subdomain}.avantifellows.org;",
       "    location / {",
       "        proxy_pass http://localhost:8080;",
       "        proxy_set_header Host \\$host;",
@@ -126,9 +135,9 @@ resource "null_resource" "run_commands" {
       "fi",
 
       # Run Certbot for the domain
-      "sudo certbot --nginx -d content.avantifellows.org --non-interactive --agree-tos -m ankur@avantifellows.org",
+      "sudo certbot --nginx -d ${var.subdomain}.avantifellows.org --non-interactive --agree-tos -m ankur@avantifellows.org",
       # Remove blank lines introduced by certbot
-      "sudo sed -i '/^$/d' /etc/nginx/conf.d/content.conf",
+      "sudo sed -i '/^$/d' /etc/nginx/conf.d/${var.subdomain}.conf",
 
       # Start and enable the Nginx service
       "sudo systemctl enable nginx",
@@ -167,7 +176,7 @@ resource "null_resource" "run_commands" {
 }
 
 data "local_file" "env_file" {
-  filename = "../.env.staging"
+  filename = terraform.workspace == "production" ? "../.env" : "../.env.staging"
 }
 
 output "env_checksum" {
@@ -175,6 +184,11 @@ output "env_checksum" {
 }
 
 resource "null_resource" "upload_env" {
+  # Ensures that this runs after run_commands complete
+  depends_on = [
+    null_resource.run_commands
+  ]
+
   triggers = {
     # Trigger resource update on checksum change
     env_checksum = filesha256(data.local_file.env_file.filename)
@@ -186,7 +200,7 @@ resource "null_resource" "upload_env" {
   }
 
   connection {
-    host        = aws_instance.cms.public_ip
+    host        = terraform.workspace == "production" ? data.aws_eip.existing_eip.public_ip : aws_instance.cms.public_ip
     user        = "ec2-user"
     private_key = file("D:/Avanti/cms-key.pem")
   }

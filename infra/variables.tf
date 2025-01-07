@@ -25,3 +25,12 @@ variable "cloudflare_zone_id" {
   type        = string
 }
 
+variable "ec2_name" {
+  description = "ec2 instance name for the application (CMS or staging-CMS)"
+  type        = string
+}
+
+variable "subdomain" {
+  description = "Subdomain name for the application (content or staging-content)"
+  type        = string
+}
