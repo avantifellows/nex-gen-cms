@@ -49,7 +49,9 @@ resource "cloudflare_record" "ec2_domain" {
 # to restart instance if stopped
 resource "null_resource" "start_instance" {
 
-  # depends on cloudflare_record
+  # While running terraform script first time, this resource creation runs forever waiting for public ip of ec2 instance. 
+  # To fix that, run start_instance resource only after elastic ip association and domain name mapping completes
+  # Hence depends on cloudflare_record
   depends_on = [cloudflare_record.ec2_domain]
 
   provisioner "local-exec" {
