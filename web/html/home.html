@@ -16,15 +16,15 @@
     <div>
         <nav>
             <div class="nav nav-tabs" id="nav-tab">
-                <button class="nav-link active" hx-get="/chapters" hx-target="#content" data-toggle="tab"
-                    onclick="updateTabState(this)">Chapters</button>
+                <button class="nav-link active" id="chapters-tab" hx-get="/chapters" hx-target="#content"
+                    data-toggle="tab" onclick="updateTabState(this)">Chapters</button>
                 <div {{ if .InitialLoad }} hx-trigger="load" hx-get="/chapters" {{ end }} hx-target="#content"></div>
-                <button class="nav-link" hx-get="/modules" hx-target="#content" data-toggle="tab"
+                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-target="#content" data-toggle="tab"
                     onclick="updateTabState(this)">Modules</button>
-                <button class="nav-link" hx-get="/books" hx-target="#content" data-toggle="tab"
+                <button class="nav-link" id="books-tab" hx-get="/books" hx-target="#content" data-toggle="tab"
                     onclick="updateTabState(this)">Books</button>
-                <button class="nav-link" hx-get="/major-tests" hx-target="#content" data-toggle="tab"
-                    onclick="updateTabState(this)">Major Tests</button>
+                <button class="nav-link" id="major-tests-tab" hx-get="/major-tests" hx-target="#content"
+                    data-toggle="tab" onclick="updateTabState(this)">Major Tests</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
@@ -87,7 +87,7 @@
             if (!selectedValue) {
                 // if dropdown selection is not known from url then get it from sessionStorage
                 selectedValue = sessionStorage.getItem(sessionStorageKey);
-            } 
+            }
             if (selectedValue) {
                 dropdown.value = selectedValue;
             }
