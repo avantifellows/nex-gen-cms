@@ -31,43 +31,43 @@ func NewTopicsHandler(service *services.Service[models.Topic]) *TopicsHandler {
 	}
 }
 
-func (h *TopicsHandler) OpenAddTopic(w http.ResponseWriter, r *http.Request) {
-	chapterId := r.URL.Query().Get("chapterId")
-	local_repo.ExecuteTemplate(addTopicTemplate, w, chapterId)
+func (h *TopicsHandler) OpenAddTopic(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterId := request.URL.Query().Get("chapterId")
+	local_repo.ExecuteTemplate(addTopicTemplate, responseWriter, chapterId)
 }
 
-func (h *TopicsHandler) AddTopic(w http.ResponseWriter, r *http.Request) {
-	topicCode := r.FormValue("code")
-	topicName := r.FormValue("name")
-	chapterIdStr := r.FormValue("chapter_id")
+func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *http.Request) {
+	topicCode := request.FormValue("code")
+	topicName := request.FormValue("name")
+	chapterIdStr := request.FormValue("chapter_id")
 	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
 	if err != nil {
-		http.Error(w, "Invalid Chapter ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 		return
 	}
-	curriculumIdStr := r.FormValue(CURRICULUM_DROPDOWN_NAME)
+	curriculumIdStr := request.FormValue(CURRICULUM_DROPDOWN_NAME)
 	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
 	if err != nil {
-		http.Error(w, "Invalid Curriculum ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
 		return
 	}
 	newTopicPtr := models.NewTopic(topicCode, topicName, chapterId, curriculumId)
 
 	newTopicPtr, err = h.service.AddObject(newTopicPtr, topicsKey, topicsEndPoint)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error adding topic: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error adding topic: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	topicPtrs := []*models.Topic{newTopicPtr}
-	local_repo.ExecuteTemplate(topicRowTemplate, w, topicPtrs)
+	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, topicPtrs)
 }
 
-func (h *TopicsHandler) DeleteTopic(w http.ResponseWriter, r *http.Request) {
-	topicIdStr := r.URL.Query().Get("id")
+func (h *TopicsHandler) DeleteTopic(responseWriter http.ResponseWriter, request *http.Request) {
+	topicIdStr := request.URL.Query().Get("id")
 	topicId, err := utils.StringToIntType[int16](topicIdStr)
 	if err != nil {
-		http.Error(w, "Invalid Topic ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 		return
 	}
 	err = h.service.DeleteObject(topicIdStr, func(t *models.Topic) bool {
@@ -76,22 +76,22 @@ func (h *TopicsHandler) DeleteTopic(w http.ResponseWriter, r *http.Request) {
 
 	// If http error is thrown from here then target row won't be removed by htmx code
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func (h *TopicsHandler) EditTopic(w http.ResponseWriter, r *http.Request) {
-	selectedTopicPtr, code, err := h.getTopic(r)
+func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedTopicPtr, code, err := h.getTopic(request)
 	if err != nil {
-		http.Error(w, err.Error(), code)
+		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 
-	local_repo.ExecuteTemplate(editTopicTemplate, w, selectedTopicPtr)
+	local_repo.ExecuteTemplate(editTopicTemplate, responseWriter, selectedTopicPtr)
 }
 
-func (h *TopicsHandler) getTopic(r *http.Request) (*models.Topic, int, error) {
-	topicIdStr := r.URL.Query().Get("id")
+func (h *TopicsHandler) getTopic(request *http.Request) (*models.Topic, int, error) {
+	topicIdStr := request.URL.Query().Get("id")
 	topicId, err := utils.StringToIntType[int16](topicIdStr)
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid Topic ID: %w", err)
@@ -108,16 +108,16 @@ func (h *TopicsHandler) getTopic(r *http.Request) (*models.Topic, int, error) {
 	return selectedTopicPtr, http.StatusOK, nil
 }
 
-func (h *TopicsHandler) UpdateTopic(w http.ResponseWriter, r *http.Request) {
-	topicIdStr := r.FormValue("id")
+func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request *http.Request) {
+	topicIdStr := request.FormValue("id")
 	topicId, err := utils.StringToIntType[int16](topicIdStr)
 	if err != nil {
-		http.Error(w, "Invalid Topic ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 		return
 	}
 
-	topicName := r.FormValue("name")
-	topicCode := r.FormValue("code")
+	topicName := request.FormValue("name")
+	topicCode := request.FormValue("code")
 
 	dummyTopicPtr := &models.Topic{}
 	topicMap := dummyTopicPtr.BuildMap(topicCode, topicName)
@@ -127,10 +127,10 @@ func (h *TopicsHandler) UpdateTopic(w http.ResponseWriter, r *http.Request) {
 			return topic.ID == topicId
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error updating topic: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error updating topic: %v", err), http.StatusInternalServerError)
 	}
 
-	local_repo.ExecuteTemplate(updateSuccessTemplate, w, "Topic")
+	local_repo.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Topic")
 }
 
 func sortTopics(topics []models.Topic) {
