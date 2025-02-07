@@ -11,13 +11,6 @@ type HTMXMiddleware struct {
 	lock    sync.RWMutex
 }
 
-// Set the next handler
-func (middleware *HTMXMiddleware) SetNext(next http.Handler) {
-	middleware.lock.Lock()
-	defer middleware.lock.Unlock()
-	middleware.handler = next
-}
-
 // ServeHTTP handles the request
 func (middleware *HTMXMiddleware) ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) {
 	middleware.lock.RLock()
@@ -36,14 +29,6 @@ func (middleware *HTMXMiddleware) ServeHTTP(responseWriter http.ResponseWriter, 
 	}
 }
 
-// RequireHTMX returns the same middleware instance
-var instance *HTMXMiddleware
-var once sync.Once
-
 func RequireHTMX(next http.Handler) http.Handler {
-	once.Do(func() {
-		instance = &HTMXMiddleware{}
-	})
-	instance.SetNext(next)
-	return instance
+	return &HTMXMiddleware{handler: next}
 }
