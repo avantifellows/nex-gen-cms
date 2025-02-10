@@ -30,10 +30,11 @@ jobs:
       run: |
         go run cmd/main.go &
         sleep 5  # Allow time for the server to start
+        curl --retry 5 --retry-delay 2 --retry-connrefused http://localhost:8080 || exit 1
 
     - name: Run Playwright tests
       run: npx playwright test
-      
+
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
