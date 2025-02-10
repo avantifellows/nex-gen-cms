@@ -28,9 +28,16 @@ jobs:
 
     - name: Start Go server
       run: |
-        go run cmd/main.go &
-        sleep 5  # Allow time for the server to start
+        go run cmd/main.go > server.log 2>&1 &
+        sleep 10  # Give the server time to start
+        echo "Checking if server is running..."
+        netstat -tulnp || true  # List active network connections
+        ps aux | grep main || true  # Check if Go server is running
         curl --retry 5 --retry-delay 2 --retry-connrefused http://localhost:8080 || exit 1
+
+    - name: Print server logs if failed
+      if: failure()
+      run: cat server.log
 
     - name: Run Playwright tests
       run: npx playwright test
