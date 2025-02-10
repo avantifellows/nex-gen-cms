@@ -26,6 +26,12 @@ jobs:
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
 
+    - name: Create .env file
+      run: echo "${{ secrets.ENV_FILE_FOR_PLAYWRIGHT_TESTS }}" > .env
+
+    - name: Verify .env file (for debugging)
+      run: cat .env  # REMOVE THIS AFTER VERIFYING
+
     - name: Start Go server
       run: |
         go run cmd/main.go > server.log 2>&1 &
