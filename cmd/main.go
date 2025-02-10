@@ -19,7 +19,7 @@ func main() {
 	}
 
 	setup(new(Config), mux, appComponentPtr)
-	http.ListenAndServe(":8080", mux)
+	http.ListenAndServe("0.0.0.0:8080", mux)
 }
 
 type ConfigLoader interface {
