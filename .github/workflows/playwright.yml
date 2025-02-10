@@ -10,15 +10,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.23.4  # Update to match your Go version
+
     - name: Install dependencies
       run: npm ci
+
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
+
+    - name: Start Go server
+      run: |
+        go run cmd/main.go &
+        sleep 5  # Allow time for the server to start
+
     - name: Run Playwright tests
       run: npx playwright test
+      
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:
