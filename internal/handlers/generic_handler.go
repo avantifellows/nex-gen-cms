@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/internal/dto"
 )
 
 /*
@@ -15,15 +16,15 @@ Handles loading html template files having same name as that of path passed
 in request. Path containing only '/' is considered as "/home", resulting in
 loading web/html/home.html file
 */
-func GenericHandler(w http.ResponseWriter, r *http.Request) {
+func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
 
 	// Extract the requested path
-	path := r.URL.Path
-	var data HomeChapterData
+	path := request.URL.Path
+	var data dto.HomeChapterData
 	if initialLoad := path == "/"; initialLoad {
-		data = HomeChapterData{
-			true,
-			nil,
+		data = dto.HomeChapterData{
+			InitialLoad: true,
+			ChapterPtr:  nil,
 		}
 	}
 
@@ -38,14 +39,14 @@ func GenericHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse the template
 	tmpl, err := template.ParseFiles(filePath)
 	if err != nil {
-		http.NotFound(w, r)
+		http.NotFound(responseWriter, request)
 		log.Printf("Template not found: %s", filePath)
 		return
 	}
 
 	// Render the template
-	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+	if err := tmpl.Execute(responseWriter, data); err != nil {
+		http.Error(responseWriter, "Error rendering template", http.StatusInternalServerError)
 		log.Printf("Error executing template: %s", err)
 	}
 }

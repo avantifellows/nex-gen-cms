@@ -23,13 +23,13 @@ func NewCurriculumsHandler(service *services.Service[models.Curriculum]) *Curric
 	}
 }
 
-func (h *CurriculumsHandler) GetCurriculums(w http.ResponseWriter, r *http.Request) {
+func (h *CurriculumsHandler) GetCurriculums(responseWriter http.ResponseWriter, request *http.Request) {
 	curriculums, err := h.service.GetList(getCurriculumsEndPoint, curriculumsKey, false)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching curriculums: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error fetching curriculums: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Load curriculums.html
-	local_repo.ExecuteTemplate(curriculumsTemplate, w, curriculums)
+	local_repo.ExecuteTemplate(curriculumsTemplate, responseWriter, curriculums)
 }
