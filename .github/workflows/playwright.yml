@@ -18,7 +18,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.23.4  # Update to match your Go version
+        go-version: 1.23.4  # Update to match our Go version
 
     - name: Install dependencies
       run: npm ci
@@ -29,17 +29,11 @@ jobs:
     - name: Create .env file
       run: echo "${{ secrets.ENV_FILE_FOR_PLAYWRIGHT_TESTS }}" > .env
 
-    - name: Verify .env file (for debugging)
-      run: cat .env  # REMOVE THIS AFTER VERIFYING
-
     - name: Start Go server
       run: |
         go run cmd/main.go > server.log 2>&1 &
+        echo $! > server.pid  # Save the PID of the server
         sleep 10  # Give the server time to start
-        echo "Checking if server is running..."
-        netstat -tulnp || true  # List active network connections
-        ps aux | grep main || true  # Check if Go server is running
-        curl --retry 5 --retry-delay 2 --retry-connrefused http://localhost:8080 || exit 1
 
     - name: Print server logs if failed
       if: failure()
@@ -47,6 +41,12 @@ jobs:
 
     - name: Run Playwright tests
       run: npx playwright test
+
+    - name: Stop Go server
+      if: always()  # Ensure this runs even if tests fail
+      run: |
+        kill $(cat server.pid) || true
+        rm server.pid
 
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
