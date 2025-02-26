@@ -23,13 +23,13 @@ func NewSubjectsHandler(service *services.Service[models.Subject]) *SubjectsHand
 	}
 }
 
-func (h *SubjectsHandler) GetSubjects(w http.ResponseWriter, r *http.Request) {
+func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, request *http.Request) {
 	subjects, err := h.service.GetList(getSubjectsEndPoint, subjectsKey, false, false)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Load subjects.html
-	local_repo.ExecuteTemplate(subjectsTemplate, w, subjects)
+	local_repo.ExecuteTemplate(subjectsTemplate, responseWriter, subjects)
 }

@@ -63,7 +63,12 @@
         function afterDropdownReq(dropdown, initialLoad, selectedValue) {
             // trigger event to reload chapters if needed [not needed when moving to edit chapter screen]
             if (initialLoad) {
-                htmx.trigger('#' + dropdown.id, 'onLoaded');
+                // execute code inside setTimeout(); otherwise playwright test related to onLoaded event trigger 
+                // fails on firefox & webkit sometimes, because 'onLoaded' gets triggered even before setting 
+                // listener for this event to verify
+                setTimeout(function () {
+                    htmx.trigger('#' + dropdown.id, 'onLoaded');
+                }, 0);
             }
 
             // update dropdown value to last selected value from session storage

@@ -7,6 +7,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/di"
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers"
+	"github.com/avantifellows/nex-gen-cms/internal/middleware"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 	}
 
 	setup(new(Config), mux, appComponentPtr)
-	http.ListenAndServe(":8080", mux)
+	http.ListenAndServe("0.0.0.0:8080", mux)
 }
 
 type ConfigLoader interface {
@@ -59,7 +60,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/api/grades", appComponentPtr.GradesHandler.GetGrades)
 	muxHandler.HandleFunc("/api/subjects", appComponentPtr.SubjectsHandler.GetSubjects)
 	muxHandler.HandleFunc("/api/chapters", chaptersHandler.GetChapters)
-	muxHandler.Handle("/edit-chapter", handlers.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter)))
+	muxHandler.Handle("/edit-chapter", middleware.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter)))
 	muxHandler.HandleFunc("/update-chapter", chaptersHandler.UpdateChapter)
 	muxHandler.HandleFunc("/create-chapter", chaptersHandler.AddChapter)
 	muxHandler.HandleFunc("/delete-chapter", chaptersHandler.DeleteChapter)
@@ -71,6 +72,6 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/add-topic", topicsHandler.OpenAddTopic)
 	muxHandler.HandleFunc("/create-topic", topicsHandler.AddTopic)
 	muxHandler.HandleFunc("/delete-topic", topicsHandler.DeleteTopic)
-	muxHandler.Handle("/edit-topic", handlers.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
+	muxHandler.Handle("/edit-topic", middleware.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
 	muxHandler.HandleFunc("/update-topic", topicsHandler.UpdateTopic)
 }

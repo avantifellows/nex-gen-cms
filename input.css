@@ -42,3 +42,6 @@
 .sub-tab.active {
     @apply text-white bg-red-500 rounded;
 }
+.action-button {
+    @apply text-blue-500 hover:text-red-500 hover:scale-110;
+}

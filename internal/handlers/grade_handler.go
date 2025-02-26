@@ -23,13 +23,13 @@ func NewGradesHandler(service *services.Service[models.Grade]) *GradesHandler {
 	}
 }
 
-func (h *GradesHandler) GetGrades(w http.ResponseWriter, r *http.Request) {
+func (h *GradesHandler) GetGrades(responseWriter http.ResponseWriter, request *http.Request) {
 	grades, err := h.service.GetList(getGradesEndPoint, gradesKey, false, false)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching grades: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error fetching grades: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Load grades.html
-	local_repo.ExecuteTemplate(gradesTemplate, w, grades)
+	local_repo.ExecuteTemplate(gradesTemplate, responseWriter, grades)
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
@@ -44,38 +45,23 @@ func NewChaptersHandler(chaptersService *services.Service[models.Chapter],
 	}
 }
 
-type HomeChapterData struct {
-	InitialLoad bool
-	ChapterPtr  *models.Chapter
-}
-
-type SortState struct {
-	Column string
-	Order  constants.SortOrder
-}
-
-var chapterSortState = SortState{
+var chapterSortState = dto.SortState{
 	Column: "0",
 	Order:  constants.SortOrderAsc,
 }
 
-type TopicsData struct {
-	ChapterId       string
-	TopicsSortState SortState
-}
-
-var topicSortState = SortState{
+var topicSortState = dto.SortState{
 	Column: "0",
 	Order:  constants.SortOrderAsc,
 }
 
-func (h *ChaptersHandler) LoadChapters(w http.ResponseWriter, r *http.Request) {
-	updateSortState(r, &chapterSortState)
-	local_repo.ExecuteTemplate(chaptersTemplate, w, chapterSortState)
+func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, request *http.Request) {
+	updateSortState(request, &chapterSortState)
+	local_repo.ExecuteTemplate(chaptersTemplate, responseWriter, chapterSortState)
 }
 
-func updateSortState(r *http.Request, sortState *SortState) {
-	urlVals := r.URL.Query()
+func updateSortState(request *http.Request, sortState *dto.SortState) {
+	urlVals := request.URL.Query()
 	const queryParam = "sortColumn"
 
 	// change sort state if it is called due to click on any column header
@@ -97,8 +83,8 @@ func updateSortState(r *http.Request, sortState *SortState) {
 	}
 }
 
-func (h *ChaptersHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(r.URL.Query())
+func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, request *http.Request) {
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
 	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
 		return
 	}
@@ -112,7 +98,7 @@ func (h *ChaptersHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching chapters: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error fetching chapters: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -122,16 +108,16 @@ func (h *ChaptersHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
 	})
 	typecastedChapters := filteredChapters.([]*models.Chapter)
 
-	h.getTopics(w, typecastedChapters)
+	h.getTopics(responseWriter, typecastedChapters)
 	sortChapters(typecastedChapters)
 
-	local_repo.ExecuteTemplate(chapterRowTemplate, w, typecastedChapters)
+	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, typecastedChapters)
 }
 
-func (h *ChaptersHandler) getTopics(w http.ResponseWriter, chapterPtrs []*models.Chapter) {
+func (h *ChaptersHandler) getTopics(responseWriter http.ResponseWriter, chapterPtrs []*models.Chapter) {
 	topics, err := h.topicsService.GetList(topicsEndPoint, topicsKey, false, false)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
 	} else {
 		associateTopicsWithChapters(chapterPtrs, *topics)
 	}
@@ -156,30 +142,30 @@ func associateTopicsWithChapters(chapterPtrs []*models.Chapter, topicPtrs []*mod
 	}
 }
 
-func (h *ChaptersHandler) EditChapter(w http.ResponseWriter, r *http.Request) {
-	selectedChapterPtr, code, err := h.getChapter(r)
+func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedChapterPtr, code, err := h.getChapter(request)
 	if err != nil {
-		http.Error(w, err.Error(), code)
+		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 
-	data := HomeChapterData{
-		false,
-		selectedChapterPtr,
+	data := dto.HomeChapterData{
+		InitialLoad: false,
+		ChapterPtr:  selectedChapterPtr,
 	}
-	local_repo.ExecuteTemplates(baseTemplate, editChapterTemplate, w, data)
+	local_repo.ExecuteTemplates(baseTemplate, editChapterTemplate, responseWriter, data)
 }
 
-func (h *ChaptersHandler) UpdateChapter(w http.ResponseWriter, r *http.Request) {
-	chapterIdStr := r.FormValue("id")
+func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterIdStr := request.FormValue("id")
 	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
 	if err != nil {
-		http.Error(w, "Invalid Chapter ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 		return
 	}
 
-	chapterName := r.FormValue("name")
-	chapterCode := r.FormValue("code")
+	chapterName := request.FormValue("name")
+	chapterCode := request.FormValue("code")
 
 	dummyChapterPtr := &models.Chapter{}
 	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName)
@@ -189,51 +175,51 @@ func (h *ChaptersHandler) UpdateChapter(w http.ResponseWriter, r *http.Request) 
 			return (*chapter).ID == chapterId
 		})
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error updating chapter: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error updating chapter: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	local_repo.ExecuteTemplate(updateSuccessTemplate, w, "Chapter")
+	local_repo.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Chapter")
 }
 
-func (h *ChaptersHandler) AddChapter(w http.ResponseWriter, r *http.Request) {
-	chapterCode := r.FormValue("code")
-	chapterName := r.FormValue("name")
-	curriculumIdStr := r.FormValue(CURRICULUM_DROPDOWN_NAME)
+func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterCode := request.FormValue("code")
+	chapterName := request.FormValue("name")
+	curriculumIdStr := request.FormValue(CURRICULUM_DROPDOWN_NAME)
 	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
 	if err != nil {
-		http.Error(w, "Invalid Curriculum ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
 		return
 	}
-	gradeIdStr := r.FormValue(GRADE_DROPDOWN_NAME)
+	gradeIdStr := request.FormValue(GRADE_DROPDOWN_NAME)
 	gradeId, err := utils.StringToIntType[int8](gradeIdStr)
 	if err != nil {
-		http.Error(w, "Invalid Grade ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
 		return
 	}
-	subjectIdStr := r.FormValue(SUBJECT_DROPDOWN_NAME)
+	subjectIdStr := request.FormValue(SUBJECT_DROPDOWN_NAME)
 	subjectId, err := utils.StringToIntType[int8](subjectIdStr)
 	if err != nil {
-		http.Error(w, "Invalid Subject ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Subject ID", http.StatusBadRequest)
 		return
 	}
 	newChapterPtr := models.NewChapter(chapterCode, chapterName, curriculumId, gradeId, subjectId)
 
 	newChapterPtr, err = h.chaptersService.AddObject(newChapterPtr, chaptersKey, chaptersEndPoint)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error adding chapter: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error adding chapter: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	chapterPtrs := []*models.Chapter{newChapterPtr}
-	local_repo.ExecuteTemplate(chapterRowTemplate, w, chapterPtrs)
+	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, chapterPtrs)
 }
 
-func (h *ChaptersHandler) DeleteChapter(w http.ResponseWriter, r *http.Request) {
-	chapterIdStr := r.URL.Query().Get("id")
+func (h *ChaptersHandler) DeleteChapter(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterIdStr := request.URL.Query().Get("id")
 	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
 	if err != nil {
-		http.Error(w, "Invalid Chapter ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 		return
 	}
 	err = h.chaptersService.DeleteObject(chapterIdStr, func(c *models.Chapter) bool {
@@ -242,7 +228,7 @@ func (h *ChaptersHandler) DeleteChapter(w http.ResponseWriter, r *http.Request) 
 
 	// If http error is thrown from here then target row won't be removed by htmx code
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -292,8 +278,8 @@ func sortChapters(chapterPtrs []*models.Chapter) {
 	})
 }
 
-func (h *ChaptersHandler) getChapter(r *http.Request) (*models.Chapter, int, error) {
-	chapterIdStr := r.URL.Query().Get("id")
+func (h *ChaptersHandler) getChapter(request *http.Request) (*models.Chapter, int, error) {
+	chapterIdStr := request.URL.Query().Get("id")
 	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid Chapter ID: %w", err)
@@ -310,40 +296,40 @@ func (h *ChaptersHandler) getChapter(r *http.Request) (*models.Chapter, int, err
 	return selectedChapterPtr, http.StatusOK, nil
 }
 
-func (h *ChaptersHandler) GetChapter(w http.ResponseWriter, r *http.Request) {
-	selectedChapterPtr, code, err := h.getChapter(r)
+func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedChapterPtr, code, err := h.getChapter(request)
 	if err != nil {
-		http.Error(w, err.Error(), code)
+		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 
-	data := HomeChapterData{
-		false,
-		selectedChapterPtr,
+	data := dto.HomeChapterData{
+		InitialLoad: false,
+		ChapterPtr:  selectedChapterPtr,
 	}
-	local_repo.ExecuteTemplates(baseTemplate, chapterTemplate, w, data)
+	local_repo.ExecuteTemplates(baseTemplate, chapterTemplate, responseWriter, data)
 }
 
-func (h *ChaptersHandler) LoadTopics(w http.ResponseWriter, r *http.Request) {
-	chapterIdStr := r.URL.Query().Get("id")
-	updateSortState(r, &topicSortState)
+func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterIdStr := request.URL.Query().Get("id")
+	updateSortState(request, &topicSortState)
 
-	data := TopicsData{
+	data := dto.TopicsData{
 		ChapterId:       chapterIdStr,
 		TopicsSortState: topicSortState,
 	}
-	local_repo.ExecuteTemplate(topicsTemplate, w, data)
+	local_repo.ExecuteTemplate(topicsTemplate, responseWriter, data)
 }
 
-func (h *ChaptersHandler) GetTopics(w http.ResponseWriter, r *http.Request) {
-	selectedChapterPtr, code, err := h.getChapter(r)
+func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedChapterPtr, code, err := h.getChapter(request)
 	if err != nil {
-		http.Error(w, err.Error(), code)
+		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 	if len(selectedChapterPtr.Topics) == 0 {
-		h.getTopics(w, []*models.Chapter{selectedChapterPtr})
+		h.getTopics(responseWriter, []*models.Chapter{selectedChapterPtr})
 	}
 	sortTopics(selectedChapterPtr.Topics)
-	local_repo.ExecuteTemplate(topicRowTemplate, w, selectedChapterPtr.Topics)
+	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, selectedChapterPtr.Topics)
 }
