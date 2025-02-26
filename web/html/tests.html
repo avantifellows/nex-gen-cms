@@ -1,0 +1,19 @@
+<div>
+    <select hx-get="/update" hx-target="#subcontent" hx-trigger="change"
+        class="mb-4 border border-gray-400 p-2 rounded">
+        <option value="">-- Select --</option>
+        <option value="chapter_test">Chapter Test</option>
+        <option value="part_test">Part Test</option>
+        <option value="major_test">Major Test</option>
+        <option value="full_syllabus_test">Full Syllabus Test</option>
+        <option value="evaluation_test">Evaluation Test</option>
+        <option value="mock_test">Mock Test</option>
+        <option value="nta_test">NTA Test</option>
+        <option value="homework_assignment">Homework Assignment</option>
+    </select>
+
+    <!-- Content Area -->
+    <div id="subcontent">
+        <p>Select a test type to load content.</p>
+    </div>
+</div>

@@ -24,7 +24,7 @@ func NewCurriculumsHandler(service *services.Service[models.Curriculum]) *Curric
 }
 
 func (h *CurriculumsHandler) GetCurriculums(w http.ResponseWriter, r *http.Request) {
-	curriculums, err := h.service.GetList(getCurriculumsEndPoint, curriculumsKey, false)
+	curriculums, err := h.service.GetList(getCurriculumsEndPoint, curriculumsKey, false, false)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching curriculums: %v", err), http.StatusInternalServerError)
 		return

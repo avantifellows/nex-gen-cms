@@ -50,7 +50,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/", handlers.GenericHandler)
 	muxHandler.HandleFunc("/modules", handlers.GenericHandler)
 	muxHandler.HandleFunc("/books", handlers.GenericHandler)
-	muxHandler.HandleFunc("/major-tests", handlers.GenericHandler)
+	muxHandler.HandleFunc("/tests", handlers.GenericHandler)
 	muxHandler.HandleFunc("/add-chapter", handlers.GenericHandler)
 
 	chaptersHandler := appComponentPtr.ChaptersHandler

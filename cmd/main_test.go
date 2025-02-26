@@ -67,7 +67,7 @@ func TestSetup(t *testing.T) {
 		{"/", http.HandlerFunc(handlers.GenericHandler)},
 		{"/modules", http.HandlerFunc(handlers.GenericHandler)},
 		{"/books", http.HandlerFunc(handlers.GenericHandler)},
-		{"/major-tests", http.HandlerFunc(handlers.GenericHandler)},
+		{"/tests", http.HandlerFunc(handlers.GenericHandler)},
 		{"/add-chapter", http.HandlerFunc(handlers.GenericHandler)},
 		{"/chapters", http.HandlerFunc(chaptersHandler.LoadChapters)},
 		{"/api/curriculums", http.HandlerFunc(appComponentPtr.CurriculumsHandler.GetCurriculums)},

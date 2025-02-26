@@ -19,7 +19,7 @@ test.describe('Homepage Load', () => {
         await expect(chaptersTab).toBeVisible();
         await expect(page.locator('#modules-tab')).toBeVisible();
         await expect(page.locator('#books-tab')).toBeVisible();
-        await expect(page.locator('#major-tests-tab')).toBeVisible();
+        await expect(page.locator('#tests-tab')).toBeVisible();
 
         // Check that the first tab is selected by default
         await expect(chaptersTab).toHaveClass(/active/);
@@ -136,7 +136,7 @@ test.describe('Tabs', () => {
         { name: 'chapters', urlPattern: /\/chapters/, content: 'Chapters content loaded' },
         { name: 'books', urlPattern: /\/books/, content: 'Books content loaded' },
         { name: 'modules', urlPattern: /\/modules/, content: 'Modules content loaded' },
-        { name: 'major-tests', urlPattern: /\/major-tests/, content: 'Major tests content loaded' }
+        { name: 'tests', urlPattern: /\/tests/, content: 'Tests content loaded' }
     ];
 
     tabs.forEach(function ({ name, urlPattern, content }) {

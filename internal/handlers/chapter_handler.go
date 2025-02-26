@@ -103,7 +103,14 @@ func (h *ChaptersHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chapters, err := h.chaptersService.GetList(chaptersEndPoint, chaptersKey, false)
+	queryParams := fmt.Sprintf("?curriculum_id=%d&grade_id=%d&subject_id=%d", curriculumId, gradeId, subjectId)
+	chapters, err := h.chaptersService.GetList(chaptersEndPoint+queryParams, chaptersKey, false, true)
+
+	// set curriculum id on each chapter
+	for _, ch := range *chapters {
+		ch.CurriculumID = curriculumId
+	}
+
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching chapters: %v", err), http.StatusInternalServerError)
 		return
@@ -122,7 +129,7 @@ func (h *ChaptersHandler) GetChapters(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ChaptersHandler) getTopics(w http.ResponseWriter, chapterPtrs []*models.Chapter) {
-	topics, err := h.topicsService.GetList(topicsEndPoint, topicsKey, false)
+	topics, err := h.topicsService.GetList(topicsEndPoint, topicsKey, false, false)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
 	} else {

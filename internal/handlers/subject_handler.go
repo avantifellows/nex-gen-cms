@@ -24,7 +24,7 @@ func NewSubjectsHandler(service *services.Service[models.Subject]) *SubjectsHand
 }
 
 func (h *SubjectsHandler) GetSubjects(w http.ResponseWriter, r *http.Request) {
-	subjects, err := h.service.GetList(getSubjectsEndPoint, subjectsKey, false)
+	subjects, err := h.service.GetList(getSubjectsEndPoint, subjectsKey, false, false)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
 		return

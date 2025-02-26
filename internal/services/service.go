@@ -24,15 +24,17 @@ func NewService[T any](cacheRepo *local_repo.CacheRepository, apiRepo *remote_re
 }
 
 // GetList returns data from cache or API
-func (s *Service[T]) GetList(urlEndPoint string, cacheKey string, onlyCache bool) (*[]*T, error) {
+func (s *Service[T]) GetList(urlEndPoint string, cacheKey string, onlyCache bool, onlyRemote bool) (*[]*T, error) {
 
-	// Check if data is in cache
-	if list, found := s.cacheRepository.Get(cacheKey); found {
-		return list.(*[]*T), nil
-	}
+	if !onlyRemote {
+		// Check if data is in cache
+		if list, found := s.cacheRepository.Get(cacheKey); found {
+			return list.(*[]*T), nil
+		}
 
-	if onlyCache {
-		return nil, nil
+		if onlyCache {
+			return nil, nil
+		}
 	}
 
 	// Otherwise, fetch from API
@@ -57,7 +59,7 @@ func (s *Service[T]) GetObject(objIdStr string, objFindingPredicate func(*T) boo
 	urlEndPoint string) (*T, error) {
 
 	// check in the cache for list
-	list, _ := s.GetList(urlEndPoint, cacheKey, true)
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	objPtr := new(T)
 	if list != nil {
 		objPtr = funk.Find(*list, objFindingPredicate).(*T)
@@ -92,7 +94,7 @@ func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any,
 	}
 
 	// Update in cache
-	list, _ := s.GetList(urlEndPoint, cacheKey, true)
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	if list != nil {
 		selectedObjPtr := funk.Find(*list, objFindingPredicate).(*T)
 		*selectedObjPtr = *objPtr
@@ -115,7 +117,7 @@ func (s *Service[T]) AddObject(body any, cacheKey string, urlEndPoint string) (*
 	}
 
 	// Add in cache
-	list, _ := s.GetList(urlEndPoint, cacheKey, true)
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	if list != nil {
 		*list = append(*list, objPtr)
 	}
@@ -130,7 +132,7 @@ func (s *Service[T]) DeleteObject(objIdStr string, objKeepingPredicate func(*T) 
 	}
 
 	// as deleted from api without any error, now delete from cache also
-	list, _ := s.GetList(urlEndPoint, cacheKey, true)
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	if list != nil {
 		*list = funk.Filter(*list, objKeepingPredicate).([]*T)
 	}
