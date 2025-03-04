@@ -51,7 +51,6 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/", handlers.GenericHandler)
 	muxHandler.HandleFunc("/modules", handlers.GenericHandler)
 	muxHandler.HandleFunc("/books", handlers.GenericHandler)
-	muxHandler.HandleFunc("/tests", handlers.GenericHandler)
 	muxHandler.HandleFunc("/add-chapter", handlers.GenericHandler)
 
 	chaptersHandler := appComponentPtr.ChaptersHandler
@@ -74,4 +73,8 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/delete-topic", topicsHandler.DeleteTopic)
 	muxHandler.Handle("/edit-topic", middleware.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
 	muxHandler.HandleFunc("/update-topic", topicsHandler.UpdateTopic)
+
+	testsHandler := appComponentPtr.TestsHandler
+	muxHandler.HandleFunc("/tests", testsHandler.LoadTests)
+	muxHandler.HandleFunc("/api/tests", testsHandler.GetTests)
 }

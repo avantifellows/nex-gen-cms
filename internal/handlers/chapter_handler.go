@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 
@@ -15,10 +14,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 	"github.com/thoas/go-funk"
 )
-
-const CURRICULUM_DROPDOWN_NAME = "curriculum-dropdown"
-const GRADE_DROPDOWN_NAME = "grade-dropdown"
-const SUBJECT_DROPDOWN_NAME = "subject-dropdown"
 
 const chaptersEndPoint = "/chapter"
 
@@ -58,29 +53,6 @@ var topicSortState = dto.SortState{
 func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, request *http.Request) {
 	updateSortState(request, &chapterSortState)
 	local_repo.ExecuteTemplate(chaptersTemplate, responseWriter, chapterSortState)
-}
-
-func updateSortState(request *http.Request, sortState *dto.SortState) {
-	urlVals := request.URL.Query()
-	const queryParam = "sortColumn"
-
-	// change sort state if it is called due to click on any column header
-	if urlVals.Has(queryParam) {
-		sortColumn := urlVals.Get(queryParam)
-
-		// if same column is clicked, toggle the order
-		if sortColumn == sortState.Column {
-			if sortState.Order == constants.SortOrderAsc {
-				sortState.Order = constants.SortOrderDesc
-			} else {
-				sortState.Order = constants.SortOrderAsc
-			}
-		} else {
-			// If a new column is clicked, default to ascending order
-			sortState.Column = sortColumn
-			sortState.Order = constants.SortOrderAsc
-		}
-	}
 }
 
 func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, request *http.Request) {
@@ -230,23 +202,6 @@ func (h *ChaptersHandler) DeleteChapter(responseWriter http.ResponseWriter, requ
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
-}
-
-func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
-	// these query parameters can be queried by element names only, not ids
-	curriculumId, err := utils.StringToIntType[int16](urlValues.Get(CURRICULUM_DROPDOWN_NAME))
-	if err != nil {
-		fmt.Println("Selected Curriculum is invalid")
-	}
-	gradeId, err := utils.StringToIntType[int8](urlValues.Get(GRADE_DROPDOWN_NAME))
-	if err != nil {
-		fmt.Println("Selected Grade is invalid")
-	}
-	subjectId, err := utils.StringToIntType[int8](urlValues.Get(SUBJECT_DROPDOWN_NAME))
-	if err != nil {
-		fmt.Println("Selected Subject is invalid")
-	}
-	return curriculumId, gradeId, subjectId
 }
 
 func sortChapters(chapterPtrs []*models.Chapter) {

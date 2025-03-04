@@ -1,6 +1,7 @@
 <div>
-    <select hx-get="/update" hx-target="#subcontent" hx-trigger="change"
-        class="mb-4 border border-gray-400 p-2 rounded">
+    <select id="testtype-dropdown" name="testtype-dropdown" class="border border-gray-400 p-2 rounded"
+        hx-get="/api/tests" hx-trigger="change" hx-target="#testTableBody"
+        hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown, #testtype-dropdown">
         <option value="">-- Select --</option>
         <option value="chapter_test">Chapter Test</option>
         <option value="part_test">Part Test</option>
@@ -14,6 +15,65 @@
 
     <!-- Content Area -->
     <div id="subcontent">
-        <p>Select a test type to load content.</p>
+        <div class="shadow-md my-6 overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead>
+                    <tr class="bg-gray-200 text-gray-600 text-sm">
+                        <th class="py-4 px-6 text-left">
+                            <a href="#" hx-get="/tests?sortColumn=1" hx-target="#content">
+                                Code <i class="fas 
+                                {{ if eq .Column " 1" }} {{ if eq .Order "asc" }} fa-sort-up {{ else if eq
+                                    .Order "desc" }} fa-sort-down {{ else }} fa-sort {{ end }} {{ else }} fa-sort {{ end
+                                    }}"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-left">
+                            <a href="#" hx-get="/tests?sortColumn=2" hx-target="#content">
+                                Name <i class="fas 
+                                {{ if eq .Column " 2" }} {{ if eq .Order "asc" }} fa-sort-up {{ else if eq
+                                    .Order "desc" }} fa-sort-down {{ else }} fa-sort {{ end }} {{ else }} fa-sort {{ end
+                                    }}"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">
+                            <a href="#" hx-get="/tests?sortColumn=3" hx-target="#content">
+                                # of questions <i class="fas
+                                {{ if eq .Column " 3" }} {{ if eq .Order "asc" }} fa-sort-up {{ else if eq
+                                    .Order "desc" }} fa-sort-down {{ else }} fa-sort {{ end }} {{ else }} fa-sort {{ end
+                                    }}"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">
+                            <a href="#" hx-get="/tests?sortColumn=4" hx-target="#content">
+                                Marks <i class="fas
+                                {{ if eq .Column " 4" }} {{ if eq .Order "asc" }} fa-sort-up {{ else if eq
+                                    .Order "desc" }} fa-sort-down {{ else }} fa-sort {{ end }} {{ else }} fa-sort {{ end
+                                    }}"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">
+                            <a href="#" hx-get="/tests?sortColumn=5" hx-target="#content">
+                                Duration <i class="fas
+                                {{ if eq .Column " 5" }} {{ if eq .Order "asc" }} fa-sort-up {{ else if eq
+                                    .Order "desc" }} fa-sort-down {{ else }} fa-sort {{ end }} {{ else }} fa-sort {{ end
+                                    }}"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">
+                            <a href="#" hx-get="/tests?sortColumn=6" hx-target="#content">
+                                Set <i class="fas
+                                {{ if eq .Column " 6" }} {{ if eq .Order "asc" }} fa-sort-up {{ else if eq
+                                    .Order "desc" }} fa-sort-down {{ else }} fa-sort {{ end }} {{ else }} fa-sort {{ end
+                                    }}"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="testTableBody" class="text-gray-600 text-sm">
+                    <!-- Rows will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
