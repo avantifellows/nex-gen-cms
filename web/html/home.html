@@ -102,6 +102,14 @@
             const tabBtns = document.querySelectorAll('[data-toggle="tab"]');
             tabBtns.forEach(tabBtn => tabBtn.classList.remove("active"));
             tabBtn.classList.add("active");
+
+            // Hide subject dropdown when "Tests" tab is clicked
+            const subjectDropdown = document.getElementById("subject-dropdown");
+            if (tabBtn.id === "tests-tab") {
+                subjectDropdown.style.display = "none";
+            } else {
+                subjectDropdown.style.display = "inline-block"; // Show for other tabs
+            }
         }
 
         // Function to go back after delay

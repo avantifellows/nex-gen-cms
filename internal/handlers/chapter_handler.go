@@ -55,6 +55,29 @@ func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, reque
 	local_repo.ExecuteTemplate(chaptersTemplate, responseWriter, chapterSortState)
 }
 
+func updateSortState(request *http.Request, sortState *dto.SortState) {
+	urlVals := request.URL.Query()
+	const queryParam = "sortColumn"
+
+	// change sort state if it is called due to click on any column header
+	if urlVals.Has(queryParam) {
+		sortColumn := urlVals.Get(queryParam)
+
+		// if same column is clicked, toggle the order
+		if sortColumn == sortState.Column {
+			if sortState.Order == constants.SortOrderAsc {
+				sortState.Order = constants.SortOrderDesc
+			} else {
+				sortState.Order = constants.SortOrderAsc
+			}
+		} else {
+			// If a new column is clicked, default to ascending order
+			sortState.Column = sortColumn
+			sortState.Order = constants.SortOrderAsc
+		}
+	}
+}
+
 func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, request *http.Request) {
 	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
 	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {

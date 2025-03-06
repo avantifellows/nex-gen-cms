@@ -74,26 +74,3 @@ func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
 	}
 	return curriculumId, gradeId, subjectId
 }
-
-func updateSortState(request *http.Request, sortState *dto.SortState) {
-	urlVals := request.URL.Query()
-	const queryParam = "sortColumn"
-
-	// change sort state if it is called due to click on any column header
-	if urlVals.Has(queryParam) {
-		sortColumn := urlVals.Get(queryParam)
-
-		// if same column is clicked, toggle the order
-		if sortColumn == sortState.Column {
-			if sortState.Order == constants.SortOrderAsc {
-				sortState.Order = constants.SortOrderDesc
-			} else {
-				sortState.Order = constants.SortOrderAsc
-			}
-		} else {
-			// If a new column is clicked, default to ascending order
-			sortState.Column = sortColumn
-			sortState.Order = constants.SortOrderAsc
-		}
-	}
-}
