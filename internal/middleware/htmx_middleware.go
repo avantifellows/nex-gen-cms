@@ -19,7 +19,7 @@ func (middleware *HTMXMiddleware) ServeHTTP(responseWriter http.ResponseWriter, 
 	// Check if the request is from HTMX
 	if request.Header.Get("HX-Request") == "" {
 		// If the request is NOT from HTMX, redirect to the home page
-		http.Redirect(responseWriter, request, "/", http.StatusSeeOther)
+		http.Redirect(responseWriter, request, "/chapters", http.StatusSeeOther)
 		return
 	}
 

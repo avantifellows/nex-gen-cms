@@ -1,36 +1,31 @@
+{{ define "content" }}
 <div>
     <div class="shadow-md my-6 overflow-x-auto">
         <table class="min-w-full bg-white">
             <thead>
                 <tr class="bg-gray-200 text-gray-600 text-sm">
                     <th class="py-4 px-6 text-left">
-                        <a href="#" hx-get="/chapters?sortColumn=1" hx-target="#content">
+                        <a href="#" hx-get="/chapters?sortColumn=1" hx-target="body">
                             Code <i class="fas 
-                            {{ if eq .Column "1" }}
-                                {{ if eq .Order "asc" }} fa-sort-up
-                                {{ else if eq .Order "desc" }} fa-sort-down
-                                {{ else }} fa-sort {{ end }}
-                            {{ else }} fa-sort {{ end }}"></i>
+                            {{ if eq .ChapterSortState.Column " 1" }} {{ if eq .ChapterSortState.Order "asc" }}
+                                fa-sort-up {{ else if eq .ChapterSortState.Order "desc" }} fa-sort-down {{ else }}
+                                fa-sort {{ end }} {{ else }} fa-sort {{ end }}"></i>
                         </a>
                     </th>
                     <th class="px-6 text-left">
-                        <a href="#" hx-get="/chapters?sortColumn=2" hx-target="#content">
+                        <a href="#" hx-get="/chapters?sortColumn=2" hx-target="body">
                             Name <i class="fas 
-                            {{ if eq .Column "2" }}
-                                {{ if eq .Order "asc" }} fa-sort-up
-                                {{ else if eq .Order "desc" }} fa-sort-down
-                                {{ else }} fa-sort {{ end }}
-                            {{ else }} fa-sort {{ end }}"></i>
+                            {{ if eq .ChapterSortState.Column " 2" }} {{ if eq .ChapterSortState.Order "asc" }}
+                                fa-sort-up {{ else if eq .ChapterSortState.Order "desc" }} fa-sort-down {{ else }}
+                                fa-sort {{ end }} {{ else }} fa-sort {{ end }}"></i>
                         </a>
                     </th>
                     <th class="px-6 text-center">
-                        <a href="#" hx-get="/chapters?sortColumn=3" hx-target="#content">
+                        <a href="#" hx-get="/chapters?sortColumn=3" hx-target="body">
                             Topics <i class="fas
-                            {{ if eq .Column "3" }}
-                                {{ if eq .Order "asc" }} fa-sort-up
-                                {{ else if eq .Order "desc" }} fa-sort-down
-                                {{ else }} fa-sort {{ end }}
-                            {{ else }} fa-sort {{ end }}"></i>
+                            {{ if eq .ChapterSortState.Column " 3" }} {{ if eq .ChapterSortState.Order "asc" }}
+                                fa-sort-up {{ else if eq .ChapterSortState.Order "desc" }} fa-sort-down {{ else }}
+                                fa-sort {{ end }} {{ else }} fa-sort {{ end }}"></i>
                         </a>
                     </th>
                     <th class="px-6 text-center">Chapter Tests</th>
@@ -42,11 +37,12 @@
                     <th class="px-6 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody id="chapterTableBody" class="text-gray-600 text-sm" hx-get="/api/chapters" hx-trigger="
-                load[!document.getElementById('curriculum-dropdown').options[0].disabled], 
+            <tbody id="chapterTableBody" hx-ext="chaptersLoader" class="text-gray-600 text-sm" hx-get="/api/chapters"
+                hx-trigger="load[!document.getElementById('curriculum-dropdown').options[0].disabled], 
                 onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), 
                 change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
-                hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown">
+                hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown"
+                hx-on::after-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'true')">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
@@ -59,7 +55,63 @@
         </h4>
     </div>
 
-    <script>
+    <script type="module">
+
+        import { isInt } from './web/static/js/utils.js';
+
+        // reset flag to reload chapters on page refresh or direct url entry
+        window.addEventListener("pageshow", function (event) {
+            // when moving forward in history, it generates pageshow event with persisted=true. Don't reset flag in that case
+            if (!event.persisted) {
+                console.log("Fresh page load detected, resetting chaptersLoaded.");
+                sessionStorage.setItem("chaptersLoaded", "false");
+            }
+        });
+
+        /**
+         * Directly added htmx:beforeRequest event listener on chapterTableBody is not called back in some cases like
+         * 1. Chapters tab -> Edit chapter -> back
+         * 2. Chapters tab -> Tests tab -> Change curriculum -> back
+         * It calls /api/chapters with wrong value 1 for all 3 dropdowns curriculum, grade and subject; 
+         * and this event doesn't come inside listener, because it is being generated from old chapters tab screen
+         * which is displayed from cache and on the verge of finishing and getting replaced by new chapters tab screen.
+         * Hence listener from old chapters screen is removed and new chapters tab listener is not yet registered.
+         * 
+         * Whereas using this extension allows to listen all above events also
+         */
+        htmx.defineExtension('chaptersLoader', {
+            onEvent: function (name, event) {
+                if (name === "htmx:beforeRequest") {
+                    const requestPath = event.detail.elt.getAttribute("hx-get");
+
+                    if (requestPath === "/api/chapters") {
+                        if (sessionStorage.getItem(window.CHAPTERS_LOADED_KEY) === "true") {
+                            console.log("Skipping /api/chapters request because chapters are already loaded.");
+                            event.preventDefault();
+
+                        } else {
+                            const params = event.detail.requestConfig.parameters;
+                            const curriculum = params["curriculum-dropdown"];
+                            const grade = params["grade-dropdown"];
+                            const subject = params["subject-dropdown"];
+
+                            // if dropdown values are showing default value like "Loading...", then don't execute request
+                            if (!isInt(curriculum) || !isInt(grade) || !isInt(subject)) {
+                                console.log("Skipping /api/chapters request because dropdowns are not loaded yet.");
+                                event.preventDefault();
+
+                            } else if (sessionStorage.getItem("selectedCurriculum") !== curriculum || sessionStorage.getItem("selectedGrade") !== grade
+                                || sessionStorage.getItem("selectedSubject") !== subject) {
+                                // at least 1 dropdown value is 1 (1st item value) and its correct value is yet to be retained from sessionStorage
+                                console.log("Skipping /api/chapters request because dropdowns values are not yet retained.");
+                                event.preventDefault();
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         // This script will handle toggling of the form visibility
         function toggleForm(event) {
             // Prevent the default anchor click behavior, which otherwise scrolls to top
@@ -81,3 +133,4 @@
         }
     </script>
 </div>
+{{ end }}

@@ -10,13 +10,14 @@ import (
 	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
-	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
 const CURRICULUM_DROPDOWN_NAME = "curriculum-dropdown"
 const GRADE_DROPDOWN_NAME = "grade-dropdown"
 const SUBJECT_DROPDOWN_NAME = "subject-dropdown"
+
+const baseTemplate = "home.html"
 
 /*
 Handles loading html template files having same name as that of path passed
@@ -27,13 +28,6 @@ func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
 
 	// Extract the requested path
 	path := request.URL.Path
-	var data dto.HomeChapterData
-	if initialLoad := path == "/"; initialLoad {
-		data = dto.HomeChapterData{
-			InitialLoad: true,
-			ChapterPtr:  nil,
-		}
-	}
 
 	if path == "/" {
 		path = "/home"
@@ -52,7 +46,7 @@ func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	}
 
 	// Render the template
-	if err := tmpl.Execute(responseWriter, data); err != nil {
+	if err := tmpl.Execute(responseWriter, nil); err != nil {
 		http.Error(responseWriter, "Error rendering template", http.StatusInternalServerError)
 		log.Printf("Error executing template: %s", err)
 	}

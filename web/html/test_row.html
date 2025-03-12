@@ -3,7 +3,7 @@
     <td class="py-4 px-6">{{.Code}}</td>
     <td class="px-6 text-blue-500 hover:underline"><a href="#" hx-get="/test?id={{.ID}}" hx-target="body"
         hx-push-url="/test?id={{.ID}}">{{ (index .Name 0).Resource }}</a></td>
-    <td class="px-6 text-center text-blue-500 hover:underline">{{.ProblemCount}}<a href="#"></a></td>
+    <td class="px-6 text-center text-blue-500 hover:underline">{{.ProblemCount}}</td>
     <td class="text-center">{{.TypeParams.Marks}}</td>
     <td class="text-center">{{.TypeParams.Duration}}</td>
     <td></td>

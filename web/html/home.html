@@ -10,66 +10,17 @@
     <link href="/web/static/css/output.css" rel="stylesheet">
     <!-- For Font Awesome library -->
     <script src="https://kit.fontawesome.com/76cfc651ea.js" crossorigin="anonymous"></script>
-</head>
-
-<body>
-    <div>
-        <nav>
-            <div class="nav nav-tabs" id="nav-tab">
-                <button class="nav-link active" id="chapters-tab" hx-get="/chapters" hx-target="#content"
-                    data-toggle="tab" onclick="updateTabState(this)">Chapters</button>
-                <div {{ if .InitialLoad }} hx-trigger="load" hx-get="/chapters" {{ end }} hx-target="#content"></div>
-                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-target="#content" data-toggle="tab"
-                    onclick="updateTabState(this)">Modules</button>
-                <button class="nav-link" id="books-tab" hx-get="/books" hx-target="#content" data-toggle="tab"
-                    onclick="updateTabState(this)">Books</button>
-                <button class="nav-link" id="tests-tab" hx-get="/tests" hx-target="#content" data-toggle="tab"
-                    onclick="updateTabState(this)">Tests</button>
-
-                <!-- name attribute is used, because query parameters passed via http request can be 
-                 identified by element names only. It is used in chapter_handler.go -->
-                <select class="ms-8" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
-                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }}, 
-                    {{ if .ChapterPtr }}{{ .ChapterPtr.CurriculumID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedCurriculum', this.value)">
-                    <!-- HTMX will replace this with the new options -->
-                    <option disabled selected>Loading curriculums...</option>
-                </select>
-                <select class="ms-4" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
-                    hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }}, 
-                    {{ if .ChapterPtr }}{{ .ChapterPtr.GradeID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedGrade', this.value)">
-                    <!-- HTMX will replace this with the new options -->
-                    <option disabled selected>Loading grades...</option>
-                </select>
-                <select class="ms-4" id="subject-dropdown" name="subject-dropdown" hx-get="/api/subjects"
-                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }}, 
-                    {{ if .ChapterPtr }}{{ .ChapterPtr.SubjectID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedSubject', this.value)">
-                    <!-- HTMX will replace this with the new options -->
-                    <option disabled selected>Loading subjects...</option>
-                </select>
-            </div>
-        </nav>
-
-        <div class="m-7" id="nav-tabContent">
-            <div id="content">
-                {{ block "content" . }}<p>Select a tab to load content.</p>{{ end }}
-            </div>
-        </div>
-    </div>
-
+    <script src="/web/static/js/constants.js"></script>
     <script>
-        function afterDropdownReq(dropdown, initialLoad, selectedValue) {
-            // trigger event to reload chapters if needed [not needed when moving to edit chapter screen]
-            if (initialLoad) {
-                // execute code inside setTimeout(); otherwise playwright test related to onLoaded event trigger 
-                // fails on firefox & webkit sometimes, because 'onLoaded' gets triggered even before setting 
-                // listener for this event to verify
-                setTimeout(function () {
-                    htmx.trigger('#' + dropdown.id, 'onLoaded');
-                }, 0);
-            }
+        function afterDropdownReq(dropdown, selectedValue) {
+            /* 
+             * execute code inside setTimeout(); otherwise playwright test related to onLoaded event trigger 
+             * fails on firefox & webkit sometimes, because 'onLoaded' gets triggered even before setting 
+             * listener for this event to verify
+             */
+            setTimeout(function () {
+                htmx.trigger('#' + dropdown.id, 'onLoaded');
+            }, 0);
 
             // update dropdown value to last selected value from session storage
             var sessionStorageKey;
@@ -97,20 +48,110 @@
                 dropdown.value = selectedValue;
             }
         }
+    </script>
+</head>
 
-        function updateTabState(tabBtn, event) {
-            const tabBtns = document.querySelectorAll('[data-toggle="tab"]');
-            tabBtns.forEach(tabBtn => tabBtn.classList.remove("active"));
-            tabBtn.classList.add("active");
+<body>
+    <div>
+        <nav>
+            <div class="nav nav-tabs" id="nav-tab">
+                <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="/chapters" hx-target="body"
+                    data-toggle="tab"
+                    hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
+                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-push-url="/modules" hx-target="body"
+                    data-toggle="tab">Modules</button>
+                <button class="nav-link" id="books-tab" hx-get="/books" hx-push-url="/books" hx-target="body"
+                    data-toggle="tab">Books</button>
+                <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="/tests" hx-target="body"
+                    data-toggle="tab">Tests</button>
 
-            // Hide subject dropdown when "Tests" tab is clicked
-            const subjectDropdown = document.getElementById("subject-dropdown");
-            if (tabBtn.id === "tests-tab") {
-                subjectDropdown.style.display = "none";
-            } else {
-                subjectDropdown.style.display = "inline-block"; // Show for other tabs
+                <!-- name attribute is used, because query parameters passed via http request can be 
+                 identified by element names only. It is used in chapter_handler.go -->
+                <select class="ms-8" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
+                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, 
+                    {{ if .CurriculumID }}{{ .CurriculumID }}{{ else }}null{{ end }})"
+                    onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false');">
+                    <!-- HTMX will replace this with the new options -->
+                    <option disabled selected>Loading curriculums...</option>
+                </select>
+                <select class="ms-4" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
+                    hx-on::after-request="afterDropdownReq(this, 
+                    {{ if .GradeID }}{{ .GradeID }}{{ else }}null{{ end }})"
+                    onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false');">
+                    <!-- HTMX will replace this with the new options -->
+                    <option disabled selected>Loading grades...</option>
+                </select>
+                <select class="ms-4" id="subject-dropdown" name="subject-dropdown" hx-get="/api/subjects"
+                    hx-trigger="load"
+                    hx-on::after-request="afterDropdownReq(this, {{ if .SubjectID }}{{ .SubjectID }}{{ else }}null{{ end }})"
+                    onchange="sessionStorage.setItem('selectedSubject', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false');">
+                    <!-- HTMX will replace this with the new options -->
+                    <option disabled selected>Loading subjects...</option>
+                </select>
+            </div>
+        </nav>
+
+        <div class="m-7" id="nav-tabContent">
+            <div id="content">
+                {{ block "content" . }}<p>Select a tab to load content.</p>{{ end }}
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
+            let lastPath = null;
+            let debounceTimeout;
+
+            function getTabURLFromPath(path) {
+                // Define URL-to-tab mapping based on expected paths
+                if (path === "/chapters") return "chapters-tab";
+                if (path === "/modules") return "modules-tab";
+                if (path === "/books") return "books-tab";
+                if (path === "/tests") return "tests-tab";
+                return null;
             }
-        }
+
+            function updateActiveTabFromURL() {
+                const currentPath = window.location.pathname;
+
+                // Avoid unnecessary updates
+                if (lastPath !== null && currentPath === lastPath) {
+                    return;
+                }
+                lastPath = currentPath;
+
+                const tabBtns = document.querySelectorAll('[data-toggle="tab"]');
+                tabBtns.forEach(tabBtn => tabBtn.classList.remove("active"));
+
+                // Determine which tab should be active
+                const activeTabID = getTabURLFromPath(currentPath);
+                if (activeTabID) {
+                    const activeTab = document.getElementById(activeTabID);
+                    if (activeTab) activeTab.classList.add("active");
+                }
+
+                // Hide subject dropdown when "Tests" tab is active
+                const subjectDropdown = document.getElementById("subject-dropdown");
+                if (activeTabID === "tests-tab") {
+                    subjectDropdown.style.display = "none";
+                } else {
+                    subjectDropdown.style.display = "inline-block";
+                }
+            }
+
+            /*
+             * function to minimize same multiple calls happening within 50ms 
+             * due to multiple quick afterSettle events received 
+             */
+            function debounceUpdate() {
+                clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(updateActiveTabFromURL, 100); // Delay execution slightly
+            }
+
+            document.body.addEventListener("htmx:afterSettle", debounceUpdate);
+        });
 
         // Function to go back after delay
         function goBackAfterDelay(milliseconds) {

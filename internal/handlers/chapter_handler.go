@@ -21,7 +21,6 @@ const chaptersKey = "chapters"
 
 const chaptersTemplate = "chapters.html"
 const chapterRowTemplate = "chapter_row.html"
-const baseTemplate = "home.html"
 const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
@@ -52,7 +51,10 @@ var topicSortState = dto.SortState{
 
 func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, request *http.Request) {
 	updateSortState(request, &chapterSortState)
-	local_repo.ExecuteTemplate(chaptersTemplate, responseWriter, chapterSortState)
+	data := dto.HomeData{
+		ChapterSortState: chapterSortState,
+	}
+	local_repo.ExecuteTemplates(baseTemplate, chaptersTemplate, responseWriter, data)
 }
 
 func updateSortState(request *http.Request, sortState *dto.SortState) {
@@ -87,14 +89,14 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 	queryParams := fmt.Sprintf("?curriculum_id=%d&grade_id=%d&subject_id=%d", curriculumId, gradeId, subjectId)
 	chapters, err := h.chaptersService.GetList(chaptersEndPoint+queryParams, chaptersKey, false, true)
 
-	// set curriculum id on each chapter
-	for _, ch := range *chapters {
-		ch.CurriculumID = curriculumId
-	}
-
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching chapters: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	// set curriculum id on each chapter
+	for _, ch := range *chapters {
+		ch.CurriculumID = curriculumId
 	}
 
 	filteredChapters := funk.Filter(*chapters, func(chapter *models.Chapter) bool {
@@ -144,9 +146,11 @@ func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	data := dto.HomeChapterData{
-		InitialLoad: false,
-		ChapterPtr:  selectedChapterPtr,
+	data := dto.HomeData{
+		CurriculumID: selectedChapterPtr.CurriculumID,
+		GradeID:      selectedChapterPtr.GradeID,
+		SubjectID:    selectedChapterPtr.SubjectID,
+		ChapterPtr:   selectedChapterPtr,
 	}
 	local_repo.ExecuteTemplates(baseTemplate, editChapterTemplate, responseWriter, data)
 }
@@ -281,9 +285,11 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	data := dto.HomeChapterData{
-		InitialLoad: false,
-		ChapterPtr:  selectedChapterPtr,
+	data := dto.HomeData{
+		CurriculumID: selectedChapterPtr.CurriculumID,
+		GradeID:      selectedChapterPtr.GradeID,
+		SubjectID:    selectedChapterPtr.SubjectID,
+		ChapterPtr:   selectedChapterPtr,
 	}
 	local_repo.ExecuteTemplates(baseTemplate, chapterTemplate, responseWriter, data)
 }

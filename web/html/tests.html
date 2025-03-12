@@ -1,6 +1,10 @@
+{{ define "content" }}
 <div>
+    <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on 
+     coming back from single test to tests list screen -->
     <select id="testtype-dropdown" name="testtype-dropdown" class="border border-gray-400 p-2 rounded"
-        hx-get="/api/tests" hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown)"
+        hx-get="/api/tests"
+        hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
         hx-target="#testTableBody" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
         onchange="sessionStorage.setItem('selectedTesttype', this.value)">
         <option value="">-- Select --</option>
@@ -140,3 +144,4 @@
         });
     }
 </script>
+{{ end }}

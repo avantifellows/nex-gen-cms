@@ -19,6 +19,8 @@ type AppComponent struct {
 	GradesHandler      *handlers.GradesHandler
 	SubjectsHandler    *handlers.SubjectsHandler
 	TestsHandler       *handlers.TestsHandler
+	ModulesHandler     *handlers.ModulesHandler
+	BooksHandler       *handlers.BooksHandler
 }
 
 func NewAppComponent() (*AppComponent, error) {
@@ -42,6 +44,8 @@ func NewAppComponent() (*AppComponent, error) {
 	gradesHandler := handlers.NewGradesHandler(gradesService)
 	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
 	testsHandler := handlers.NewTestsHandler(testsService)
+	modulesHandler := handlers.NewModulesHandler()
+	booksHandler := handlers.NewBooksHandler()
 
 	return &AppComponent{
 		CssPathHandler:     cssPathHandler,
@@ -51,5 +55,7 @@ func NewAppComponent() (*AppComponent, error) {
 		GradesHandler:      gradesHandler,
 		SubjectsHandler:    subjectsHandler,
 		TestsHandler:       testsHandler,
+		ModulesHandler:     modulesHandler,
+		BooksHandler:       booksHandler,
 	}, nil
 }

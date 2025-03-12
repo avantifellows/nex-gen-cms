@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
@@ -15,14 +16,21 @@ import (
 
 const TESTTYPE_DROPDOWN_NAME = "testtype-dropdown"
 
+const testsTemplate = "tests.html"
 const testRowTemplate = "test_row.html"
+const testTemplate = "test.html"
 
+const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
 
 const testsKey = "tests"
 
 type TestsHandler struct {
 	service *services.Service[models.Test]
+}
+
+func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
+	local_repo.ExecuteTemplates(baseTemplate, testsTemplate, responseWriter, nil)
 }
 
 func NewTestsHandler(service *services.Service[models.Test]) *TestsHandler {
@@ -47,6 +55,12 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	// set curriculum id on each chapter
+	for _, test := range *tests {
+		test.CurriculumID = curriculumId
+		test.GradeID = gradeId
 	}
 
 	sortTests(*tests, sortColumn, sortOrder)
@@ -84,4 +98,36 @@ func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string) {
 		}
 		return sortResult
 	})
+}
+
+func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedTestPtr, code, err := h.getTest(request)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	data := dto.HomeData{
+		CurriculumID: selectedTestPtr.CurriculumID,
+		GradeID:      selectedTestPtr.GradeID,
+	}
+	local_repo.ExecuteTemplates(baseTemplate, testTemplate, responseWriter, data)
+}
+
+func (h *TestsHandler) getTest(request *http.Request) (*models.Test, int, error) {
+	testIdStr := request.URL.Query().Get("id")
+	testId, err := utils.StringToIntType[int16](testIdStr)
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid Test ID: %w", err)
+	}
+
+	selectedTestPtr, err := h.service.GetObject(testIdStr,
+		func(test *models.Test) bool {
+			return (*test).ID == testId
+		}, testsKey, resourcesEndPoint)
+	if err != nil {
+		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching test: %v", err)
+	}
+
+	return selectedTestPtr, http.StatusOK, nil
 }
