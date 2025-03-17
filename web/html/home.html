@@ -63,21 +63,22 @@
                 <button class="nav-link" id="books-tab" hx-get="/books" hx-push-url="/books" hx-target="body"
                     data-toggle="tab">Books</button>
                 <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="/tests" hx-target="body"
-                    data-toggle="tab">Tests</button>
+                    data-toggle="tab"
+                    hx-on::before-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false')">Tests</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
                 <select class="ms-8" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
                     hx-trigger="load" hx-on::after-request="afterDropdownReq(this, 
                     {{ if .CurriculumID }}{{ .CurriculumID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false');">
+                    onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');">
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading curriculums...</option>
                 </select>
                 <select class="ms-4" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
                     hx-on::after-request="afterDropdownReq(this, 
                     {{ if .GradeID }}{{ .GradeID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false');">
+                    onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');">
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading grades...</option>
                 </select>
@@ -98,6 +99,17 @@
         </div>
     </div>
 
+    <!-- Modules (type="module") are scoped, meaning functions are not global by default.
+     Direct imports work only inside module scripts. Need to attach such functions to window if we need them 
+     in non-module scripts. Otherwise we need to convert all scripts to module type and import 
+     it wherever we want to use isInt() and then any function defined inside such module script cannot be 
+     accessed from same file's html code -->
+    <script type="module">
+        import { isInt } from './web/static/js/utils.js';
+
+        // Attach to window to make it globally accessible
+        window.isInt = isInt;
+    </script>
     <script>
 
         document.addEventListener("DOMContentLoaded", function () {
@@ -106,10 +118,10 @@
 
             function getTabURLFromPath(path) {
                 // Define URL-to-tab mapping based on expected paths
-                if (path === "/chapters") return "chapters-tab";
+                if (path.startsWith("/chapter")) return "chapters-tab";
                 if (path === "/modules") return "modules-tab";
                 if (path === "/books") return "books-tab";
-                if (path === "/tests") return "tests-tab";
+                if (path.startsWith("/test")) return "tests-tab";
                 return null;
             }
 

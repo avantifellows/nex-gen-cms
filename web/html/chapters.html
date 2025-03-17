@@ -5,25 +5,28 @@
             <thead>
                 <tr class="bg-gray-200 text-gray-600 text-sm">
                     <th class="py-4 px-6 text-left">
-                        <a href="#" hx-get="/chapters?sortColumn=1" hx-target="body">
+                        <a href="#" hx-get="/chapters?sortColumn=1" hx-target="body"
+                            hx-on::before-request="sessionStorage.removeItem(window.CHAPTERS_LOADED_KEY)">
                             Code <i class="fas 
-                            {{ if eq .ChapterSortState.Column " 1" }} {{ if eq .ChapterSortState.Order "asc" }}
+                            {{ if eq .ChapterSortState.Column "1" }} {{ if eq .ChapterSortState.Order "asc" }}
                                 fa-sort-up {{ else if eq .ChapterSortState.Order "desc" }} fa-sort-down {{ else }}
                                 fa-sort {{ end }} {{ else }} fa-sort {{ end }}"></i>
                         </a>
                     </th>
                     <th class="px-6 text-left">
-                        <a href="#" hx-get="/chapters?sortColumn=2" hx-target="body">
+                        <a href="#" hx-get="/chapters?sortColumn=2" hx-target="body"
+                            hx-on::before-request="sessionStorage.removeItem(window.CHAPTERS_LOADED_KEY)">
                             Name <i class="fas 
-                            {{ if eq .ChapterSortState.Column " 2" }} {{ if eq .ChapterSortState.Order "asc" }}
+                            {{ if eq .ChapterSortState.Column "2" }} {{ if eq .ChapterSortState.Order "asc" }}
                                 fa-sort-up {{ else if eq .ChapterSortState.Order "desc" }} fa-sort-down {{ else }}
                                 fa-sort {{ end }} {{ else }} fa-sort {{ end }}"></i>
                         </a>
                     </th>
                     <th class="px-6 text-center">
-                        <a href="#" hx-get="/chapters?sortColumn=3" hx-target="body">
+                        <a href="#" hx-get="/chapters?sortColumn=3" hx-target="body"
+                            hx-on::before-request="sessionStorage.removeItem(window.CHAPTERS_LOADED_KEY)">
                             Topics <i class="fas
-                            {{ if eq .ChapterSortState.Column " 3" }} {{ if eq .ChapterSortState.Order "asc" }}
+                            {{ if eq .ChapterSortState.Column "3" }} {{ if eq .ChapterSortState.Order "asc" }}
                                 fa-sort-up {{ else if eq .ChapterSortState.Order "desc" }} fa-sort-down {{ else }}
                                 fa-sort {{ end }} {{ else }} fa-sort {{ end }}"></i>
                         </a>
@@ -55,16 +58,14 @@
         </h4>
     </div>
 
-    <script type="module">
-
-        import { isInt } from './web/static/js/utils.js';
+    <script>
 
         // reset flag to reload chapters on page refresh or direct url entry
         window.addEventListener("pageshow", function (event) {
             // when moving forward in history, it generates pageshow event with persisted=true. Don't reset flag in that case
             if (!event.persisted) {
                 console.log("Fresh page load detected, resetting chaptersLoaded.");
-                sessionStorage.setItem("chaptersLoaded", "false");
+                sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, "false");
             }
         });
 
@@ -100,11 +101,18 @@
                                 console.log("Skipping /api/chapters request because dropdowns are not loaded yet.");
                                 event.preventDefault();
 
-                            } else if (sessionStorage.getItem("selectedCurriculum") !== curriculum || sessionStorage.getItem("selectedGrade") !== grade
-                                || sessionStorage.getItem("selectedSubject") !== subject) {
-                                // at least 1 dropdown value is 1 (1st item value) and its correct value is yet to be retained from sessionStorage
-                                console.log("Skipping /api/chapters request because dropdowns values are not yet retained.");
-                                event.preventDefault();
+                            } else {
+                                const storedCurriculum = sessionStorage.getItem("selectedCurriculum");
+                                const storedGrade = sessionStorage.getItem("selectedGrade");
+                                const storedSubject = sessionStorage.getItem("selectedSubject");
+
+                                if ((storedCurriculum && storedCurriculum !== curriculum) ||
+                                    (storedGrade && storedGrade !== grade) ||
+                                    (storedSubject && storedSubject !== subject)) {
+                                    // at least 1 dropdown value is 1 (1st item value) and its correct value is yet to be retained from sessionStorage
+                                    console.log("Skipping /api/chapters request because dropdowns values are not yet retained.");
+                                    event.preventDefault();
+                                }
                             }
                         }
                     }
