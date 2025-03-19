@@ -1,7 +1,7 @@
 package models
 
 type Test struct {
-	ID           int16     `json:"id"`
+	ID           int       `json:"id"`
 	Name         []ResName `json:"names"`
 	Code         string    `json:"code"`
 	Subtype      string    `json:"subtype"`
@@ -13,7 +13,7 @@ type Test struct {
 }
 
 type ResName struct {
-	LangID   int    `json:"lang_id"`
+	LangID   int8   `json:"lang_id"`
 	Resource string `json:"resource"`
 }
 
@@ -24,7 +24,8 @@ type ResTypeParams struct {
 }
 
 type ResSubject struct {
-	SubjectID int          `json:"subject_id"`
+	SubjectID int8 `json:"subject_id"`
+	Name      string
 	Marks     int          `json:"marks"`
 	Sections  []ResSection `json:"sections"`
 }

@@ -108,7 +108,7 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 	h.getTopics(responseWriter, typecastedChapters)
 	sortChapters(typecastedChapters)
 
-	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, typecastedChapters)
+	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, typecastedChapters, nil)
 }
 
 func (h *ChaptersHandler) getTopics(responseWriter http.ResponseWriter, chapterPtrs []*models.Chapter) {
@@ -178,7 +178,7 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 		return
 	}
 
-	local_repo.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Chapter")
+	local_repo.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Chapter", nil)
 }
 
 func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request *http.Request) {
@@ -211,7 +211,7 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 	}
 
 	chapterPtrs := []*models.Chapter{newChapterPtr}
-	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, chapterPtrs)
+	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, chapterPtrs, nil)
 }
 
 func (h *ChaptersHandler) DeleteChapter(responseWriter http.ResponseWriter, request *http.Request) {
@@ -302,7 +302,7 @@ func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request
 		ChapterId:       chapterIdStr,
 		TopicsSortState: topicSortState,
 	}
-	local_repo.ExecuteTemplate(topicsTemplate, responseWriter, data)
+	local_repo.ExecuteTemplate(topicsTemplate, responseWriter, data, nil)
 }
 
 func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request *http.Request) {
@@ -315,5 +315,5 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 		h.getTopics(responseWriter, []*models.Chapter{selectedChapterPtr})
 	}
 	sortTopics(selectedChapterPtr.Topics)
-	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, selectedChapterPtr.Topics)
+	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, selectedChapterPtr.Topics, nil)
 }

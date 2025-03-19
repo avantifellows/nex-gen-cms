@@ -31,5 +31,5 @@ func (h *GradesHandler) GetGrades(responseWriter http.ResponseWriter, request *h
 	}
 
 	// Load grades.html
-	local_repo.ExecuteTemplate(gradesTemplate, responseWriter, grades)
+	local_repo.ExecuteTemplate(gradesTemplate, responseWriter, grades, nil)
 }

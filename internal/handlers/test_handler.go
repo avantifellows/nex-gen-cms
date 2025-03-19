@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 	"slices"
 	"strings"
@@ -19,23 +20,28 @@ const TESTTYPE_DROPDOWN_NAME = "testtype-dropdown"
 const testsTemplate = "tests.html"
 const testRowTemplate = "test_row.html"
 const testTemplate = "test.html"
+const problemRowTemplate = "problem_row.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
 
 const testsKey = "tests"
+const problemsKey = "problems"
 
 type TestsHandler struct {
-	service *services.Service[models.Test]
+	testsService    *services.Service[models.Test]
+	subjectsService *services.Service[models.Subject]
 }
 
 func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
 	local_repo.ExecuteTemplates(baseTemplate, testsTemplate, responseWriter, nil)
 }
 
-func NewTestsHandler(service *services.Service[models.Test]) *TestsHandler {
+func NewTestsHandler(testsService *services.Service[models.Test],
+	subjectsService *services.Service[models.Subject]) *TestsHandler {
 	return &TestsHandler{
-		service: service,
+		testsService:    testsService,
+		subjectsService: subjectsService,
 	}
 }
 
@@ -50,21 +56,21 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	sortOrder := urlValues.Get("sortOrder")
 
 	queryParams := fmt.Sprintf("?curriculum_id=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
-	tests, err := h.service.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
+	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
 
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// set curriculum id on each chapter
+	// set curriculum & grade id on each test
 	for _, test := range *tests {
 		test.CurriculumID = curriculumId
 		test.GradeID = gradeId
 	}
 
 	sortTests(*tests, sortColumn, sortOrder)
-	local_repo.ExecuteTemplate(testRowTemplate, responseWriter, tests)
+	local_repo.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
 }
 
 func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string) {
@@ -101,7 +107,7 @@ func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string) {
 }
 
 func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedTestPtr, code, err := h.getTest(request)
+	selectedTestPtr, code, err := h.getTest(responseWriter, request)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -110,18 +116,17 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 	data := dto.HomeData{
 		CurriculumID: selectedTestPtr.CurriculumID,
 		GradeID:      selectedTestPtr.GradeID,
+		TestPtr:      selectedTestPtr,
 	}
+
 	local_repo.ExecuteTemplates(baseTemplate, testTemplate, responseWriter, data)
 }
 
-func (h *TestsHandler) getTest(request *http.Request) (*models.Test, int, error) {
+func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http.Request) (*models.Test, int, error) {
 	testIdStr := request.URL.Query().Get("id")
-	testId, err := utils.StringToIntType[int16](testIdStr)
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid Test ID: %w", err)
-	}
+	testId := utils.StringToInt(testIdStr)
 
-	selectedTestPtr, err := h.service.GetObject(testIdStr,
+	selectedTestPtr, err := h.testsService.GetObject(testIdStr,
 		func(test *models.Test) bool {
 			return (*test).ID == testId
 		}, testsKey, resourcesEndPoint)
@@ -129,5 +134,95 @@ func (h *TestsHandler) getTest(request *http.Request) (*models.Test, int, error)
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching test: %v", err)
 	}
 
+	// Fill subject names in test
+	h.fillSubjectNames(responseWriter, selectedTestPtr)
+
 	return selectedTestPtr, http.StatusOK, nil
+}
+
+func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, testPtr *models.Test) {
+	subjectPtrs, err := h.subjectsService.GetList(subjectsEndPoint, subjectsKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
+	} else {
+		// Create a map to quickly lookup subject names by their ID
+		subjectIdToNameMap := make(map[int8]string)
+
+		// fill the map with the address of each subject
+		for _, subjectPtr := range *subjectPtrs {
+			subjectIdToNameMap[subjectPtr.ID] = subjectPtr.Name
+		}
+
+		// loop through subjects of test and update subject name
+		for i, testSubject := range testPtr.TypeParams.Subjects {
+			/**
+			updating name directly on testSubject will change it in copy of actual subjects instead of
+			original subjects under testPtr, hence we are assigning it to testPtr.TypeParams.Subjects[i].Name
+			*/
+			testPtr.TypeParams.Subjects[i].Name = subjectIdToNameMap[testSubject.SubjectID]
+		}
+	}
+}
+
+func (h *TestsHandler) GetProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	// problems, err := h.testsService.GetList(resourcesEndPoint, problemsKey, false, true)
+
+	// if err != nil {
+	// 	http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
+	// 	return
+	// }
+
+	problems := []models.Problem{
+		{
+			ID:     1,
+			Code:   "P1234",
+			LangID: 1,
+			MetaData: models.ProbMetaData{
+				Question: "What is the capital of France?",
+				Options:  []string{"Berlin", "Madrid", "Paris", "Rome"},
+				Answers:  []string{"3"},
+				Solutions: []models.Solution{
+					{Type: "text", Value: "Paris is the capital city of France."},
+					{Type: "video", Value: 101},
+				},
+			},
+		},
+		{
+			ID:     2,
+			Code:   "P5678",
+			LangID: 1,
+			MetaData: models.ProbMetaData{
+				Question: "What is 5 + 7?",
+				Options:  []string{"10", "11", "12", "13"},
+				Answers:  []string{"3"},
+				Solutions: []models.Solution{
+					{Type: "text", Value: "5 plus 7 equals 12."},
+					{Type: "audio", Value: 202},
+				},
+			},
+		},
+		{
+			ID:     3,
+			Code:   "P9012",
+			LangID: 1,
+			MetaData: models.ProbMetaData{
+				Question: "Which gas do plants absorb during photosynthesis?",
+				Options:  []string{"Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"},
+				Answers:  []string{"2"},
+				Solutions: []models.Solution{
+					{Type: "text", Value: "Plants absorb Carbon Dioxide for photosynthesis."},
+					{Type: "video", Value: 303},
+				},
+			},
+		},
+	}
+
+	// Passing custom function add to use in template for serial number by adding 1 to index
+	local_repo.ExecuteTemplate(problemRowTemplate, responseWriter, problems, template.FuncMap{
+		"add": add,
+	})
+}
+
+func add(a, b int) int {
+	return a + b
 }

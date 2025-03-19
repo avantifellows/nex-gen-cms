@@ -9,7 +9,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 )
 
-const getSubjectsEndPoint = "/subject"
+const subjectsEndPoint = "/subject"
 const subjectsKey = "subjects"
 const subjectsTemplate = "subjects.html"
 
@@ -24,12 +24,12 @@ func NewSubjectsHandler(service *services.Service[models.Subject]) *SubjectsHand
 }
 
 func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, request *http.Request) {
-	subjects, err := h.service.GetList(getSubjectsEndPoint, subjectsKey, false, false)
+	subjects, err := h.service.GetList(subjectsEndPoint, subjectsKey, false, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	// Load subjects.html
-	local_repo.ExecuteTemplate(subjectsTemplate, responseWriter, subjects)
+	local_repo.ExecuteTemplate(subjectsTemplate, responseWriter, subjects, nil)
 }

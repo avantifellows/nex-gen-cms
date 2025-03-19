@@ -31,5 +31,5 @@ func (h *CurriculumsHandler) GetCurriculums(responseWriter http.ResponseWriter, 
 	}
 
 	// Load curriculums.html
-	local_repo.ExecuteTemplate(curriculumsTemplate, responseWriter, curriculums)
+	local_repo.ExecuteTemplate(curriculumsTemplate, responseWriter, curriculums, nil)
 }

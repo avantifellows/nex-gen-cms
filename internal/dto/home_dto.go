@@ -8,4 +8,5 @@ type HomeData struct {
 	SubjectID        int8
 	ChapterPtr       *models.Chapter
 	ChapterSortState SortState
+	TestPtr          *models.Test
 }

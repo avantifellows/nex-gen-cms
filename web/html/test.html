@@ -1,10 +1,35 @@
 {{ define "content" }}
 <div class="bg-white mb-4">
-    <div class="flex items-center">
+    <div class="flex justify-between items-center">
         <button class="action-button" onclick="window.history.back()">
-            <i class="fa-solid fa-chevron-left"></i>  Back
+            <i class="fa-solid fa-chevron-left"></i> Back
         </button>
-        <h3 class="text-base font-semibold ml-4">{{.ChapterPtr.Name}}</h3>
+        <h3 class="text-base font-semibold ml-4">{{ (index .TestPtr.Name 0).Resource }}</h3>
+        <div class="text-right">
+            <span class="block">
+                Duration: {{.TestPtr.TypeParams.Duration}} min
+            </span>
+            <span class="block">
+                Marks: {{.TestPtr.TypeParams.Marks}}
+            </span>
+        </div>
     </div>
+    {{ range $index, $subject := .TestPtr.TypeParams.Subjects }}
+    <h2 class="text-xl font-bold text-center bg-gray-200 p-3 rounded capitalize">
+        {{$subject.Name}}
+    </h2>
+    <table class="min-w-full shadow-md">
+        <thead>
+            <tr class="border-b text-sm">
+                <th class="py-2 px-4">S.No.</th>
+                <th class="px-4">Code</th>
+                <th class="px-4">Text</th>
+            </tr>
+        </thead>
+        <tbody hx-get="/api/problems" hx-trigger="load">
+            <!-- Rows will be dynamically inserted here -->
+        </tbody>
+    </table>
+    {{ end }}
 </div>
 {{ end }}

@@ -37,9 +37,14 @@ func (r *CacheRepository) Delete(key string) {
 	r.cache.Delete(key)
 }
 
-func ExecuteTemplate(filename string, responseWriter http.ResponseWriter, data any) {
+func ExecuteTemplate(filename string, responseWriter http.ResponseWriter, data any, funcMap template.FuncMap) {
 	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), filename)
-	tmpl := template.Must(template.ParseFiles(tmplPath))
+	var tmpl *template.Template
+	if funcMap != nil {
+		tmpl = template.Must(template.New(filename).Funcs(funcMap).ParseFiles(tmplPath))
+	} else {
+		tmpl = template.Must(template.ParseFiles(tmplPath))
+	}
 	tmpl.Execute(responseWriter, data)
 }
 

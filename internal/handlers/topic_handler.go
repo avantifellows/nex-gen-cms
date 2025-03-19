@@ -33,7 +33,7 @@ func NewTopicsHandler(service *services.Service[models.Topic]) *TopicsHandler {
 
 func (h *TopicsHandler) OpenAddTopic(responseWriter http.ResponseWriter, request *http.Request) {
 	chapterId := request.URL.Query().Get("chapterId")
-	local_repo.ExecuteTemplate(addTopicTemplate, responseWriter, chapterId)
+	local_repo.ExecuteTemplate(addTopicTemplate, responseWriter, chapterId, nil)
 }
 
 func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *http.Request) {
@@ -60,7 +60,7 @@ func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *ht
 	}
 
 	topicPtrs := []*models.Topic{newTopicPtr}
-	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, topicPtrs)
+	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, topicPtrs, nil)
 }
 
 func (h *TopicsHandler) DeleteTopic(responseWriter http.ResponseWriter, request *http.Request) {
@@ -87,7 +87,7 @@ func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *h
 		return
 	}
 
-	local_repo.ExecuteTemplate(editTopicTemplate, responseWriter, selectedTopicPtr)
+	local_repo.ExecuteTemplate(editTopicTemplate, responseWriter, selectedTopicPtr, nil)
 }
 
 func (h *TopicsHandler) getTopic(request *http.Request) (*models.Topic, int, error) {
@@ -130,7 +130,7 @@ func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request 
 		http.Error(responseWriter, fmt.Sprintf("Error updating topic: %v", err), http.StatusInternalServerError)
 	}
 
-	local_repo.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Topic")
+	local_repo.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Topic", nil)
 }
 
 func sortTopics(topics []models.Topic) {
