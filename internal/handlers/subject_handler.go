@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
@@ -31,5 +32,11 @@ func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, reques
 	}
 
 	// Load subjects.html
-	local_repo.ExecuteTemplate(subjectsTemplate, responseWriter, subjects, nil)
+	local_repo.ExecuteTemplate(subjectsTemplate, responseWriter, subjects, template.FuncMap{
+		"getName": getName,
+	})
+}
+
+func getName(s models.Subject, lang string) string {
+	return s.GetNameByLang(lang)
 }

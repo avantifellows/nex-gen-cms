@@ -149,7 +149,7 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 
 		// fill the map with the address of each subject
 		for _, subjectPtr := range *subjectPtrs {
-			subjectIdToNameMap[subjectPtr.ID] = subjectPtr.Name
+			subjectIdToNameMap[subjectPtr.ID] = subjectPtr.GetNameByLang("en")
 		}
 
 		// loop through subjects of test and update subject name
