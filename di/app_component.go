@@ -19,6 +19,7 @@ type AppComponent struct {
 	GradesHandler      *handlers.GradesHandler
 	SubjectsHandler    *handlers.SubjectsHandler
 	TestsHandler       *handlers.TestsHandler
+	ProblemsHandler    *handlers.ProblemsHandler
 	ModulesHandler     *handlers.ModulesHandler
 	BooksHandler       *handlers.BooksHandler
 }
@@ -35,6 +36,7 @@ func NewAppComponent() (*AppComponent, error) {
 	gradesService := services.NewService[models.Grade](cacheRepo, apiRepo)
 	subjectsService := services.NewService[models.Subject](cacheRepo, apiRepo)
 	testsService := services.NewService[models.Test](cacheRepo, apiRepo)
+	problemsService := services.NewService[models.Problem](cacheRepo, apiRepo)
 
 	// Initialize handlers
 	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
@@ -44,6 +46,8 @@ func NewAppComponent() (*AppComponent, error) {
 	gradesHandler := handlers.NewGradesHandler(gradesService)
 	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
 	testsHandler := handlers.NewTestsHandler(testsService, subjectsService)
+	problemsHandler := handlers.NewProblemsHandler(problemsService)
+
 	modulesHandler := handlers.NewModulesHandler()
 	booksHandler := handlers.NewBooksHandler()
 
@@ -55,6 +59,7 @@ func NewAppComponent() (*AppComponent, error) {
 		GradesHandler:      gradesHandler,
 		SubjectsHandler:    subjectsHandler,
 		TestsHandler:       testsHandler,
+		ProblemsHandler:    problemsHandler,
 		ModulesHandler:     modulesHandler,
 		BooksHandler:       booksHandler,
 	}, nil

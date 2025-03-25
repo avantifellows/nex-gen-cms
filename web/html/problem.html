@@ -1,0 +1,73 @@
+{{ define "content" }}
+<div>
+    <div class="flex items-center">
+        <button class="action-button" onclick="window.history.back()">
+            <i class="fa-solid fa-chevron-left"></i> Back
+        </button>
+        <h3 class="text-base font-semibold ml-4">{{.ProblemPtr.Code}}</h3>
+        <div class="flex space-x-4 ml-auto pr-4">
+            <button class="action-button">
+                <i class="fas fa-pen">
+                </i></button>
+            <button class="action-button">
+                <i class="fas fa-trash">
+                </i></button>
+        </div>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-lg font-semibold">
+            STATEMENT/TEXT
+        </h2>
+        <p class="mt-2">
+            {{.ProblemPtr.MetaData.Question}}
+        </p>
+        <h2 class="text-lg font-semibold mt-4">
+            SKILL
+        </h2>
+        <p class="mt-2">
+            Recall
+        </p>
+        <h2 class="text-lg font-semibold mt-4">
+            OPTIONS
+        </h2>
+        <div class="mt-2 border border-gray-300">
+            <div class="flex items-center border-b border-gray-300 p-4">
+                <span class="mr-8 font-semibold">
+                    A
+                </span>
+                <p>Option a</p>
+            </div>
+            <div class="flex items-center border-b border-gray-300 p-4">
+                <span class="mr-8 font-semibold">
+                    B
+                </span>
+                <p>Option b</p>
+            </div>
+            <div class="flex items-center border-b border-gray-300 p-4">
+                <span class="mr-8 font-semibold">
+                    C
+                </span>
+                <p>Option c</p>
+            </div>
+            <div class="flex items-center border-gray-300 p-4">
+                <span class="mr-8 font-semibold">
+                    D
+                </span>
+                <p>Option d</p>
+            </div>
+        </div>
+        <h2 class="text-lg font-semibold mt-4">
+            ANSWER
+        </h2>
+        <p class="mt-2">
+            B
+        </p>
+        <h2 class="text-lg font-semibold mt-4">
+            SOLUTION
+        </h2>
+        <p class="mt-2">
+            This is Baeyer Villiger oxidation and the methyl group is the weakest migrating group.
+        </p>
+    </div>
+</div>
+{{ end }}

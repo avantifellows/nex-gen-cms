@@ -1,5 +1,7 @@
 package models
 
+import "html/template"
+
 type Problem struct {
 	ID       int `json:"id"`
 	Code     string
@@ -8,10 +10,10 @@ type Problem struct {
 }
 
 type ProbMetaData struct {
-	Question  string     `json:"text"`
-	Options   []string   `json:"options"`
-	Answers   []string   `json:"answer"`
-	Solutions []Solution `json:"solutions"`
+	Question  template.HTML `json:"text"`
+	Options   []string      `json:"options"`
+	Answers   []string      `json:"answer"`
+	Solutions []Solution    `json:"solutions"`
 }
 
 type Solution struct {

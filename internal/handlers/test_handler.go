@@ -26,15 +26,10 @@ const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
 
 const testsKey = "tests"
-const problemsKey = "problems"
 
 type TestsHandler struct {
 	testsService    *services.Service[models.Test]
 	subjectsService *services.Service[models.Subject]
-}
-
-func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(baseTemplate, testsTemplate, responseWriter, nil)
 }
 
 func NewTestsHandler(testsService *services.Service[models.Test],
@@ -43,6 +38,10 @@ func NewTestsHandler(testsService *services.Service[models.Test],
 		testsService:    testsService,
 		subjectsService: subjectsService,
 	}
+}
+
+func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
+	local_repo.ExecuteTemplates(baseTemplate, testsTemplate, responseWriter, nil)
 }
 
 func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *http.Request) {

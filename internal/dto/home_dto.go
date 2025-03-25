@@ -9,4 +9,5 @@ type HomeData struct {
 	ChapterPtr       *models.Chapter
 	ChapterSortState SortState
 	TestPtr          *models.Test
+	ProblemPtr       *models.Problem
 }

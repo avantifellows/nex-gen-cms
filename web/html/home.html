@@ -10,6 +10,8 @@
     <link href="/web/static/css/output.css" rel="stylesheet">
     <!-- For Font Awesome library -->
     <script src="https://kit.fontawesome.com/76cfc651ea.js" crossorigin="anonymous"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
     <script src="/web/static/js/constants.js"></script>
     <script>
         function afterDropdownReq(dropdown, selectedValue) {
@@ -51,7 +53,7 @@
     </script>
 </head>
 
-<body>
+<body hx-ext="mathJaxLoader">
     <div>
         <nav>
             <div class="nav nav-tabs" id="nav-tab">
@@ -181,6 +183,21 @@
             }, milliseconds);
         }
 
+        htmx.defineExtension('mathJaxLoader', {
+            onEvent: function (name, event) {
+                /**
+                 * window.MathJax condition is not required right now because it will always return non-null
+                 * value for our case as we have included MathJax script in this home.html file which is 
+                 * used as base template for all screens, but still it is recommended way to handle cases 
+                 * where MathJax can n ot be loaded due to network or cdn issues OR in future if we create
+                 * some pages not requiring MathJax and hence shift its script declaration from this file
+                 * to files where it is required
+                 */
+                if (name === "htmx:afterSwap" && window.MathJax && event.detail.target === document.body) {
+                    MathJax.typeset();
+                }
+            }
+        })
     </script>
 </body>
 
