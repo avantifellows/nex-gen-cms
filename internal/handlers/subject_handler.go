@@ -33,10 +33,10 @@ func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, reques
 
 	// Load subjects.html
 	local_repo.ExecuteTemplate(subjectsTemplate, responseWriter, subjects, template.FuncMap{
-		"getName": getName,
+		"getName": getSubjectName,
 	})
 }
 
-func getName(s models.Subject, lang string) string {
+func getSubjectName(s models.Subject, lang string) string {
 	return s.GetNameByLang(lang)
 }

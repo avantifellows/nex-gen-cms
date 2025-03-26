@@ -2,6 +2,7 @@ package local_repo
 
 import (
 	"html/template"
+	"log"
 	"net/http"
 	"path/filepath"
 	"time"
@@ -48,10 +49,23 @@ func ExecuteTemplate(filename string, responseWriter http.ResponseWriter, data a
 	tmpl.Execute(responseWriter, data)
 }
 
-func ExecuteTemplates(baseFileName string, contentFileName string, responseWriter http.ResponseWriter, data any) {
+func ExecuteTemplates(baseFileName string, contentFileName string, responseWriter http.ResponseWriter, data any,
+	funcMap template.FuncMap) {
 	htmlFolderPath := constants.GetHtmlFolderPath()
 	baseTmplPath := filepath.Join(htmlFolderPath, baseFileName)
 	contentTmplPath := filepath.Join(htmlFolderPath, contentFileName)
-	tmpl := template.Must(template.ParseFiles(baseTmplPath, contentTmplPath))
-	tmpl.Execute(responseWriter, data)
+	var tmpl *template.Template
+
+	if funcMap != nil {
+		tmpl = template.Must(template.New("base").Funcs(funcMap).ParseFiles(baseTmplPath, contentTmplPath))
+	} else {
+		// Direct parsing if no FuncMap
+		tmpl = template.Must(template.ParseFiles(baseTmplPath, contentTmplPath))
+	}
+
+	err := tmpl.ExecuteTemplate(responseWriter, "base", data)
+	if err != nil {
+		log.Println("Template Execution Error:", err)
+		http.Error(responseWriter, "Internal Server Error", http.StatusInternalServerError)
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
@@ -60,7 +61,13 @@ func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *ht
 	}
 
 	topicPtrs := []*models.Topic{newTopicPtr}
-	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, topicPtrs, nil)
+	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, topicPtrs, template.FuncMap{
+		"getName": getTopicName,
+	})
+}
+
+func getTopicName(t models.Topic, lang string) string {
+	return t.GetNameByLang(lang)
 }
 
 func (h *TopicsHandler) DeleteTopic(responseWriter http.ResponseWriter, request *http.Request) {
@@ -87,7 +94,9 @@ func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *h
 		return
 	}
 
-	local_repo.ExecuteTemplate(editTopicTemplate, responseWriter, selectedTopicPtr, nil)
+	local_repo.ExecuteTemplate(editTopicTemplate, responseWriter, selectedTopicPtr, template.FuncMap{
+		"getName": getTopicName,
+	})
 }
 
 func (h *TopicsHandler) getTopic(request *http.Request) (*models.Topic, int, error) {
@@ -133,8 +142,8 @@ func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request 
 	local_repo.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Topic", nil)
 }
 
-func sortTopics(topics []models.Topic) {
-	slices.SortStableFunc(topics, func(t1, t2 models.Topic) int {
+func sortTopics(topics []*models.Topic) {
+	slices.SortStableFunc(topics, func(t1, t2 *models.Topic) int {
 		var sortResult int
 		switch topicSortState.Column {
 		case "1":
@@ -148,7 +157,7 @@ func sortTopics(topics []models.Topic) {
 				sortResult = strings.Compare(t1.Code, t2.Code)
 			}
 		case "2":
-			sortResult = strings.Compare(t1.Name, t2.Name)
+			sortResult = strings.Compare(t1.GetNameByLang("en"), t2.GetNameByLang("en"))
 		default:
 			sortResult = 0
 		}

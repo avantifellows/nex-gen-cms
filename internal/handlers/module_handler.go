@@ -19,5 +19,5 @@ func NewModulesHandler( /*service *services.Service[models.Test]*/ ) *ModulesHan
 }
 
 func (h *ModulesHandler) LoadModules(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(baseTemplate, modulesTemplate, responseWriter, nil)
+	local_repo.ExecuteTemplates(baseTemplate, modulesTemplate, responseWriter, nil, nil)
 }

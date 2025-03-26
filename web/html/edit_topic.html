@@ -3,7 +3,7 @@
   <form hx-patch="/update-topic?id={{.ID}}">
     <div class="mb-4">
       <label for="name" class="block text-gray-700 font-medium mb-2">Topic Title</label>
-      <input type="text" id="name" name="name" class="w-full p-3 border border-gray-300 rounded" value="{{.Name}}">
+      <input type="text" id="name" name="name" class="w-full p-3 border border-gray-300 rounded" value="{{ getName . "en" }}">
     </div>
     <div class="mb-4">
       <label for="description" class="block text-gray-700 font-medium mb-2">Description</label>

@@ -41,7 +41,7 @@ func NewTestsHandler(testsService *services.Service[models.Test],
 }
 
 func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(baseTemplate, testsTemplate, responseWriter, nil)
+	local_repo.ExecuteTemplates(baseTemplate, testsTemplate, responseWriter, nil, nil)
 }
 
 func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *http.Request) {
@@ -118,7 +118,7 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 		TestPtr:      selectedTestPtr,
 	}
 
-	local_repo.ExecuteTemplates(baseTemplate, testTemplate, responseWriter, data)
+	local_repo.ExecuteTemplates(baseTemplate, testTemplate, responseWriter, data, nil)
 }
 
 func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http.Request) (*models.Test, int, error) {

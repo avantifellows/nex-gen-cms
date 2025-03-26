@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
@@ -54,7 +55,7 @@ func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, reque
 	data := dto.HomeData{
 		ChapterSortState: chapterSortState,
 	}
-	local_repo.ExecuteTemplates(baseTemplate, chaptersTemplate, responseWriter, data)
+	local_repo.ExecuteTemplates(baseTemplate, chaptersTemplate, responseWriter, data, nil)
 }
 
 func updateSortState(request *http.Request, sortState *dto.SortState) {
@@ -108,7 +109,13 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 	h.getTopics(responseWriter, typecastedChapters)
 	sortChapters(typecastedChapters)
 
-	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, typecastedChapters, nil)
+	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, typecastedChapters, template.FuncMap{
+		"getName": getChapterName,
+	})
+}
+
+func getChapterName(ch models.Chapter, lang string) string {
+	return ch.GetNameByLang(lang)
 }
 
 func (h *ChaptersHandler) getTopics(responseWriter http.ResponseWriter, chapterPtrs []*models.Chapter) {
@@ -134,7 +141,7 @@ func associateTopicsWithChapters(chapterPtrs []*models.Chapter, topicPtrs []*mod
 	// Loop through each topic and assign it to the corresponding chapter
 	for _, topicPtr := range topicPtrs {
 		if chapterPtr, exists := chapterPtrsMap[topicPtr.ChapterID]; exists {
-			chapterPtr.Topics = append(chapterPtr.Topics, *topicPtr)
+			chapterPtr.Topics = append(chapterPtr.Topics, topicPtr)
 		}
 	}
 }
@@ -152,7 +159,9 @@ func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, reques
 		SubjectID:    selectedChapterPtr.SubjectID,
 		ChapterPtr:   selectedChapterPtr,
 	}
-	local_repo.ExecuteTemplates(baseTemplate, editChapterTemplate, responseWriter, data)
+	local_repo.ExecuteTemplates(baseTemplate, editChapterTemplate, responseWriter, data, template.FuncMap{
+		"getName": getChapterName,
+	})
 }
 
 func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, request *http.Request) {
@@ -211,7 +220,9 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 	}
 
 	chapterPtrs := []*models.Chapter{newChapterPtr}
-	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, chapterPtrs, nil)
+	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, chapterPtrs, template.FuncMap{
+		"getName": getChapterName,
+	})
 }
 
 func (h *ChaptersHandler) DeleteChapter(responseWriter http.ResponseWriter, request *http.Request) {
@@ -246,7 +257,7 @@ func sortChapters(chapterPtrs []*models.Chapter) {
 				sortResult = strings.Compare(c1.Code, c2.Code)
 			}
 		case "2":
-			sortResult = strings.Compare(c1.Name, c2.Name)
+			sortResult = strings.Compare(c1.GetNameByLang("en"), c2.GetNameByLang("en"))
 		case "3":
 			sortResult = int(c1.TopicCount() - c2.TopicCount())
 		default:
@@ -291,7 +302,9 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 		SubjectID:    selectedChapterPtr.SubjectID,
 		ChapterPtr:   selectedChapterPtr,
 	}
-	local_repo.ExecuteTemplates(baseTemplate, chapterTemplate, responseWriter, data)
+	local_repo.ExecuteTemplates(baseTemplate, chapterTemplate, responseWriter, data, template.FuncMap{
+		"getName": getChapterName,
+	})
 }
 
 func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request *http.Request) {
@@ -315,5 +328,7 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 		h.getTopics(responseWriter, []*models.Chapter{selectedChapterPtr})
 	}
 	sortTopics(selectedChapterPtr.Topics)
-	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, selectedChapterPtr.Topics, nil)
+	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, selectedChapterPtr.Topics, template.FuncMap{
+		"getName": getTopicName,
+	})
 }

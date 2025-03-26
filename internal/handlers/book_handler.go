@@ -19,5 +19,5 @@ func NewBooksHandler( /*service *services.Service[models.Test]*/ ) *BooksHandler
 }
 
 func (h *BooksHandler) LoadBooks(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(baseTemplate, booksTemplate, responseWriter, nil)
+	local_repo.ExecuteTemplates(baseTemplate, booksTemplate, responseWriter, nil, nil)
 }

@@ -2,7 +2,7 @@
 <tr class="border-b hover:bg-gray-100">
     <td class="py-4 px-6">{{.Code}}</td>
     <td class="px-6 text-blue-500 hover:underline"><a href="#" hx-get="/chapter?id={{.ID}}" hx-target="body"
-        hx-push-url="/chapter?id={{.ID}}">{{.Name}}</a></td>
+        hx-push-url="/chapter?id={{.ID}}">{{ getName . "en" }}</a></td>
     <td class="px-6 text-center text-blue-500 hover:underline"><a href="#">{{.TopicCount}}</a></td>
     <td></td>
     <td></td>
@@ -18,7 +18,7 @@
             <i class="fa-solid fa-pencil"></i>
         </button>
         <button class="action-button" hx-delete="/delete-chapter?id={{.ID}}"
-            hx-confirm="Are you sure you want to delete chapter {{.Name}}?" hx-target="closest tr">
+            hx-confirm="Are you sure you want to delete chapter {{ getName . "en" }}?" hx-target="closest tr">
             <i class="fa-solid fa-trash"></i>
         </button>
     </td>

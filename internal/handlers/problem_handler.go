@@ -55,5 +55,5 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		ProblemPtr: selectedProblemPtr,
 	}
 
-	local_repo.ExecuteTemplates(baseTemplate, problemTemplate, responseWriter, data)
+	local_repo.ExecuteTemplates(baseTemplate, problemTemplate, responseWriter, data, nil)
 }

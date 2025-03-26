@@ -1,7 +1,7 @@
 {{ range . }}
 <tr class="border-b hover:bg-gray-100">
     <td class="py-4 px-6">{{.Code}}</td>
-    <td class="px-6 text-blue-500 hover:underline"><a href="#">{{.Name}}</a></td>
+    <td class="px-6 text-blue-500 hover:underline"><a href="#">{{ getName . "en" }}</a></td>
     <td></td>
     <td></td>
     <td></td>
@@ -14,7 +14,7 @@
             <i class="fa-solid fa-pencil"></i>
         </button>
         <button class="action-button" hx-delete="/delete-topic?id={{.ID}}"
-            hx-confirm="Are you sure you want to delete topic {{.Name}}?" hx-target="closest tr">
+            hx-confirm="Are you sure you want to delete topic {{ getName . "en" }}?" hx-target="closest tr">
             <i class="fa-solid fa-trash"></i>
         </button>
     </td>
