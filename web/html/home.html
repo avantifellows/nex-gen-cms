@@ -194,12 +194,25 @@
                  * window.MathJax condition is not required right now because it will always return non-null
                  * value for our case as we have included MathJax script in this home.html file which is 
                  * used as base template for all screens, but still it is recommended way to handle cases 
-                 * where MathJax can n ot be loaded due to network or cdn issues OR in future if we create
+                 * where MathJax can not be loaded due to network or cdn issues OR in future if we create
                  * some pages not requiring MathJax and hence shift its script declaration from this file
                  * to files where it is required
                  */
-                if (name === "htmx:afterSwap" && window.MathJax && event.detail.target === document.body) {
-                    MathJax.typeset();
+                if (name === "htmx:afterSwap" && window.MathJax) {
+                    let targetElement = event.detail.target;
+
+                    // Check if the target element itself has data-mathjax
+                    let hasMathJax = targetElement.hasAttribute("data-mathjax");
+
+                    // Check if any nested elements have data-mathjax
+                    if (!hasMathJax) {
+                        hasMathJax = targetElement.querySelector('[data-mathjax]') !== null;
+                    }
+
+                    // Apply MathJax.typesetPromise() only if at least one element has data-mathjax
+                    if (hasMathJax) {
+                        MathJax.typesetPromise([targetElement]).catch(console.error);
+                    }
                 }
             }
         })

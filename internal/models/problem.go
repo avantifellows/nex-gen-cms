@@ -5,15 +5,15 @@ import "html/template"
 type Problem struct {
 	ID       int `json:"id"`
 	Code     string
-	LangID   int8         `json:"lang_id"`
+	LangCode string       `json:"lang_code"`
 	MetaData ProbMetaData `json:"meta_data"`
 }
 
 type ProbMetaData struct {
-	Question  template.HTML `json:"text"`
-	Options   []string      `json:"options"`
-	Answers   []string      `json:"answer"`
-	Solutions []Solution    `json:"solutions"`
+	Question  template.HTML   `json:"text"`
+	Options   []template.HTML `json:"options"`
+	Answers   []string        `json:"answer"`
+	Solutions []Solution      `json:"solutions"`
 }
 
 type Solution struct {

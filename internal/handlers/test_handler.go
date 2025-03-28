@@ -24,19 +24,22 @@ const problemRowTemplate = "problem_row.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
+const testProblemsEndPoint = "/resource/test/%d/problems?lang_code=en"
 
 const testsKey = "tests"
 
 type TestsHandler struct {
 	testsService    *services.Service[models.Test]
 	subjectsService *services.Service[models.Subject]
+	problemsService *services.Service[models.Problem]
 }
 
-func NewTestsHandler(testsService *services.Service[models.Test],
-	subjectsService *services.Service[models.Subject]) *TestsHandler {
+func NewTestsHandler(testsService *services.Service[models.Test], subjectsService *services.Service[models.Subject],
+	problemsService *services.Service[models.Problem]) *TestsHandler {
 	return &TestsHandler{
 		testsService:    testsService,
 		subjectsService: subjectsService,
+		problemsService: problemsService,
 	}
 }
 
@@ -164,64 +167,19 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 }
 
 func (h *TestsHandler) GetProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	// problems, err := h.testsService.GetList(resourcesEndPoint, problemsKey, false, true)
+	testIdStr := request.URL.Query().Get("test_id")
+	testId := utils.StringToInt(testIdStr)
 
-	// if err != nil {
-	// 	http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
-	// 	return
-	// }
+	endPointWithId := fmt.Sprintf(testProblemsEndPoint, testId)
+	problems, err := h.problemsService.GetList(endPointWithId, problemsKey, false, true)
 
-	problems := []models.Problem{
-		{
-			ID:     1,
-			Code:   "P1234",
-			LangID: 1,
-			MetaData: models.ProbMetaData{
-				Question: "What is the capital of France?",
-				Options:  []string{"Berlin", "Madrid", "Paris", "Rome"},
-				Answers:  []string{"3"},
-				Solutions: []models.Solution{
-					{Type: "text", Value: "Paris is the capital city of France."},
-					{Type: "video", Value: 101},
-				},
-			},
-		},
-		{
-			ID:     2,
-			Code:   "P5678",
-			LangID: 1,
-			MetaData: models.ProbMetaData{
-				Question: "What is 5 + 7?",
-				Options:  []string{"10", "11", "12", "13"},
-				Answers:  []string{"3"},
-				Solutions: []models.Solution{
-					{Type: "text", Value: "5 plus 7 equals 12."},
-					{Type: "audio", Value: 202},
-				},
-			},
-		},
-		{
-			ID:     3,
-			Code:   "P9012",
-			LangID: 1,
-			MetaData: models.ProbMetaData{
-				Question: "Which gas do plants absorb during photosynthesis?",
-				Options:  []string{"Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"},
-				Answers:  []string{"2"},
-				Solutions: []models.Solution{
-					{Type: "text", Value: "Plants absorb Carbon Dioxide for photosynthesis."},
-					{Type: "video", Value: 303},
-				},
-			},
-		},
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
+		return
 	}
 
 	// Passing custom function add to use in template for serial number by adding 1 to index
 	local_repo.ExecuteTemplate(problemRowTemplate, responseWriter, problems, template.FuncMap{
-		"add": add,
+		"add": utils.Add,
 	})
-}
-
-func add(a, b int) int {
-	return a + b
 }

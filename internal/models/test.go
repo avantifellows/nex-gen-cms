@@ -2,10 +2,10 @@ package models
 
 type Test struct {
 	ID           int       `json:"id"`
-	Name         []ResName `json:"names"`
+	Name         []ResName `json:"name"`
 	Code         string    `json:"code"`
 	Subtype      string    `json:"subtype"`
-	SkillIDs     []int8    `json:"skill_ids"`
+	SkillIDs     []int16   `json:"skill_ids"`
 	ChapterID    int16     `json:"chapter_id"`
 	CurriculumID int16
 	GradeID      int8

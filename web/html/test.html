@@ -26,7 +26,7 @@
                 <th class="px-4">Text</th>
             </tr>
         </thead>
-        <tbody hx-get="/api/problems" hx-trigger="load">
+        <tbody hx-get="/api/problems?test_id={{$.TestPtr.ID}}" hx-trigger="load" data-mathjax="true">
             <!-- Rows will be dynamically inserted here -->
         </tbody>
     </table>

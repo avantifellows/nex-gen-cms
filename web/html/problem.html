@@ -14,7 +14,7 @@
                 </i></button>
         </div>
     </div>
-    <div class="bg-white p-6 rounded-lg shadow-md">
+    <div class="bg-white p-6 rounded-lg shadow-md" data-mathjax="true">
         <h2 class="text-lg font-semibold">
             STATEMENT/TEXT
         </h2>
@@ -31,30 +31,14 @@
             OPTIONS
         </h2>
         <div class="mt-2 border border-gray-300">
+            {{ range $index, $option := .ProblemPtr.MetaData.Options }}
             <div class="flex items-center border-b border-gray-300 p-4">
                 <span class="mr-8 font-semibold">
-                    A
+                    {{ printf "%c" (add 65 $index) }}    <!-- Convert ASCII to letter -->
                 </span>
-                <p>Option a</p>
+                <p>{{ $option }}</p>
             </div>
-            <div class="flex items-center border-b border-gray-300 p-4">
-                <span class="mr-8 font-semibold">
-                    B
-                </span>
-                <p>Option b</p>
-            </div>
-            <div class="flex items-center border-b border-gray-300 p-4">
-                <span class="mr-8 font-semibold">
-                    C
-                </span>
-                <p>Option c</p>
-            </div>
-            <div class="flex items-center border-gray-300 p-4">
-                <span class="mr-8 font-semibold">
-                    D
-                </span>
-                <p>Option d</p>
-            </div>
+            {{ end }}
         </div>
         <h2 class="text-lg font-semibold mt-4">
             ANSWER
