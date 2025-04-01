@@ -25,7 +25,9 @@
             SKILL
         </h2>
         <p class="mt-2">
-            Recall
+            {{ range $index, $skill := .ProblemPtr.Skills }}
+                {{ if $index }}, {{ end }}{{ $skill.Name }}
+            {{ end }}
         </p>
         <h2 class="text-lg font-semibold mt-4">
             OPTIONS
@@ -44,13 +46,25 @@
             ANSWER
         </h2>
         <p class="mt-2">
-            B
+            {{ if eq .ProblemPtr.Subtype "mcq_single_answer" }}
+                {{ range .ProblemPtr.MetaData.Answers }}
+                    {{ printf "%c" (add 64 (stringToInt .)) }}
+                {{ end }}
+            {{ else }}
+                {{ range .ProblemPtr.MetaData.Answers }}
+                    {{ . }}
+                {{ end }}
+            {{ end }}
         </p>
         <h2 class="text-lg font-semibold mt-4">
             SOLUTION
         </h2>
         <p class="mt-2">
-            This is Baeyer Villiger oxidation and the methyl group is the weakest migrating group.
+            {{ if gt (len .ProblemPtr.MetaData.Solutions) 0 }}
+                {{ (index .ProblemPtr.MetaData.Solutions 0).Value }}
+            {{ else }}
+                No solution available.
+            {{ end }}
         </p>
     </div>
 </div>

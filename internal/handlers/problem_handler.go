@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"text/template"
 
@@ -12,17 +13,21 @@ import (
 )
 
 const problemsKey = "problems"
+const skillsKey = "skills"
 
 const problemsEndPoint = "/problem"
+const skillsEndPoint = "/skill"
 
 const problemTemplate = "problem.html"
 
 type ProblemsHandler struct {
-	service *services.Service[models.Problem]
+	problemsService *services.Service[models.Problem]
+	skillsService   *services.Service[models.Skill]
 }
 
-func NewProblemsHandler(service *services.Service[models.Problem]) *ProblemsHandler {
-	return &ProblemsHandler{service: service}
+func NewProblemsHandler(problemsService *services.Service[models.Problem],
+	skillsService *services.Service[models.Skill]) *ProblemsHandler {
+	return &ProblemsHandler{problemsService: problemsService, skillsService: skillsService}
 }
 
 func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -30,7 +35,7 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	problemIdStr := urlValues.Get("id")
 	problemId := utils.StringToInt(problemIdStr)
 
-	selectedProblemPtr, err := h.service.GetObject(problemIdStr,
+	selectedProblemPtr, err := h.problemsService.GetObject(problemIdStr,
 		func(problem *models.Problem) bool {
 			return problem.ID == problemId
 		}, problemsKey, problemsEndPoint)
@@ -38,11 +43,30 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
 
+	skills, err := h.skillsService.GetList(skillsEndPoint, skillsKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching skills: %v", err), http.StatusInternalServerError)
+	} else {
+		// Create a map to quickly lookup skills by their ID
+		skillPtrsMap := make(map[int16]*models.Skill)
+
+		// Fill the map with the address of each skill
+		for _, skillPtr := range *skills {
+			skillPtrsMap[skillPtr.ID] = skillPtr
+		}
+
+		// Loop through skill ids and add corresponding skills
+		for _, skillId := range selectedProblemPtr.SkillIDs {
+			selectedProblemPtr.Skills = append(selectedProblemPtr.Skills, *skillPtrsMap[skillId])
+		}
+	}
+
 	data := dto.HomeData{
 		ProblemPtr: selectedProblemPtr,
 	}
 
 	local_repo.ExecuteTemplates(baseTemplate, problemTemplate, responseWriter, data, template.FuncMap{
-		"add": utils.Add,
+		"add":         utils.Add,
+		"stringToInt": utils.StringToInt,
 	})
 }

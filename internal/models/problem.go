@@ -7,6 +7,9 @@ type Problem struct {
 	Code     string
 	LangCode string       `json:"lang_code"`
 	MetaData ProbMetaData `json:"meta_data"`
+	SkillIDs []int16      `json:"skill_ids"`
+	Skills   []Skill
+	Subtype  string `json:"subtype"`
 }
 
 type ProbMetaData struct {
@@ -17,6 +20,6 @@ type ProbMetaData struct {
 }
 
 type Solution struct {
-	Type  string `json:"type"`
-	Value any    `json:"value"`
+	Type  string        `json:"type"`
+	Value template.HTML `json:"value"`
 }
