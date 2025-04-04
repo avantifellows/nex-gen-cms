@@ -10,7 +10,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avanti Next Generation CMS</title>
-    <script src="https://unpkg.com/htmx.org@2.0.2"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <!-- For tailwind css library -->
     <link href="/web/static/css/output.css" rel="stylesheet">
     <!-- For Font Awesome library -->
@@ -112,7 +112,7 @@
      it wherever we want to use isInt() and then any function defined inside such module script cannot be 
      accessed from same file's html code -->
     <script type="module">
-        import { isInt } from './web/static/js/utils.js';
+        import { isInt } from '/web/static/js/utils.js';
 
         // Attach to window to make it globally accessible
         window.isInt = isInt;
@@ -150,10 +150,10 @@
                     const activeTab = document.getElementById(activeTabID);
                     if (activeTab) activeTab.classList.add("active");
                 }
-
+                
                 // Hide subject dropdown when "Tests" tab is active
                 const subjectDropdown = document.getElementById("subject-dropdown");
-                if (activeTabID === "tests-tab") {
+                if (activeTabID === "tests-tab" && !currentPath.endsWith("/add-test")) {
                     subjectDropdown.style.display = "none";
                 } else {
                     subjectDropdown.style.display = "inline-block";

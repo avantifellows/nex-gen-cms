@@ -21,6 +21,7 @@ const testsTemplate = "tests.html"
 const testRowTemplate = "test_row.html"
 const testTemplate = "test.html"
 const problemRowTemplate = "problem_row.html"
+const addTestTemplate = "add_test.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
@@ -182,4 +183,8 @@ func (h *TestsHandler) GetProblems(responseWriter http.ResponseWriter, request *
 	local_repo.ExecuteTemplate(problemRowTemplate, responseWriter, problems, template.FuncMap{
 		"add": utils.Add,
 	})
+}
+
+func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
+	local_repo.ExecuteTemplates(baseTemplate, addTestTemplate, responseWriter, nil, nil)
 }
