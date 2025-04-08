@@ -22,6 +22,7 @@ const testRowTemplate = "test_row.html"
 const testTemplate = "test.html"
 const problemRowTemplate = "problem_row.html"
 const addTestTemplate = "add_test.html"
+const testTypeOptionsTemplate = "test_type_options.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
@@ -45,7 +46,7 @@ func NewTestsHandler(testsService *services.Service[models.Test], subjectsServic
 }
 
 func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(baseTemplate, testsTemplate, responseWriter, nil, nil)
+	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, testsTemplate, testTypeOptionsTemplate)
 }
 
 func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *http.Request) {
@@ -122,7 +123,7 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 		TestPtr:      selectedTestPtr,
 	}
 
-	local_repo.ExecuteTemplates(baseTemplate, testTemplate, responseWriter, data, nil)
+	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, testTemplate)
 }
 
 func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http.Request) (*models.Test, int, error) {
@@ -186,5 +187,5 @@ func (h *TestsHandler) GetProblems(responseWriter http.ResponseWriter, request *
 }
 
 func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(baseTemplate, addTestTemplate, responseWriter, nil, nil)
+	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, addTestTemplate, testTypeOptionsTemplate)
 }

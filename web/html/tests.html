@@ -8,15 +8,7 @@
         hx-target="#testTableBody" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
         onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');"
         hx-on::after-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'true')">
-        <option value="">-- Select --</option>
-        <option value="chapter_test">Chapter Test</option>
-        <option value="part_test">Part Test</option>
-        <option value="major_test">Major Test</option>
-        <option value="full_syllabus_test">Full Syllabus Test</option>
-        <option value="evaluation_test">Evaluation Test</option>
-        <option value="mock_test">Mock Test</option>
-        <option value="nta_test">NTA Test</option>
-        <option value="homework_assignment">Homework Assignment</option>
+        {{ template "test_type_options" . }}
     </select>
 
     <!-- Content Area -->

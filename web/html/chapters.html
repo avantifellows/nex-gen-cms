@@ -40,7 +40,7 @@
                     <th class="px-6 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody id="chapterTableBody" hx-ext="chaptersLoader" class="text-gray-600 text-sm" hx-get="/api/chapters"
+            <tbody id="chapterTableBody" hx-ext="chaptersLoader" class="text-gray-600 text-sm" hx-get="/api/chapters?view=list"
                 hx-trigger="load[!document.getElementById('curriculum-dropdown').options[0].disabled], 
                 onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), 
                 change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
@@ -84,8 +84,8 @@
             onEvent: function (name, event) {
                 if (name === "htmx:beforeRequest") {
                     const requestPath = event.detail.elt.getAttribute("hx-get");
-
-                    if (requestPath === "/api/chapters") {
+                    
+                    if (requestPath === "/api/chapters?view=list") {
                         if (sessionStorage.getItem(window.CHAPTERS_LOADED_KEY) === "true") {
                             console.log("Skipping /api/chapters request because chapters are already loaded.");
                             event.preventDefault();

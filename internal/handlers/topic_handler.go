@@ -21,6 +21,7 @@ const topicsTemplate = "topics.html"
 const topicRowTemplate = "topic_row.html"
 const addTopicTemplate = "add_topic.html"
 const editTopicTemplate = "edit_topic.html"
+const topicDropdownTemplate = "topic_dropdown.html"
 
 type TopicsHandler struct {
 	service *services.Service[models.Topic]

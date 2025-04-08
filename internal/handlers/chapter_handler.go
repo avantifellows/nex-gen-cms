@@ -25,6 +25,7 @@ const chapterRowTemplate = "chapter_row.html"
 const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
+const chapterDropdownTemplate = "chapter_dropdown.html"
 
 type ChaptersHandler struct {
 	chaptersService *services.Service[models.Chapter]
@@ -55,7 +56,7 @@ func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, reque
 	data := dto.HomeData{
 		ChapterSortState: chapterSortState,
 	}
-	local_repo.ExecuteTemplates(baseTemplate, chaptersTemplate, responseWriter, data, nil)
+	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, chaptersTemplate)
 }
 
 func updateSortState(request *http.Request, sortState *dto.SortState) {
@@ -82,7 +83,8 @@ func updateSortState(request *http.Request, sortState *dto.SortState) {
 }
 
 func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, request *http.Request) {
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
+	urlValues := request.URL.Query()
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlValues)
 	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
 		return
 	}
@@ -109,7 +111,14 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 	h.getTopics(responseWriter, typecastedChapters)
 	sortChapters(typecastedChapters)
 
-	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, typecastedChapters, template.FuncMap{
+	view := urlValues.Get("view")
+	var filename string
+	if view == "list" {
+		filename = chapterRowTemplate
+	} else {
+		filename = chapterDropdownTemplate
+	}
+	local_repo.ExecuteTemplate(filename, responseWriter, typecastedChapters, template.FuncMap{
 		"getName": getChapterName,
 	})
 }
@@ -159,9 +168,9 @@ func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, reques
 		SubjectID:    selectedChapterPtr.SubjectID,
 		ChapterPtr:   selectedChapterPtr,
 	}
-	local_repo.ExecuteTemplates(baseTemplate, editChapterTemplate, responseWriter, data, template.FuncMap{
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getChapterName,
-	})
+	}, baseTemplate, editChapterTemplate)
 }
 
 func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, request *http.Request) {
@@ -272,7 +281,12 @@ func sortChapters(chapterPtrs []*models.Chapter) {
 }
 
 func (h *ChaptersHandler) getChapter(request *http.Request) (*models.Chapter, int, error) {
-	chapterIdStr := request.URL.Query().Get("id")
+	urlVals := request.URL.Query()
+	chapterIdStr := urlVals.Get("id")
+
+	if chapterIdStr == "" {
+		chapterIdStr = urlVals.Get("chapter-dropdown")
+	}
 	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid Chapter ID: %w", err)
@@ -302,9 +316,9 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 		SubjectID:    selectedChapterPtr.SubjectID,
 		ChapterPtr:   selectedChapterPtr,
 	}
-	local_repo.ExecuteTemplates(baseTemplate, chapterTemplate, responseWriter, data, template.FuncMap{
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getChapterName,
-	})
+	}, baseTemplate, chapterTemplate)
 }
 
 func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request *http.Request) {
@@ -328,7 +342,15 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 		h.getTopics(responseWriter, []*models.Chapter{selectedChapterPtr})
 	}
 	sortTopics(selectedChapterPtr.Topics)
-	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, selectedChapterPtr.Topics, template.FuncMap{
+
+	view := request.URL.Query().Get("view")
+	var filename string
+	if view == "list" {
+		filename = topicRowTemplate
+	} else {
+		filename = topicDropdownTemplate
+	}
+	local_repo.ExecuteTemplate(filename, responseWriter, selectedChapterPtr.Topics, template.FuncMap{
 		"getName": getTopicName,
 	})
 }

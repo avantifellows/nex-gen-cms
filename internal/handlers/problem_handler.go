@@ -65,8 +65,8 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		ProblemPtr: selectedProblemPtr,
 	}
 
-	local_repo.ExecuteTemplates(baseTemplate, problemTemplate, responseWriter, data, template.FuncMap{
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"add":         utils.Add,
 		"stringToInt": utils.StringToInt,
-	})
+	}, baseTemplate, problemTemplate)
 }

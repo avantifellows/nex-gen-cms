@@ -49,21 +49,34 @@ func ExecuteTemplate(filename string, responseWriter http.ResponseWriter, data a
 	tmpl.Execute(responseWriter, data)
 }
 
-func ExecuteTemplates(baseFileName string, contentFileName string, responseWriter http.ResponseWriter, data any,
-	funcMap template.FuncMap) {
-	htmlFolderPath := constants.GetHtmlFolderPath()
-	baseTmplPath := filepath.Join(htmlFolderPath, baseFileName)
-	contentTmplPath := filepath.Join(htmlFolderPath, contentFileName)
-	var tmpl *template.Template
-
-	if funcMap != nil {
-		tmpl = template.Must(template.New("base").Funcs(funcMap).ParseFiles(baseTmplPath, contentTmplPath))
-	} else {
-		// Direct parsing if no FuncMap
-		tmpl = template.Must(template.ParseFiles(baseTmplPath, contentTmplPath))
+func ExecuteTemplates(responseWriter http.ResponseWriter, data any, funcMap template.FuncMap, templateFiles ...string) {
+	if len(templateFiles) == 0 {
+		http.Error(responseWriter, "No template files provided", http.StatusInternalServerError)
+		return
 	}
 
-	err := tmpl.ExecuteTemplate(responseWriter, "base", data)
+	htmlFolderPath := constants.GetHtmlFolderPath()
+	var fullPaths []string
+	for _, file := range templateFiles {
+		fullPaths = append(fullPaths, filepath.Join(htmlFolderPath, file))
+	}
+
+	var tmpl *template.Template
+	var err error
+
+	if funcMap != nil {
+		tmpl, err = template.New("base").Funcs(funcMap).ParseFiles(fullPaths...)
+	} else {
+		tmpl, err = template.ParseFiles(fullPaths...)
+	}
+
+	if err != nil {
+		log.Println("Template Parsing Error:", err)
+		http.Error(responseWriter, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.ExecuteTemplate(responseWriter, "base", data)
 	if err != nil {
 		log.Println("Template Execution Error:", err)
 		http.Error(responseWriter, "Internal Server Error", http.StatusInternalServerError)

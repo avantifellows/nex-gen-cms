@@ -32,7 +32,7 @@
                     <th class="px-6 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody id="topicTableBody" class="text-gray-600 text-sm" hx-get="/api/topics?id={{.ChapterId}}"
+            <tbody id="topicTableBody" class="text-gray-600 text-sm" hx-get="/api/topics?view=list&id={{.ChapterId}}"
                 hx-trigger="load">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>

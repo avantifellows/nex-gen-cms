@@ -1,0 +1,4 @@
+<option selected>Select Chapter</option>
+{{ range . }}
+    <option value="{{.ID}}">{{ getName . "en" }}</option>
+{{ end }}
