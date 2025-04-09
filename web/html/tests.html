@@ -147,40 +147,40 @@
     }
 
     htmx.defineExtension('testsLoader', {
-            onEvent: function (name, event) {
-                if (name === "htmx:beforeRequest") {
-                    const requestPath = event.detail.elt.getAttribute("hx-get");
+        onEvent: function (name, event) {
+            if (name === "htmx:beforeRequest") {
+                const requestPath = event.detail.elt.getAttribute("hx-get");
 
-                    if (requestPath === "/api/tests") {
-                        if (sessionStorage.getItem(window.TESTS_LOADED_KEY) === "true") {
-                            console.log("Skipping /api/tests request because tests are already loaded.");
+                if (requestPath === "/api/tests") {
+                    if (sessionStorage.getItem(window.TESTS_LOADED_KEY) === "true") {
+                        console.log("Skipping /api/tests request because tests are already loaded.");
+                        event.preventDefault();
+
+                    } else {
+                        const params = event.detail.requestConfig.parameters;
+                        const curriculum = params["curriculum-dropdown"];
+                        const grade = params["grade-dropdown"];                            
+
+                        // if dropdown values are showing default value like "Loading...", then don't execute request
+                        if (!isInt(curriculum) || !isInt(grade)) {
+                            console.log("Skipping /api/tests request because dropdowns are not loaded yet.");
                             event.preventDefault();
 
                         } else {
-                            const params = event.detail.requestConfig.parameters;
-                            const curriculum = params["curriculum-dropdown"];
-                            const grade = params["grade-dropdown"];                            
+                            const storedCurriculum = sessionStorage.getItem("selectedCurriculum");
+                            const storedGrade = sessionStorage.getItem("selectedGrade");
 
-                            // if dropdown values are showing default value like "Loading...", then don't execute request
-                            if (!isInt(curriculum) || !isInt(grade)) {
-                                console.log("Skipping /api/tests request because dropdowns are not loaded yet.");
+                            if ((storedCurriculum && storedCurriculum !== curriculum) ||
+                                (storedGrade && storedGrade !== grade)) {
+                                // at least 1 dropdown value is 1 (1st item value) and its correct value is yet to be retained from sessionStorage
+                                console.log("Skipping /api/tests request because dropdowns values are not yet retained.");
                                 event.preventDefault();
-
-                            } else {
-                                const storedCurriculum = sessionStorage.getItem("selectedCurriculum");
-                                const storedGrade = sessionStorage.getItem("selectedGrade");
-
-                                if ((storedCurriculum && storedCurriculum !== curriculum) ||
-                                    (storedGrade && storedGrade !== grade)) {
-                                    // at least 1 dropdown value is 1 (1st item value) and its correct value is yet to be retained from sessionStorage
-                                    console.log("Skipping /api/tests request because dropdowns values are not yet retained.");
-                                    event.preventDefault();
-                                }
                             }
                         }
                     }
                 }
             }
-        });
+        }
+    });
 </script>
 {{ end }}

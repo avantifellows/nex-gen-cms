@@ -168,7 +168,7 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 	}
 }
 
-func (h *TestsHandler) GetProblems(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	testIdStr := request.URL.Query().Get("test_id")
 	testId := utils.StringToInt(testIdStr)
 

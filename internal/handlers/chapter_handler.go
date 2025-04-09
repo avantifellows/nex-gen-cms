@@ -333,9 +333,25 @@ func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request
 }
 
 func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	view := urlVals.Get("view")
+	var filename string
+	if view == "list" {
+		filename = topicRowTemplate
+	} else {
+		filename = topicDropdownTemplate
+	}
+
 	selectedChapterPtr, code, err := h.getChapter(request)
 	if err != nil {
-		http.Error(responseWriter, err.Error(), code)
+		// if "Select Chapter" default option is selected in add test screen, then just return empty response
+		if urlVals.Get("chapter-dropdown") == "Select Chapter" {
+			local_repo.ExecuteTemplate(filename, responseWriter, nil, template.FuncMap{
+				"getName": getTopicName,
+			})
+		} else {
+			http.Error(responseWriter, err.Error(), code)
+		}
 		return
 	}
 	if len(selectedChapterPtr.Topics) == 0 {
@@ -343,13 +359,6 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	}
 	sortTopics(selectedChapterPtr.Topics)
 
-	view := request.URL.Query().Get("view")
-	var filename string
-	if view == "list" {
-		filename = topicRowTemplate
-	} else {
-		filename = topicDropdownTemplate
-	}
 	local_repo.ExecuteTemplate(filename, responseWriter, selectedChapterPtr.Topics, template.FuncMap{
 		"getName": getTopicName,
 	})

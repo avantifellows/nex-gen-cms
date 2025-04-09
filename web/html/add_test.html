@@ -7,14 +7,16 @@
         <div class="grid grid-cols-2 gap-4">
             <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
-            <select id="chapter-dropdown" name="chapter-dropdown" class="p-2 border rounded w-full"
+            <select id="chapter-dropdown" name="chapter-dropdown" hx-ext="cascade-clear"
+                class="p-2 border rounded w-full"
                 hx-trigger="load, onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
                 hx-get="/api/chapters?view=dropdown"
                 hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown">
                 <option>Select Chapter</option>
             </select>
-            <select class="p-2 border rounded w-full" hx-get="/api/topics?view=dropdown"
-                hx-trigger="change from:#chapter-dropdown" hx-include="#chapter-dropdown">
+            <select id="topic-dropdown" name="topic-dropdown" hx-ext="cascade-clear" class="p-2 border rounded w-full"
+                hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
+                hx-include="#chapter-dropdown">
                 <option>Select Topic</option>
             </select>
             <label class="font-semibold">Level</label>
@@ -47,25 +49,9 @@
                         <th class="p-2">Action</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <tr class="border-b">
-                        <td class="p-2">P3156</td>
-                        <td class="p-2">If R is the radius of the Earth...</td>
-                        <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded">+</button>
-                        </td>
-                    </tr>
-                    <tr class="border-b">
-                        <td class="p-2">P3195</td>
-                        <td class="p-2">The acceleration due to gravity...</td>
-                        <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded">+</button>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="p-2">P3201</td>
-                        <td class="p-2">Suppose the Earth suddenly shrinks...</td>
-                        <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded">+</button>
-                        </td>
-                    </tr>
+                <tbody id="question-bank" hx-get="/api/topic/problems" hx-trigger="change from:#topic-dropdown"
+                    hx-include="#topic-dropdown">
+                    <!-- Rows will be dynamically inserted here -->
                 </tbody>
             </table>
         </div>
@@ -226,4 +212,28 @@
         <button class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded">Save</button>
     </div>
 </div>
+
+<script>
+    htmx.defineExtension('cascade-clear', {
+        onEvent: function (name, event) {
+            if (name === "htmx:afterSwap") {
+
+                const targetId = event.detail.target.id;
+                // Reset topic dropdown to default if afterSwap event is received for chapter-dropdown
+                if (targetId === "chapter-dropdown") {
+                    const topicDropdown = document.getElementById('topic-dropdown');
+                    if (topicDropdown) {
+                        topicDropdown.innerHTML = '<option>Select Topic</option>';
+                    }
+                }
+
+                // Clear problem list
+                const problemList = document.getElementById('question-bank');
+                if (problemList) {
+                    problemList.innerHTML = '';
+                }
+            }
+        }
+    });
+</script>
 {{ end }}
