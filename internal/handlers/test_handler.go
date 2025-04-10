@@ -189,3 +189,24 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
 	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, addTestTemplate, testTypeOptionsTemplate)
 }
+
+func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
+	problemRow := fmt.Sprintf(`
+        <tbody hx-swap-oob="beforeend:#questions-table-body">
+		<tr>
+            <td class="p-2">--</td>
+            <td class="p-2">%s</td>
+            <td class="p-2">-</td>
+            <td class="p-2">%s</td>
+            <td class="p-2">-</td>
+            <td class="p-2">-</td>
+            <td class="p-2">-</td>
+            <td class="p-2 text-center">
+                <button class="px-2 py-1 bg-red-500 text-white rounded">X</button>
+            </td>
+        </tr>
+		</tbody>
+    `, request.FormValue("code"), request.FormValue("question"))
+	responseWriter.Header().Set("Content-Type", "text/html")
+	fmt.Fprint(responseWriter, problemRow)
+}

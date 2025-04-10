@@ -10,6 +10,7 @@ type Problem struct {
 	SkillIDs []int16      `json:"skill_ids"`
 	Skills   []Skill
 	Subtype  string `json:"subtype"`
+	Subject  Subject
 }
 
 type ProbMetaData struct {

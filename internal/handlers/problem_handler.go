@@ -27,11 +27,12 @@ const srcProblemRowTemplate = "src_problem_row.html"
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
 	skillsService   *services.Service[models.Skill]
+	subjectsService *services.Service[models.Subject]
 }
 
 func NewProblemsHandler(problemsService *services.Service[models.Problem],
-	skillsService *services.Service[models.Skill]) *ProblemsHandler {
-	return &ProblemsHandler{problemsService: problemsService, skillsService: skillsService}
+	skillsService *services.Service[models.Skill], subjectsService *services.Service[models.Subject]) *ProblemsHandler {
+	return &ProblemsHandler{problemsService: problemsService, skillsService: skillsService, subjectsService: subjectsService}
 }
 
 func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -85,25 +86,44 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
+	subjectIdStr := urlValues.Get("subject-dropdown")
+	subjectId, err := utils.StringToIntType[int8](subjectIdStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Subject ID", http.StatusBadRequest)
+		return
+	}
+
+	selectedSubPtr, err := h.subjectsService.GetObject(subjectIdStr, func(subject *models.Subject) bool {
+		return (*subject).ID == subjectId
+	}, subjectsKey, subjectsEndPoint)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching subject: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	var problems = []models.Problem{
 		{
 			Code: "P3156",
 			MetaData: models.ProbMetaData{
 				Question: htmlTpl.HTML("If R is the radius of the Earth..."),
 			},
+			Subject: *selectedSubPtr,
 		},
 		{
 			Code: "P3195",
 			MetaData: models.ProbMetaData{
 				Question: template.HTML("The acceleration due to gravity..."),
 			},
+			Subject: *selectedSubPtr,
 		},
 		{
 			Code: "P3201",
 			MetaData: models.ProbMetaData{
 				Question: template.HTML("Suppose the Earth suddenly shrinks..."),
 			},
+			Subject: *selectedSubPtr,
 		},
 	}
+
 	local_repo.ExecuteTemplate(srcProblemRowTemplate, responseWriter, problems, nil)
 }

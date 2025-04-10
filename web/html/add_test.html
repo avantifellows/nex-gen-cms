@@ -50,7 +50,7 @@
                     </tr>
                 </thead>
                 <tbody id="question-bank" hx-get="/api/topic/problems" hx-trigger="change from:#topic-dropdown"
-                    hx-include="#topic-dropdown">
+                    hx-include="#topic-dropdown, #subject-dropdown">
                     <!-- Rows will be dynamically inserted here -->
                 </tbody>
             </table>
@@ -112,8 +112,8 @@
                     <th class="p-2">Action</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr class="bg-white">
+            <tbody id="questions-table-body" name="questions-table">
+                <!-- <tr class="bg-white">
                     <td class="p-2 font-medium text-center" colspan="8">Chemistry</td>
                 </tr>
                 <tr class="bg-gray-100">
@@ -200,7 +200,7 @@
                     <td class="p-2">-2</td>
                     <td class="p-2">2</td>
                     <td class="p-2 text-center"><button class="px-2 py-1 bg-red-500 text-white rounded">X</button></td>
-                </tr>
+                </tr> -->
             </tbody>
         </table>
         <div class="grid grid-cols-[auto_1fr_auto_1fr] items-center gap-x-4 mt-2">

@@ -2,7 +2,12 @@
 <tr class="border-b">
     <td class="p-2">{{.Code}}</td>
     <td class="p-2">{{.MetaData.Question}}</td>
-    <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded">+</button>
+    <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded"
+            hx-post="/add-question-to-test" hx-swap="delete" hx-target="closest tr"
+            hx-vals='{
+                "code": "{{.Code}}",
+                "question": "{{.MetaData.Question}}"
+            }'>+</button>
     </td>
 </tr>
 {{ end }}
