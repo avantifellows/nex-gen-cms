@@ -9,6 +9,7 @@ import (
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
+	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
@@ -23,6 +24,8 @@ const testTemplate = "test.html"
 const problemRowTemplate = "problem_row.html"
 const addTestTemplate = "add_test.html"
 const testTypeOptionsTemplate = "test_type_options.html"
+const addTestDestProblemRowTemplate = "dest_problem_row.html"
+const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
@@ -191,22 +194,36 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
-	problemRow := fmt.Sprintf(`
-        <tbody hx-swap-oob="beforeend:#questions-table-body">
-		<tr>
-            <td class="p-2">--</td>
-            <td class="p-2">%s</td>
-            <td class="p-2">-</td>
-            <td class="p-2">%s</td>
-            <td class="p-2">-</td>
-            <td class="p-2">-</td>
-            <td class="p-2">-</td>
-            <td class="p-2 text-center">
-                <button class="px-2 py-1 bg-red-500 text-white rounded">X</button>
-            </td>
-        </tr>
-		</tbody>
-    `, request.FormValue("code"), request.FormValue("question"))
+	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(request.FormValue("subject-id"),
+		h.subjectsService, subjectsKey, subjectsEndPoint)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), statusCode)
+		return
+	}
+
+	problem := models.Problem{
+		ID:   utils.StringToInt(request.FormValue("id")),
+		Code: request.FormValue("code"),
+		MetaData: models.ProbMetaData{
+			Question: template.HTML(request.FormValue("question")),
+		},
+		Subject: *subjectPtr,
+	}
+	insertAfterId := request.FormValue("insert-after-id")
+	var filename string
+	if insertAfterId == "" {
+		filename = addTestDestProblemRowWithHeadersTemplate
+	} else {
+		filename = addTestDestProblemRowTemplate
+	}
+
+	data := map[string]interface{}{
+		"Problem":       problem,
+		"InsertAfterId": insertAfterId,
+	}
 	responseWriter.Header().Set("Content-Type", "text/html")
-	fmt.Fprint(responseWriter, problemRow)
+
+	local_repo.ExecuteTemplate(filename, responseWriter, data, template.FuncMap{
+		"getName": getSubjectName,
+	})
 }

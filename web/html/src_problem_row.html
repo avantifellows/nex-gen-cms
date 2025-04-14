@@ -2,12 +2,35 @@
 <tr class="border-b">
     <td class="p-2">{{.Code}}</td>
     <td class="p-2">{{.MetaData.Question}}</td>
-    <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded"
-            hx-post="/add-question-to-test" hx-swap="delete" hx-target="closest tr"
-            hx-vals='{
-                "code": "{{.Code}}",
-                "question": "{{.MetaData.Question}}"
-            }'>+</button>
+    <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded" data-id="{{.ID}}" data-code="{{.Code}}"
+            data-question="{{.MetaData.Question}}" data-subject='{{.Subject.ID}}'
+            hx-on:click="addQuestionToTest(this)">+</button>
     </td>
 </tr>
+
+<script>
+    function addQuestionToTest(btn) {
+        const id = btn.dataset.id
+        const code = btn.dataset.code;
+        const question = btn.dataset.question;
+        const subjectId = btn.dataset.subject;
+        const questionsTableBody = document.querySelector("#questions-table-body");
+        const rows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+        
+        const lastRow = rows[rows.length - 1];
+        const insertAfterId = lastRow ? lastRow.id : "";
+
+        htmx.ajax("POST", "/add-question-to-test", {
+            target: btn.closest("tr"),
+            swap: "delete",
+            values: {
+                "id": id,
+                "code": code,
+                "question": question,
+                "subject-id": subjectId,
+                "insert-after-id": insertAfterId
+            }
+        });
+    }
+</script>
 {{ end }}

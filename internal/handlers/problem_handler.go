@@ -9,6 +9,7 @@ import (
 	textTpl "text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
+	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
@@ -86,42 +87,37 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	subjectIdStr := urlValues.Get("subject-dropdown")
-	subjectId, err := utils.StringToIntType[int8](subjectIdStr)
+	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(urlValues.Get("subject-dropdown"),
+		h.subjectsService, subjectsKey, subjectsEndPoint)
 	if err != nil {
-		http.Error(responseWriter, "Invalid Subject ID", http.StatusBadRequest)
-		return
-	}
-
-	selectedSubPtr, err := h.subjectsService.GetObject(subjectIdStr, func(subject *models.Subject) bool {
-		return (*subject).ID == subjectId
-	}, subjectsKey, subjectsEndPoint)
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching subject: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, err.Error(), statusCode)
 		return
 	}
 
 	var problems = []models.Problem{
 		{
+			ID:   1,
 			Code: "P3156",
 			MetaData: models.ProbMetaData{
 				Question: htmlTpl.HTML("If R is the radius of the Earth..."),
 			},
-			Subject: *selectedSubPtr,
+			Subject: *subjectPtr,
 		},
 		{
+			ID:   2,
 			Code: "P3195",
 			MetaData: models.ProbMetaData{
 				Question: template.HTML("The acceleration due to gravity..."),
 			},
-			Subject: *selectedSubPtr,
+			Subject: *subjectPtr,
 		},
 		{
+			ID:   3,
 			Code: "P3201",
 			MetaData: models.ProbMetaData{
 				Question: template.HTML("Suppose the Earth suddenly shrinks..."),
 			},
-			Subject: *selectedSubPtr,
+			Subject: *subjectPtr,
 		},
 	}
 
