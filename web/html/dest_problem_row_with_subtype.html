@@ -1,11 +1,8 @@
-<tbody hx-swap-oob="beforeend:#questions-table-body">
-    <tr class="bg-white">
-        <td class="p-2 font-medium text-center capitalize" colspan="8">{{ getName .Subject "en" }}</td>
-    </tr>
+<tbody id="questions-table-body" hx-swap-oob="afterend:#{{.InsertAfterId}}">
     <tr class="bg-gray-100">
         <td class="p-2" colspan="8">
             <div class="flex justify-between items-center whitespace-nowrap">
-                <span>{{.DisplaySubtype}}</span>
+                <span>{{.Problem.DisplaySubtype}}</span>
                 <div class="flex gap-2">
                     <button class="px-3 py-1 bg-blue-500 text-white rounded">Shuffle</button>
                     <button class="px-3 py-1 bg-green-500 text-white rounded">^</button>
@@ -13,11 +10,11 @@
             </div>
         </td>
     </tr>
-    <tr id="problem-{{.ID}}" data-subject="subject-{{.Subject.ID}}" data-subtype="subtype-{{.Subtype}}">
+    <tr id="problem-{{.Problem.ID}}" data-subject="subject-{{.Problem.Subject.ID}}" data-subtype="subtype-{{.Problem.Subtype}}">
         <td class="p-2">--</td>
-        <td class="p-2">{{ .Code }}</td>
+        <td class="p-2">{{ .Problem.Code }}</td>
         <td class="p-2">-</td>
-        <td class="p-2">{{ .MetaData.Question }}</td>
+        <td class="p-2">{{ .Problem.MetaData.Question }}</td>
         <td class="p-2">-</td>
         <td class="p-2">-</td>
         <td class="p-2">-</td>

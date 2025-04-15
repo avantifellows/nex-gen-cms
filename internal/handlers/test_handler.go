@@ -25,6 +25,7 @@ const problemRowTemplate = "problem_row.html"
 const addTestTemplate = "add_test.html"
 const testTypeOptionsTemplate = "test_type_options.html"
 const addTestDestProblemRowTemplate = "dest_problem_row.html"
+const addTestDestProblemRowWithSubtypeTemplate = "dest_problem_row_with_subtype.html"
 const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.html"
 
 const resourcesEndPoint = "/resource"
@@ -207,20 +208,40 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		MetaData: models.ProbMetaData{
 			Question: template.HTML(request.FormValue("question")),
 		},
+		Subtype: request.FormValue("subtype"),
 		Subject: *subjectPtr,
 	}
+
 	insertAfterId := request.FormValue("insert-after-id")
+	subjectExists := request.FormValue("subject-exists") == "true"
+	subtypeExists := request.FormValue("subtype-exists") == "true"
+
 	var filename string
-	if insertAfterId == "" {
+	var data any
+
+	switch {
+	case !subjectExists && !subtypeExists:
+		// Need subject + subtype header
 		filename = addTestDestProblemRowWithHeadersTemplate
-	} else {
+		data = problem
+
+	case subjectExists && !subtypeExists:
+		// Only subtype header needed
+		filename = addTestDestProblemRowWithSubtypeTemplate
+		data = map[string]any{
+			"Problem":       problem,
+			"InsertAfterId": insertAfterId,
+		}
+
+	case subtypeExists:
+		// Just problem row
 		filename = addTestDestProblemRowTemplate
+		data = map[string]any{
+			"Problem":       problem,
+			"InsertAfterId": insertAfterId,
+		}
 	}
 
-	data := map[string]interface{}{
-		"Problem":       problem,
-		"InsertAfterId": insertAfterId,
-	}
 	responseWriter.Header().Set("Content-Type", "text/html")
 
 	local_repo.ExecuteTemplate(filename, responseWriter, data, template.FuncMap{

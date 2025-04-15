@@ -24,3 +24,14 @@ type Solution struct {
 	Type  string        `json:"type"`
 	Value template.HTML `json:"value"`
 }
+
+func (p Problem) DisplaySubtype() string {
+	switch p.Subtype {
+	case "mcq_single_answer":
+		return "MCQ Single Answer"
+	case "numerical_answer":
+		return "Numerical Answer"
+	default:
+		return "Unknown"
+	}
+}

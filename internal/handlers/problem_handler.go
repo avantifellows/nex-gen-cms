@@ -101,6 +101,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 			MetaData: models.ProbMetaData{
 				Question: htmlTpl.HTML("If R is the radius of the Earth..."),
 			},
+			Subtype: "mcq_single_answer",
 			Subject: *subjectPtr,
 		},
 		{
@@ -109,6 +110,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 			MetaData: models.ProbMetaData{
 				Question: template.HTML("The acceleration due to gravity..."),
 			},
+			Subtype: "numerical_answer",
 			Subject: *subjectPtr,
 		},
 		{
@@ -117,6 +119,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 			MetaData: models.ProbMetaData{
 				Question: template.HTML("Suppose the Earth suddenly shrinks..."),
 			},
+			Subtype: "mcq_single_answer",
 			Subject: *subjectPtr,
 		},
 	}
