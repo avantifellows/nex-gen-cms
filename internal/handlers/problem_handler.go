@@ -101,8 +101,9 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 			MetaData: models.ProbMetaData{
 				Question: htmlTpl.HTML("If R is the radius of the Earth..."),
 			},
-			Subtype: "mcq_single_answer",
-			Subject: *subjectPtr,
+			Subtype:         "mcq_single_answer",
+			Subject:         *subjectPtr,
+			DifficultyLevel: "easy",
 		},
 		{
 			ID:   2,
@@ -110,8 +111,9 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 			MetaData: models.ProbMetaData{
 				Question: template.HTML("The acceleration due to gravity..."),
 			},
-			Subtype: "numerical_answer",
-			Subject: *subjectPtr,
+			Subtype:         "numerical_answer",
+			Subject:         *subjectPtr,
+			DifficultyLevel: "medium",
 		},
 		{
 			ID:   3,
@@ -119,10 +121,25 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 			MetaData: models.ProbMetaData{
 				Question: template.HTML("Suppose the Earth suddenly shrinks..."),
 			},
-			Subtype: "mcq_single_answer",
-			Subject: *subjectPtr,
+			Subtype:         "numerical_answer",
+			Subject:         *subjectPtr,
+			DifficultyLevel: "easy",
 		},
 	}
 
+	filterProblems(&problems, urlValues.Get("level-dropdown"), urlValues.Get("ptype-dropdown"))
 	local_repo.ExecuteTemplate(srcProblemRowTemplate, responseWriter, problems, nil)
+}
+
+func filterProblems(problems *[]models.Problem, difficulty string, ptype string) {
+	ps := *problems
+	n := 0
+	for _, p := range ps {
+		// "" means All is selected in dropdown
+		if (difficulty == "" || p.DifficultyLevel == difficulty) && (ptype == "" || p.Subtype == ptype) {
+			ps[n] = p
+			n++
+		}
+	}
+	*problems = ps[:n]
 }

@@ -21,21 +21,21 @@
             </select>
             <label class="font-semibold">Level</label>
             <label class="font-semibold">Problem Type</label>
-            <select class="p-2 border rounded w-full">
-                <option>All</option>
-                <option>Easy</option>
-                <option>Medium</option>
-                <option>Hard</option>
+            <select id="level-dropdown" name="level-dropdown" class="p-2 border rounded w-full">
+                <option value="">All</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="difficult">Hard</option>
             </select>
-            <select class="p-2 border rounded w-full">
-                <option>All</option>
-                <option>Single Answer</option>
-                <option>Mcq Single Answer</option>
-                <option>Mcq Multiple Answer</option>
-                <option>Integer Type</option>
-                <option>Matrix Match</option>
-                <option>Numerical Answer</option>
-                <option>Comprehension Type</option>
+            <select id="ptype-dropdown" name="ptype-dropdown" class="p-2 border rounded w-full">
+                <option value="">All</option>
+                <option value="single_answer">Single Answer</option>
+                <option value="mcq_single_answer">Mcq Single Answer</option>
+                <option value="mcq_multiple_answer">Mcq Multiple Answer</option>
+                <option value="integer_type">Integer Type</option>
+                <option value="matrix_match">Matrix Match</option>
+                <option value="numerical_answer">Numerical Answer</option>
+                <option value="comprehension_type">Comprehension Type</option>
             </select>
         </div>
         <!-- Questions List -->
@@ -49,8 +49,9 @@
                         <th class="p-2">Action</th>
                     </tr>
                 </thead>
-                <tbody id="question-bank" hx-get="/api/topic/problems" hx-trigger="change from:#topic-dropdown"
-                    hx-include="#topic-dropdown, #subject-dropdown">
+                <tbody id="question-bank" hx-get="/api/topic/problems"
+                    hx-trigger="change from:(#topic-dropdown, #level-dropdown, #ptype-dropdown)"
+                    hx-include="#topic-dropdown, #subject-dropdown, #level-dropdown, #ptype-dropdown">
                     <!-- Rows will be dynamically inserted here -->
                 </tbody>
             </table>
@@ -91,9 +92,9 @@
             </thead>
             <tbody>
                 <tr>
-                    <td class="p-2">5</td>
-                    <td class="p-2">10</td>
-                    <td class="p-2">15</td>
+                    <td id="level-easy" class="p-2">0</td>
+                    <td id="level-medium" class="p-2">0</td>
+                    <td id="level-difficult" class="p-2">0</td>
                 </tr>
             </tbody>
         </table>

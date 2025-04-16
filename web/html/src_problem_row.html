@@ -4,7 +4,8 @@
     <td class="p-2">{{.MetaData.Question}}</td>
     <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded" data-id="{{.ID}}"
             data-code="{{.Code}}" data-question="{{.MetaData.Question}}" data-subject="{{.Subject.ID}}"
-            data-subtype="{{.Subtype}}" hx-on:click="addQuestionToTest(this)">+</button>
+            data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
+            hx-on:click="addQuestionToTest(this)">+</button>
     </td>
 </tr>
 
@@ -27,6 +28,63 @@
             // Subtype doesn't exist but subject does — insert after last subject-related row
             insertAfterId = subjectRows[subjectRows.length - 1].id;
         }
+
+        // Hook a one-time global listener that just closes over this specific button's data
+        const handler = (event) => {
+            if (event.detail.successful) {
+                // Increase the count in the levels table
+                const difficulty = dataset.difficulty;
+                const levelCell = document.getElementById(`level-${difficulty}`);
+                if (levelCell) {
+                    levelCell.textContent = parseInt(levelCell.textContent) + 1;
+                }
+
+                // Assign serial number to newly added row and Update serial numbers of all affected rows
+                let serial = 0;
+                let currentRow;
+
+                if (insertAfterId !== "") {
+                    const insertAfterRow = document.getElementById(insertAfterId);
+                    const firstTd = insertAfterRow.querySelector("td");
+                    serial = parseInt(firstTd.textContent);
+                    currentRow = insertAfterRow.nextElementSibling;
+
+                } else {
+                    // Inserted without known insertAfterId — find previous valid row with serial number
+                    const allRows = Array.from(questionsTableBody.querySelectorAll("tr"));
+                    // loop in reverse order
+                    for (let i = allRows.length - 1; i >= 0; i--) {
+                        const row = allRows[i];
+                        const firstTd = row.querySelector("td");
+
+                        // find valid problem rows (excluding subject/problem type header rows)
+                        if (!firstTd.hasAttribute("colspan")) {
+
+                            // last problem row added just now
+                            if (firstTd.textContent.trim() === "") {
+                                currentRow = row;
+                                
+                            } else {
+                                // serial number of 2nd last problem
+                                serial = parseInt(firstTd.textContent.trim());
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // Update serial numbers, skipping colspan header rows
+                while (currentRow) {
+                    const firstTd = currentRow.querySelector("td");
+                    if (!firstTd.hasAttribute("colspan")) {
+                        firstTd.textContent = ++serial;
+                    }
+                    currentRow = currentRow.nextElementSibling;
+                }
+            }
+            document.body.removeEventListener("htmx:afterRequest", handler);
+        };
+        document.body.addEventListener("htmx:afterRequest", handler);
 
         htmx.ajax("POST", "/add-question-to-test", {
             target: btn.closest("tr"),

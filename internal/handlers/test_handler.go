@@ -242,8 +242,6 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		}
 	}
 
-	responseWriter.Header().Set("Content-Type", "text/html")
-
 	local_repo.ExecuteTemplate(filename, responseWriter, data, template.FuncMap{
 		"getName": getSubjectName,
 	})

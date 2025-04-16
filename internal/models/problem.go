@@ -3,14 +3,15 @@ package models
 import "html/template"
 
 type Problem struct {
-	ID       int `json:"id"`
-	Code     string
-	LangCode string       `json:"lang_code"`
-	MetaData ProbMetaData `json:"meta_data"`
-	SkillIDs []int16      `json:"skill_ids"`
-	Skills   []Skill
-	Subtype  string `json:"subtype"`
-	Subject  Subject
+	ID              int `json:"id"`
+	Code            string
+	LangCode        string       `json:"lang_code"`
+	MetaData        ProbMetaData `json:"meta_data"`
+	SkillIDs        []int16      `json:"skill_ids"`
+	Skills          []Skill
+	Subtype         string `json:"subtype"`
+	Subject         Subject
+	DifficultyLevel string `json:"difficulty_level"`
 }
 
 type ProbMetaData struct {
