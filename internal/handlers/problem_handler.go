@@ -6,6 +6,7 @@ import (
 	htmlTpl "html/template"
 	"log"
 	"net/http"
+	"strings"
 	textTpl "text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
@@ -127,16 +128,22 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		},
 	}
 
-	filterProblems(&problems, urlValues.Get("level-dropdown"), urlValues.Get("ptype-dropdown"))
+	filterProblems(&problems, urlValues.Get("level-dropdown"), urlValues.Get("ptype-dropdown"), urlValues.Get("selected-ids"))
 	local_repo.ExecuteTemplate(srcProblemRowTemplate, responseWriter, problems, nil)
 }
 
-func filterProblems(problems *[]models.Problem, difficulty string, ptype string) {
+func filterProblems(problems *[]models.Problem, difficulty string, ptype string, selectedIdsRaw string) {
+	// Build map of already selected problem ids. map is used instead of slice for better performance
+	selectedIds := map[int]bool{}
+	for _, id := range strings.Split(selectedIdsRaw, ",") {
+		selectedIds[utils.StringToInt(id)] = true
+	}
+
 	ps := *problems
 	n := 0
 	for _, p := range ps {
 		// "" means All is selected in dropdown
-		if (difficulty == "" || p.DifficultyLevel == difficulty) && (ptype == "" || p.Subtype == ptype) {
+		if (difficulty == "" || p.DifficultyLevel == difficulty) && (ptype == "" || p.Subtype == ptype) && !selectedIds[p.ID] {
 			ps[n] = p
 			n++
 		}

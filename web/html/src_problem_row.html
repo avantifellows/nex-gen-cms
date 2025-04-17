@@ -14,76 +14,15 @@
         const dataset = btn.dataset
         const subtype = dataset.subtype;
         const subjectId = dataset.subject;
+        const difficulty = dataset.difficulty;
         const questionsTableBody = document.querySelector("#questions-table-body");
 
         const subjectRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
         const subtypeRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
-
-        let insertAfterId = "";
-
-        if (subtypeRows.length > 0) {
-            // Subtype exists — insert after last row of this subtype
-            insertAfterId = subtypeRows[subtypeRows.length - 1].id;
-        } else if (subjectRows.length > 0) {
-            // Subtype doesn't exist but subject does — insert after last subject-related row
-            insertAfterId = subjectRows[subjectRows.length - 1].id;
-        }
+        const insertAfterId = getInsertAfterId(subjectRows, subtypeRows);
 
         // Hook a one-time global listener that just closes over this specific button's data
-        const handler = (event) => {
-            if (event.detail.successful) {
-                // Increase the count in the levels table
-                const difficulty = dataset.difficulty;
-                const levelCell = document.getElementById(`level-${difficulty}`);
-                if (levelCell) {
-                    levelCell.textContent = parseInt(levelCell.textContent) + 1;
-                }
-
-                // Assign serial number to newly added row and Update serial numbers of all affected rows
-                let serial = 0;
-                let currentRow;
-
-                if (insertAfterId !== "") {
-                    const insertAfterRow = document.getElementById(insertAfterId);
-                    const firstTd = insertAfterRow.querySelector("td");
-                    serial = parseInt(firstTd.textContent);
-                    currentRow = insertAfterRow.nextElementSibling;
-
-                } else {
-                    // Inserted without known insertAfterId — find previous valid row with serial number
-                    const allRows = Array.from(questionsTableBody.querySelectorAll("tr"));
-                    // loop in reverse order
-                    for (let i = allRows.length - 1; i >= 0; i--) {
-                        const row = allRows[i];
-                        const firstTd = row.querySelector("td");
-
-                        // find valid problem rows (excluding subject/problem type header rows)
-                        if (!firstTd.hasAttribute("colspan")) {
-
-                            // last problem row added just now
-                            if (firstTd.textContent.trim() === "") {
-                                currentRow = row;
-                                
-                            } else {
-                                // serial number of 2nd last problem
-                                serial = parseInt(firstTd.textContent.trim());
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // Update serial numbers, skipping colspan header rows
-                while (currentRow) {
-                    const firstTd = currentRow.querySelector("td");
-                    if (!firstTd.hasAttribute("colspan")) {
-                        firstTd.textContent = ++serial;
-                    }
-                    currentRow = currentRow.nextElementSibling;
-                }
-            }
-            document.body.removeEventListener("htmx:afterRequest", handler);
-        };
+        const handler = createAfterRequestHandler(difficulty, insertAfterId, questionsTableBody);
         document.body.addEventListener("htmx:afterRequest", handler);
 
         htmx.ajax("POST", "/add-question-to-test", {
@@ -95,11 +34,89 @@
                 "question": dataset.question,
                 "subtype": subtype,
                 "subject-id": subjectId,
+                "difficulty": difficulty,
                 "subject-exists": subjectRows.length > 0,
                 "subtype-exists": subtypeRows.length > 0,
                 "insert-after-id": insertAfterId
             }
         });
+    }
+
+    function getInsertAfterId(subjectRows, subtypeRows) {
+        if (subtypeRows.length > 0) {
+            // Subtype exists — insert after last row of this subtype
+            return subtypeRows[subtypeRows.length - 1].id;
+        }
+
+        if (subjectRows.length > 0) {
+            // Subtype doesn't exist but subject does — insert after last subject-related row
+            return subjectRows[subjectRows.length - 1].id;
+        }
+
+        return "";
+    }
+
+    function createAfterRequestHandler(difficulty, insertAfterId, tableBody) {
+        return function handler(event) {
+            if (event.detail.successful) {
+                incrementLevelCount(difficulty);
+                updateSerialNumbers(insertAfterId, tableBody);
+            }
+            document.body.removeEventListener("htmx:afterRequest", handler);
+        }
+    }
+
+    function incrementLevelCount(difficulty) {
+        // Increase the count in the levels table
+        const levelCell = document.getElementById(`level-${difficulty}`);
+        if (levelCell) {
+            levelCell.textContent = parseInt(levelCell.textContent) + 1;
+        }
+    }
+
+    function updateSerialNumbers(insertAfterId, tableBody) {
+        // Assign serial number to newly added row and Update serial numbers of all affected rows
+        let serial = 0;
+        let currentRow;
+
+        if (insertAfterId !== "") {
+            const insertAfterRow = document.getElementById(insertAfterId);
+            const firstTd = insertAfterRow.querySelector("td");
+            serial = parseInt(firstTd.textContent);
+            currentRow = insertAfterRow.nextElementSibling;
+
+        } else {
+            // Inserted without known insertAfterId — find previous valid row with serial number
+            const allRows = Array.from(tableBody.querySelectorAll("tr"));
+            // loop in reverse order
+            for (let i = allRows.length - 1; i >= 0; i--) {
+                const row = allRows[i];
+                const firstTd = row.querySelector("td");
+
+                // find valid problem rows (excluding subject/problem type header rows)
+                if (!firstTd.hasAttribute("colspan")) {
+
+                    // last problem row added just now
+                    if (firstTd.textContent.trim() === "") {
+                        currentRow = row;
+
+                    } else {
+                        // serial number of 2nd last problem
+                        serial = parseInt(firstTd.textContent.trim());
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Update serial numbers, skipping colspan header rows
+        while (currentRow) {
+            const firstTd = currentRow.querySelector("td");
+            if (!firstTd.hasAttribute("colspan")) {
+                firstTd.textContent = ++serial;
+            }
+            currentRow = currentRow.nextElementSibling;
+        }
     }
 </script>
 {{ end }}

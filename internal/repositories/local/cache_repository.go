@@ -65,7 +65,7 @@ func ExecuteTemplates(responseWriter http.ResponseWriter, data any, funcMap temp
 	var err error
 
 	if funcMap != nil {
-		tmpl, err = template.New("base").Funcs(funcMap).ParseFiles(fullPaths...)
+		tmpl, err = template.New(templateFiles[0]).Funcs(funcMap).ParseFiles(fullPaths...)
 	} else {
 		tmpl, err = template.ParseFiles(fullPaths...)
 	}
@@ -76,7 +76,7 @@ func ExecuteTemplates(responseWriter http.ResponseWriter, data any, funcMap temp
 		return
 	}
 
-	err = tmpl.ExecuteTemplate(responseWriter, "base", data)
+	err = tmpl.ExecuteTemplate(responseWriter, templateFiles[0], data)
 	if err != nil {
 		log.Println("Template Execution Error:", err)
 		http.Error(responseWriter, "Internal Server Error", http.StatusInternalServerError)

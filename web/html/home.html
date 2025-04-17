@@ -1,8 +1,3 @@
-<!-- defining "base" template here is required to map it inside cache_repository.ExecuteTemplates() [like 
- template.New("base") and tmpl.ExecuteTemplate(responseWriter, "base", data)], without which FuncMap passed 
- doesn't work properly (it doesn't inflate html page at all or inflates only internal "content" template 
- without top tabs based on what do we pass to template.New()) -->
-{{ define "base" }}
 <!DOCTYPE html>
 <html lang="en">
 
@@ -220,4 +215,3 @@
 </body>
 
 </html>
-{{ end }}

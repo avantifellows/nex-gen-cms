@@ -36,3 +36,14 @@ func (p Problem) DisplaySubtype() string {
 		return "Unknown"
 	}
 }
+
+func (p Problem) DisplayDifficulty() int8 {
+	switch p.DifficultyLevel {
+	case "easy":
+		return 1
+	case "medium":
+		return 2
+	default:
+		return 3
+	}
+}

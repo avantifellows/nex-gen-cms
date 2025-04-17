@@ -1,14 +1,46 @@
-<tbody id="questions-table-body" hx-swap-oob="afterend:#{{.InsertAfterId}}">
-    <tr id="problem-{{.Problem.ID}}" data-subject="subject-{{.Problem.Subject.ID}}">
-        <td class="p-2"></td>
-        <td class="p-2">{{ .Problem.Code }}</td>
-        <td class="p-2">-</td>
-        <td class="p-2">{{ .Problem.MetaData.Question }}</td>
-        <td class="p-2">-</td>
-        <td class="p-2">-</td>
-        <td class="p-2">-</td>
-        <td class="p-2 text-center">
-            <button class="px-2 py-1 bg-red-500 text-white rounded">X</button>
-        </td>
-    </tr>
-</tbody>
+{{ define "dest_problem_row" }}
+<tr id="problem-{{.ID}}" data-subject="subject-{{.Subject.ID}}" data-subtype="subtype-{{.Subtype}}">
+    <td class="p-2"></td>
+    <td class="p-2">{{ .Code }}</td>
+    <td class="p-2">{{.DisplayDifficulty}}</td>
+    <td class="p-2">{{ .MetaData.Question }}</td>
+    <td class="p-2">-</td>
+    <td class="p-2">-</td>
+    <td class="p-2">-</td>
+    <td class="p-2 text-center">
+        <button class="px-2 py-1 bg-red-500 text-white rounded">X</button>
+        <!-- <button class="px-2 py-1 bg-red-500 text-white rounded" data-id="{{.ID}}" data-code="{{.Code}}"
+            data-question="{{.MetaData.Question}}" data-difficulty="{{.DifficultyLevel}}"
+            hx-on:click="removeQuestionFromTest(this)">X</button> -->
+    </td>
+</tr>
+<!-- <script>
+    function removeQuestionFromTest(btn) {
+        // Remove row from the DOM
+        btn.closest("tr").remove();
+
+        const dataset = btn.dataset;
+
+        // Decrement count in levels table
+        decrementLevelCount(dataset.difficulty);
+
+        // Add question back to the left panel via HTMX
+        htmx.ajax("POST", "/remove-question-from-test", {
+            target: "#question-bank",
+            swap: "beforeend",
+            values: {
+                "id": dataset.id,
+                "code": dataset.code,
+                "question": dataset.question
+            }
+        });
+    }
+
+    function decrementLevelCount(difficulty) {
+        const levelCell = document.getElementById(`level-${difficulty}`);
+        if (levelCell) {
+            levelCell.textContent = Math.max(0, parseInt(levelCell.textContent) - 1)
+        }
+    }
+</script> -->
+{{ end }}

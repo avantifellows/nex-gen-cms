@@ -49,7 +49,7 @@
                         <th class="p-2">Action</th>
                     </tr>
                 </thead>
-                <tbody id="question-bank" hx-get="/api/topic/problems"
+                <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems"
                     hx-trigger="change from:(#topic-dropdown, #level-dropdown, #ptype-dropdown)"
                     hx-include="#topic-dropdown, #subject-dropdown, #level-dropdown, #ptype-dropdown">
                     <!-- Rows will be dynamically inserted here -->
@@ -145,6 +145,17 @@
                 if (problemList) {
                     problemList.innerHTML = '';
                 }
+            }
+        }
+    });
+
+    htmx.defineExtension('addSelectedIds', {
+        onEvent: function (name, evt) {
+            if (name === "htmx:configRequest") {
+                // add already selected problem ids in parameters
+                const selectedIds = Array.from(document.querySelectorAll("#questions-table-body tr[id^='problem-']"))
+                    .map(row => row.id.replace("problem-", ""));
+                evt.detail.parameters["selected-ids"] = selectedIds.join(",");
             }
         }
     });

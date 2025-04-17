@@ -24,9 +24,11 @@ const testTemplate = "test.html"
 const problemRowTemplate = "problem_row.html"
 const addTestTemplate = "add_test.html"
 const testTypeOptionsTemplate = "test_type_options.html"
-const addTestDestProblemRowTemplate = "dest_problem_row.html"
+const addTestDestProblemRowWithoutHeadersTemplate = "dest_problem_row_without_headers.html"
 const addTestDestProblemRowWithSubtypeTemplate = "dest_problem_row_with_subtype.html"
 const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.html"
+const addTestDestProblemRowTemplate = "dest_problem_row.html"
+const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
@@ -208,8 +210,9 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		MetaData: models.ProbMetaData{
 			Question: template.HTML(request.FormValue("question")),
 		},
-		Subtype: request.FormValue("subtype"),
-		Subject: *subjectPtr,
+		Subtype:         request.FormValue("subtype"),
+		Subject:         *subjectPtr,
+		DifficultyLevel: request.FormValue("difficulty"),
 	}
 
 	insertAfterId := request.FormValue("insert-after-id")
@@ -235,14 +238,18 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 
 	case subtypeExists:
 		// Just problem row
-		filename = addTestDestProblemRowTemplate
+		filename = addTestDestProblemRowWithoutHeadersTemplate
 		data = map[string]any{
 			"Problem":       problem,
 			"InsertAfterId": insertAfterId,
 		}
 	}
 
-	local_repo.ExecuteTemplate(filename, responseWriter, data, template.FuncMap{
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getSubjectName,
-	})
+	}, filename, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate)
+}
+
+func (h *TestsHandler) removeQuestionFromTest(responseWriter http.ResponseWriter, request *http.Request) {
+
 }
