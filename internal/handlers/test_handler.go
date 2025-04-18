@@ -249,7 +249,3 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		"getName": getSubjectName,
 	}, filename, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate)
 }
-
-func (h *TestsHandler) removeQuestionFromTest(responseWriter http.ResponseWriter, request *http.Request) {
-
-}

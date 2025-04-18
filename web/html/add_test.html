@@ -159,5 +159,52 @@
             }
         }
     });
+
+    function removeQuestionFromTest(btn) {
+        // Remove problem row from the DOM
+        const problemRow = btn.closest("tr");
+        const prevRow = problemRow.previousElementSibling;
+        const prevPrevRow = prevRow.previousElementSibling;
+        let nextRow = problemRow.nextElementSibling;
+        problemRow.remove();
+
+        const dataset = btn.dataset;
+        const subject = problemRow.dataset.subject;
+        const subtype = problemRow.dataset.subtype;
+        const tableBody = document.getElementById("questions-table-body");
+
+        // Remove subtype header if no more problems of that subtype under same subject remain
+        const remainingSubtypeProblems = tableBody.querySelectorAll(`tr[data-subject="${subject}"][data-subtype="${subtype}"]`);
+        if (remainingSubtypeProblems.length === 0) {
+            prevRow.remove();
+
+            // Remove subject header if no more problems of that subject remain
+            const remainingSubjectProblems = tableBody.querySelectorAll(`tr[data-subject="${subject}"]`);
+            if (remainingSubjectProblems.length === 0) {
+                prevPrevRow.remove();
+            }
+        }
+
+        // Update serial numbers of all rows following removed row, skipping colspan header rows
+        while (nextRow) {
+            const firstTd = nextRow.querySelector("td");
+            if (!firstTd.hasAttribute("colspan")) {
+                firstTd.textContent = parseInt(firstTd.textContent - 1);
+            }
+            nextRow = nextRow.nextElementSibling;
+        }
+
+        // Decrement count in levels table
+        decrementLevelCount(dataset.difficulty);
+
+        // Refresh left panel
+        const topicDropdown = document.getElementById("topic-dropdown");
+        htmx.trigger(topicDropdown, "change");
+    }
+
+    function decrementLevelCount(difficulty) {
+        const levelCell = document.getElementById(`level-${difficulty}`);
+        levelCell.textContent = Math.max(0, parseInt(levelCell.textContent) - 1)
+    }
 </script>
 {{ end }}
