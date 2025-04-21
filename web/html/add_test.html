@@ -107,9 +107,8 @@
                     <th class="p-2">Code</th>
                     <th class="p-2">Level</th>
                     <th class="p-2">Question</th>
-                    <th class="p-2">+ve Marks</th>
-                    <th class="p-2">-ve Marks</th>
-                    <th class="p-2">Partial Marks</th>
+                    <th class="p-2 text-center">+ve Marks</th>
+                    <th class="p-2 text-center">-ve Marks</th>
                     <th class="p-2">Action</th>
                 </tr>
             </thead>
@@ -205,6 +204,52 @@
     function decrementLevelCount(difficulty) {
         const levelCell = document.getElementById(`level-${difficulty}`);
         levelCell.textContent = Math.max(0, parseInt(levelCell.textContent) - 1)
+    }
+
+    function handleEditableChips(e) {
+        const editor = e.currentTarget;
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+
+        // Only handle Enter, Comma, or Space
+        if (['Enter', ',', ' '].includes(e.key)) {
+            e.preventDefault();
+
+            // Get and trim the typed value
+            const textNode = range.startContainer;
+            let value = textNode.textContent.trim();
+
+            // Remove the typed text
+            textNode.textContent = '';
+
+            // Get all existing chips in the same editor
+            const existingMarks = Array.from(editor.querySelectorAll('.chip')).map(chip => chip.textContent.trim());
+
+            // Validate and check duplicates
+            if (value && /^\d+$/.test(value) && !existingMarks.includes(value)) {
+                // Create chip element
+                const chip = document.createElement('span');
+                chip.className = 'chip';
+                chip.contentEditable = 'false';
+                chip.textContent = value;
+
+                // Insert chip at cursor
+                range.insertNode(chip);
+                range.insertNode(document.createTextNode('\u00A0'));
+
+                // Move cursor after the inserted chip
+                const newRange = document.createRange();
+                newRange.setStartAfter(chip.nextSibling || chip);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+            }
+        }
+    }
+
+    function focusEditable(containerDiv) {
+        const editor = containerDiv.querySelector('[contenteditable="true"]');
+        editor.focus();
     }
 </script>
 {{ end }}

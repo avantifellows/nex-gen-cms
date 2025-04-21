@@ -592,6 +592,10 @@ video {
   visibility: visible;
 }
 
+.collapse {
+  visibility: collapse;
+}
+
 .m-7 {
   margin: 1.75rem;
 }
@@ -604,10 +608,6 @@ video {
 .my-6 {
   margin-top: 1.5rem;
   margin-bottom: 1.5rem;
-}
-
-.-mt-4 {
-  margin-top: -1rem;
 }
 
 .mb-2 {
@@ -688,6 +688,10 @@ video {
 
 .w-1\/4 {
   width: 25%;
+}
+
+.w-\[5rem\] {
+  width: 5rem;
 }
 
 .w-full {
@@ -1114,6 +1118,39 @@ video {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
   --tw-text-opacity: 1;
   color: rgb(239 68 68 / var(--tw-text-opacity, 1));
+}
+
+.chip {
+  display: inline-block;
+  border-radius: 0.25rem;
+  --tw-bg-opacity: 1;
+  background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.chip-box {
+  display: flex;
+  min-height: 2rem;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-radius: 0.25rem;
+  border-width: 1px;
+  --tw-border-opacity: 1;
+  border-color: rgb(209 213 219 / var(--tw-border-opacity, 1));
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.chip-editor {
+  min-width: 1rem;
+  text-align: left;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
 }
 
 .hover\:bg-blue-600:hover {
