@@ -68,16 +68,24 @@
         </div>
 
         <h2 class="mt-4 text-lg font-semibold">Marking Scheme</h2>
-        <div class="mt-2 grid grid-cols-4 gap-4 items-center">
+        <div id="marking-scheme-div" class="mt-2 grid grid-cols-4 gap-4 items-center">
             <label class="font-semibold">Award</label>
             <div class="flex items-center border rounded p-2 w-full">
                 <span class="text-gray-500">+</span>
-                <input type="number" class="ml-2 w-full border-none focus:ring-0" value="0">
+                <div id="chip-box" class="chip-box ml-2 w-full" onclick="focusEditable(this)">
+                    <div id="chip-editor-pos" contenteditable="true" class="chip-editor"
+                        onkeydown="handleEditableChips(event)">
+                    </div>
+                </div>
             </div>
             <label class="font-semibold">Deduct</label>
             <div class="flex items-center border rounded p-2 w-full">
                 <span class="text-gray-500">-</span>
-                <input type="number" class="ml-2 w-full border-none focus:ring-0" value="0">
+                <div id="chip-box" class="chip-box ml-2 w-full" onclick="focusEditable(this)">
+                    <div id="chip-editor-neg" contenteditable="true" class="chip-editor"
+                        onkeydown="handleEditableChips(event)">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -207,7 +215,7 @@
     }
 
     function handleEditableChips(e) {
-        const editor = e.currentTarget;
+        const targetEditor = e.currentTarget;
         const selection = window.getSelection();
         const range = selection.getRangeAt(0);
 
@@ -222,29 +230,71 @@
             // Remove the typed text
             textNode.textContent = '';
 
+            // if not digit then return
+            if (!value || !/^\d+$/.test(value)) return;
+
             // Get all existing chips in the same editor
-            const existingMarks = Array.from(editor.querySelectorAll('.chip')).map(chip => chip.textContent.trim());
+            const existingMarks = Array.from(targetEditor.querySelectorAll('.chip')).map(chip => chip.textContent.trim());
+            // if duplicate then return
+            if (existingMarks.includes(value)) return;
 
-            // Validate and check duplicates
-            if (value && /^\d+$/.test(value) && !existingMarks.includes(value)) {
-                // Create chip element
-                const chip = document.createElement('span');
-                chip.className = 'chip';
-                chip.contentEditable = 'false';
-                chip.textContent = value;
+            // Create chip element
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.contentEditable = 'false';
+            chip.textContent = value;
 
-                // Insert chip at cursor
-                range.insertNode(chip);
-                range.insertNode(document.createTextNode('\u00A0'));
+            // Insert chip & space at cursor
+            range.insertNode(chip);
+            range.insertNode(document.createTextNode('\u00A0'));
 
-                // Move cursor after the inserted chip
-                const newRange = document.createRange();
-                newRange.setStartAfter(chip.nextSibling || chip);
-                newRange.collapse(true);
-                selection.removeAllRanges();
-                selection.addRange(newRange);
+            // Move cursor after the inserted chip
+            const newRange = document.createRange();
+            newRange.setStartAfter(chip.nextSibling || chip);
+            newRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+
+            // Clone .chip-editor content
+            const questionsTableBody = document.querySelector("#questions-table-body");
+            const clonedContent = targetEditor.cloneNode(true);
+
+            const closestTr = targetEditor.closest('tr');
+            if (closestTr) {
+                const trId = closestTr.id;
+
+                if (trId.startsWith('subtype-')) {
+                    // section level marking scheme change - apply same marking scheme to all problems under this section
+                    const trIdComponents = trId.split('-');
+                    const subjectId = trIdComponents[1];
+                    const subtype = trIdComponents[2];
+
+                    const subtypeRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+                    cloneChips(subtypeRows, targetEditor.id, clonedContent);
+
+                } else if (trId.startsWith('subject-')) {
+                    // subject level marking scheme change - apply same marking scheme to all problems under this subject
+                    const trIdComponents = trId.split('-');
+                    const subjectId = trIdComponents[1];
+
+                    const subjectRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+                    cloneChips(subjectRows, targetEditor.id, clonedContent);
+                }
+
+            } else {
+                // entire test level marking scheme change - apply same change to all problems
+                const problemRows = questionsTableBody.querySelectorAll(`tr[id^="problem-"]`);
+                cloneChips(problemRows, targetEditor.id, clonedContent);
             }
         }
+    }
+
+    function cloneChips(rows, targetEditorId, clonedContent) {
+        rows.forEach(row => {
+            // apply change to element having same id as target editor (chip-editor-pos or chip-editor-neg)
+            const chipEditor = row.querySelector(`div[id="${targetEditorId}"]`);
+            chipEditor.innerHTML = clonedContent.innerHTML;
+        });
     }
 
     function focusEditable(containerDiv) {

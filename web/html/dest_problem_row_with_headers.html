@@ -1,6 +1,7 @@
 <tbody hx-swap-oob="beforeend:#questions-table-body">
-    <tr class="bg-white">
-        <td class="p-2 font-medium capitalize" colspan="8">{{ getName .Subject "en" }}</td>
+    <tr id="subject-{{.Subject.ID}}" class="bg-white">
+        <td class="p-2 font-medium capitalize" colspan="4">{{ getName .Subject "en" }}</td>
+        {{ template "chip_box_cells" . }}
     </tr>
     {{ template "dest_subtype_row" . }}
     {{ template "dest_problem_row" . }}

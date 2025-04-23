@@ -10,6 +10,10 @@
 </tr>
 
 <script>
+    var chipEditorPosId = "#chip-editor-pos";
+    var chipEditorNegId = "#chip-editor-neg";
+    var chipClass = ".chip";
+
     function addQuestionToTest(btn) {
         const dataset = btn.dataset
         const subtype = dataset.subtype;
@@ -60,7 +64,8 @@
         return function handler(event) {
             if (event.detail.successful) {
                 incrementLevelCount(difficulty);
-                updateSerialNumbers(insertAfterId, tableBody);
+                const newlyInsertedRow = updateSerialNumbers(insertAfterId, tableBody);
+                inheritMarkingScheme(tableBody, newlyInsertedRow);
             }
             document.body.removeEventListener("htmx:afterRequest", handler);
         }
@@ -78,12 +83,21 @@
         // Assign serial number to newly added row and Update serial numbers of all affected rows
         let serial = 0;
         let currentRow;
-
+        
         if (insertAfterId !== "") {
             const insertAfterRow = document.getElementById(insertAfterId);
             const firstTd = insertAfterRow.querySelector("td");
             serial = parseInt(firstTd.textContent);
             currentRow = insertAfterRow.nextElementSibling;
+            /**
+             * when subject exists but section is new, then insertAfterId belongs to last problem id
+             * under its subtype under same subject. And 2 rows are inserted in this case - subtype, problem.
+             * So its 1st nextElementSibling will be subtype row, hence again go to nextElementSibling to select 
+             * actual problem row
+             */
+            if (!currentRow.id.startsWith("problem-")) {
+                currentRow = currentRow.nextElementSibling;
+            }
 
         } else {
             // Inserted without known insertAfterId — find previous valid row with serial number
@@ -109,6 +123,9 @@
             }
         }
 
+        // Save reference to return
+        const newlyInsertedProblemRow = currentRow;
+
         // Update serial numbers, skipping colspan header rows
         while (currentRow) {
             const firstTd = currentRow.querySelector("td");
@@ -117,6 +134,39 @@
             }
             currentRow = currentRow.nextElementSibling;
         }
+
+        return newlyInsertedProblemRow;
+    }
+
+    function inheritMarkingScheme(tableBody, newlyInsertedRow) {
+        const subtype = newlyInsertedRow.dataset.subtype.replace("subtype-", "");
+        const subjectId = newlyInsertedRow.dataset.subject.replace("subject-", "");
+
+        const posMarksEditor = newlyInsertedRow.querySelector(chipEditorPosId);
+        const negMarksEditor = newlyInsertedRow.querySelector(chipEditorNegId);
+
+        // copy marking scheme from subtype header row
+        const subtypeRow = tableBody.querySelector(`tr[id="subtype-${subjectId}-${subtype}"]`);
+        if (copyChipsFrom(subtypeRow, posMarksEditor, negMarksEditor)) return;
+
+        // else copy marking scheme from subject header row
+        const subjectRow = tableBody.querySelector(`tr[id="subject-${subjectId}"]`);
+        if (copyChipsFrom(subjectRow, posMarksEditor, negMarksEditor)) return;
+
+        // else copy marking scheme from test level
+        const markingSchemeDiv = document.getElementById('marking-scheme-div');
+        if (copyChipsFrom(markingSchemeDiv, posMarksEditor, negMarksEditor)) return;
+    }
+
+    function copyChipsFrom(fromElement, toPosMarksEditor, toNegMarksEditor) {
+        const fromPosMarks = fromElement.querySelector(chipEditorPosId);
+        const fromNegMarks = fromElement.querySelector(chipEditorNegId);
+        if (fromPosMarks.querySelector(chipClass) !== null || fromNegMarks.querySelector(chipClass) !== null) {
+            toPosMarksEditor.innerHTML = fromPosMarks.cloneNode(true).innerHTML;
+            toNegMarksEditor.innerHTML = fromNegMarks.cloneNode(true).innerHTML;
+            return true;
+        }
+        return false;
     }
 </script>
 {{ end }}

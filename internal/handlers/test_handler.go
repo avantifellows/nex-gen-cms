@@ -29,6 +29,7 @@ const addTestDestProblemRowWithSubtypeTemplate = "dest_problem_row_with_subtype.
 const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.html"
 const addTestDestProblemRowTemplate = "dest_problem_row.html"
 const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
+const chipBoxCellTemplate = "chip_box_cells.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
@@ -247,5 +248,5 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getSubjectName,
-	}, filename, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate)
+	}, filename, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }

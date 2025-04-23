@@ -1,6 +1,6 @@
 {{ define "dest_subtype_row" }}
-<tr class="bg-gray-100">
-    <td class="p-2" colspan="8">
+<tr id="subtype-{{.Subject.ID}}-{{.Subtype}}" class="bg-gray-100">
+    <td class="p-2" colspan="4">
         <div class="flex justify-between items-center whitespace-nowrap">
             <span>{{.DisplaySubtype}}</span>
             <div class="flex gap-2">
@@ -9,5 +9,7 @@
             </div>
         </div>
     </td>
+    {{ template "chip_box_cells" . }}
+    <td></td>
 </tr>
 {{ end }}
