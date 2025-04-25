@@ -97,11 +97,6 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	// set curriculum id on each chapter
-	for _, ch := range *chapters {
-		ch.CurriculumID = curriculumId
-	}
-
 	filteredChapters := funk.Filter(*chapters, func(chapter *models.Chapter) bool {
 		return (*chapter).CurriculumID == curriculumId && (*chapter).GradeID == gradeId &&
 			(*chapter).SubjectID == subjectId

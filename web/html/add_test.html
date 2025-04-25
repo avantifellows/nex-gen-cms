@@ -51,7 +51,8 @@
                 </thead>
                 <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems"
                     hx-trigger="change from:(#topic-dropdown, #level-dropdown, #ptype-dropdown)"
-                    hx-include="#topic-dropdown, #subject-dropdown, #level-dropdown, #ptype-dropdown">
+                    hx-include="#topic-dropdown, #curriculum-dropdown, #subject-dropdown, #level-dropdown, #ptype-dropdown"
+                    data-mathjax="true">
                     <!-- Rows will be dynamically inserted here -->
                 </tbody>
             </table>

@@ -2,9 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"html/template"
-	htmlTpl "html/template"
-	"log"
 	"net/http"
 	"strings"
 	textTpl "text/template"
@@ -20,7 +17,7 @@ import (
 const problemsKey = "problems"
 const skillsKey = "skills"
 
-const problemsEndPoint = "/problem"
+const problemsEndPoint = "/problems"
 const skillsEndPoint = "/skill"
 
 const problemTemplate = "problem.html"
@@ -82,9 +79,15 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	urlValues := request.URL.Query()
 	topicIdStr := urlValues.Get("topic-dropdown")
 	topicId, err := utils.StringToIntType[int16](topicIdStr)
-	log.Println("topic id = ", topicId)
 	if err != nil {
-		// http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
+		return
+	}
+
+	queryParams := fmt.Sprintf("?curriculum_id=%s&topic_id=%d&lang_code=en", urlValues.Get("curriculum-dropdown"), topicId)
+	problems, err := h.problemsService.GetList(problemsEndPoint+queryParams, problemsKey, false, true)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -95,44 +98,16 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	var problems = []models.Problem{
-		{
-			ID:   1,
-			Code: "P3156",
-			MetaData: models.ProbMetaData{
-				Question: htmlTpl.HTML("If R is the radius of the Earth..."),
-			},
-			Subtype:         "mcq_single_answer",
-			Subject:         *subjectPtr,
-			DifficultyLevel: "easy",
-		},
-		{
-			ID:   2,
-			Code: "P3195",
-			MetaData: models.ProbMetaData{
-				Question: template.HTML("The acceleration due to gravity..."),
-			},
-			Subtype:         "numerical_answer",
-			Subject:         *subjectPtr,
-			DifficultyLevel: "medium",
-		},
-		{
-			ID:   3,
-			Code: "P3201",
-			MetaData: models.ProbMetaData{
-				Question: template.HTML("Suppose the Earth suddenly shrinks..."),
-			},
-			Subtype:         "numerical_answer",
-			Subject:         *subjectPtr,
-			DifficultyLevel: "easy",
-		},
+	// set subject on each problem
+	for _, problem := range *problems {
+		problem.Subject = *subjectPtr
 	}
 
-	filterProblems(&problems, urlValues.Get("level-dropdown"), urlValues.Get("ptype-dropdown"), urlValues.Get("selected-ids"))
+	filterProblems(problems, urlValues.Get("level-dropdown"), urlValues.Get("ptype-dropdown"), urlValues.Get("selected-ids"))
 	local_repo.ExecuteTemplate(srcProblemRowTemplate, responseWriter, problems, nil)
 }
 
-func filterProblems(problems *[]models.Problem, difficulty string, ptype string, selectedIdsRaw string) {
+func filterProblems(problems *[]*models.Problem, difficulty string, ptype string, selectedIdsRaw string) {
 	// Build map of already selected problem ids. map is used instead of slice for better performance
 	selectedIds := map[int]bool{}
 	for _, id := range strings.Split(selectedIdsRaw, ",") {

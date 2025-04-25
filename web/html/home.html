@@ -192,21 +192,29 @@
                  * where MathJax can not be loaded due to network or cdn issues OR in future if we create
                  * some pages not requiring MathJax and hence shift its script declaration from this file
                  * to files where it is required
+                 * 
+                 * htmx:oobAfterSwap is received when problem is added from question bank in test from add_test.html
                  */
-                if (name === "htmx:afterSwap" && window.MathJax) {
+                if ((name === "htmx:afterSwap" || name === "htmx:oobAfterSwap") && window.MathJax) {
                     let targetElement = event.detail.target;
 
                     // Check if the target element itself has data-mathjax
                     let hasMathJax = targetElement.hasAttribute("data-mathjax");
-
+                    
                     // Check if any nested elements have data-mathjax
                     if (!hasMathJax) {
                         hasMathJax = targetElement.querySelector('[data-mathjax]') !== null;
                     }
-
+                    
                     // Apply MathJax.typesetPromise() only if at least one element has data-mathjax
                     if (hasMathJax) {
-                        MathJax.typesetPromise([targetElement]).catch(console.error);
+                        /**
+                         * Applying typesetPromise() to parent of targetElement instead of targetElement itself,
+                         * because otherwise while adding problem rows in test from add_test.html, it shows
+                         * targetElement as row before the new row inserted, hence newly inserted row's math symbols
+                         * are not converted. In this case applying typesetPromise() to its parent solves the issue
+                         */
+                        MathJax.typesetPromise([targetElement.parentElement]).catch(console.error);
                     }
                 }
             }
