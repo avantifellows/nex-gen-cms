@@ -339,8 +339,13 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 
 	selectedChapterPtr, code, err := h.getChapter(request)
 	if err != nil {
-		// if "Select Chapter" default option is selected in add test screen, then just return empty response
-		if urlVals.Get("chapter-dropdown") == "Select Chapter" {
+		chapterDropdownVal := urlVals.Get("chapter-dropdown")
+		/**
+		 * if "Select Chapter" default option is selected or its value is blank (on coming back from
+		 * single problem to add test screen sometimes it is blank) in add test screen,
+		 * then just return empty response.
+		 */
+		if chapterDropdownVal == "Select Chapter" || chapterDropdownVal == "" {
 			local_repo.ExecuteTemplate(filename, responseWriter, nil, template.FuncMap{
 				"getName": getTopicName,
 			})

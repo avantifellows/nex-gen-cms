@@ -1,6 +1,7 @@
 {{ range . }}
 <tr class="border-b">
-    <td class="p-2">{{.Code}}</td>
+    <td class="p-2 text-blue-500 hover:underline"><a href="#" hx-get="/problem?id={{.ID}}" hx-target="body"
+            hx-push-url="/problem?id={{.ID}}">{{.Code}}</a></td>
     <td class="p-2">{{.MetaData.Question}}</td>
     <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded" data-id="{{.ID}}"
             data-code="{{.Code}}" data-question="{{.MetaData.Question}}" data-subject="{{.Subject.ID}}"
@@ -66,6 +67,7 @@
                 incrementLevelCount(difficulty);
                 const newlyInsertedRow = updateSerialNumbers(insertAfterId, tableBody);
                 inheritMarkingScheme(tableBody, newlyInsertedRow);
+                updateTotalMarks();
             }
             document.body.removeEventListener("htmx:afterRequest", handler);
         }
@@ -83,7 +85,7 @@
         // Assign serial number to newly added row and Update serial numbers of all affected rows
         let serial = 0;
         let currentRow;
-        
+
         if (insertAfterId !== "") {
             const insertAfterRow = document.getElementById(insertAfterId);
             const firstTd = insertAfterRow.querySelector("td");

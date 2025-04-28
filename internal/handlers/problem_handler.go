@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	textTpl "text/template"
+	"text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
@@ -69,7 +69,7 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		ProblemPtr: selectedProblemPtr,
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, data, textTpl.FuncMap{
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"add":         utils.Add,
 		"stringToInt": utils.StringToInt,
 	}, baseTemplate, problemTemplate)

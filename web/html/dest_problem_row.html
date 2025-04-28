@@ -1,7 +1,8 @@
 {{ define "dest_problem_row" }}
 <tr id="problem-{{.ID}}" data-subject="subject-{{.Subject.ID}}" data-subtype="subtype-{{.Subtype}}" data-mathjax="true">
     <td class="p-2"></td>
-    <td class="p-2">{{ .Code }}</td>
+    <td class="p-2 text-blue-500 hover:underline"><a href="#" hx-get="/problem?id={{.ID}}" hx-target="body"
+            hx-push-url="/problem?id={{.ID}}">{{ .Code }}</a></td>
     <td class="p-2 text-center">{{.DisplayDifficulty}}</td>
     <td class="p-2">{{ .MetaData.Question }}</td>
     {{ template "chip_box_cells" . }}

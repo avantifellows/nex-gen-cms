@@ -11,12 +11,15 @@
                 class="p-2 border rounded w-full"
                 hx-trigger="load, onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
                 hx-get="/api/chapters?view=dropdown"
-                hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown">
+                hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown"
+                onchange="sessionStorage.setItem('selectedChapter', this.value);"
+                hx-on::after-request="onDropdownLoaded(this, 'selectedChapter')">
                 <option>Select Chapter</option>
             </select>
             <select id="topic-dropdown" name="topic-dropdown" hx-ext="cascade-clear" class="p-2 border rounded w-full"
                 hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
-                hx-include="#chapter-dropdown">
+                hx-include="#chapter-dropdown" onchange="sessionStorage.setItem('selectedTopic', this.value);"
+                hx-on::after-request="onDropdownLoaded(this, 'selectedTopic')">
                 <option>Select Topic</option>
             </select>
             <label class="font-semibold">Level</label>
@@ -25,7 +28,7 @@
                 <option value="">All</option>
                 <option value="easy">Easy</option>
                 <option value="medium">Medium</option>
-                <option value="difficult">Hard</option>
+                <option value="hard">Hard</option>
             </select>
             <select id="ptype-dropdown" name="ptype-dropdown" class="p-2 border rounded w-full">
                 <option value="">All</option>
@@ -103,7 +106,7 @@
                 <tr>
                     <td id="level-easy" class="p-2">0</td>
                     <td id="level-medium" class="p-2">0</td>
-                    <td id="level-difficult" class="p-2">0</td>
+                    <td id="level-hard" class="p-2">0</td>
                 </tr>
             </tbody>
         </table>
@@ -128,13 +131,15 @@
             <label class="text-sm font-medium">Duration (mins):</label>
             <input type="number" class="w-1/4 border rounded p-2" placeholder="60">
             <label class="text-sm font-medium">Total Marks:</label>
-            <div class="p-2">100</div>
+            <label id="total-marks" class="p-2">0</label>
         </div>
         <button class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded">Save</button>
     </div>
 </div>
 
 <script>
+    var problemRowsSelectors = "#questions-table-body tr[id^='problem-']";
+
     htmx.defineExtension('cascade-clear', {
         onEvent: function (name, event) {
             if (name === "htmx:afterSwap") {
@@ -161,7 +166,7 @@
         onEvent: function (name, evt) {
             if (name === "htmx:configRequest") {
                 // add already selected problem ids in parameters
-                const selectedIds = Array.from(document.querySelectorAll("#questions-table-body tr[id^='problem-']"))
+                const selectedIds = Array.from(document.querySelectorAll(problemRowsSelectors))
                     .map(row => row.id.replace("problem-", ""));
                 evt.detail.parameters["selected-ids"] = selectedIds.join(",");
             }
@@ -205,7 +210,9 @@
         // Decrement count in levels table
         decrementLevelCount(dataset.difficulty);
 
-        // Refresh left panel
+        updateTotalMarks();
+
+        // Refresh left panel questions
         const topicDropdown = document.getElementById("topic-dropdown");
         htmx.trigger(topicDropdown, "change");
     }
@@ -287,6 +294,10 @@
                 const problemRows = questionsTableBody.querySelectorAll(`tr[id^="problem-"]`);
                 cloneChips(problemRows, targetEditor.id, clonedContent);
             }
+
+            if (targetEditor.id === "chip-editor-pos") {
+                updateTotalMarks();
+            }
         }
     }
 
@@ -301,6 +312,48 @@
     function focusEditable(containerDiv) {
         const editor = containerDiv.querySelector('[contenteditable="true"]');
         editor.focus();
+    }
+
+    function updateTotalMarks() {
+        const problemRows = document.querySelectorAll(problemRowsSelectors);
+
+        let totalMarks = 0;
+        problemRows.forEach(row => {
+            const chipEditor = row.querySelector(chipEditorPosId);
+            const chips = chipEditor.querySelectorAll(".chip");
+            let maxMarks = 0;
+            chips.forEach(chip => {
+                maxMarks = Math.max(maxMarks, chip.textContent);
+            });
+            totalMarks += maxMarks;
+        })
+        document.getElementById("total-marks").textContent = totalMarks;
+    }
+
+    var dropdownDebounceTimers = {};
+
+    function onDropdownLoaded(dropdown, storageKey) {
+        // restore last selected value from sessionStorage
+        const lastSelectedValue = sessionStorage.getItem(storageKey);
+        // dropdown value is blank sometimes on coming back from problem screen
+        if (lastSelectedValue && dropdown.value !== "") {
+            dropdown.value = lastSelectedValue;
+
+            // Clear any previous pending trigger for this dropdown
+            if (dropdownDebounceTimers[dropdown.id]) {
+                clearTimeout(dropdownDebounceTimers[dropdown.id]);
+            }
+
+            /**
+             * Debounce trigger to avoid firing event multiple times rapidly
+             * This happens on refreshing this screen or on clicking any problem and then coming back to this screen,
+             * which in turn calls topic dropdown loading and problems loading apis mutiple times
+             */
+            dropdownDebounceTimers[dropdown.id] = setTimeout(() => {
+                htmx.trigger(dropdown, 'change');
+                delete dropdownDebounceTimers[dropdown.id];
+            }, 500);
+        }
     }
 </script>
 {{ end }}
