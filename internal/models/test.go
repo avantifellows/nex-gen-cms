@@ -6,14 +6,13 @@ type Test struct {
 	Code         string    `json:"code"`
 	Subtype      string    `json:"subtype"`
 	SkillIDs     []int16   `json:"skill_ids"`
-	ChapterID    int16     `json:"chapter_id"`
 	CurriculumID int16
 	GradeID      int8
 	TypeParams   ResTypeParams `json:"type_params"`
 }
 
 type ResName struct {
-	LangID   int8   `json:"lang_id"`
+	LangCode string `json:"lang_code"`
 	Resource string `json:"resource"`
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 func StringToInt(s string) int {
@@ -61,4 +62,12 @@ func ExtractNumericSuffix(s string) int {
 	}
 	// return 0 if no numeric suffix is found
 	return 0
+}
+
+func JoinInt16(intArr []int16, separator string) string {
+	var stringArr []string
+	for _, integer := range intArr {
+		stringArr = append(stringArr, strconv.Itoa(int(integer)))
+	}
+	return strings.Join(stringArr, separator)
 }

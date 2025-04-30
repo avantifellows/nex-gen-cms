@@ -64,9 +64,41 @@
 
     <!-- Right Panel -->
     <div class="flex-1 p-5 overflow-auto bg-gray-50">
+        <label class="font-semibold">Select Test Code</label>
+        <div class="flex items-center gap-2 mt-2 mb-2">
+            <select id="program-dropdown" class="p-2 border rounded flex-1">
+                <option>JN</option>
+                <option>HP</option>
+                <option>MH</option>
+                <option>GJ</option>
+                <option>TN</option>
+                <option>PN</option>
+                <option>UK</option>
+                <option>OR</option>
+                <option>DL</option>
+                <option>X</option>
+            </select>
+            <select id="test-type-code-dropdown" class="p-2 border rounded flex-1">
+                <option>P</option>
+                <option>C</option>
+                <option>M</option>
+                <option>B</option>
+                <option>CT</option>
+                <option>CCT</option>
+                <option>PT</option>
+                <option>MT</option>
+                <option>MoT</option>
+                <option>FST</option>
+            </select>
+            <select id="test-sequence-dropdown" class="p-2 border rounded flex-1">
+            </select>
+            <select id="year-dropdown" class="p-2 border rounded flex-1">
+            </select>
+        </div>
+
         <div class="flex items-center gap-2">
-            <input type="text" placeholder="Test Name" class="p-2 border rounded flex-1">
-            <select class="p-2 border rounded flex-1">
+            <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1">
+            <select id="test-type-dropdown" class="p-2 border rounded flex-1">
                 {{ template "test_type_options" . }}
             </select>
         </div>
@@ -133,11 +165,29 @@
             <label class="text-sm font-medium">Total Marks:</label>
             <label id="total-marks" class="p-2">0</label>
         </div>
-        <button class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded">Save</button>
+        <button class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="createTest()">Save</button>
     </div>
 </div>
 
 <script>
+    var seqDropdown = document.getElementById('test-sequence-dropdown');
+
+    for (let i = 1; i <= 199; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i;
+        seqDropdown.appendChild(option);
+    }
+
+    var yrDropdown = document.getElementById('year-dropdown');
+
+    for (let i = 16; i <= 25; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i;
+        yrDropdown.appendChild(option);
+    }
+
     var problemRowsSelectors = "#questions-table-body tr[id^='problem-']";
 
     htmx.defineExtension('cascade-clear', {
@@ -354,6 +404,70 @@
                 delete dropdownDebounceTimers[dropdown.id];
             }, 500);
         }
+    }
+
+    function createTest() {
+        if (!validateFields()) {
+            return;
+        }
+        const testJson = buildTestJson();
+
+        fetch('/create-test', {
+            method: 'POST',
+            body: JSON.stringify(testJson),
+            headers: {
+                'Content-Type': 'application/json',  // Specify content type as JSON
+                'HX-Request': 'true'  // so that your server can detect HTMX if needed
+            }
+        });
+    }
+
+    function validateFields() {
+        const testName = document.getElementById('test-name').value.trim();
+        if (!testName) {
+            alert("Please fill in the Test Name before saving.");
+            return false;
+        }
+
+        const testType = document.getElementById('test-type-dropdown').value;
+        if (!testType || testType === "Select Test type") {
+            alert("Please select the Test Type before saving.");
+            return false;
+        }
+
+        return true;
+    }
+
+    function buildTestJson() {
+        const program = document.getElementById('program-dropdown').value;
+        const testTypeCode = document.getElementById('test-type-code-dropdown').value;
+        const testSequence = document.getElementById('test-sequence-dropdown').value;
+        const year = document.getElementById('year-dropdown').value;
+
+        const code = `${program}-${testTypeCode}-${testSequence}-${year}`;
+
+        const tableBody = document.getElementById('questions-table-body');
+        const problemRows = tableBody.querySelectorAll(`tr[id^="problem-"]`);
+
+        const skillIdSet = new Set();
+
+        problemRows.forEach(row => {
+            console.log('skillIds = ', row.dataset.skillIds);
+            for (const skillId of (row.dataset.skillIds || "").split(',')) {
+                skillIdSet.add(parseInt(skillId.trim()));
+            }
+        });
+        return {
+            code: code,
+            name: [
+                {
+                    "lang_code": "en",
+                    "resource": document.getElementById('test-name').value
+                }
+            ],
+            subtype: document.getElementById('test-type-dropdown').value,
+            skill_ids: Array.from(skillIdSet)
+        };
     }
 </script>
 {{ end }}

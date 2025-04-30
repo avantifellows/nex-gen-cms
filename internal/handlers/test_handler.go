@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -198,23 +199,28 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
+	problemIdStr := request.FormValue("id")
+	problemId := utils.StringToInt(problemIdStr)
+	problemPtr, err := h.problemsService.GetObject(problemIdStr,
+		func(problem *models.Problem) bool {
+			return problem.ID == problemId
+		}, problemsKey, problemsEndPoint)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+	}
+
 	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(request.FormValue("subject-id"),
 		h.subjectsService, subjectsKey, subjectsEndPoint)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), statusCode)
 		return
 	}
-
-	problem := models.Problem{
-		ID:   utils.StringToInt(request.FormValue("id")),
-		Code: request.FormValue("code"),
-		MetaData: models.ProbMetaData{
-			Question: template.HTML(request.FormValue("question")),
-		},
-		Subtype:         request.FormValue("subtype"),
-		Subject:         *subjectPtr,
-		DifficultyLevel: request.FormValue("difficulty"),
-	}
+	/**
+	 * Following properties might not be coming with problem response as these are not in resource &
+	 * problem_lang tables
+	 */
+	problemPtr.Subject = *subjectPtr
+	problemPtr.DifficultyLevel = request.FormValue("difficulty")
 
 	insertAfterId := request.FormValue("insert-after-id")
 	subjectExists := request.FormValue("subject-exists") == "true"
@@ -227,13 +233,13 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	case !subjectExists && !subtypeExists:
 		// Need subject + subtype header
 		filename = addTestDestProblemRowWithHeadersTemplate
-		data = problem
+		data = problemPtr
 
 	case subjectExists && !subtypeExists:
 		// Only subtype header needed
 		filename = addTestDestProblemRowWithSubtypeTemplate
 		data = map[string]any{
-			"Problem":       problem,
+			"Problem":       problemPtr,
 			"InsertAfterId": insertAfterId,
 		}
 
@@ -241,12 +247,28 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		// Just problem row
 		filename = addTestDestProblemRowWithoutHeadersTemplate
 		data = map[string]any{
-			"Problem":       problem,
+			"Problem":       problemPtr,
 			"InsertAfterId": insertAfterId,
 		}
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"getName": getSubjectName,
+		"getName":   getSubjectName,
+		"joinInt16": utils.JoinInt16,
 	}, filename, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+}
+
+func (h *TestsHandler) CreateTest(responseWriter http.ResponseWriter, request *http.Request) {
+	// Declare a variable to hold the parsed JSON
+	var testData map[string]interface{}
+
+	// Decode the JSON body into the testData map
+	err := json.NewDecoder(request.Body).Decode(&testData)
+	if err != nil {
+		http.Error(responseWriter, "Error parsing JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Print the parsed JSON
+	fmt.Println("Received test data:", testData)
 }
