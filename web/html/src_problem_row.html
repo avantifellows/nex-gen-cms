@@ -4,8 +4,7 @@
             hx-push-url="/problem?id={{.ID}}">{{.Code}}</a></td>
     <td class="p-2">{{.MetaData.Question}}</td>
     <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded" data-id="{{.ID}}"
-            data-code="{{.Code}}" data-question="{{.MetaData.Question}}" data-subject="{{.Subject.ID}}"
-            data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
+            data-subject="{{.Subject.ID}}" data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
             hx-on:click="addQuestionToTest(this)">+</button>
     </td>
 </tr>
@@ -17,8 +16,8 @@
 
     function addQuestionToTest(btn) {
         const dataset = btn.dataset
-        const subtype = dataset.subtype;
         const subjectId = dataset.subject;
+        const subtype = dataset.subtype;
         const difficulty = dataset.difficulty;
         const questionsTableBody = document.querySelector("#questions-table-body");
 
@@ -35,9 +34,6 @@
             swap: "delete",
             values: {
                 "id": dataset.id,
-                "code": dataset.code,
-                "question": dataset.question,
-                "subtype": subtype,
                 "subject-id": subjectId,
                 "difficulty": difficulty,
                 "subject-exists": subjectRows.length > 0,

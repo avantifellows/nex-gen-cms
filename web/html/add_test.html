@@ -161,11 +161,12 @@
         </table>
         <div class="grid grid-cols-[auto_1fr_auto_1fr] items-center gap-x-4 mt-2">
             <label class="text-sm font-medium">Duration (mins):</label>
-            <input type="number" class="w-1/4 border rounded p-2" placeholder="60">
+            <input id="duration" type="number" class="w-1/4 border rounded p-2" placeholder="60">
             <label class="text-sm font-medium">Total Marks:</label>
             <label id="total-marks" class="p-2">0</label>
         </div>
-        <button class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600" onclick="createTest()">Save</button>
+        <button class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            onclick="createTest()">Save</button>
     </div>
 </div>
 
@@ -376,7 +377,7 @@
                 maxMarks = Math.max(maxMarks, chip.textContent);
             });
             totalMarks += maxMarks;
-        })
+        });
         document.getElementById("total-marks").textContent = totalMarks;
     }
 
@@ -435,6 +436,11 @@
             return false;
         }
 
+        const duration = document.getElementById('duration').value.trim();
+        if (!duration) {
+            alert("Please fill in the Test Duration before saving.");
+            return false;
+        }
         return true;
     }
 
@@ -446,28 +452,85 @@
 
         const code = `${program}-${testTypeCode}-${testSequence}-${year}`;
 
-        const tableBody = document.getElementById('questions-table-body');
-        const problemRows = tableBody.querySelectorAll(`tr[id^="problem-"]`);
+        const markingSchemeDiv = document.getElementById('marking-scheme-div');
+        const posChips = markingSchemeDiv.querySelectorAll(`${chipEditorPosId} .chip`);
+        const negChips = markingSchemeDiv.querySelectorAll(`${chipEditorNegId} .chip`);
 
+        const subjects = [];
+        var currentSubject = null;
+        var currentSection = null;
         const skillIdSet = new Set();
 
-        problemRows.forEach(row => {
-            console.log('skillIds = ', row.dataset.skillIds);
-            for (const skillId of (row.dataset.skillIds || "").split(',')) {
-                skillIdSet.add(parseInt(skillId.trim()));
+        const tableBody = document.getElementById('questions-table-body');
+        const rows = tableBody.querySelectorAll('tr');
+        rows.forEach(row => {
+            const posChips = row.querySelectorAll(`${chipEditorPosId} .chip`);
+            const negChips = row.querySelectorAll(`${chipEditorNegId} .chip`);
+
+            const id = row.id;
+            if (id.startsWith("subject-")) {
+                currentSubject = {
+                    subject_id: parseInt(id.split("-")[1]),
+                    pos_marks: getMarksArray(posChips),
+                    neg_marks: getMarksArray(negChips),
+                    sections: []
+                };
+                subjects.push(currentSubject);
+
+            } else if (id.startsWith("subtype-")) {
+                currentSection = {
+                    id: id.split("-")[2],
+                    pos_marks: getMarksArray(posChips),
+                    neg_marks: getMarksArray(negChips),
+                    compulsory: {
+                        problems: []
+                    },
+                    // right now optional section is not needed
+                    optional: {}
+                };
+                currentSubject.sections.push(currentSection);
+
+            } else {
+                const problem = {
+                    id: parseInt(id.split("-")[1]),
+                    pos_marks: getMarksArray(posChips),
+                    neg_marks: getMarksArray(negChips),
+                };
+                currentSection.compulsory.problems.push(problem);
+
+                for (const skillId of (row.dataset.skillIds || "").split(',')) {
+                    skillIdSet.add(parseInt(skillId.trim()));
+                }
             }
         });
+
         return {
             code: code,
             name: [
                 {
-                    "lang_code": "en",
-                    "resource": document.getElementById('test-name').value
+                    lang_code: "en",
+                    resource: document.getElementById('test-name').value
                 }
             ],
             subtype: document.getElementById('test-type-dropdown').value,
-            skill_ids: Array.from(skillIdSet)
+            skill_ids: Array.from(skillIdSet),
+            type: "test",
+            type_params: {
+                duration: document.getElementById('duration').value,
+                marks: document.getElementById('total-marks').textContent,
+                pos_marks: getMarksArray(posChips),
+                neg_marks: getMarksArray(negChips),
+                subjects: subjects
+            }
         };
+    }
+
+    function getMarksArray(chips) {
+        const marks = [];
+        chips.forEach(chip => {
+            marks.push(chip.textContent.trim());
+        });
+        return marks;
     }
 </script>
 {{ end }}
