@@ -1,5 +1,5 @@
 {{ define "content" }}
-<h1 class="text-lg font-semibold">New Test</h1>
+<h1 class="text-lg font-semibold">{{if .TestPtr}}Edit{{else}}New{{end}} Test</h1>
 <div class="flex h-screen">
     <!-- Left Panel -->
     <div class="w-1/3 p-5 bg-white shadow overflow-auto">
@@ -412,15 +412,16 @@
             return;
         }
         const testJson = buildTestJson();
-
-        fetch('/create-test', {
-            method: 'POST',
-            body: JSON.stringify(testJson),
-            headers: {
-                'Content-Type': 'application/json',  // Specify content type as JSON
-                'HX-Request': 'true'  // so that your server can detect HTMX if needed
-            }
-        });
+        if (testJson) {
+            fetch('/create-test', {
+                method: 'POST',
+                body: JSON.stringify(testJson),
+                headers: {
+                    'Content-Type': 'application/json',  // Specify content type as JSON
+                    'HX-Request': 'true'  // so that your server can detect HTMX if needed
+                }
+            });
+        }
     }
 
     function validateFields() {
@@ -457,18 +458,25 @@
         const negChips = markingSchemeDiv.querySelectorAll(`${chipEditorNegId} .chip`);
 
         const subjects = [];
-        var currentSubject = null;
-        var currentSection = null;
+        let currentSubject = null, currentSection = null;
+        let currentSubjectMarks = 0, currentSectionMarks = 0;
+        // set is used to have unique skill ids only
         const skillIdSet = new Set();
 
         const tableBody = document.getElementById('questions-table-body');
         const rows = tableBody.querySelectorAll('tr');
-        rows.forEach(row => {
+        for (const row of rows) {
             const posChips = row.querySelectorAll(`${chipEditorPosId} .chip`);
             const negChips = row.querySelectorAll(`${chipEditorNegId} .chip`);
 
             const id = row.id;
+            // if it is subject row
             if (id.startsWith("subject-")) {
+                if (currentSubject) {
+                    // set total marks on previous subject and reset marks variable
+                    currentSubject.marks = currentSubjectMarks;
+                    currentSubjectMarks = 0;
+                }
                 currentSubject = {
                     subject_id: parseInt(id.split("-")[1]),
                     pos_marks: getMarksArray(posChips),
@@ -478,6 +486,12 @@
                 subjects.push(currentSubject);
 
             } else if (id.startsWith("subtype-")) {
+                // it is section row
+                if (currentSection) {
+                    // set total marks on previous section and reset marks variable
+                    currentSection.marks = currentSectionMarks;
+                    currentSectionMarks = 0;
+                }
                 currentSection = {
                     id: id.split("-")[2],
                     pos_marks: getMarksArray(posChips),
@@ -491,19 +505,39 @@
                 currentSubject.sections.push(currentSection);
 
             } else {
+                // it's problem row
+                const posMarksArr = getMarksArray(posChips);
+                if (posMarksArr.length === 0) {
+                    alert("Please fill in all the Problem Marks before saving.");
+                    return;
+                }
+
                 const problem = {
                     id: parseInt(id.split("-")[1]),
-                    pos_marks: getMarksArray(posChips),
+                    pos_marks: posMarksArr,
                     neg_marks: getMarksArray(negChips),
                 };
                 currentSection.compulsory.problems.push(problem);
+
+                // find maximum marks for this problem and add it into both current section and subject marks' total
+                const maxMarks = Math.max(...posMarksArr);
+                currentSubjectMarks += maxMarks;
+                currentSectionMarks += maxMarks;
 
                 for (const skillId of (row.dataset.skillIds || "").split(',')) {
                     skillIdSet.add(parseInt(skillId.trim()));
                 }
             }
-        });
+        }
 
+        if (currentSubject) {
+            // set total marks on last subject
+            currentSubject.marks = currentSubjectMarks;
+        }
+        if (currentSection) {
+            // set total marks on last section
+            currentSection.marks = currentSectionMarks;
+        }
         return {
             code: code,
             name: [

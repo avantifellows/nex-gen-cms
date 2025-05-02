@@ -272,3 +272,17 @@ func (h *TestsHandler) CreateTest(responseWriter http.ResponseWriter, request *h
 	// Print the parsed JSON
 	fmt.Println("Received test data:", testData)
 }
+
+func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedTestPtr, code, err := h.getTest(responseWriter, request)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	data := dto.HomeData{
+		TestPtr: selectedTestPtr,
+	}
+
+	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, addTestTemplate, testTypeOptionsTemplate)
+}
