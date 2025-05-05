@@ -8,7 +8,7 @@
         hx-target="#testTableBody" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
         onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');"
         hx-on::after-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'true')">
-        {{ template "test_type_options" . }}
+        {{ template "test_type_options" }}
     </select>
 
     <!-- Content Area -->

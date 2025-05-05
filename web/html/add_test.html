@@ -64,42 +64,51 @@
 
     <!-- Right Panel -->
     <div class="flex-1 p-5 overflow-auto bg-gray-50">
+
+        {{/* Define variables with empty values first so as to access them out of if-end block */}}
+        {{ $program := "" }}
+        {{ $type := "" }}
+        {{ $seq := "" }}
+        {{ $year := "" }}
+
+        {{if .TestPtr}}
+        {{ $parts := split .TestPtr.Code "-" }}
+        {{ $program = index $parts 0 }}
+        {{ $type = index $parts 1 }}
+        {{ $seq = index $parts 2 }}
+        {{ $year = index $parts 3 }}
+        {{end}}
+
         <label class="font-semibold">Select Test Code</label>
         <div class="flex items-center gap-2 mt-2 mb-2">
             <select id="program-dropdown" class="p-2 border rounded flex-1">
-                <option>JN</option>
-                <option>HP</option>
-                <option>MH</option>
-                <option>GJ</option>
-                <option>TN</option>
-                <option>PN</option>
-                <option>UK</option>
-                <option>OR</option>
-                <option>DL</option>
-                <option>X</option>
+                {{range $opt := (slice "JN" "HP" "MH" "GJ" "TN" "PN" "UK" "OR" "DL" "X")}}
+                <option {{if eq $program $opt}}selected{{end}}>{{$opt}}</option>
+                {{end}}
             </select>
             <select id="test-type-code-dropdown" class="p-2 border rounded flex-1">
-                <option>P</option>
-                <option>C</option>
-                <option>M</option>
-                <option>B</option>
-                <option>CT</option>
-                <option>CCT</option>
-                <option>PT</option>
-                <option>MT</option>
-                <option>MoT</option>
-                <option>FST</option>
+                {{range $opt := (slice "P" "C" "M" "B" "CT" "CCT" "PT" "MT" "MoT" "FST")}}
+                <option {{if eq $type $opt}}selected{{end}}>{{$opt}}</option>
+                {{end}}
             </select>
             <select id="test-sequence-dropdown" class="p-2 border rounded flex-1">
+                {{range $i := seq 1 199}}
+                <!-- "%d" is used to convert $i to string so that it can be compared with $seq -->
+                <option {{if eq $seq (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
+                {{end}}
             </select>
             <select id="year-dropdown" class="p-2 border rounded flex-1">
+                {{range $i := seq 16 25}}
+                <option {{if eq $year (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
+                {{end}}
             </select>
         </div>
 
         <div class="flex items-center gap-2">
-            <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1">
+            <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1"
+                value="{{if .TestPtr}}{{getName .TestPtr "en"}}{{end}}">
             <select id="test-type-dropdown" class="p-2 border rounded flex-1">
-                {{ template "test_type_options" . }}
+                {{ template "test_type_options" .TestPtr }}
             </select>
         </div>
 
@@ -171,24 +180,6 @@
 </div>
 
 <script>
-    var seqDropdown = document.getElementById('test-sequence-dropdown');
-
-    for (let i = 1; i <= 199; i++) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = i;
-        seqDropdown.appendChild(option);
-    }
-
-    var yrDropdown = document.getElementById('year-dropdown');
-
-    for (let i = 16; i <= 25; i++) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = i;
-        yrDropdown.appendChild(option);
-    }
-
     var problemRowsSelectors = "#questions-table-body tr[id^='problem-']";
 
     htmx.defineExtension('cascade-clear', {

@@ -54,7 +54,10 @@ func NewTestsHandler(testsService *services.Service[models.Test], subjectsServic
 }
 
 func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, testsTemplate, testTypeOptionsTemplate)
+	local_repo.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+		"slice": utils.Slice,
+		"add":   utils.Add,
+	}, baseTemplate, testsTemplate, testTypeOptionsTemplate)
 }
 
 func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *http.Request) {
@@ -195,7 +198,13 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 }
 
 func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, addTestTemplate, testTypeOptionsTemplate)
+	local_repo.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+		"split":   strings.Split,
+		"slice":   utils.Slice,
+		"seq":     utils.Seq,
+		"getName": getTestName,
+		"add":     utils.Add,
+	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate)
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -284,5 +293,15 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		TestPtr: selectedTestPtr,
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, addTestTemplate, testTypeOptionsTemplate)
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"split":   strings.Split,
+		"slice":   utils.Slice,
+		"seq":     utils.Seq,
+		"getName": getTestName,
+		"add":     utils.Add,
+	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate)
+}
+
+func getTestName(t models.Test, lang string) string {
+	return t.GetNameByLang(lang)
 }

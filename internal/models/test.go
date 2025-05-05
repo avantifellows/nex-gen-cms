@@ -70,3 +70,12 @@ func (t Test) ProblemCount() int {
 
 	return total
 }
+
+func (test *Test) GetNameByLang(langCode string) string {
+	for _, testLang := range test.Name {
+		if testLang.LangCode == langCode {
+			return testLang.Resource
+		}
+	}
+	return ""
+}

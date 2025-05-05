@@ -71,3 +71,11 @@ func JoinInt16(intArr []int16, separator string) string {
 	}
 	return strings.Join(stringArr, separator)
 }
+
+/**
+ * Custom Slice() is defined to handle any number of arguments; otherwise default Slice() has
+ * restriction on number of arguments (mostly 7)
+ */
+func Slice(args ...any) []any {
+	return args
+}
