@@ -1,0 +1,13 @@
+{{ define "dest_subject_row_problem" }}
+<tr id="subject-{{.Subject.ID}}" class="bg-white">
+    <td class="p-2 font-medium capitalize" colspan="4">{{ getName .Subject "en" }}</td>
+    {{ template "chip_box_cells" . }}
+</tr>
+{{ end }}
+
+{{ define "dest_subject_row_test" }}
+<tr id="subject-{{.SubjectID}}" class="bg-white">
+    <td class="p-2 font-medium capitalize" colspan="4">{{.Name}}</td>
+    {{ template "chip_box_cells" . }}
+</tr>
+{{ end }}

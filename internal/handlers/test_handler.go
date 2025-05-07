@@ -30,6 +30,7 @@ const addTestDestProblemRowWithSubtypeTemplate = "dest_problem_row_with_subtype.
 const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.html"
 const addTestDestProblemRowTemplate = "dest_problem_row.html"
 const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
+const addTestDestSubjectRowTemplate = "dest_subject_row.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
 
 const resourcesEndPoint = "/resource"
@@ -199,12 +200,14 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 
 func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
 	local_repo.ExecuteTemplates(responseWriter, nil, template.FuncMap{
-		"split":   strings.Split,
-		"slice":   utils.Slice,
-		"seq":     utils.Seq,
-		"getName": getTestName,
-		"add":     utils.Add,
-	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate)
+		"split":     strings.Split,
+		"slice":     utils.Slice,
+		"seq":       utils.Seq,
+		"getName":   getTestName,
+		"add":       utils.Add,
+		"joinInt16": utils.JoinInt16,
+	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
+		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -264,7 +267,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName":   getSubjectName,
 		"joinInt16": utils.JoinInt16,
-	}, filename, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+	}, filename, addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
 func (h *TestsHandler) CreateTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -294,12 +297,14 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"split":   strings.Split,
-		"slice":   utils.Slice,
-		"seq":     utils.Seq,
-		"getName": getTestName,
-		"add":     utils.Add,
-	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate)
+		"split":     strings.Split,
+		"slice":     utils.Slice,
+		"seq":       utils.Seq,
+		"getName":   getTestName,
+		"add":       utils.Add,
+		"joinInt16": utils.JoinInt16,
+	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
+		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
 func getTestName(t models.Test, lang string) string {

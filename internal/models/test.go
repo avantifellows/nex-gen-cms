@@ -19,6 +19,8 @@ type ResName struct {
 type ResTypeParams struct {
 	Duration string       `json:"duration"`
 	Marks    int16        `json:"marks"`
+	PosMarks []int8       `json:"pos_marks"`
+	NegMarks []int8       `json:"neg_marks"`
 	Subjects []ResSubject `json:"subjects"`
 }
 
