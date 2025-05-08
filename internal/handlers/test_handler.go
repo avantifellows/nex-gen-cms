@@ -181,14 +181,8 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 }
 
 func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	testIdStr := request.URL.Query().Get("test_id")
-	testId := utils.StringToInt(testIdStr)
-
-	endPointWithId := fmt.Sprintf(testProblemsEndPoint, testId)
-	problems, err := h.problemsService.GetList(endPointWithId, problemsKey, false, true)
-
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
+	problems := h.getTestProblems(responseWriter, request)
+	if problems == nil {
 		return
 	}
 
@@ -198,14 +192,29 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 	})
 }
 
+func (h *TestsHandler) getTestProblems(responseWriter http.ResponseWriter, request *http.Request) *[]*models.Problem {
+	testIdStr := request.URL.Query().Get("id")
+	testId := utils.StringToInt(testIdStr)
+
+	endPointWithId := fmt.Sprintf(testProblemsEndPoint, testId)
+	problems, err := h.problemsService.GetList(endPointWithId, problemsKey, false, true)
+
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
+	}
+	return problems
+}
+
 func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
 	local_repo.ExecuteTemplates(responseWriter, nil, template.FuncMap{
-		"split":     strings.Split,
-		"slice":     utils.Slice,
-		"seq":       utils.Seq,
-		"getName":   getTestName,
-		"add":       utils.Add,
-		"joinInt16": utils.JoinInt16,
+		"split":             strings.Split,
+		"slice":             utils.Slice,
+		"seq":               utils.Seq,
+		"getName":           getTestName,
+		"add":               utils.Add,
+		"joinInt16":         utils.JoinInt16,
+		"dict":              utils.Dict,
+		"getDisplaySubtype": utils.DisplaySubtype,
 	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
 		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
@@ -265,8 +274,10 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"getName":   getSubjectName,
-		"joinInt16": utils.JoinInt16,
+		"getName":           getSubjectName,
+		"joinInt16":         utils.JoinInt16,
+		"dict":              utils.Dict,
+		"getDisplaySubtype": utils.DisplaySubtype,
 	}, filename, addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
@@ -292,17 +303,29 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
+	problems := h.getTestProblems(responseWriter, request)
+	if problems == nil {
+		return
+	}
+	problemsMap := make(map[int]*models.Problem)
+	for _, p := range *problems {
+		problemsMap[p.ID] = p
+	}
+
 	data := dto.HomeData{
-		TestPtr: selectedTestPtr,
+		TestPtr:  selectedTestPtr,
+		Problems: problemsMap,
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"split":     strings.Split,
-		"slice":     utils.Slice,
-		"seq":       utils.Seq,
-		"getName":   getTestName,
-		"add":       utils.Add,
-		"joinInt16": utils.JoinInt16,
+		"split":             strings.Split,
+		"slice":             utils.Slice,
+		"seq":               utils.Seq,
+		"getName":           getTestName,
+		"add":               utils.Add,
+		"joinInt16":         utils.JoinInt16,
+		"dict":              utils.Dict,
+		"getDisplaySubtype": utils.DisplaySubtype,
 	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
 		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }

@@ -10,4 +10,5 @@ type HomeData struct {
 	ChapterSortState SortState
 	TestPtr          *models.Test
 	ProblemPtr       *models.Problem
+	Problems         map[int]*models.Problem // key = Problem ID
 }

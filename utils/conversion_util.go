@@ -79,3 +79,24 @@ func JoinInt16(intArr []int16, separator string) string {
 func Slice(args ...any) []any {
 	return args
 }
+
+func Dict(values ...any) map[string]any {
+	dict := make(map[string]any)
+	for i := 0; i < len(values); i += 2 {
+		key := values[i].(string)
+		value := values[i+1]
+		dict[key] = value
+	}
+	return dict
+}
+
+func DisplaySubtype(subtype string) string {
+	switch subtype {
+	case "mcq_single_answer":
+		return "MCQ Single Answer"
+	case "numerical_answer":
+		return "Numerical Answer"
+	default:
+		return "Unknown"
+	}
+}

@@ -3,9 +3,8 @@ package models
 import "html/template"
 
 type Problem struct {
-	ID              int `json:"id"`
-	Code            string
-	LangCode        string       `json:"lang_code"`
+	ID              int          `json:"id"`
+	Code            string       `json:"code"`
 	MetaData        ProbMetaData `json:"meta_data"`
 	SkillIDs        []int16      `json:"skill_ids"`
 	Skills          []Skill
@@ -24,17 +23,6 @@ type ProbMetaData struct {
 type Solution struct {
 	Type  string        `json:"type"`
 	Value template.HTML `json:"value"`
-}
-
-func (p Problem) DisplaySubtype() string {
-	switch p.Subtype {
-	case "mcq_single_answer":
-		return "MCQ Single Answer"
-	case "numerical_answer":
-		return "Numerical Answer"
-	default:
-		return "Unknown"
-	}
 }
 
 func (p Problem) DisplayDifficulty() int8 {

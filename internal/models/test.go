@@ -28,6 +28,8 @@ type ResSubject struct {
 	SubjectID int8 `json:"subject_id"`
 	Name      string
 	Marks     int          `json:"marks"`
+	PosMarks  []int8       `json:"pos_marks"`
+	NegMarks  []int8       `json:"neg_marks"`
 	Sections  []ResSection `json:"sections"`
 }
 
