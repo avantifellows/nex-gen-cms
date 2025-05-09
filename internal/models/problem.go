@@ -27,11 +27,11 @@ type Solution struct {
 
 func (p Problem) DisplayDifficulty() int8 {
 	switch p.DifficultyLevel {
-	case "easy":
-		return 1
+	case "hard":
+		return 3
 	case "medium":
 		return 2
 	default:
-		return 3
+		return 1
 	}
 }

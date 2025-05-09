@@ -1,4 +1,4 @@
 <tbody id="questions-table-body" hx-swap-oob="afterend:#{{.InsertAfterId}}">
     {{ template "dest_subtype_row" (dict "SubjectId" .Problem.Subject.ID "Subtype" .Problem.Subtype "DisplaySubtype" (getDisplaySubtype .Problem.Subtype)) }}
-    {{ template "dest_problem_row" .Problem }}
+    {{ template "dest_problem_row" (dict "Problem" .Problem) }}
 </tbody>

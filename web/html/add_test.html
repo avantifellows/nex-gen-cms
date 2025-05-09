@@ -137,6 +137,21 @@
             </div>
         </div>
 
+        {{ $easy := 0 }}
+        {{ $medium := 0 }}
+        {{ $hard := 0 }}
+        {{if .TestPtr}}
+            {{range .Problems}}
+                {{ if eq .DifficultyLevel "easy" }}
+                    {{ $easy = add $easy 1 }}
+                {{ else if eq .DifficultyLevel "medium" }}
+                    {{ $medium = add $medium 1 }}
+                {{ else if eq .DifficultyLevel "hard" }}
+                    {{ $hard = add $hard 1 }}
+                {{ end }}
+            {{end}}
+        {{end}}
+
         <!-- Levels Table -->
         <table class="mt-4 w-full border text-center">
             <thead>
@@ -148,9 +163,9 @@
             </thead>
             <tbody>
                 <tr>
-                    <td id="level-easy" class="p-2">0</td>
-                    <td id="level-medium" class="p-2">0</td>
-                    <td id="level-hard" class="p-2">0</td>
+                    <td id="level-easy" class="p-2">{{$easy}}</td>
+                    <td id="level-medium" class="p-2">{{$medium}}</td>
+                    <td id="level-hard" class="p-2">{{$hard}}</td>
                 </tr>
             </tbody>
         </table>
@@ -171,6 +186,7 @@
             <tbody id="questions-table-body" name="questions-table-body">
                 <!-- if this is for edit test -->
                 {{if .TestPtr}}
+                    {{ $sr := 0 }}
                     {{range .TestPtr.TypeParams.Subjects}}
                         {{ $subjectId := .SubjectID }}
                         {{ template "dest_subject_row" (dict "SubjectId" $subjectId "SubjectName" .Name 
@@ -179,7 +195,9 @@
                             {{template "dest_subtype_row" (dict "SubjectId" $subjectId "Subtype" .Name 
                             "DisplaySubtype" (getDisplaySubtype .Name) "PosMarks" .PosMarks "NegMarks" .NegMarks)}}
                             {{range .Compulsory.Problems}}
-                                {{template "dest_problem_row" index $.Problems .ID}}
+                                {{ $sr = add $sr 1 }}
+                                {{template "dest_problem_row" (dict "Problem" (index $.Problems .ID) "SrNo" $sr
+                                "PosMarks" .PosMarks "NegMarks" .NegMarks)}}
                             {{end}}
                         {{end}}
                     {{end}}
@@ -200,6 +218,8 @@
 
 <script>
     var problemRowsSelectors = "#questions-table-body tr[id^='problem-']";
+    var chipEditorPosId = "#chip-editor-pos";
+    var chipEditorNegId = "#chip-editor-neg";
 
     htmx.defineExtension('cascade-clear', {
         onEvent: function (name, event) {

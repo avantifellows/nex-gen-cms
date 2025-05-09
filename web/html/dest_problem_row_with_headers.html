@@ -1,5 +1,5 @@
 <tbody hx-swap-oob="beforeend:#questions-table-body">
     {{ template "dest_subject_row" (dict "SubjectId" .Subject.ID "SubjectName" (getName .Subject "en")) }}
     {{ template "dest_subtype_row" (dict "SubjectId" .Subject.ID "Subtype" .Subtype "DisplaySubtype" (getDisplaySubtype .Subtype)) }}
-    {{ template "dest_problem_row" . }}
+    {{ template "dest_problem_row" (dict "Problem" .) }}
 </tbody>
