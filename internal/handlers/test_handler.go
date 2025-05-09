@@ -310,7 +310,6 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 	problemsMap := make(map[int]*models.Problem)
 	for _, p := range *problems {
 		problemsMap[p.ID] = p
-		p.DifficultyLevel = "hard"
 	}
 
 	data := dto.HomeData{
