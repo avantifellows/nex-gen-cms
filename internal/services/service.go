@@ -60,21 +60,30 @@ func (s *Service[T]) GetObject(objIdStr string, objFindingPredicate func(*T) boo
 
 	// check in the cache for list
 	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
-	objPtr := new(T)
 	if list != nil {
-		objPtr = funk.Find(*list, objFindingPredicate).(*T)
+		found := funk.Find(*list, objFindingPredicate)
+		if found != nil {
+			return found.(*T), nil
+		}
+	}
 
+	var fullURL string
+	if objIdStr == "" {
+		fullURL = urlEndPoint
 	} else {
-		// call api to fetch single object
-		respBytes, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodGet, nil)
-		if err != nil {
-			return nil, err
-		}
+		fullURL = urlEndPoint + "/" + objIdStr
+	}
 
-		// Unmarshal the response bytes into pointer to object
-		if err := json.Unmarshal(respBytes, objPtr); err != nil {
-			return nil, fmt.Errorf("error parsing response: %v", err)
-		}
+	// call api to fetch single object
+	respBytes, err := s.apiRepository.CallAPI(fullURL, http.MethodGet, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	objPtr := new(T)
+	// Unmarshal the response bytes into pointer to object
+	if err := json.Unmarshal(respBytes, objPtr); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
 	}
 	return objPtr, nil
 }

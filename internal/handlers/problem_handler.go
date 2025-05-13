@@ -18,6 +18,7 @@ const problemsKey = "problems"
 const skillsKey = "skills"
 
 const problemsEndPoint = "/problems"
+const problemEndPoint = "/resource/problem/%d/en/%d"
 const skillsEndPoint = "/skill"
 
 const problemTemplate = "problem.html"
@@ -38,11 +39,14 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	urlValues := request.URL.Query()
 	problemIdStr := urlValues.Get("id")
 	problemId := utils.StringToInt(problemIdStr)
+	// Todo: Replace last argument by curriculum id from problem object
+	endPointWithId := fmt.Sprintf(problemEndPoint, problemId, 40)
 
-	selectedProblemPtr, err := h.problemsService.GetObject(problemIdStr,
+	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
+	selectedProblemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemId
-		}, problemsKey, problemsEndPoint)
+		}, problemsKey, endPointWithId)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}

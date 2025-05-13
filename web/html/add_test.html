@@ -63,7 +63,7 @@
     </div>
 
     <!-- Right Panel -->
-    <div class="flex-1 p-5 overflow-auto bg-gray-50">
+    <div id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50">
 
         <label class="font-semibold">Select Test Code</label>
         <div class="flex items-center gap-2 mt-2 mb-2">
@@ -80,23 +80,27 @@
             {{ $seq = index $parts 2 }}
             {{ $year = index $parts 3 }}
             {{end}}
-            <select id="program-dropdown" class="p-2 border rounded flex-1">
+            <select id="program-dropdown" class="p-2 border rounded flex-1"
+                onchange="sessionStorage.setItem('selectedProgram', this.value);">
                 {{range $opt := (slice "JN" "HP" "MH" "GJ" "TN" "PN" "UK" "OR" "DL" "X")}}
                 <option {{if eq $program $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
-            <select id="test-type-code-dropdown" class="p-2 border rounded flex-1">
+            <select id="test-type-code-dropdown" class="p-2 border rounded flex-1"
+                onchange="sessionStorage.setItem('selectedTestTypeCode', this.value);">
                 {{range $opt := (slice "P" "C" "M" "B" "CT" "CCT" "PT" "MT" "MoT" "FST")}}
                 <option {{if eq $type $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
-            <select id="test-sequence-dropdown" class="p-2 border rounded flex-1">
+            <select id="test-sequence-dropdown" class="p-2 border rounded flex-1"
+                onchange="sessionStorage.setItem('selectedSequence', this.value);">
                 {{range $i := seq 1 199}}
                 <!-- "%d" is used to convert $i to string so that it can be compared with $seq -->
                 <option {{if eq $seq (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
                 {{end}}
             </select>
-            <select id="year-dropdown" class="p-2 border rounded flex-1">
+            <select id="year-dropdown" class="p-2 border rounded flex-1"
+                onchange="sessionStorage.setItem('selectedYear', this.value);">
                 {{range $i := seq 16 25}}
                 <option {{if eq $year (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
                 {{end}}
@@ -105,7 +109,8 @@
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1"
-                value="{{if .TestPtr}}{{getName .TestPtr "en"}}{{end}}">
+                value="{{if .TestPtr}}{{getName .TestPtr "en"}}{{end}}" 
+                onchange="sessionStorage.setItem('selectedName', this.value);">
             <select id="test-type-dropdown" class="p-2 border rounded flex-1">
                 {{ template "test_type_options" .TestPtr }}
             </select>
@@ -207,7 +212,8 @@
         <div class="grid grid-cols-[auto_1fr_auto_1fr] items-center gap-x-4 mt-2">
             <label class="text-sm font-medium">Duration (mins):</label>
             <input id="duration" type="number" class="w-1/4 border rounded p-2" placeholder="60"
-                value="{{if .TestPtr}}{{.TestPtr.TypeParams.Duration}}{{end}}">
+                value="{{if .TestPtr}}{{.TestPtr.TypeParams.Duration}}{{end}}" 
+                onchange="sessionStorage.setItem('selectedDuration', this.value);">
             <label class="text-sm font-medium">Total Marks:</label>
             <label id="total-marks" class="p-2">{{if .TestPtr}}{{.TestPtr.TypeParams.Marks}}{{else}}0{{end}}</label>
         </div>
@@ -220,6 +226,42 @@
     var problemRowsSelectors = "#questions-table-body tr[id^='problem-']";
     var chipEditorPosId = "#chip-editor-pos";
     var chipEditorNegId = "#chip-editor-neg";
+
+    var SESSION_KEY_PROGRAM = "selectedProgram";
+    var SESSION_KEY_TEST_TYPE_CODE = "selectedTestTypeCode";
+    var SESSION_KEY_SEQUENCE = "selectedSequence";
+    var SESSION_KEY_YEAR = "selectedYear";
+    var SESSION_KEY_NAME = "selectedName";
+    var SESSION_KEY_DURATION = "selectedDuration";
+
+    (function () {        
+        if (window.lastPushedScreen === PUSHED_SCREEN_ADD_TEST) {
+            // clear session storage values stored earlier as this is new screen opened
+            sessionStorage.removeItem(SESSION_KEY_PROGRAM);
+            sessionStorage.removeItem(SESSION_KEY_TEST_TYPE_CODE);
+            sessionStorage.removeItem(SESSION_KEY_SEQUENCE);
+            sessionStorage.removeItem(SESSION_KEY_YEAR);
+            sessionStorage.removeItem(SESSION_KEY_NAME);
+            sessionStorage.removeItem(SESSION_KEY_DURATION);
+        }
+    })();
+
+    function setElementFromStorage(elementId, storageKey) {
+        const element = document.getElementById(elementId);
+        const storedVal = sessionStorage.getItem(storageKey);
+        if (storedVal) {
+            element.value = storedVal;
+        }
+    }
+
+    document.querySelector(Add_TEST_DIV_SELECTOR).addEventListener(BACK_TO_ADD_TEST_EVT, () => {
+        setElementFromStorage('program-dropdown', SESSION_KEY_PROGRAM);
+        setElementFromStorage('test-type-code-dropdown', SESSION_KEY_TEST_TYPE_CODE);
+        setElementFromStorage('test-sequence-dropdown', SESSION_KEY_SEQUENCE);
+        setElementFromStorage('year-dropdown', SESSION_KEY_YEAR);
+        setElementFromStorage('test-name', SESSION_KEY_NAME);
+        setElementFromStorage('duration', SESSION_KEY_DURATION);
+    });
 
     htmx.defineExtension('cascade-clear', {
         onEvent: function (name, event) {
