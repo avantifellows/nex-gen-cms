@@ -18,7 +18,7 @@ const problemsKey = "problems"
 const skillsKey = "skills"
 
 const problemsEndPoint = "/problems"
-const problemEndPoint = "/resource/problem/%d/en/%d"
+const problemEndPoint = "/resource/problem/%d/en/%s"
 const skillsEndPoint = "/skill"
 
 const problemTemplate = "problem.html"
@@ -39,8 +39,7 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	urlValues := request.URL.Query()
 	problemIdStr := urlValues.Get("id")
 	problemId := utils.StringToInt(problemIdStr)
-	// Todo: Replace last argument by curriculum id from problem object
-	endPointWithId := fmt.Sprintf(problemEndPoint, problemId, 40)
+	endPointWithId := fmt.Sprintf(problemEndPoint, problemId, urlValues.Get(QUERY_PARAM_CURRICULUM_ID))
 
 	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
 	selectedProblemPtr, err := h.problemsService.GetObject("",
@@ -88,7 +87,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	queryParams := fmt.Sprintf("?curriculum_id=%s&topic_id=%d&lang_code=en", urlValues.Get("curriculum-dropdown"), topicId)
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%s&topic_id=%d&lang_code=en", urlValues.Get("curriculum-dropdown"), topicId)
 	problems, err := h.problemsService.GetList(problemsEndPoint+queryParams, problemsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)

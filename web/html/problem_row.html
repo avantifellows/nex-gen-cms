@@ -2,8 +2,8 @@
 <tr class="border-b hover:bg-gray-100 text-center">
     <!-- add is a custom function registered in test_handler.go -->
     <td class="py-2 px-4">{{ add $index 1 }}</td>
-    <td class="px-4 text-blue-500 hover:underline"><a href="#" hx-get="/problem?id={{.ID}}" hx-target="body"
-            hx-push-url="/problem?id={{.ID}}">{{.Code}}</a>
+    <td class="px-4 text-blue-500 hover:underline"><a href="#" hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body"
+            hx-push-url="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}">{{.Code}}</a>
     </td>
     <td class="px-4 text-left">{{.MetaData.Question}}</td>
 </tr>

@@ -35,7 +35,7 @@ const chipBoxCellTemplate = "chip_box_cells.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
-const testProblemsEndPoint = "/resource/test/%d/problems?lang_code=en"
+const testProblemsEndPoint = "/resource/test/%d/problems?lang_code=en&" + QUERY_PARAM_CURRICULUM_ID + "=%s"
 
 const testsKey = "tests"
 
@@ -71,7 +71,7 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	sortColumn := urlValues.Get("sortColumn")
 	sortOrder := urlValues.Get("sortOrder")
 
-	queryParams := fmt.Sprintf("?curriculum_id=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
 	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
 
 	if err != nil {
@@ -139,7 +139,8 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 }
 
 func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http.Request) (*models.Test, int, error) {
-	testIdStr := request.URL.Query().Get("id")
+	urlVals := request.URL.Query()
+	testIdStr := urlVals.Get("id")
 	testId := utils.StringToInt(testIdStr)
 
 	selectedTestPtr, err := h.testsService.GetObject(testIdStr,
@@ -149,6 +150,13 @@ func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching test: %v", err)
 	}
+
+	curriculumId, err := utils.StringToIntType[int16](urlVals.Get(QUERY_PARAM_CURRICULUM_ID))
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid Curriculum ID: %v", err)
+	}
+
+	selectedTestPtr.CurriculumID = curriculumId
 
 	// Fill subject names in test
 	h.fillSubjectNames(responseWriter, selectedTestPtr)
@@ -193,10 +201,11 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 }
 
 func (h *TestsHandler) getTestProblems(responseWriter http.ResponseWriter, request *http.Request) *[]*models.Problem {
-	testIdStr := request.URL.Query().Get("id")
+	urlVals := request.URL.Query()
+	testIdStr := urlVals.Get("id")
 	testId := utils.StringToInt(testIdStr)
 
-	endPointWithId := fmt.Sprintf(testProblemsEndPoint, testId)
+	endPointWithId := fmt.Sprintf(testProblemsEndPoint, testId, urlVals.Get(QUERY_PARAM_CURRICULUM_ID))
 	problems, err := h.problemsService.GetList(endPointWithId, problemsKey, false, true)
 
 	if err != nil {
@@ -222,10 +231,14 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
 	problemIdStr := request.FormValue("id")
 	problemId := utils.StringToInt(problemIdStr)
-	problemPtr, err := h.problemsService.GetObject(problemIdStr,
+
+	endPointWithId := fmt.Sprintf(problemEndPoint, problemId, request.FormValue("curriculum-id"))
+
+	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
+	problemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemId
-		}, problemsKey, problemsEndPoint)
+		}, problemsKey, endPointWithId)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}

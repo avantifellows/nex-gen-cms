@@ -9,6 +9,8 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 )
 
+const QUERY_PARAM_CURRICULUM_ID = "curriculum_id"
+
 const getCurriculumsEndPoint = "/curriculum"
 const curriculumsKey = "curriculums"
 const curriculumsTemplate = "curriculums.html"

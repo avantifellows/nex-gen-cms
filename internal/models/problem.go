@@ -10,6 +10,8 @@ type Problem struct {
 	Skills          []Skill
 	Subtype         string `json:"subtype"`
 	Subject         Subject
+	CurriculumID    int16  `json:"curriculum_id"`
+	GradeID         int8   `json:"grade_id"`
 	DifficultyLevel string `json:"difficulty_level"`
 }
 

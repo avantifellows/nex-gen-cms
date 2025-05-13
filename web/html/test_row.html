@@ -1,8 +1,8 @@
 {{ range . }}
 <tr class="border-b hover:bg-gray-100">
     <td class="py-4 px-6">{{.Code}}</td>
-    <td class="px-6 text-blue-500 hover:underline"><a href="#" hx-get="/test?id={{.ID}}" hx-target="body"
-        hx-push-url="/test?id={{.ID}}">{{ (index .Name 0).Resource }}</a></td>
+    <td class="px-6 text-blue-500 hover:underline"><a href="#" hx-get="/test?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body"
+        hx-push-url="/test?id={{.ID}}&curriculum_id={{.CurriculumID}}">{{ (index .Name 0).Resource }}</a></td>
     <td class="px-6 text-center text-blue-500 hover:underline">{{.ProblemCount}}</td>
     <td class="text-center">{{.TypeParams.Marks}}</td>
     <td class="text-center">{{.TypeParams.Duration}}</td>
@@ -10,8 +10,8 @@
     <td class="space-x-4">
         <!-- target is kept body instead of #content, because using #content as target will not work when
          directly edit url is entered in browser -->
-        <button class="action-button" hx-get="/edit-test?id={{.ID}}"
-            hx-target="body" hx-push-url="/edit-test?id={{.ID}}">
+        <button class="action-button" hx-get="/edit-test?id={{.ID}}&curriculum_id={{.CurriculumID}}"
+            hx-target="body" hx-push-url="/edit-test?id={{.ID}}&curriculum_id={{.CurriculumID}}">
             <i class="fa-solid fa-pencil"></i>
         </button>
         <button class="action-button" hx-delete="/delete-test?id={{.ID}}"

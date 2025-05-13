@@ -89,7 +89,7 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	queryParams := fmt.Sprintf("?curriculum_id=%d&grade_id=%d&subject_id=%d", curriculumId, gradeId, subjectId)
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&subject_id=%d", curriculumId, gradeId, subjectId)
 	chapters, err := h.chaptersService.GetList(chaptersEndPoint+queryParams, chaptersKey, false, true)
 
 	if err != nil {
