@@ -1,15 +1,27 @@
 {{ define "content" }}
 <div>
-    <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on 
-     coming back from single test to tests list screen -->
-    <select id="testtype-dropdown" hx-ext="testsLoader" name="testtype-dropdown"
-        class="border border-gray-400 p-2 rounded" hx-get="/api/tests"
-        hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
-        hx-target="#testTableBody" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
-        onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');"
-        hx-on::after-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'true')">
-        {{ template "test_type_options" }}
-    </select>
+    <div class="flex justify-between items-center mb-4">
+
+        <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on 
+        coming back from single test to tests list screen -->
+        <select id="testtype-dropdown" hx-ext="testsLoader" name="testtype-dropdown"
+            class="border border-gray-400 p-2 rounded" hx-get="/api/tests"
+            hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
+            hx-target="#testTableBody" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
+            onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');"
+            hx-on::after-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'true')">
+            {{ template "test_type_options" }}
+        </select>
+
+        <!-- Add New Test Link -->
+        <h4 class="text-sm font-semibold text-blue-500 hover:underline ml-4">
+            <a href="#" 
+                hx-get="/add-test-dialog" 
+                hx-target="body" 
+                hx-swap="beforeend">Add New Test</a>
+            <!-- <a href="#" hx-get="/tests/add-test" hx-target="body" hx-push-url="/tests/add-test">Add New Test</a> -->
+        </h4>
+    </div>
 
     <!-- Content Area -->
     <div id="subcontent">
@@ -55,13 +67,6 @@
                 </tbody>
             </table>
         </div>
-    </div>
-
-    <!-- Link to add new test -->
-    <div class="mt-4">
-        <h4 class="text-sm font-semibold text-blue-500 hover:underline">
-            <a href="#" hx-get="/tests/add-test" hx-target="body" hx-push-url="/tests/add-test">Add New Test</a>
-        </h4>
     </div>
 
 </div>
@@ -159,7 +164,7 @@
                     } else {
                         const params = event.detail.requestConfig.parameters;
                         const curriculum = params["curriculum-dropdown"];
-                        const grade = params["grade-dropdown"];                            
+                        const grade = params["grade-dropdown"];
 
                         // if dropdown values are showing default value like "Loading...", then don't execute request
                         if (!isInt(curriculum) || !isInt(grade)) {

@@ -1,0 +1,8 @@
+{{ define "curriculum_grade_selects" }}
+<select name="modal-curriculum" class="border p-2 rounded w-full" hx-get="/api/curriculums" hx-trigger="load">
+    <option disabled selected>Loading curriculums...</option>
+</select>
+<select name="modal-grade" class="border p-2 rounded w-full" hx-get="/api/grades" hx-trigger="load">
+    <option disabled selected>Loading grades...</option>
+</select>
+{{ end }}

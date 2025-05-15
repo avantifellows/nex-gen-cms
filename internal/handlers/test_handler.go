@@ -32,6 +32,9 @@ const addTestDestProblemRowTemplate = "dest_problem_row.html"
 const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
 const addTestDestSubjectRowTemplate = "dest_subject_row.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
+const addTestModalTemplate = "add_test_modal.html"
+const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
+const addCurriculumGradeSelectsTemplate = "add_curriculum_grade_selects.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
@@ -345,4 +348,15 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 
 func getTestName(t models.Test, lang string) string {
 	return t.GetNameByLang(lang)
+}
+
+func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request *http.Request) {
+	local_repo.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+		"slice": utils.Slice,
+		"add":   utils.Add,
+	}, addTestModalTemplate, testTypeOptionsTemplate, curriculumGradeSelectsTemplate)
+}
+
+func (h *TestsHandler) AddCurriculumGradeDropdowns(responseWriter http.ResponseWriter, request *http.Request) {
+	local_repo.ExecuteTemplates(responseWriter, nil, nil, addCurriculumGradeSelectsTemplate, curriculumGradeSelectsTemplate)
 }

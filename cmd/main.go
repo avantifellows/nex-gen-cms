@@ -81,6 +81,8 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/add-question-to-test", testsHandler.AddQuestionToTest)
 	muxHandler.HandleFunc("/create-test", testsHandler.CreateTest)
 	muxHandler.HandleFunc("/edit-test", testsHandler.EditTest)
+	muxHandler.HandleFunc("/add-test-dialog", testsHandler.AddTestModal)
+	muxHandler.HandleFunc("/add-curriculum-grade-selects", testsHandler.AddCurriculumGradeDropdowns)
 
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problem", problemsHandler.GetProblem)
