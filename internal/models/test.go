@@ -1,14 +1,18 @@
 package models
 
 type Test struct {
-	ID           int       `json:"id"`
-	Name         []ResName `json:"name"`
-	Code         string    `json:"code"`
-	Subtype      string    `json:"subtype"`
-	SkillIDs     []int16   `json:"skill_ids"`
+	ID               int       `json:"id"`
+	Name             []ResName `json:"name"`
+	Code             string    `json:"code"`
+	Subtype          string    `json:"subtype"`
+	SkillIDs         []int16   `json:"skill_ids"`
+	CurriculumGrades []CurriculumGrade
+	TypeParams       ResTypeParams `json:"type_params"`
+}
+
+type CurriculumGrade struct {
 	CurriculumID int16
 	GradeID      int8
-	TypeParams   ResTypeParams `json:"type_params"`
 }
 
 type ResName struct {
@@ -82,4 +86,27 @@ func (test *Test) GetNameByLang(langCode string) string {
 		}
 	}
 	return ""
+}
+
+func (test *Test) SetCurriculumGrade(curriculumID int16, gradeID int8) {
+	newPair := CurriculumGrade{
+		CurriculumID: curriculumID,
+		GradeID:      gradeID,
+	}
+
+	// If nil or empty, initialize with the new pair
+	if test.CurriculumGrades == nil || len(test.CurriculumGrades) == 0 {
+		test.CurriculumGrades = []CurriculumGrade{newPair}
+		return
+	}
+
+	// Check if the pair already exists
+	for _, cg := range test.CurriculumGrades {
+		if cg.CurriculumID == curriculumID && cg.GradeID == gradeID {
+			return // Already exists, do nothing
+		}
+	}
+
+	// Append if not found
+	test.CurriculumGrades = append(test.CurriculumGrades, newPair)
 }

@@ -84,8 +84,7 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 
 	// set curriculum & grade id on each test
 	for _, test := range *tests {
-		test.CurriculumID = curriculumId
-		test.GradeID = gradeId
+		test.SetCurriculumGrade(curriculumId, gradeId)
 	}
 
 	sortTests(*tests, sortColumn, sortOrder)
@@ -133,8 +132,8 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 	}
 
 	data := dto.HomeData{
-		CurriculumID: selectedTestPtr.CurriculumID,
-		GradeID:      selectedTestPtr.GradeID,
+		CurriculumID: selectedTestPtr.CurriculumGrades[0].CurriculumID,
+		GradeID:      selectedTestPtr.CurriculumGrades[0].GradeID,
 		TestPtr:      selectedTestPtr,
 	}
 
@@ -158,8 +157,11 @@ func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid Curriculum ID: %v", err)
 	}
-
-	selectedTestPtr.CurriculumID = curriculumId
+	gradeId, err := utils.StringToIntType[int8](urlVals.Get("grade_id"))
+	if err != nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("invalid Grade ID: %v", err)
+	}
+	selectedTestPtr.SetCurriculumGrade(curriculumId, gradeId)
 
 	// Fill subject names in test
 	h.fillSubjectNames(responseWriter, selectedTestPtr)
@@ -218,7 +220,40 @@ func (h *TestsHandler) getTestProblems(responseWriter http.ResponseWriter, reque
 }
 
 func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+	if err := request.ParseForm(); err != nil {
+		http.Error(responseWriter, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	curriculums := request.Form["curriculum[]"]
+	grades := request.Form["grade[]"]
+	testType := request.FormValue("modal-testType")
+
+	var curriculumGrades []models.CurriculumGrade
+	for i := range curriculums {
+		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
+		if err != nil {
+			fmt.Printf("invalid curriculum id at index %d", i)
+			return
+		}
+
+		gradeId, err := utils.StringToIntType[int8](grades[i])
+		if err != nil {
+			fmt.Printf("invalid grade id at index %d", i)
+			return
+		}
+
+		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
+			CurriculumID: curriculumId,
+			GradeID:      gradeId,
+		})
+	}
+	test := models.Test{
+		Subtype:          testType,
+		CurriculumGrades: curriculumGrades,
+	}
+
+	local_repo.ExecuteTemplates(responseWriter, test, template.FuncMap{
 		"split":             strings.Split,
 		"slice":             utils.Slice,
 		"seq":               utils.Seq,

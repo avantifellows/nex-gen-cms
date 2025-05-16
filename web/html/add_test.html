@@ -111,9 +111,11 @@
             <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1"
                 value="{{if .TestPtr}}{{getName .TestPtr "en"}}{{end}}" 
                 onchange="sessionStorage.setItem('selectedName', this.value);">
+            {{if .TestPtr}}
             <select id="test-type-dropdown" class="p-2 border rounded flex-1">
                 {{ template "test_type_options" .TestPtr }}
             </select>
+            {{end}}
         </div>
 
         <h2 class="mt-4 text-lg font-semibold">Marking Scheme</h2>

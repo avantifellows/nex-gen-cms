@@ -1,7 +1,7 @@
 <div id="addTestModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
     <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
         <h2 class="text-lg font-semibold mb-4">Create New Test</h2>
-        <form id="addTestForm" onsubmit="event.preventDefault(); redirectToAddTest();">
+        <form id="addTestForm">
             <div id="curriculum-grade-container" class="space-y-4 mb-6">
                 <div class="curriculum-grade-set">
                     <div class="grid grid-cols-2 gap-4">
@@ -22,8 +22,8 @@
 
             <!-- Test Type Dropdown -->
             <div class="mb-6 flex items-center gap-4">
-                <label for="modal-testtype" class="font-medium whitespace-nowrap">Test Type</label>
-                <select id="modal-testtype" class="flex-1 border p-2 rounded">
+                <label for="modal-testType" class="font-medium whitespace-nowrap">Test Type</label>
+                <select id="modal-testType" name="modal-testType" class="flex-1 border p-2 rounded">
                     {{ template "test_type_options" }}
                 </select>
             </div>
@@ -32,33 +32,24 @@
             <div class="w-full flex-row flex justify-end space-x-2">
                 <button type="button" onclick="closeAddTestModal()"
                     class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
-                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Continue</button>
+                <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="/tests/add-test"
+                    hx-on::before-request="if (!validateTestType()) event.preventDefault()"
+                    class="bg-blue-500 text-white px-4 py-2 rounded">Continue</button>
             </div>
 
         </form>
     </div>
 </div>
 <script>
-    function redirectToAddTest() {
-        const testtype = document.getElementById('modal-testtype').value;
-        if (!testtype) {
+    function validateTestType() {
+        const testType = document.getElementById('modal-testType').value;
+        if (!testType) {
             alert("Please select a test type.");
-            return;
+            // block form submission
+            return false;
         }
-
-        const form = document.getElementById('addTestForm');
-
-        // Gather all curriculum-grade sets
-        const curriculumSelects = form.querySelectorAll('select[name="modal-curriculum"]');
-        const gradeSelects = form.querySelectorAll('select[name="modal-grade"]');
-
-        const params = new URLSearchParams();
-
-        for (let i = 0; i < curriculumSelects.length; i++) {
-            params.append("curriculum[]", curriculumSelects[i].value);
-            params.append("grade[]", gradeSelects[i].value);
-        }
-        console.log('params = ', params.toString());
+        // allow form submission
+        return true;
     }
 
     function closeAddTestModal() {
