@@ -1,18 +1,19 @@
 package models
 
 type Test struct {
-	ID               int       `json:"id"`
-	Name             []ResName `json:"name"`
-	Code             string    `json:"code"`
-	Subtype          string    `json:"subtype"`
-	SkillIDs         []int16   `json:"skill_ids"`
-	CurriculumGrades []CurriculumGrade
-	TypeParams       ResTypeParams `json:"type_params"`
+	ID               int               `json:"id"`
+	Name             []ResName         `json:"name"`
+	Code             string            `json:"code"`
+	Type             string            `json:"type"`
+	Subtype          string            `json:"subtype"`
+	SkillIDs         []int16           `json:"skill_ids"`
+	CurriculumGrades []CurriculumGrade `json:"curriculum_grades"`
+	TypeParams       ResTypeParams     `json:"type_params"`
 }
 
 type CurriculumGrade struct {
-	CurriculumID int16
-	GradeID      int8
+	CurriculumID int16 `json:"curriculum_id"`
+	GradeID      int8  `json:"grade_id"`
 }
 
 type ResName struct {

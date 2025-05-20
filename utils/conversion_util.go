@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -99,4 +101,13 @@ func DisplaySubtype(subtype string) string {
 	default:
 		return "Unknown"
 	}
+}
+
+func ToJson(v any) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		log.Printf("Error marshalling to JSON: %v", err)
+		return ""
+	}
+	return string(b)
 }

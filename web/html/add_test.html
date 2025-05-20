@@ -1,5 +1,5 @@
 {{ define "content" }}
-<h1 class="text-lg font-semibold">{{if .TestPtr}}Edit{{else}}New{{end}} Test</h1>
+<h1 class="text-lg font-semibold">{{if .Problems}}Edit{{else}}New{{end}} Test</h1>
 <div class="flex h-screen">
     <!-- Left Panel -->
     <div class="w-1/3 p-5 bg-white shadow overflow-auto">
@@ -63,7 +63,9 @@
     </div>
 
     <!-- Right Panel -->
-    <div id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50">
+    <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50" hx-post="/create-test"
+        hx-on::before-request='createTest(event, {{if .Problems}}null{{else}}"{{.TestPtr.Subtype}}"{{end}}, 
+        {{if .Problems}}null{{else}}{{.TestPtr.CurriculumGrades | toJson}}{{end}})'>
 
         <label class="font-semibold">Select Test Code</label>
         <div class="flex items-center gap-2 mt-2 mb-2">
@@ -73,7 +75,7 @@
             {{ $seq := "" }}
             {{ $year := "" }}
 
-            {{if .TestPtr}}
+            {{if .Problems}}
             {{ $parts := split .TestPtr.Code "-" }}
             {{ $program = index $parts 0 }}
             {{ $type = index $parts 1 }}
@@ -109,9 +111,9 @@
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1"
-                value="{{if .TestPtr}}{{getName .TestPtr "en"}}{{end}}" 
+                value="{{if .Problems}}{{getName .TestPtr "en"}}{{end}}" 
                 onchange="sessionStorage.setItem('selectedName', this.value);">
-            {{if .TestPtr}}
+            {{if .Problems}}
             <select id="test-type-dropdown" class="p-2 border rounded flex-1">
                 {{ template "test_type_options" .TestPtr }}
             </select>
@@ -126,7 +128,7 @@
                 <div id="chip-box" class="chip-box ml-2 w-full" onclick="focusEditable(this)">
                     <div id="chip-editor-pos" contenteditable="true" class="chip-editor"
                         onkeydown="handleEditableChips(event)">
-                        {{if .TestPtr}}{{range .TestPtr.TypeParams.PosMarks}}&nbsp;<span
+                        {{if .Problems}}{{range .TestPtr.TypeParams.PosMarks}}&nbsp;<span
                             class="chip">{{.}}</span>{{end}}&nbsp;{{end}}
                     </div>
                 </div>
@@ -137,7 +139,7 @@
                 <div id="chip-box" class="chip-box ml-2 w-full" onclick="focusEditable(this)">
                     <div id="chip-editor-neg" contenteditable="true" class="chip-editor"
                         onkeydown="handleEditableChips(event)">
-                        {{if .TestPtr}}{{range .TestPtr.TypeParams.NegMarks}}&nbsp;<span
+                        {{if .Problems}}{{range .TestPtr.TypeParams.NegMarks}}&nbsp;<span
                             class="chip">{{.}}</span>{{end}}&nbsp;{{end}}
                     </div>
                 </div>
@@ -147,7 +149,7 @@
         {{ $easy := 0 }}
         {{ $medium := 0 }}
         {{ $hard := 0 }}
-        {{if .TestPtr}}
+        {{if .Problems}}
             {{range .Problems}}
                 {{ if eq .DifficultyLevel "easy" }}
                     {{ $easy = add $easy 1 }}
@@ -192,7 +194,7 @@
             </thead>
             <tbody id="questions-table-body" name="questions-table-body">
                 <!-- if this is for edit test -->
-                {{if .TestPtr}}
+                {{if .Problems}}
                     {{ $sr := 0 }}
                     {{range .TestPtr.TypeParams.Subjects}}
                         {{ $subjectId := .SubjectID }}
@@ -214,14 +216,13 @@
         <div class="grid grid-cols-[auto_1fr_auto_1fr] items-center gap-x-4 mt-2">
             <label class="text-sm font-medium">Duration (mins):</label>
             <input id="duration" type="number" class="w-1/4 border rounded p-2" placeholder="60"
-                value="{{if .TestPtr}}{{.TestPtr.TypeParams.Duration}}{{end}}" 
+                value="{{if .Problems}}{{.TestPtr.TypeParams.Duration}}{{end}}" 
                 onchange="sessionStorage.setItem('selectedDuration', this.value);">
             <label class="text-sm font-medium">Total Marks:</label>
-            <label id="total-marks" class="p-2">{{if .TestPtr}}{{.TestPtr.TypeParams.Marks}}{{else}}0{{end}}</label>
+            <label id="total-marks" class="p-2">{{if .Problems}}{{.TestPtr.TypeParams.Marks}}{{else}}0{{end}}</label>
         </div>
-        <button class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            onclick="createTest()">Save</button>
-    </div>
+        <button type="submit" class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save</button>
+    </form>
 </div>
 
 <script>
@@ -481,11 +482,14 @@
         }
     }
 
-    function createTest() {
+    function createTest(event, subtype, curriculumGrades) {
+        event.preventDefault();  // Cancel the request
+
         if (!validateFields()) {
-            return;
+            return false;
         }
-        const testJson = buildTestJson();
+
+        const testJson = buildTestJson(subtype, curriculumGrades);
         if (testJson) {
             fetch('/create-test', {
                 method: 'POST',
@@ -494,20 +498,22 @@
                     'Content-Type': 'application/json',  // Specify content type as JSON
                     'HX-Request': 'true'  // so that your server can detect HTMX if needed
                 }
-            });
+            }).then(res => res.text())
+              .then(html => {
+                  console.log("Response received " + html);
+                  //   document.getElementById("test-result").innerHTML = html;
+              }).catch(err => {
+                  console.error("Error during test creation:", err);
+              });
         }
+
+        return false;
     }
 
     function validateFields() {
         const testName = document.getElementById('test-name').value.trim();
         if (!testName) {
             alert("Please fill in the Test Name before saving.");
-            return false;
-        }
-
-        const testType = document.getElementById('test-type-dropdown').value;
-        if (!testType || testType === "Select Test type") {
-            alert("Please select the Test Type before saving.");
             return false;
         }
 
@@ -519,13 +525,17 @@
         return true;
     }
 
-    function buildTestJson() {
+    function buildTestJson(subtype, curriculumGrades) {
         const program = document.getElementById('program-dropdown').value;
         const testTypeCode = document.getElementById('test-type-code-dropdown').value;
         const testSequence = document.getElementById('test-sequence-dropdown').value;
         const year = document.getElementById('year-dropdown').value;
 
         const code = `${program}-${testTypeCode}-${testSequence}-${year}`;
+
+        if (subtype == null) {
+            subtype = document.getElementById('test-type-dropdown').value;
+        }
 
         const markingSchemeDiv = document.getElementById('marking-scheme-div');
         const posChips = markingSchemeDiv.querySelectorAll(`${chipEditorPosId} .chip`);
@@ -567,7 +577,7 @@
                     currentSectionMarks = 0;
                 }
                 currentSection = {
-                    id: id.split("-")[2],
+                    name: id.split("-")[2],
                     pos_marks: getMarksArray(posChips),
                     neg_marks: getMarksArray(negChips),
                     compulsory: {
@@ -612,6 +622,7 @@
             // set total marks on last section
             currentSection.marks = currentSectionMarks;
         }
+        console.log("cur = ", curriculumGrades);
         return {
             code: code,
             name: [
@@ -620,12 +631,13 @@
                     resource: document.getElementById('test-name').value
                 }
             ],
-            subtype: document.getElementById('test-type-dropdown').value,
-            skill_ids: Array.from(skillIdSet),
             type: "test",
+            subtype: subtype,
+            skill_ids: Array.from(skillIdSet),
+            curriculum_grades: curriculumGrades,
             type_params: {
                 duration: document.getElementById('duration').value,
-                marks: document.getElementById('total-marks').textContent,
+                marks: parseInt(document.getElementById('total-marks').textContent.trim()),
                 pos_marks: getMarksArray(posChips),
                 neg_marks: getMarksArray(negChips),
                 subjects: subjects
@@ -636,7 +648,7 @@
     function getMarksArray(chips) {
         const marks = [];
         chips.forEach(chip => {
-            marks.push(chip.textContent.trim());
+            marks.push(parseInt(chip.textContent.trim()));
         });
         return marks;
     }

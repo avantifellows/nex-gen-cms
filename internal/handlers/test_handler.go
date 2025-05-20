@@ -248,12 +248,14 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 			GradeID:      gradeId,
 		})
 	}
-	test := models.Test{
-		Subtype:          testType,
-		CurriculumGrades: curriculumGrades,
+	data := dto.HomeData{
+		TestPtr: &models.Test{
+			Subtype:          testType,
+			CurriculumGrades: curriculumGrades,
+		},
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, test, template.FuncMap{
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"split":             strings.Split,
 		"slice":             utils.Slice,
 		"seq":               utils.Seq,
@@ -262,6 +264,7 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"joinInt16":         utils.JoinInt16,
 		"dict":              utils.Dict,
 		"getDisplaySubtype": utils.DisplaySubtype,
+		"toJson":            utils.ToJson,
 	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
 		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
@@ -334,17 +337,26 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 
 func (h *TestsHandler) CreateTest(responseWriter http.ResponseWriter, request *http.Request) {
 	// Declare a variable to hold the parsed JSON
-	var testData map[string]interface{}
+	var testObj models.Test
 
 	// Decode the JSON body into the testData map
-	err := json.NewDecoder(request.Body).Decode(&testData)
+	err := json.NewDecoder(request.Body).Decode(&testObj)
 	if err != nil {
 		http.Error(responseWriter, "Error parsing JSON", http.StatusBadRequest)
 		return
 	}
 
 	// Print the parsed JSON
-	fmt.Println("Received test data:", testData)
+	fmt.Println("Received test data:", testObj)
+	// newTestPtr := models.NewTest(testData)
+	// newTestPtr, err := h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
+	_, err = h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error adding test: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// responseWriter.Write([]byte("<div>Test created</div>"))
 }
 
 func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -377,6 +389,7 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"joinInt16":         utils.JoinInt16,
 		"dict":              utils.Dict,
 		"getDisplaySubtype": utils.DisplaySubtype,
+		"toJson":            utils.ToJson,
 	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
 		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
