@@ -346,17 +346,11 @@ func (h *TestsHandler) CreateTest(responseWriter http.ResponseWriter, request *h
 		return
 	}
 
-	// Print the parsed JSON
-	fmt.Println("Received test data:", testObj)
-	// newTestPtr := models.NewTest(testData)
-	// newTestPtr, err := h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
 	_, err = h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error adding test: %v", err), http.StatusInternalServerError)
 		return
 	}
-
-	// responseWriter.Write([]byte("<div>Test created</div>"))
 }
 
 func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *http.Request) {

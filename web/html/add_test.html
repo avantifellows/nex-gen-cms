@@ -498,10 +498,16 @@
                     'Content-Type': 'application/json',  // Specify content type as JSON
                     'HX-Request': 'true'  // so that your server can detect HTMX if needed
                 }
-            }).then(res => res.text())
-              .then(html => {
-                  console.log("Response received " + html);
-                  //   document.getElementById("test-result").innerHTML = html;
+            }).then(res => {
+                  if (!res.ok) {
+                      // Turn HTTP error into a real JS error to trigger .catch
+                      throw new Error(`HTTP error! status: ${res.status}`);
+                  }
+                  return res.text(); // if OK, read body
+              }).then(html => {
+                  // go back twice to first remove add test screen and then add test dialog
+                  goBackAfterDelay(0);
+                  goBackAfterDelay(0);
               }).catch(err => {
                   console.error("Error during test creation:", err);
               });
@@ -584,7 +590,6 @@
                         problems: []
                     },
                     // right now optional section is not needed
-                    optional: {}
                 };
                 currentSubject.sections.push(currentSection);
 
@@ -608,8 +613,11 @@
                 currentSubjectMarks += maxMarks;
                 currentSectionMarks += maxMarks;
 
-                for (const skillId of (row.dataset.skillIds || "").split(',')) {
-                    skillIdSet.add(parseInt(skillId.trim()));
+                const skillIds = row.dataset.skillIds;
+                if (skillIds) {
+                    for (const skillId of skillIds.split(',')) {
+                        skillIdSet.add(parseInt(skillId.trim()));
+                    }
                 }
             }
         }
@@ -622,7 +630,6 @@
             // set total marks on last section
             currentSection.marks = currentSectionMarks;
         }
-        console.log("cur = ", curriculumGrades);
         return {
             code: code,
             name: [

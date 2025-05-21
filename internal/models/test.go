@@ -1,12 +1,12 @@
 package models
 
 type Test struct {
-	ID               int               `json:"id"`
+	ID               int               `json:"id,omitempty"`
 	Name             []ResName         `json:"name"`
 	Code             string            `json:"code"`
 	Type             string            `json:"type"`
 	Subtype          string            `json:"subtype"`
-	SkillIDs         []int16           `json:"skill_ids"`
+	SkillIDs         []int16           `json:"skill_ids,omitempty"`
 	CurriculumGrades []CurriculumGrade `json:"curriculum_grades"`
 	TypeParams       ResTypeParams     `json:"type_params"`
 }
@@ -24,27 +24,27 @@ type ResName struct {
 type ResTypeParams struct {
 	Duration string       `json:"duration"`
 	Marks    int16        `json:"marks"`
-	PosMarks []int8       `json:"pos_marks"`
-	NegMarks []int8       `json:"neg_marks"`
-	Subjects []ResSubject `json:"subjects"`
+	PosMarks []int8       `json:"pos_marks,omitempty"`
+	NegMarks []int8       `json:"neg_marks,omitempty"`
+	Subjects []ResSubject `json:"subjects,omitempty"`
 }
 
 type ResSubject struct {
-	SubjectID int8 `json:"subject_id"`
-	Name      string
+	SubjectID int8         `json:"subject_id"`
+	Name      string       `json:",omitempty"`
 	Marks     int          `json:"marks"`
-	PosMarks  []int8       `json:"pos_marks"`
-	NegMarks  []int8       `json:"neg_marks"`
+	PosMarks  []int8       `json:"pos_marks,omitempty"`
+	NegMarks  []int8       `json:"neg_marks,omitempty"`
 	Sections  []ResSection `json:"sections"`
 }
 
 type ResSection struct {
 	Name       string        `json:"name"`
 	Marks      int16         `json:"marks"`
-	PosMarks   []int8        `json:"pos_marks"`
-	NegMarks   []int8        `json:"neg_marks"`
+	PosMarks   []int8        `json:"pos_marks,omitempty"`
+	NegMarks   []int8        `json:"neg_marks,omitempty"`
 	Compulsory ResCompulsory `json:"compulsory"`
-	Optional   ResOptional   `json:"optional"`
+	Optional   *ResOptional  `json:"optional,omitempty"`
 }
 
 type ResCompulsory struct {
@@ -52,14 +52,14 @@ type ResCompulsory struct {
 }
 
 type ResOptional struct {
-	MandatoryCount int8         `json:"mandatory_count"`
-	Problems       []ResProblem `json:"problems"`
+	MandatoryCount int8         `json:"mandatory_count,omitempty"`
+	Problems       []ResProblem `json:"problems,omitempty"`
 }
 
 type ResProblem struct {
 	ID       int    `json:"id"`
 	PosMarks []int8 `json:"pos_marks"`
-	NegMarks []int8 `json:"neg_marks"`
+	NegMarks []int8 `json:"neg_marks,omitempty"`
 }
 
 // Method to count total problems
@@ -73,7 +73,10 @@ func (t Test) ProblemCount() int {
 			// Count compulsory problems
 			total += len(section.Compulsory.Problems)
 			// Count optional problems
-			total += int(section.Optional.MandatoryCount)
+			optionalSection := section.Optional
+			if optionalSection != nil {
+				total += int(optionalSection.MandatoryCount)
+			}
 		}
 	}
 
