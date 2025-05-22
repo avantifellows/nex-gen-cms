@@ -76,8 +76,12 @@
     {{ end }}
 
     <!-- Right Panel -->
+    <!-- (event.target === this) check is added in before-request, because HTMX bubbles up events through the DOM. 
+    So when any child element inside the form (like our <a> tag with hx-get on clicking problem code) triggers 
+    an HTMX request, the before-request event is fired on the parent form, causing createTest(...) to be called 
+    even for unrelated hx-get actions -->
     <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50" hx-post="/create-test"
-        hx-on::before-request='createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}})'>
+        hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}})'>
 
         <label class="font-semibold">Select Test Code</label>
         <div class="flex items-center gap-2 mt-2 mb-2">

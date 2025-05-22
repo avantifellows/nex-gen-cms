@@ -398,7 +398,7 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 	testIdStr := request.URL.Query().Get("id")
 	testId := utils.StringToInt(testIdStr)
 
-	obj, err := h.testsService.UpdateObject(testIdStr, resourcesEndPoint, testObj, testsKey,
+	_, err = h.testsService.UpdateObject(testIdStr, resourcesEndPoint, testObj, testsKey,
 		func(test *models.Test) bool {
 			return (*test).ID == testId
 		})
