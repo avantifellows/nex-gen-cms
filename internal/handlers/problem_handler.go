@@ -95,7 +95,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	}
 
 	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(urlValues.Get("subject-dropdown"),
-		h.subjectsService, subjectsKey, subjectsEndPoint)
+		h.subjectsService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), statusCode)
 		return

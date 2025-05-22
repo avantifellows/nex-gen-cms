@@ -62,10 +62,22 @@
         </div>
     </div>
 
+    {{ $id := "null" }}
+    {{ $subtype := "null" }}
+    {{ $curriculumGrades := "null" }}
+
+    {{ if .Problems }}
+        <!-- edit test -->
+        {{ $id = printf "%d" .TestPtr.ID }}
+    {{ else }}
+        <!-- add test -->
+        {{ $subtype = printf "\"%s\"" .TestPtr.Subtype }}
+        {{ $curriculumGrades = .TestPtr.CurriculumGrades | toJson }}
+    {{ end }}
+
     <!-- Right Panel -->
     <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50" hx-post="/create-test"
-        hx-on::before-request='createTest(event, {{if .Problems}}null{{else}}"{{.TestPtr.Subtype}}"{{end}}, 
-        {{if .Problems}}null{{else}}{{.TestPtr.CurriculumGrades | toJson}}{{end}})'>
+        hx-on::before-request='createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}})'>
 
         <label class="font-semibold">Select Test Code</label>
         <div class="flex items-center gap-2 mt-2 mb-2">
@@ -482,7 +494,7 @@
         }
     }
 
-    function createTest(event, subtype, curriculumGrades) {
+    function createTest(event, testId, subtype, curriculumGrades) {
         event.preventDefault();  // Cancel the request
 
         if (!validateFields()) {
@@ -491,25 +503,34 @@
 
         const testJson = buildTestJson(subtype, curriculumGrades);
         if (testJson) {
-            fetch('/create-test', {
-                method: 'POST',
+            const url = curriculumGrades ? '/create-test' : `/update-test?id=${testId}`;
+            const method = curriculumGrades ? 'POST' : 'PATCH';
+
+            fetch(url, {
+                method: method,
                 body: JSON.stringify(testJson),
                 headers: {
                     'Content-Type': 'application/json',  // Specify content type as JSON
                     'HX-Request': 'true'  // so that your server can detect HTMX if needed
                 }
+
             }).then(res => {
                   if (!res.ok) {
                       // Turn HTTP error into a real JS error to trigger .catch
                       throw new Error(`HTTP error! status: ${res.status}`);
                   }
                   return res.text(); // if OK, read body
+
               }).then(html => {
-                  // go back twice to first remove add test screen and then add test dialog
+                  // go back to remove add/edit test screen
                   goBackAfterDelay(0);
-                  goBackAfterDelay(0);
+                  if (curriculumGrades) {
+                      // remove add test dialog
+                      goBackAfterDelay(0);
+                  }
+
               }).catch(err => {
-                  console.error("Error during test creation:", err);
+                  console.error(curriculumGrades ? "Error during test creation:" : "Error during test updation:", err);
               });
         }
 
@@ -641,14 +662,15 @@
             type: "test",
             subtype: subtype,
             skill_ids: Array.from(skillIdSet),
-            curriculum_grades: curriculumGrades,
             type_params: {
                 duration: document.getElementById('duration').value,
                 marks: parseInt(document.getElementById('total-marks').textContent.trim()),
                 pos_marks: getMarksArray(posChips),
                 neg_marks: getMarksArray(negChips),
                 subjects: subjects
-            }
+            },
+            // Used spread operator to add curriculum_grades node only for add new test scenario; otherwise it won't add this node
+            ...(curriculumGrades ? { curriculum_grades: curriculumGrades } : {})
         };
     }
 

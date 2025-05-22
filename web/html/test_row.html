@@ -13,8 +13,8 @@
     <td class="space-x-4">
         <!-- target is kept body instead of #content, because using #content as target will not work when
          directly edit url is entered in browser -->
-        <button class="action-button" hx-get="/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
-            hx-target="body" hx-push-url="/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}">
+        <button class="action-button" hx-get="/tests/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
+            hx-target="body" hx-push-url="/tests/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}">
             <i class="fa-solid fa-pencil"></i>
         </button>
         <button class="action-button" hx-delete="/delete-test?id={{.ID}}"

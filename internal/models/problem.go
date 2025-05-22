@@ -9,9 +9,10 @@ type Problem struct {
 	SkillIDs        []int16      `json:"skill_ids"`
 	Skills          []Skill
 	Subtype         string `json:"subtype"`
-	Subject         Subject
 	CurriculumID    int16  `json:"curriculum_id"`
 	GradeID         int8   `json:"grade_id"`
+	SubjectID       int8   `json:"subject_id"`
+	Subject         Subject
 	DifficultyLevel string `json:"difficulty_level"`
 }
 

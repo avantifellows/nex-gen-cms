@@ -170,7 +170,7 @@ func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http
 }
 
 func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, testPtr *models.Test) {
-	subjectPtrs, err := h.subjectsService.GetList(subjectsEndPoint, subjectsKey, false, false)
+	subjectPtrs, err := h.subjectsService.GetList(handlerutils.SubjectsEndPoint, handlerutils.SubjectsKey, false, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
 	} else {
@@ -284,18 +284,14 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
 
-	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(request.FormValue("subject-id"),
-		h.subjectsService, subjectsKey, subjectsEndPoint)
+	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(utils.IntToString(problemPtr.SubjectID),
+		h.subjectsService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), statusCode)
 		return
 	}
-	/**
-	 * Following properties might not be coming with problem response as these are not in resource &
-	 * problem_lang tables
-	 */
+	// set subject as its name is required to be displayed under right hand side table for add/edit test screen
 	problemPtr.Subject = *subjectPtr
-	problemPtr.DifficultyLevel = request.FormValue("difficulty")
 
 	insertAfterId := request.FormValue("insert-after-id")
 	subjectExists := request.FormValue("subject-exists") == "true"
@@ -386,6 +382,30 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"toJson":            utils.ToJson,
 	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
 		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+}
+
+func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *http.Request) {
+	// Declare a variable to hold the parsed JSON
+	var testObj models.Test
+
+	// Decode the JSON body into the testData map
+	err := json.NewDecoder(request.Body).Decode(&testObj)
+	if err != nil {
+		http.Error(responseWriter, "Error parsing JSON", http.StatusBadRequest)
+		return
+	}
+
+	testIdStr := request.URL.Query().Get("id")
+	testId := utils.StringToInt(testIdStr)
+
+	obj, err := h.testsService.UpdateObject(testIdStr, resourcesEndPoint, testObj, testsKey,
+		func(test *models.Test) bool {
+			return (*test).ID == testId
+		})
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error updating test: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
 
 func getTestName(t models.Test, lang string) string {

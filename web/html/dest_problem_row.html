@@ -1,6 +1,6 @@
 {{ define "dest_problem_row" }}
 {{with .Problem}}
-<tr id="problem-{{.ID}}" data-subject="subject-{{.Subject.ID}}" data-subtype="subtype-{{.Subtype}}"
+<tr id="problem-{{.ID}}" data-subject="subject-{{.SubjectID}}" data-subtype="subtype-{{.Subtype}}"
     data-skill-ids="{{joinInt16 .SkillIDs ","}}" data-mathjax="true">
     <td class="p-2">{{if $.SrNo}}{{$.SrNo}}{{end}}</td>
     <td class="p-2 text-blue-500 hover:underline"><a href="#" hx-get="/problem?id={{.ID}}" hx-target="body"

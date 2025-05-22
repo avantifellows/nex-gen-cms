@@ -9,10 +9,12 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
+const SubjectsEndPoint = "/subject"
+const SubjectsKey = "subjects"
+
 func FetchSelectedSubject(
 	subIdStr string,
 	subjectsService *services.Service[models.Subject],
-	cacheKey, endpoint string,
 ) (*models.Subject, int, error) {
 	subjectId, err := utils.StringToIntType[int8](subIdStr)
 	if err != nil {
@@ -21,7 +23,7 @@ func FetchSelectedSubject(
 
 	selectedSubPtr, err := subjectsService.GetObject(subIdStr, func(subject *models.Subject) bool {
 		return subject.ID == subjectId
-	}, cacheKey, endpoint)
+	}, SubjectsKey, SubjectsEndPoint)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching subject: %w", err)
 	}

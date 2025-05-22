@@ -111,3 +111,7 @@ func ToJson(v any) string {
 	}
 	return string(b)
 }
+
+func IntToString[T IntType](v T) string {
+	return strconv.FormatInt(int64(v), 10)
+}
