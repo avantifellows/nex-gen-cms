@@ -75,6 +75,7 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"add":         utils.Add,
 		"stringToInt": utils.StringToInt,
+		"seq":         utils.Seq,
 	}, baseTemplate, problemTemplate)
 }
 
