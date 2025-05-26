@@ -59,14 +59,14 @@
     <div>
         <nav>
             <div class="nav nav-tabs" id="nav-tab">
-                <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="/chapters" hx-target="body"
+                <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
-                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-push-url="/modules" hx-target="body"
+                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-push-url="true" hx-target="body"
                     data-toggle="tab">Modules</button>
-                <button class="nav-link" id="books-tab" hx-get="/books" hx-push-url="/books" hx-target="body"
+                <button class="nav-link" id="books-tab" hx-get="/books" hx-push-url="true" hx-target="body"
                     data-toggle="tab">Books</button>
-                <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="/tests" hx-target="body"
+                <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false')">Tests</button>
 

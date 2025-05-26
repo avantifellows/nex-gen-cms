@@ -32,7 +32,7 @@
             <div class="w-full flex-row flex justify-end space-x-2">
                 <button type="button" onclick="closeAddTestModal()"
                     class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
-                <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="/tests/add-test"
+                <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="true"
                     hx-on::before-request="if (!validateTestType()) event.preventDefault()"
                     class="bg-blue-500 text-white px-4 py-2 rounded">Continue</button>
             </div>

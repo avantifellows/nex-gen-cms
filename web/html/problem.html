@@ -29,6 +29,7 @@
                 {{ if $index }}, {{ end }}{{ $skill.Name }}
             {{ end }}
         </p>
+        {{ if .ProblemPtr.MetaData.Options }}
         <h2 class="text-lg font-semibold mt-4">
             OPTIONS
         </h2>
@@ -42,6 +43,7 @@
             </div>
             {{ end }}
         </div>
+        {{ end }}
         <h2 class="text-lg font-semibold mt-4">
             ANSWER
         </h2>

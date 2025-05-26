@@ -1,7 +1,8 @@
 {{ range . }}
 <tr class="border-b">
-    <td class="p-2 text-blue-500 hover:underline"><a href="#" hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body"
-            hx-push-url="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}">{{.Code}}</a></td>
+    <td class="p-2 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
+        hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">{{.Code}}
+    </a></td>
     <td class="p-2">{{.MetaData.Question}}</td>
     <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded" data-id="{{.ID}}"
             data-subject="{{.Subject.ID}}" data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
