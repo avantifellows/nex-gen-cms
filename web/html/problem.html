@@ -21,6 +21,18 @@
         <p class="mt-2">
             {{.ProblemPtr.MetaData.Question}}
         </p>
+        {{/*
+        {{ if .ProblemPtr.Concepts }}
+        <h2 class="text-lg font-semibold mt-4">
+            CONCEPTS
+        </h2>
+        <p class="mt-2">
+            {{ range $index, $concept := .ProblemPtr.Concepts }}
+                {{ if $index }}, {{ end }}{{ getName $concept "en" }}
+            {{ end }}
+        </p>
+        {{ end }}
+        */}}
         <h2 class="text-lg font-semibold mt-4">
             SKILL
         </h2>

@@ -71,6 +71,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/delete-topic", topicsHandler.DeleteTopic)
 	muxHandler.Handle("/edit-topic", middleware.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
 	muxHandler.HandleFunc("/update-topic", topicsHandler.UpdateTopic)
+	muxHandler.HandleFunc("/topic", topicsHandler.GetTopic)
 
 	testsHandler := appComponentPtr.TestsHandler
 	muxHandler.HandleFunc("/tests", testsHandler.LoadTests)

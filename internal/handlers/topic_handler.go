@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
@@ -22,6 +23,7 @@ const topicRowTemplate = "topic_row.html"
 const addTopicTemplate = "add_topic.html"
 const editTopicTemplate = "edit_topic.html"
 const topicDropdownTemplate = "topic_dropdown.html"
+const topicTemplate = "topic.html"
 
 type TopicsHandler struct {
 	service *services.Service[models.Topic]
@@ -168,4 +170,30 @@ func sortTopics(topics []*models.Topic) {
 		}
 		return sortResult
 	})
+}
+
+func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	topicIdStr := urlVals.Get("id")
+	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	selectedTopicPtr, err := h.service.GetObject(topicIdStr,
+		func(topic *models.Topic) bool {
+			return (*topic).ID == topicId
+		}, topicsKey, topicsEndPoint)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching topic: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	data := dto.HomeData{
+		TopicPtr: selectedTopicPtr,
+	}
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"getName": getTopicName,
+	}, baseTemplate, topicTemplate)
 }

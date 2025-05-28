@@ -13,7 +13,6 @@ import (
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/utils"
-	"github.com/thoas/go-funk"
 )
 
 const chaptersEndPoint = "/chapter"
@@ -97,14 +96,8 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	filteredChapters := funk.Filter(*chapters, func(chapter *models.Chapter) bool {
-		return (*chapter).CurriculumID == curriculumId && (*chapter).GradeID == gradeId &&
-			(*chapter).SubjectID == subjectId
-	})
-	typecastedChapters := filteredChapters.([]*models.Chapter)
-
-	h.getTopics(responseWriter, typecastedChapters)
-	sortChapters(typecastedChapters)
+	h.getTopics(responseWriter, *chapters)
+	sortChapters(*chapters)
 
 	view := urlValues.Get("view")
 	var filename string
@@ -113,7 +106,7 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 	} else {
 		filename = chapterDropdownTemplate
 	}
-	local_repo.ExecuteTemplate(filename, responseWriter, typecastedChapters, template.FuncMap{
+	local_repo.ExecuteTemplate(filename, responseWriter, chapters, template.FuncMap{
 		"getName": getChapterName,
 	})
 }

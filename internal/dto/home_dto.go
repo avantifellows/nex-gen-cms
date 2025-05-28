@@ -11,4 +11,5 @@ type HomeData struct {
 	TestPtr          *models.Test
 	ProblemPtr       *models.Problem
 	Problems         map[int]*models.Problem // key = Problem ID
+	TopicPtr         *models.Topic
 }
