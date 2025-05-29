@@ -2,7 +2,8 @@
 <tr class="border-b hover:bg-gray-100">
     <td class="py-4 px-6">{{.Code}}</td>
     <td class="px-6 text-blue-500 hover:underline"><a href="/topic?id={{.ID}}" hx-get="/topic?id={{.ID}}"
-            hx-target="body" hx-push-url="true">{{ getName . "en" }}</a></td>
+            hx-target="body" hx-push-url="true" hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown">
+            {{ getName . "en" }}</a></td>
     <td></td>
     <td></td>
     <td></td>

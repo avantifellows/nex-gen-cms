@@ -23,6 +23,8 @@ const skillsEndPoint = "/skill"
 
 const problemTemplate = "problem.html"
 const srcProblemRowTemplate = "src_problem_row.html"
+const problemsTemplate = "problems.html"
+const topicProblemRowTemplate = "topic_problem_row.html"
 
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
@@ -88,14 +90,14 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%s&topic_id=%d&lang_code=en", urlValues.Get("curriculum-dropdown"), topicId)
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%s&topic_id=%d&lang_code=en", urlValues.Get(CURRICULUM_DROPDOWN_NAME), topicId)
 	problems, err := h.problemsService.GetList(problemsEndPoint+queryParams, problemsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(urlValues.Get("subject-dropdown"),
+	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(urlValues.Get(SUBJECT_DROPDOWN_NAME),
 		h.subjectsService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), statusCode)
@@ -108,7 +110,16 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	}
 
 	filterProblems(problems, urlValues.Get("level-dropdown"), urlValues.Get("ptype-dropdown"), urlValues.Get("selected-ids"))
-	local_repo.ExecuteTemplate(srcProblemRowTemplate, responseWriter, problems, nil)
+
+	var tmpl string
+	if urlValues.Has("level-dropdown") {
+		// for add/edit test screen
+		tmpl = srcProblemRowTemplate
+	} else {
+		// for topic screen's Problems tab
+		tmpl = topicProblemRowTemplate
+	}
+	local_repo.ExecuteTemplate(tmpl, responseWriter, problems, nil)
 }
 
 func filterProblems(problems *[]*models.Problem, difficulty string, ptype string, selectedIdsRaw string) {
@@ -128,4 +139,9 @@ func filterProblems(problems *[]*models.Problem, difficulty string, ptype string
 		}
 	}
 	*problems = ps[:n]
+}
+
+func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	topicIdStr := request.URL.Query().Get("topic_id")
+	local_repo.ExecuteTemplate(problemsTemplate, responseWriter, topicIdStr, nil)
 }

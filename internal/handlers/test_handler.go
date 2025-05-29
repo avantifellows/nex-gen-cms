@@ -22,7 +22,7 @@ const TESTTYPE_DROPDOWN_NAME = "testtype-dropdown"
 const testsTemplate = "tests.html"
 const testRowTemplate = "test_row.html"
 const testTemplate = "test.html"
-const problemRowTemplate = "problem_row.html"
+const testProblemRowTemplate = "test_problem_row.html"
 const addTestTemplate = "add_test.html"
 const testTypeOptionsTemplate = "test_type_options.html"
 const addTestDestProblemRowWithoutHeadersTemplate = "dest_problem_row_without_headers.html"
@@ -200,7 +200,7 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 	}
 
 	// Passing custom function add to use in template for serial number by adding 1 to index
-	local_repo.ExecuteTemplate(problemRowTemplate, responseWriter, problems, template.FuncMap{
+	local_repo.ExecuteTemplate(testProblemRowTemplate, responseWriter, problems, template.FuncMap{
 		"add": utils.Add,
 	})
 }

@@ -1,0 +1,23 @@
+<div>
+    <!-- Add New Problem Link -->
+    <h4 class="text-sm font-semibold text-blue-500 hover:underline mb-4">
+        <a href="/topics/add-problem" hx-get="/topics/add-problem" hx-target="body" hx-push-url="true">Add New
+            Problem</a>
+    </h4>
+
+    <div class="shadow-md overflow-x-auto">
+        <table class="min-w-full bg-white">
+            <thead>
+                <tr class="bg-gray-200 text-gray-600 text-sm">
+                    <th class="py-4 text-center">Code</th>
+                    <th class="text-center">Text</th>
+                    <th class="pr-4 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load"
+                hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown">
+                <!-- Rows will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -7,9 +7,9 @@
         <h3 class="text-base font-semibold ml-4">{{ getName .TopicPtr "en" }}</h3>
     </div>
     <div class="flex space-x-4 py-4">
-        <button data-toggle="sub-tab" class="sub-tab active" onclick="updateSubtabState(this)"
-            hx-target="#subContent">Concepts</button>
-        <button data-toggle="sub-tab" class="sub-tab" onclick="updateSubtabState(this)"
+        <button data-toggle="sub-tab" class="sub-tab active" onclick="updateSubtabState(this)" hx-trigger="click, load"
+            hx-get="/concepts" hx-target="#subContent">Concepts</button>
+        <button data-toggle="sub-tab" class="sub-tab" onclick="updateSubtabState(this)" hx-get="/problems?topic_id={{.TopicPtr.ID}}"
             hx-target="#subContent">Problems</button>
     </div>
     <div id="sub-tabContent">

@@ -190,8 +190,12 @@ func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *ht
 		return
 	}
 
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlVals)
 	data := dto.HomeData{
-		TopicPtr: selectedTopicPtr,
+		CurriculumID: curriculumId,
+		GradeID:      gradeId,
+		SubjectID:    subjectId,
+		TopicPtr:     selectedTopicPtr,
 	}
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getTopicName,
