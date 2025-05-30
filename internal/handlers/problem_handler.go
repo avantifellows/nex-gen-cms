@@ -25,6 +25,7 @@ const problemTemplate = "problem.html"
 const srcProblemRowTemplate = "src_problem_row.html"
 const problemsTemplate = "problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
+const addProblemTemplate = "add_problem.html"
 
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
@@ -144,4 +145,8 @@ func filterProblems(problems *[]*models.Problem, difficulty string, ptype string
 func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	topicIdStr := request.URL.Query().Get("topic_id")
 	local_repo.ExecuteTemplate(problemsTemplate, responseWriter, topicIdStr, nil)
+}
+
+func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
+	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, addProblemTemplate)
 }

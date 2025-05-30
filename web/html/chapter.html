@@ -25,7 +25,7 @@
 <script>
     function updateSubtabState(subtabBtn, event) {
         const subtabBtns = document.querySelectorAll('[data-toggle="sub-tab"]');
-        subtabBtns.forEach(subtabBtn => subtabBtn.classList.remove("active"));
+        subtabBtns.forEach(btn => btn.classList.remove("active"));
         subtabBtn.classList.add("active");
     }
 </script>

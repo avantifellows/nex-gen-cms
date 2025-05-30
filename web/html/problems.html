@@ -1,7 +1,7 @@
 <div>
     <!-- Add New Problem Link -->
     <h4 class="text-sm font-semibold text-blue-500 hover:underline mb-4">
-        <a href="/topics/add-problem" hx-get="/topics/add-problem" hx-target="body" hx-push-url="true">Add New
+        <a href="/topic/add-problem" hx-get="/topic/add-problem" hx-target="body" hx-push-url="true">Add New
             Problem</a>
     </h4>
 
@@ -15,7 +15,8 @@
                 </tr>
             </thead>
             <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load"
-                hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown">
+                hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
+                data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
