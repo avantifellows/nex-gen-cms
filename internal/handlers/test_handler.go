@@ -265,7 +265,7 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"dict":              utils.Dict,
 		"getDisplaySubtype": utils.DisplaySubtype,
 		"toJson":            utils.ToJson,
-	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
+	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
 		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
@@ -380,7 +380,7 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"dict":              utils.Dict,
 		"getDisplaySubtype": utils.DisplaySubtype,
 		"toJson":            utils.ToJson,
-	}, baseTemplate, addTestTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
+	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
 		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 

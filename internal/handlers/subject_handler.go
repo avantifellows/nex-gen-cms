@@ -30,7 +30,6 @@ func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	// Load subjects.html
 	local_repo.ExecuteTemplate(subjectsTemplate, responseWriter, subjects, template.FuncMap{
 		"getName": getSubjectName,
 	})

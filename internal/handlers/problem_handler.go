@@ -15,27 +15,29 @@ import (
 )
 
 const problemsKey = "problems"
-const skillsKey = "skills"
 
 const problemsEndPoint = "/problems"
 const problemEndPoint = "/resource/problem/%d/en/%s"
-const skillsEndPoint = "/skill"
 
 const problemTemplate = "problem.html"
 const srcProblemRowTemplate = "src_problem_row.html"
 const problemsTemplate = "problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
 const addProblemTemplate = "add_problem.html"
+const problemTypeOptionsTemplate = "problem_type_options.html"
 
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
 	skillsService   *services.Service[models.Skill]
 	subjectsService *services.Service[models.Subject]
+	topicsService   *services.Service[models.Topic]
 }
 
 func NewProblemsHandler(problemsService *services.Service[models.Problem],
-	skillsService *services.Service[models.Skill], subjectsService *services.Service[models.Subject]) *ProblemsHandler {
-	return &ProblemsHandler{problemsService: problemsService, skillsService: skillsService, subjectsService: subjectsService}
+	skillsService *services.Service[models.Skill], subjectsService *services.Service[models.Subject],
+	topicsService *services.Service[models.Topic]) *ProblemsHandler {
+	return &ProblemsHandler{problemsService: problemsService, skillsService: skillsService,
+		subjectsService: subjectsService, topicsService: topicsService}
 }
 
 func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -143,10 +145,20 @@ func filterProblems(problems *[]*models.Problem, difficulty string, ptype string
 }
 
 func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIdStr := request.URL.Query().Get("topic_id")
+	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
 	local_repo.ExecuteTemplate(problemsTemplate, responseWriter, topicIdStr, nil)
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, addProblemTemplate)
+	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
+	selectedTopicPtr, code, err := handlerutils.GetTopicById(topicIdStr, h.topicsService)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	data := dto.HomeData{
+		TopicPtr: selectedTopicPtr,
+	}
+	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, problemTypeOptionsTemplate, addProblemTemplate)
 }

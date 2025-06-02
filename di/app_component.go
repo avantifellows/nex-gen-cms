@@ -15,9 +15,11 @@ type AppComponent struct {
 	CssPathHandler     http.Handler
 	ChaptersHandler    *handlers.ChaptersHandler
 	TopicsHandler      *handlers.TopicsHandler
+	ConceptsHandler    *handlers.ConceptsHandler
 	CurriculumsHandler *handlers.CurriculumsHandler
 	GradesHandler      *handlers.GradesHandler
 	SubjectsHandler    *handlers.SubjectsHandler
+	SkillsHandler      *handlers.SkillsHandler
 	TestsHandler       *handlers.TestsHandler
 	ProblemsHandler    *handlers.ProblemsHandler
 	ModulesHandler     *handlers.ModulesHandler
@@ -30,24 +32,27 @@ func NewAppComponent() (*AppComponent, error) {
 	apiRepo := remote_repo.NewAPIRepository()
 
 	// Initialize service
-	topicsService := services.NewService[models.Topic](cacheRepo, apiRepo)
 	chaptersService := services.NewService[models.Chapter](cacheRepo, apiRepo)
+	topicsService := services.NewService[models.Topic](cacheRepo, apiRepo)
+	conceptsService := services.NewService[models.Concept](cacheRepo, apiRepo)
 	curriculumsService := services.NewService[models.Curriculum](cacheRepo, apiRepo)
 	gradesService := services.NewService[models.Grade](cacheRepo, apiRepo)
 	subjectsService := services.NewService[models.Subject](cacheRepo, apiRepo)
+	skillsService := services.NewService[models.Skill](cacheRepo, apiRepo)
 	testsService := services.NewService[models.Test](cacheRepo, apiRepo)
 	problemsService := services.NewService[models.Problem](cacheRepo, apiRepo)
-	skillsService := services.NewService[models.Skill](cacheRepo, apiRepo)
 
 	// Initialize handlers
 	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
 	topicsHandler := handlers.NewTopicsHandler(topicsService)
+	conceptsHandler := handlers.NewConceptsHandler(conceptsService)
 	curriculumsHandler := handlers.NewCurriculumsHandler(curriculumsService)
 	gradesHandler := handlers.NewGradesHandler(gradesService)
 	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
+	skillsHandler := handlers.NewSkillsHandler(skillsService)
 	testsHandler := handlers.NewTestsHandler(testsService, subjectsService, problemsService)
-	problemsHandler := handlers.NewProblemsHandler(problemsService, skillsService, subjectsService)
+	problemsHandler := handlers.NewProblemsHandler(problemsService, skillsService, subjectsService, topicsService)
 
 	modulesHandler := handlers.NewModulesHandler()
 	booksHandler := handlers.NewBooksHandler()
@@ -56,9 +61,11 @@ func NewAppComponent() (*AppComponent, error) {
 		CssPathHandler:     cssPathHandler,
 		ChaptersHandler:    chaptersHandler,
 		TopicsHandler:      topicsHandler,
+		ConceptsHandler:    conceptsHandler,
 		CurriculumsHandler: curriculumsHandler,
 		GradesHandler:      gradesHandler,
 		SubjectsHandler:    subjectsHandler,
+		SkillsHandler:      skillsHandler,
 		TestsHandler:       testsHandler,
 		ProblemsHandler:    problemsHandler,
 		ModulesHandler:     modulesHandler,

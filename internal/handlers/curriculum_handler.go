@@ -32,6 +32,5 @@ func (h *CurriculumsHandler) GetCurriculums(responseWriter http.ResponseWriter, 
 		return
 	}
 
-	// Load curriculums.html
 	local_repo.ExecuteTemplate(curriculumsTemplate, responseWriter, curriculums, nil)
 }

@@ -56,6 +56,8 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/api/curriculums", appComponentPtr.CurriculumsHandler.GetCurriculums)
 	muxHandler.HandleFunc("/api/grades", appComponentPtr.GradesHandler.GetGrades)
 	muxHandler.HandleFunc("/api/subjects", appComponentPtr.SubjectsHandler.GetSubjects)
+	muxHandler.HandleFunc("/api/skills", appComponentPtr.SkillsHandler.GetSkills)
+
 	muxHandler.HandleFunc("/api/chapters", chaptersHandler.GetChapters)
 	muxHandler.Handle("/edit-chapter", middleware.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter)))
 	muxHandler.HandleFunc("/update-chapter", chaptersHandler.UpdateChapter)
@@ -72,6 +74,9 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.Handle("/edit-topic", middleware.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
 	muxHandler.HandleFunc("/update-topic", topicsHandler.UpdateTopic)
 	muxHandler.HandleFunc("/topic", topicsHandler.GetTopic)
+
+	conceptsHandler := appComponentPtr.ConceptsHandler
+	muxHandler.HandleFunc("/api/concepts", conceptsHandler.GetConcepts)
 
 	testsHandler := appComponentPtr.TestsHandler
 	muxHandler.HandleFunc("/tests", testsHandler.LoadTests)

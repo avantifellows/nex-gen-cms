@@ -9,14 +9,14 @@ import (
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
+	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const topicsEndPoint = "/topic"
-const topicsKey = "topics"
+const QUERY_PARAM_TOPIC_ID = "topic_id"
 
 const topicsTemplate = "topics.html"
 const topicRowTemplate = "topic_row.html"
@@ -57,7 +57,7 @@ func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *ht
 	}
 	newTopicPtr := models.NewTopic(topicCode, topicName, chapterId, curriculumId)
 
-	newTopicPtr, err = h.service.AddObject(newTopicPtr, topicsKey, topicsEndPoint)
+	newTopicPtr, err = h.service.AddObject(newTopicPtr, handlerutils.TopicsKey, handlerutils.TopicsEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error adding topic: %v", err), http.StatusInternalServerError)
 		return
@@ -82,7 +82,7 @@ func (h *TopicsHandler) DeleteTopic(responseWriter http.ResponseWriter, request 
 	}
 	err = h.service.DeleteObject(topicIdStr, func(t *models.Topic) bool {
 		return t.ID != topicId
-	}, topicsKey, topicsEndPoint)
+	}, handlerutils.TopicsKey, handlerutils.TopicsEndPoint)
 
 	// If http error is thrown from here then target row won't be removed by htmx code
 	if err != nil {
@@ -91,7 +91,7 @@ func (h *TopicsHandler) DeleteTopic(responseWriter http.ResponseWriter, request 
 }
 
 func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedTopicPtr, code, err := h.getTopic(request)
+	selectedTopicPtr, code, err := handlerutils.GetTopicById(request.URL.Query().Get("id"), h.service)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -100,24 +100,6 @@ func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *h
 	local_repo.ExecuteTemplate(editTopicTemplate, responseWriter, selectedTopicPtr, template.FuncMap{
 		"getName": getTopicName,
 	})
-}
-
-func (h *TopicsHandler) getTopic(request *http.Request) (*models.Topic, int, error) {
-	topicIdStr := request.URL.Query().Get("id")
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid Topic ID: %w", err)
-	}
-
-	selectedTopicPtr, err := h.service.GetObject(topicIdStr,
-		func(topic *models.Topic) bool {
-			return (*topic).ID == topicId
-		}, topicsKey, topicsEndPoint)
-	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching topic: %v", err)
-	}
-
-	return selectedTopicPtr, http.StatusOK, nil
 }
 
 func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request *http.Request) {
@@ -134,7 +116,7 @@ func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request 
 	dummyTopicPtr := &models.Topic{}
 	topicMap := dummyTopicPtr.BuildMap(topicCode, topicName)
 
-	_, err = h.service.UpdateObject(topicIdStr, topicsEndPoint, topicMap, topicsKey,
+	_, err = h.service.UpdateObject(topicIdStr, handlerutils.TopicsEndPoint, topicMap, handlerutils.TopicsKey,
 		func(topic *models.Topic) bool {
 			return topic.ID == topicId
 		})
@@ -173,24 +155,13 @@ func sortTopics(topics []*models.Topic) {
 }
 
 func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	urlVals := request.URL.Query()
-	topicIdStr := urlVals.Get("id")
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	selectedTopicPtr, code, err := handlerutils.GetTopicById(request.URL.Query().Get("id"), h.service)
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
+		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 
-	selectedTopicPtr, err := h.service.GetObject(topicIdStr,
-		func(topic *models.Topic) bool {
-			return (*topic).ID == topicId
-		}, topicsKey, topicsEndPoint)
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching topic: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlVals)
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
 	data := dto.HomeData{
 		CurriculumID: curriculumId,
 		GradeID:      gradeId,

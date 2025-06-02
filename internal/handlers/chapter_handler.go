@@ -9,6 +9,7 @@ import (
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
+	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
@@ -31,7 +32,6 @@ type ChaptersHandler struct {
 	topicsService   *services.Service[models.Topic]
 }
 
-// NewChaptersHandler creates a new instance of ChaptersHandler
 func NewChaptersHandler(chaptersService *services.Service[models.Chapter],
 	topicsService *services.Service[models.Topic]) *ChaptersHandler {
 	return &ChaptersHandler{
@@ -116,7 +116,7 @@ func getChapterName(ch models.Chapter, lang string) string {
 }
 
 func (h *ChaptersHandler) getTopics(responseWriter http.ResponseWriter, chapterPtrs []*models.Chapter) {
-	topics, err := h.topicsService.GetList(topicsEndPoint, topicsKey, false, false)
+	topics, err := h.topicsService.GetList(handlerutils.TopicsEndPoint, handlerutils.TopicsKey, false, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
 	} else {
