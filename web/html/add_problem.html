@@ -9,7 +9,6 @@
             <select name="problem-type-dropdown" class="w-full border border-gray-300 rounded p-2">
                 {{ template "problem_type_options" }}
             </select>
-            <label class="block"><input type="checkbox"> Subjective Problem (module)</label>
         </div>
         <div>
             <p class="font-semibold mb-2">Select Skills:</p>
@@ -39,13 +38,13 @@
 
     <!-- TEXT EDITOR -->
     <div class="mb-6">
-        <p class="font-semibold mb-2">TEXT</p>
-        <textarea class="w-full border p-2 h-32" placeholder="Enter the question..."></textarea>
+        <p class="font-semibold mb-2">Text</p>
+        {{ template "editor" . }}
     </div>
 
     <!-- OPTIONS -->
     <div class="mb-6">
-        <p class="font-semibold mb-2">OPTIONS</p>
+        <p class="font-semibold mb-2">Options</p>
         <div class="grid grid-cols-2 gap-4">
             <textarea class="border p-2 h-20" placeholder="Option A"></textarea>
             <textarea class="border p-2 h-20" placeholder="Option B"></textarea>
@@ -55,28 +54,28 @@
     </div>
 
     <!-- ANSWER -->
-    <div class="mb-6">
+    <!-- <div class="mb-6">
         <p class="font-semibold mb-2">ANSWER</p>
         <label class="mr-4"><input type="checkbox" name="answer"> A</label>
         <label class="mr-4"><input type="checkbox" name="answer"> B</label>
         <label class="mr-4"><input type="checkbox" name="answer"> C</label>
         <label class="mr-4"><input type="checkbox" name="answer"> D</label>
-    </div>
+    </div> -->
 
     <!-- SOLUTION -->
-    <div class="mb-6">
+    <!-- <div class="mb-6">
         <p class="font-semibold mb-2">SOLUTION</p>
         <textarea class="w-full border p-2 h-32" placeholder="Enter detailed solution..."></textarea>
-    </div>
+    </div> -->
 
     <!-- TAGS -->
-    <div class="mb-6">
+    <!-- <div class="mb-6">
         <p class="font-semibold mb-2">TAGS</p>
         <input type="text" class="w-full border p-2" placeholder="Assign Hashtags">
-    </div>
+    </div> -->
 
     <!-- SOURCE -->
-    <div class="mb-6">
+    <!-- <div class="mb-6">
         <p class="font-semibold mb-2">SOURCE</p>
         <table class="w-full text-left border border-gray-300">
             <thead class="bg-gray-200">
@@ -95,9 +94,9 @@
             </tbody>
         </table>
         <a href="#" class="text-blue-600 underline mt-2 inline-block">Add Source</a>
-    </div>
+    </div> -->
 
     <!-- SAVE BUTTON -->
-    <button class="w-full bg-blue-500 text-white py-3 font-semibold rounded hover:bg-blue-600">SAVE</button>
+    <!-- <button class="w-full bg-blue-500 text-white py-3 font-semibold rounded hover:bg-blue-600">SAVE</button> -->
 </div>
 {{ end }}

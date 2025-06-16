@@ -25,6 +25,7 @@ const problemsTemplate = "problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
 const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
+const editorTemplate = "editor.html"
 
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
@@ -160,5 +161,6 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 	data := dto.HomeData{
 		TopicPtr: selectedTopicPtr,
 	}
-	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, problemTypeOptionsTemplate, addProblemTemplate)
+	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
+		editorTemplate)
 }
