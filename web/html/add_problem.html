@@ -36,21 +36,24 @@
         <label class="mr-4"><input type="radio" name="difficulty"> 3</label>
     </div>
 
-    <!-- TEXT EDITOR -->
+    <!-- Question editor -->
     <div class="mb-6">
         <p class="font-semibold mb-2">Text</p>
         {{ template "editor" . }}
     </div>
 
-    <!-- OPTIONS -->
+    <!-- Options -->
     <div class="mb-6">
         <p class="font-semibold mb-2">Options</p>
-        <div class="grid grid-cols-2 gap-4">
-            <textarea class="border p-2 h-20" placeholder="Option A"></textarea>
-            <textarea class="border p-2 h-20" placeholder="Option B"></textarea>
-            <textarea class="border p-2 h-20" placeholder="Option C"></textarea>
-            <textarea class="border p-2 h-20" placeholder="Option D"></textarea>
+        <!-- MCQ Option Tabs -->
+        <div id="option-tabs" class="flex items-center overflow-x-auto">
+            <!-- Tabs will be inserted before this -->
+            <!-- Add (+) Tab -->
+            <button id="add-tab" title="Add Option" class="mcq-tab-add">+</button>
         </div>
+
+        <!-- Shared Editor -->
+        {{ template "editor" . }}
     </div>
 
     <!-- ANSWER -->
@@ -99,4 +102,77 @@
     <!-- SAVE BUTTON -->
     <!-- <button class="w-full bg-blue-500 text-white py-3 font-semibold rounded hover:bg-blue-600">SAVE</button> -->
 </div>
+<script>
+    const optionTabs = document.getElementById('option-tabs');
+    const addTabButton = document.getElementById('add-tab');
+
+    const labelPool = 'ABCDEFGHIJ';
+    let tabs = new Array(4).fill(null); // Start with 4 tabs
+    let activeIndex = 0;
+
+    function getLabel(index) {
+        return labelPool[index];
+    }
+
+    function renderTabs() {
+        document.querySelectorAll('.mcq-tab').forEach(tab => tab.remove());
+
+        tabs.forEach((_, index) => {
+            const label = getLabel(index);
+            const tab = document.createElement('div');
+            tab.className = 'mcq-tab' + (index === activeIndex ? ' active' : '');
+            tab.dataset.index = index;
+            tab.innerHTML = `
+                <span class="mr-2">${label}</span>
+                <button title="Remove" class="remove-btn">&times;</button>
+            `;
+            tab.addEventListener('click', () => setActiveTab(index));
+            tab.querySelector('.remove-btn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeTab(index);
+            });
+            optionTabs.insertBefore(tab, addTabButton);
+        });
+
+        // Hide "+" button if 10 or more tabs
+        if (tabs.length >= 10) {
+            addTabButton.style.display = 'none';
+        } else {
+            addTabButton.style.display = 'flex'; // or 'inline-flex' depending on your styling
+        }
+    }
+
+    function setActiveTab(index) {
+        activeIndex = index;
+        document.querySelectorAll('.mcq-tab').forEach((tab, i) => {
+            tab.classList.toggle('active', i === index);
+        });
+        // Update editor content if needed
+    }
+
+    function addTab() {
+        if (tabs.length >= labelPool.length) return;
+        tabs.push(null);
+        activeIndex = tabs.length - 1;
+        renderTabs();
+    }
+
+    function removeTab(index) {
+        if (tabs.length <= 1) {
+            alert("At least one tab must remain.");
+            return;
+        }
+
+        tabs.splice(index, 1);
+        if (activeIndex >= tabs.length) {
+            activeIndex = tabs.length - 1;
+        }
+        renderTabs();
+    }
+
+    addTabButton.addEventListener('click', addTab);
+
+    // Initial render
+    renderTabs();
+</script>
 {{ end }}
