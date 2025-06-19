@@ -1,5 +1,5 @@
 // Insert an editable inline math field at the cursor
-function insertMath() {
+function insertMath(editor) {
     const mathfield = document.createElement('math-field');
 
     mathfield.setAttribute('style', 'display:inline-block; min-width:9em; border: 1px solid #d1d5db;');
@@ -29,20 +29,18 @@ function insertMath() {
             selection.addRange(range);
 
             // Update preview
-            renderMath();
+            renderMath(editor);
         }
     });
 }
 
 // Render all \( ... \) in editor using MathLive
-function renderMath() {
-    const content = document.getElementById('editor');
-
+function renderMath(editor) {
     // Clone for safe processing
-    const clone = content.cloneNode(true);
+    const clone = editor.cloneNode(true);
 
     // Replace <math-field> with \(...\)
-    const realFields = content.querySelectorAll('math-field');
+    const realFields = editor.querySelectorAll('math-field');
     const clonedFields = clone.querySelectorAll('math-field');
 
     realFields.forEach((real, i) => {
@@ -55,7 +53,10 @@ function renderMath() {
     // Keep HTML structure for MathJax
     const html = clone.innerHTML;
 
-    const output = document.getElementById('output');
+    // Find corresponding output
+    const container = editor.closest('.container');
+    const output = container.querySelector('.output');
+
     output.innerHTML = html;
 
     MathJax.typesetPromise([output]);

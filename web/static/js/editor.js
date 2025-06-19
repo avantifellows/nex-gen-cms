@@ -1,39 +1,46 @@
-(() => {
-    // Attach event listeners
-    document.getElementById('fontSelector').addEventListener('change', (e) => {
+document.querySelectorAll('.container').forEach(container => {
+    const editorWrapper = container.querySelector(".editor-wrapper");
+    const output = container.querySelector('.output');
+
+    const editor = editorWrapper.querySelector(".editor");
+
+    // listener to display preview
+    editor.addEventListener('input', () => {
+        clearTimeout(editor.__renderTimeout);
+        editor.__renderTimeout = setTimeout(() => {
+            renderMath(editor);
+        }, 300);
+    });
+
+    editor.addEventListener("click", function (e) {
+        const target = e.target;
+        if (target.tagName === "A") {
+            e.preventDefault(); // Prevent default edit behavior
+            window.open(target.href, "_blank"); // Open link in new tab
+        }
+    });
+
+    const toolbar = editorWrapper.querySelector(".toolbar");
+    toolbar.querySelector('.fontSelector').addEventListener('change', (e) => {
         document.execCommand('styleWithCSS', false, true);
         document.execCommand('fontName', false, e.target.value);
     });
 
-    document.getElementById('boldBtn').addEventListener('click', () => {
+    toolbar.querySelector('.boldBtn').addEventListener('click', () => {
         document.execCommand('bold');
     });
 
-    document.getElementById('italicBtn').addEventListener('click', () => {
+    toolbar.querySelector('.italicBtn').addEventListener('click', () => {
         document.execCommand('italic');
     });
 
-    document.getElementById('underlineBtn').addEventListener('click', () => {
+    toolbar.querySelector('.underlineBtn').addEventListener('click', () => {
         document.execCommand('underline');
     });
 
-    document.getElementById('mathBtn').addEventListener('click', insertMath);
-
-    document.getElementById('imageBtn').addEventListener('click', () => {
-        document.getElementById('imageUpload').click();
-    });
-
-    document.getElementById('imageUpload').addEventListener('change', insertImage);
-
-    document.getElementById('editor').addEventListener('input', () => {
-        clearTimeout(window.__renderTimeout);
-        window.__renderTimeout = setTimeout(renderMath, 300);
-    });
-
-    document.getElementById("fontSizeSelector").addEventListener("change", function () {
+    toolbar.querySelector(".fontSizeSelector").addEventListener("change", function () {
         const size = this.value;
         document.execCommand("fontSize", false, "7"); // use size 7 as a placeholder
-        const editor = document.getElementById("editor");
         const fontElements = editor.getElementsByTagName("font");
         for (let i = 0; i < fontElements.length; i++) {
             if (fontElements[i].size == "7") {
@@ -42,6 +49,9 @@
             }
         }
     });
+
+    toolbar.querySelector('.foreColorLabel').addEventListener('mousedown', saveSelection);
+    toolbar.querySelector('.backColorLabel').addEventListener('mousedown', saveSelection);
 
     let savedRange = null;
 
@@ -60,43 +70,32 @@
         }
     }
 
-    document.getElementById('foreColor').addEventListener('input', function () {
+    toolbar.querySelector('.foreColor').addEventListener('input', function () {
         restoreSelection();
         document.execCommand('foreColor', false, this.value);
     });
 
-    document.getElementById('backColor').addEventListener('input', function () {
+    toolbar.querySelector('.backColor').addEventListener('input', function () {
         restoreSelection();
         document.execCommand('hiliteColor', false, this.value);
     });
 
-    document.getElementById("ulBtn").addEventListener("click", function () {
+    toolbar.querySelector(".ulBtn").addEventListener("click", function () {
         document.execCommand("insertUnorderedList", false, null);
     });
 
-    document.getElementById("olBtn").addEventListener("click", function () {
+    toolbar.querySelector(".olBtn").addEventListener("click", function () {
         document.execCommand("insertOrderedList", false, null);
     });
 
-    const dropdownBtn = document.getElementById('paragraphDropdownBtn');
-    const dropdownMenu = document.getElementById('paragraphDropdownMenu');
+    const dropdownBtn = toolbar.querySelector('.paragraphDropdownBtn');
+    const dropdownMenu = toolbar.querySelector('.paragraphDropdownMenu');
 
     dropdownBtn.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent bubbling up
         dropdownMenu.classList.toggle('hidden');
     });
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!document.getElementById('paragraphDropdownContainer').contains(e.target)) {
-            dropdownMenu.classList.add('hidden');
-        }
-        if (!document.getElementById('insertTableWrapper').contains(e.target)) {
-            gridPopup.classList.add('hidden');
-        }
-    });
-
-    // Handle command execution
     dropdownMenu.querySelectorAll('button[data-cmd]').forEach(btn => {
         btn.addEventListener('click', () => {
             document.execCommand(btn.dataset.cmd);
@@ -104,7 +103,7 @@
         });
     });
 
-    document.getElementById('lineHeightSelector').addEventListener('change', function () {
+    toolbar.querySelector('.lineHeightSelector').addEventListener('change', function () {
         const value = this.value;
         const selection = window.getSelection();
         if (!selection.rangeCount) return;
@@ -145,10 +144,10 @@
         });
     });
 
-    const gridPopup = document.getElementById("tableGridPopup");
-    const gridContainer = document.getElementById("tableGrid");
-    const label = document.getElementById("tableGridLabel");
-    const insertTableBtn = document.getElementById("insertTableBtn");
+    const gridPopup = toolbar.querySelector(".tableGridPopup");
+    const gridContainer = gridPopup.querySelector(".tableGrid");
+    const label = gridPopup.querySelector(".tableGridLabel");
+    const insertTableBtn = toolbar.querySelector(".insertTableBtn");
 
     // Create 10x10 grid cells
     for (let i = 1; i <= 100; i++) {
@@ -184,8 +183,6 @@
     gridContainer.addEventListener("click", () => {
         restoreSelection(); // restore cursor back to editor
 
-        const editor = document.getElementById("editor");
-
         const table = document.createElement("table");
         table.className = "w-full border border-black border-collapse my-2";
 
@@ -215,11 +212,7 @@
         gridPopup.classList.toggle("hidden");
     });
 
-    // Close grid if clicking outside
-    document.addEventListener("click", (e) => {
-    });
-
-    const linkBtn = document.getElementById("linkBtn");
+    const linkBtn = toolbar.querySelector(".linkBtn");
 
     linkBtn.addEventListener("click", () => {
         const url = prompt("Enter the URL:");
@@ -249,25 +242,27 @@
         }
     });
 
-    document.getElementById("editor").addEventListener("click", function (e) {
-        const target = e.target;
-        if (target.tagName === "A") {
-            e.preventDefault(); // Prevent default edit behavior
-            window.open(target.href, "_blank"); // Open link in new tab
-        }
-    });
-
-    document.getElementById('hrBtn').addEventListener('click', function () {
+    toolbar.querySelector('.hrBtn').addEventListener('click', function () {
         document.execCommand('insertHorizontalRule', false, null);
     });
 
-    const fullscreenBtn = document.getElementById("fullscreenBtn");
-    const editorWrapper = document.getElementById("editor-wrapper");
+    const imageUpload = toolbar.querySelector('.imageUpload');
+    toolbar.querySelector('.imageBtn').addEventListener('click', () => {
+        imageUpload.click();
+    });
+
+    imageUpload.addEventListener('change', (event) => {
+        insertImage(event, editor);
+    });
+
+    const fullscreenBtn = toolbar.querySelector(".fullscreenBtn");
     let isFullscreen = false;
+    let isPreviewVisible = true;
 
     fullscreenBtn.addEventListener("click", () => {
         isFullscreen = !isFullscreen;
         editorWrapper.classList.toggle("editor-fullscreen", isFullscreen);
+        editor.classList.toggle('h-52', !isFullscreen);
 
         if (isFullscreen) {
             // hide preview (without this vertical scrollbar is not working properly under editor, 
@@ -277,21 +272,34 @@
             // reset preview visibility to its last state
             setPreviewVisibility(isPreviewVisible);
         }
+
         // Swap icon between expand and compress
         fullscreenBtn.innerHTML = isFullscreen
             ? '<i class="fas fa-compress-arrows-alt"></i>'
             : '<i class="fas fa-expand-arrows-alt"></i>';
     });
 
-    // let isCodeView = false;
-    const codeViewBtn = document.getElementById("codeViewBtn");
-    const editor = document.getElementById("editor");
+    const previewBtn = toolbar.querySelector(".previewToggleBtn");
+
+    previewBtn.addEventListener("click", () => {
+        isPreviewVisible = !isPreviewVisible;
+        // don't make preview visible when it is full screen
+        setPreviewVisibility(isPreviewVisible && !isFullscreen);
+    });
+
+    function setPreviewVisibility(visible) {
+        output.classList.toggle("hidden", !visible);
+        editorWrapper.classList.toggle("w-full", !visible);
+        editorWrapper.classList.toggle("w-1/2", visible);
+    }
+
+    const codeViewBtn = toolbar.querySelector(".codeViewBtn");
 
     codeViewBtn.addEventListener("click", () => {
         toggleCodeView();
     });
 
-    const codeView = document.getElementById("codeView");
+    const codeView = editorWrapper.querySelector(".codeView");
 
     function toggleCodeView() {
         if (codeView.classList.contains("hidden")) {
@@ -347,25 +355,7 @@
         return result.trim();
     }
 
-    const previewBtn = document.getElementById("previewToggleBtn");
-    const output = document.getElementById("output");
-    let isPreviewVisible = true;
-
-    previewBtn.addEventListener("click", () => {
-        isPreviewVisible = !isPreviewVisible;
-        // don't make preview visible when it is full screen
-        setPreviewVisibility(isPreviewVisible && !isFullscreen);
+    toolbar.querySelector('.mathBtn').addEventListener('click', (event) => {
+        insertMath(editor, event);
     });
-
-    function setPreviewVisibility(visible) {
-        if (visible) {
-            output.classList.remove("hidden");
-            editorWrapper.classList.remove("w-full");
-            editorWrapper.classList.add("w-1/2");
-        } else {
-            output.classList.add("hidden");
-            editorWrapper.classList.remove("w-1/2");
-            editorWrapper.classList.add("w-full");
-        }
-    }
-})();
+});

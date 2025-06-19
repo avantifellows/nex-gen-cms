@@ -754,20 +754,24 @@ video {
   outline-offset: 2px;
 }
 
-#editor ul,
-    #output ul {
+.editor {
+  font-family: Arial, sans-serif;
+}
+
+.editor ul,
+    .output ul {
   margin-left: 1.5rem;
   list-style-type: disc;
 }
 
-#editor ol,
-    #output ol {
+.editor ol,
+    .output ol {
   margin-left: 1.5rem;
   list-style-type: decimal;
 }
 
-#editor hr,
-    #output hr {
+.editor hr,
+    .output hr {
   margin: 1rem;
   border-width: 0px;
   border-top-width: 1px;
@@ -992,6 +996,10 @@ video {
 
 .flex {
   display: flex;
+}
+
+.inline-flex {
+  display: inline-flex;
 }
 
 .table {

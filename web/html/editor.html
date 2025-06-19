@@ -1,13 +1,13 @@
 {{ define "editor" }}
-<div id="container" class="flex gap-4 items-stretch max-w-full -mt-px">
+<div class="container flex gap-4 items-stretch max-w-full -mt-px">
 
     <!-- Editor Container -->
-    <div id="editor-wrapper" class="w-1/2 border border-gray-300">
+    <div class="editor-wrapper w-1/2 border border-gray-300">
 
         <!-- Toolbar with icons -->
         <div class="toolbar bg-gray-100 border-b border-gray-300 flex flex-wrap gap-2 p-2">
-            <select id="fontSelector" title="Font Family"
-                class="border border-gray-300 rounded px-2 py-1 text-sm cursor-pointer">
+            <select title="Font Family"
+                class="fontSelector border border-gray-300 rounded px-2 py-1 text-sm cursor-pointer">
                 <option value="Arial" style="font-family: Arial;">Arial</option>
                 <option value="'Courier New', monospace" style="font-family: 'Courier New', monospace;">Courier New
                 </option>
@@ -18,19 +18,19 @@
 
             <!-- Bold/Italic/Underline grouped buttons -->
             <div class="flex gap-0 border border-gray-300 rounded overflow-hidden">
-                <button id="boldBtn" title="Bold"
-                    class="px-3 py-1 text-sm bg-white hover:bg-blue-100 border-r border-gray-300"><i
+                <button title="Bold"
+                    class="boldBtn px-3 py-1 text-sm bg-white hover:bg-blue-100 border-r border-gray-300"><i
                         class="fas fa-bold"></i></button>
-                <button id="italicBtn" title="Italic"
-                    class="px-3 py-1 text-sm bg-white hover:bg-blue-100 border-r border-gray-300"><i
+                <button title="Italic"
+                    class="italicBtn px-3 py-1 text-sm bg-white hover:bg-blue-100 border-r border-gray-300"><i
                         class="fas fa-italic"></i></button>
-                <button id="underlineBtn" title="Underline" class="px-3 py-1 text-sm bg-white hover:bg-blue-100"><i
+                <button title="Underline" class="underlineBtn px-3 py-1 text-sm bg-white hover:bg-blue-100"><i
                         class="fas fa-underline"></i></button>
             </div>
 
             <!-- Font Size Selector -->
-            <select id="fontSizeSelector" title="Font Size"
-                class="border border-gray-300 rounded px-2 py-1 text-sm cursor-pointer">
+            <select title="Font Size"
+                class="fontSizeSelector border border-gray-300 rounded px-2 py-1 text-sm cursor-pointer">
                 <option value="8px">8</option>
                 <option value="9px">9</option>
                 <option value="10px">10</option>
@@ -45,44 +45,42 @@
             <!-- Color Pickers with Icons -->
             <div class="flex items-center border border-gray-300 rounded overflow-hidden">
                 <!-- Foreground/Text Color -->
-                <label for="foreColor" title="Text Color"
-                    class="flex items-center justify-center w-8 h-8 border-r border-gray-300 bg-white hover:bg-blue-100 cursor-pointer"
-                    onmousedown="saveSelection()">
+                <label title="Text Color"
+                    class="foreColorLabel flex items-center justify-center w-8 h-8 border-r border-gray-300 bg-white hover:bg-blue-100 cursor-pointer">
                     <i class="fas fa-font text-black"></i>
+                    <input type="color" class="foreColor hidden" />
                 </label>
-                <input id="foreColor" type="color" class="hidden" />
 
                 <!-- Background Color -->
-                <label for="backColor" title="Background Color"
-                    class="flex items-center justify-center w-8 h-8 bg-white hover:bg-blue-100 cursor-pointer"
-                    onmousedown="saveSelection()">
+                <label title="Background Color"
+                    class="backColorLabel flex items-center justify-center w-8 h-8 bg-white hover:bg-blue-100 cursor-pointer">
                     <i class="fas fa-fill-drip text-black"></i>
+                    <input type="color" class="backColor hidden" />
                 </label>
-                <input id="backColor" type="color" class="hidden" />
             </div>
 
             <!-- Ordered and Unordered List Buttons -->
             <div class="flex gap-0 border border-gray-300 rounded overflow-hidden">
-                <button id="ulBtn" title="Unordered List"
-                    class="px-3 py-1 text-sm bg-white hover:bg-blue-100 border-r border-gray-300">
+                <button title="Unordered List"
+                    class="ulBtn px-3 py-1 text-sm bg-white hover:bg-blue-100 border-r border-gray-300">
                     <i class="fas fa-list-ul"></i>
                 </button>
-                <button id="olBtn" title="Ordered List" class="px-3 py-1 text-sm bg-white hover:bg-blue-100">
+                <button title="Ordered List" class="olBtn px-3 py-1 text-sm bg-white hover:bg-blue-100">
                     <i class="fas fa-list-ol"></i>
                 </button>
             </div>
 
             <!-- Paragraph Formatting Dropdown -->
-            <div class="relative flex-shrink-0" id="paragraphDropdownContainer">
-                <button title="Alignment" id="paragraphDropdownBtn"
-                    class="px-3 py-1 text-sm bg-white hover:bg-blue-100 border border-gray-300 rounded h-full flex items-center justify-center">
+            <div class="relative flex-shrink-0">
+                <button title="Alignment"
+                    class="paragraphDropdownBtn px-3 py-1 text-sm bg-white hover:bg-blue-100 border border-gray-300 rounded h-full flex items-center justify-center">
                     <i class="fas fa-align-left"></i>
                     <i class="fas fa-caret-down text-xs ml-1"></i>
                 </button>
 
                 <!-- Dropdown: 3x2 Grid of Icon Buttons -->
-                <div id="paragraphDropdownMenu"
-                    class="absolute mt-1 hidden bg-white border border-gray-300 rounded shadow-md p-2 grid grid-cols-3 gap-2 w-32">
+                <div
+                    class="paragraphDropdownMenu absolute mt-1 hidden bg-white border border-gray-300 rounded shadow-md p-2 grid grid-cols-3 gap-2 w-32">
                     <button data-cmd="justifyLeft"
                         class="w-8 h-8 flex items-center justify-center hover:bg-blue-100 rounded" title="Align Left">
                         <i class="fas fa-align-left"></i>
@@ -110,8 +108,8 @@
                 </div>
             </div>
 
-            <select id="lineHeightSelector" title="Line Height"
-                class="border border-gray-300 rounded px-2 py-1 text-sm cursor-pointer">
+            <select title="Line Height"
+                class="lineHeightSelector border border-gray-300 rounded px-2 py-1 text-sm cursor-pointer">
                 <option value="1">1</option>
                 <option value="1.2">1.2</option>
                 <option value="1.5" selected>1.5</option>
@@ -120,67 +118,66 @@
             </select>
 
             <!-- Insert Table Button + Grid Popup -->
-            <div class="relative" id="insertTableWrapper">
-                <button id="insertTableBtn" title="Table"
-                    class="bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100 h-full">
+            <div class="relative">
+                <button title="Table"
+                    class="insertTableBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100 h-full">
                     <i class="fas fa-table"></i>
                 </button>
 
                 <!-- Table Grid Picker -->
-                <div id="tableGridPopup"
-                    class="absolute left-0 mt-1 p-2 border border-gray-300 bg-white shadow-md rounded hidden z-50 w-max">
-                    <div id="tableGrid" class="grid grid-cols-10 gap-1"></div>
-                    <div id="tableGridLabel" class="text-xs text-center mt-2 text-gray-600">0 × 0</div>
+                <div
+                    class="tableGridPopup absolute left-0 mt-1 p-2 border border-gray-300 bg-white shadow-md rounded hidden z-50 w-max">
+                    <div class="tableGrid grid grid-cols-10 gap-1"></div>
+                    <div class="tableGridLabel text-xs text-center mt-2 text-gray-600">0 × 0</div>
                 </div>
             </div>
 
-            <button id="linkBtn" title="Link"
-                class="bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100">
+            <button title="Link"
+                class="linkBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100">
                 <i class="fas fa-link"></i>
             </button>
 
-            <button id="hrBtn" title="Horizontal Rule"
-                class="bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100">
+            <button title="Horizontal Rule"
+                class="hrBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100">
                 <i class="fas fa-minus"></i>
             </button>
 
-            <input type="file" id="imageUpload" accept="image/*" class="hidden">
-            <button id="imageBtn" title="Image"
-                class="bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100"><i
+            <input type="file" accept="image/*" class="imageUpload hidden">
+            <button title="Image"
+                class="imageBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100"><i
                     class="fas fa-image"></i></button>
 
             <div class="flex gap-0 border border-gray-300 rounded overflow-hidden">
-                <button id="fullscreenBtn" title="Toggle Fullscreen"
-                    class="bg-white border-r border-gray-300 px-3 py-1 text-sm hover:bg-blue-100">
+                <button title="Toggle Fullscreen"
+                    class="fullscreenBtn bg-white border-r border-gray-300 px-3 py-1 text-sm hover:bg-blue-100">
                     <i class="fas fa-expand-arrows-alt"></i>
                 </button>
 
-                <button id="codeViewBtn" title="Toggle Code View" class="bg-white px-3 py-1 text-sm hover:bg-blue-100">
+                <button title="Toggle Code View" class="codeViewBtn bg-white px-3 py-1 text-sm hover:bg-blue-100">
                     <i class="fas fa-code"></i>
                 </button>
             </div>
 
-            <button id="mathBtn" title="Math"
-                class="bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100"><i
+            <button title="Math"
+                class="mathBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100"><i
                     class="fas fa-square-root-variable"></i></button>
 
-            <button id="previewToggleBtn" title="Toggle Preview"
-                class="bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100">
+            <button title="Toggle Preview"
+                class="previewToggleBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100">
                 <i class="fas fa-eye"></i>
             </button>
 
         </div>
 
-        <div id="editor" contenteditable="true" class="h-52 p-2 overflow-y-auto"
-            style="font-family: Arial, sans-serif;">
+        <div contenteditable="true" class="editor h-52 p-2 overflow-y-auto">
         </div>
 
-        <pre id="codeView" contenteditable="true"
-            class="whitespace-pre-wrap text-sm p-2 h-52 bg-gray-100 border border-gray-300 rounded overflow-y-auto hidden"></pre>
+        <pre contenteditable="true"
+            class="codeView whitespace-pre-wrap text-sm p-2 h-52 bg-gray-100 border border-gray-300 rounded overflow-y-auto hidden"></pre>
 
     </div>
 
-    <div id="output" class="w-1/2 self-end bg-gray-100 border border-gray-300 p-2 h-52 overflow-y-auto">
+    <div class="output w-1/2 self-end bg-gray-100 border border-gray-300 p-2 h-52 overflow-y-auto">
     </div>
 </div>
 
@@ -188,5 +185,4 @@
 
 <script src="/web/static/js/editor-math.js"></script>
 <script src="/web/static/js/editor-image.js"></script>
-<script src="/web/static/js/editor.js"></script>
 {{ end }}

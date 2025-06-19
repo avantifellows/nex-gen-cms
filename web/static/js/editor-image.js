@@ -1,4 +1,4 @@
-function insertImage(event) {
+function insertImage(event, editor) {
     const file = event.target.files[0];
     if (!file) return;
 
@@ -19,7 +19,7 @@ function insertImage(event) {
         selection.removeAllRanges();
         selection.addRange(range);
 
-        renderMath(); // Optional if preview shows images too
+        renderMath(editor); // let preview show images too
     };
     reader.readAsDataURL(file);
 
