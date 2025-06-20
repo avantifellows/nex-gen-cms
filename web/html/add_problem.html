@@ -43,13 +43,13 @@
     </div>
 
     <!-- Options -->
-    <div class="mb-6">
+    <div id="optionsDiv" class="mb-6">
         <p class="font-semibold mb-2">Options:</p>
         <!-- MCQ Option Tabs -->
-        <div id="option-tabs" class="flex items-center overflow-x-auto">
+        <div id="optionTabs" class="flex items-center overflow-x-auto">
             <!-- Tabs will be inserted before this -->
             <!-- Add (+) Tab -->
-            <button id="add-tab" title="Add Option" class="mcq-tab-add">+</button>
+            <button id="addTab" title="Add Option" class="mcq-tab-add">+</button>
         </div>
 
         <!-- Shared Editor -->
@@ -104,76 +104,114 @@
 </div>
 <script src="/web/static/js/editor.js"></script>
 <script>
-    const optionTabs = document.getElementById('option-tabs');
-    const addTabButton = document.getElementById('add-tab');
+    (() => {
+        const optionsDiv = document.getElementById('optionsDiv');
+        const optionTabs = optionsDiv.querySelector('#optionTabs');
+        const addTabButton = optionsDiv.querySelector('#addTab');
 
-    const labelPool = 'ABCDEFGHIJ';
-    let tabs = new Array(4).fill(null); // Start with 4 tabs
-    let activeIndex = 0;
+        const labelPool = 'ABCDEFGHIJ';
+        let tabs = new Array(4).fill(null); // Start with 4 tabs
+        let activeIndex = 0;
 
-    function getLabel(index) {
-        return labelPool[index];
-    }
+        const tabContent = []; // Each entry: { html: '...', preview: '...' }
 
-    function renderTabs() {
-        document.querySelectorAll('.mcq-tab').forEach(tab => tab.remove());
+        const editor = optionsDiv.querySelector('.editor');
+        const preview = optionsDiv.querySelector('.output');
 
-        tabs.forEach((_, index) => {
-            const label = getLabel(index);
-            const tab = document.createElement('div');
-            tab.className = 'mcq-tab' + (index === activeIndex ? ' active' : '');
-            tab.dataset.index = index;
-            tab.innerHTML = `
-                <span class="mr-2">${label}</span>
-                <button title="Remove" class="remove-btn">&times;</button>
-            `;
-            tab.addEventListener('click', () => setActiveTab(index));
-            tab.querySelector('.remove-btn').addEventListener('click', (e) => {
-                e.stopPropagation();
-                removeTab(index);
+        function getLabel(index) {
+            return labelPool[index];
+        }
+
+        function renderTabs() {
+            document.querySelectorAll('.mcq-tab').forEach(tab => tab.remove());
+
+            tabs.forEach((_, index) => {
+                const label = getLabel(index);
+                const tab = document.createElement('div');
+                tab.className = 'mcq-tab' + (index === activeIndex ? ' active' : '');
+                tab.dataset.index = index;
+                tab.innerHTML = `
+                    <span class="mr-2">${label}</span>
+                    <button title="Remove" class="remove-btn">&times;</button>
+                `;
+                tab.addEventListener('click', () => {
+                    if (index === activeIndex) return;
+                    saveCurrentContent();
+                    setActiveTab(index)
+                });
+                tab.querySelector('.remove-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    removeTab(index);
+                });
+                optionTabs.insertBefore(tab, addTabButton);
             });
-            optionTabs.insertBefore(tab, addTabButton);
-        });
 
-        // Hide "+" button if 10 or more tabs
-        if (tabs.length >= 10) {
-            addTabButton.style.display = 'none';
-        } else {
-            addTabButton.style.display = 'flex'; // or 'inline-flex' depending on your styling
-        }
-    }
-
-    function setActiveTab(index) {
-        activeIndex = index;
-        document.querySelectorAll('.mcq-tab').forEach((tab, i) => {
-            tab.classList.toggle('active', i === index);
-        });
-        // Update editor content if needed
-    }
-
-    function addTab() {
-        if (tabs.length >= labelPool.length) return;
-        tabs.push(null);
-        activeIndex = tabs.length - 1;
-        renderTabs();
-    }
-
-    function removeTab(index) {
-        if (tabs.length <= 1) {
-            alert("At least one tab must remain.");
-            return;
+            // Hide "+" button if 10 or more tabs
+            addTabButton.style.display = tabs.length >= 10 ? 'none' : 'flex';
         }
 
-        tabs.splice(index, 1);
-        if (activeIndex >= tabs.length) {
+        function saveCurrentContent() {
+            tabContent[activeIndex] = {
+                html: editor.innerHTML,
+                preview: preview.innerHTML
+            };
+        }
+
+        function setActiveTab(index) {
+            activeIndex = index;
+            document.querySelectorAll('.mcq-tab').forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+
+            // Load saved content
+            loadActiveContent();
+        }
+
+        function addTab() {
+            if (tabs.length >= labelPool.length) return;
+
+            saveCurrentContent(); // Save current tab before adding new
+
+            tabs.push(null);
+            tabContent.push({ html: '', preview: '' });
             activeIndex = tabs.length - 1;
+
+            renderTabs();
+            editor.innerHTML = '';
+            preview.innerHTML = '';
         }
+
+        function removeTab(index) {
+            if (tabs.length <= 1) {
+                alert("At least one tab must remain.");
+                return;
+            }
+
+            tabs.splice(index, 1);
+            tabContent.splice(index, 1);
+
+            if (activeIndex >= tabs.length) {
+                activeIndex = tabs.length - 1;
+            }
+            renderTabs();
+
+            // Load new active content
+            loadActiveContent();
+        }
+
+        function loadActiveContent() {
+            const content = tabContent[activeIndex] || { html: '', preview: '' };
+            editor.innerHTML = content.html;
+            preview.innerHTML = content.preview;
+        }
+
+        addTabButton.addEventListener('click', addTab);
+
+        // Initial setup
+        tabs.forEach(() => tabContent.push({ html: '', preview: '' }));
+        // Initial render
         renderTabs();
-    }
-
-    addTabButton.addEventListener('click', addTab);
-
-    // Initial render
-    renderTabs();
+        setActiveTab(0);
+    })();
 </script>
 {{ end }}
