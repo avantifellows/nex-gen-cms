@@ -1,5 +1,5 @@
 {{ define "content" }}
-<div class="mx-auto px-4 bg-white shadow-md">
+<form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event);">
     <h2 class="text-lg font-semibold mb-4">Add New Problem</h2>
 
     <!-- type, skills, concepts -->
@@ -37,7 +37,7 @@
     </div>
 
     <!-- Question editor -->
-    <div class="mb-6">
+    <div id="questionDiv" class="mb-6">
         <p class="font-semibold mb-2">Text:</p>
         {{ template "editor" . }}
     </div>
@@ -49,33 +49,32 @@
         <div id="optionTabs" class="flex items-center overflow-x-auto">
             <!-- Tabs will be inserted before this -->
             <!-- Add (+) Tab -->
-            <button id="addTab" title="Add Option" class="mcq-tab-add">+</button>
+            <!-- type="button" is added to prevent it from invoking form submit action (due to form's 
+             internal button's default type="submit") -->
+            <button id="addTab" type="button" title="Add Option" class="mcq-tab-add">+</button>
         </div>
 
         <!-- Shared Editor -->
         {{ template "editor" . }}
     </div>
 
-    <!-- ANSWER -->
-    <!-- <div class="mb-6">
-        <p class="font-semibold mb-2">ANSWER</p>
-        <label class="mr-4"><input type="checkbox" name="answer"> A</label>
-        <label class="mr-4"><input type="checkbox" name="answer"> B</label>
-        <label class="mr-4"><input type="checkbox" name="answer"> C</label>
-        <label class="mr-4"><input type="checkbox" name="answer"> D</label>
-    </div> -->
+    <!-- Answer -->
+    <div class="mb-6" id="answerDiv">
+        <p class="font-semibold mb-2">Answer:</p>
+        <!-- Checkboxes will be generated dynamically -->
+    </div>
 
-    <!-- SOLUTION -->
-    <!-- <div class="mb-6">
-        <p class="font-semibold mb-2">SOLUTION</p>
-        <textarea class="w-full border p-2 h-32" placeholder="Enter detailed solution..."></textarea>
-    </div> -->
+    <!-- Solution -->
+    <div class="mb-6">
+        <p class="font-semibold mb-2">Solution:</p>
+        {{ template "editor" . }}
+    </div>
 
-    <!-- TAGS -->
-    <!-- <div class="mb-6">
-        <p class="font-semibold mb-2">TAGS</p>
-        <input type="text" class="w-full border p-2" placeholder="Assign Hashtags">
-    </div> -->
+    <!-- Tags -->
+    <div class="mb-6">
+        <p class="font-semibold mb-2">Tags:</p>
+        {{ template "input_tags" . }}
+    </div>
 
     <!-- SOURCE -->
     <!-- <div class="mb-6">
@@ -99,9 +98,10 @@
         <a href="#" class="text-blue-600 underline mt-2 inline-block">Add Source</a>
     </div> -->
 
-    <!-- SAVE BUTTON -->
-    <!-- <button class="w-full bg-blue-500 text-white py-3 font-semibold rounded hover:bg-blue-600">SAVE</button> -->
-</div>
+    <!-- Save button -->
+    <button type="submit"
+        class="w-full bg-blue-500 text-white mb-4 py-3 font-semibold rounded hover:bg-blue-600">Save</button>
+</form>
 <script src="/web/static/js/editor.js"></script>
 <script>
     (() => {
@@ -118,15 +118,23 @@
         const editor = optionsDiv.querySelector('.editor');
         const preview = optionsDiv.querySelector('.output');
 
+        const answers = new Set(); // <=== tracks checked answer labels
+
         function getLabel(index) {
             return labelPool[index];
         }
 
         function renderTabs() {
+            // Clear old tabs
             document.querySelectorAll('.mcq-tab').forEach(tab => tab.remove());
+            // Remove old checkboxes
+            const answerDiv = document.getElementById('answerDiv');
+            answerDiv.querySelectorAll('label').forEach(label => label.remove());
 
             tabs.forEach((_, index) => {
                 const label = getLabel(index);
+
+                // Create option tab
                 const tab = document.createElement('div');
                 tab.className = 'mcq-tab' + (index === activeIndex ? ' active' : '');
                 tab.dataset.index = index;
@@ -141,9 +149,30 @@
                 });
                 tab.querySelector('.remove-btn').addEventListener('click', (e) => {
                     e.stopPropagation();
+                    saveCurrentContent();
                     removeTab(index);
                 });
                 optionTabs.insertBefore(tab, addTabButton);
+
+                // Create answer checkbox
+                const checkboxLabel = document.createElement('label');
+                checkboxLabel.className = 'mr-4';
+                checkboxLabel.innerHTML = `<input type="checkbox" name="answer" value="${label}"> ${label}`;
+
+                const checkbox = checkboxLabel.querySelector('input');
+                // restore checked state if present
+                checkbox.checked = answers.has(label);
+
+                // update answers set on change
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        answers.add(label);
+                    } else {
+                        answers.delete(label);
+                    }
+                });
+
+                answerDiv.appendChild(checkboxLabel);
             });
 
             // Hide "+" button if 10 or more tabs
@@ -190,6 +219,10 @@
             tabs.splice(index, 1);
             tabContent.splice(index, 1);
 
+            const removedLabel = getLabel(index); // label like 'A', 'B'
+            // Also remove this label from answers set
+            answers.delete(removedLabel);
+
             if (activeIndex >= tabs.length) {
                 activeIndex = tabs.length - 1;
             }
@@ -212,6 +245,52 @@
         // Initial render
         renderTabs();
         setActiveTab(0);
+
+        window.createProblem = function (event) {
+            console.log("create");
+            event.preventDefault();  // Cancel the default form request
+            // save latest option value visible; otherwise if save is pressed directly after entering value
+            // in option A editor, it will show wrong alert aking to enter value in option A, because without
+            // this save call we are saving tab content only on switching tabs and adding new tab
+            saveCurrentContent();
+            if (!validateFields()) {
+                return false;
+            }
+            // Proceed
+        };
+
+        function validateFields() {
+            const difficulty = document.querySelector('input[name="difficulty"]:checked');
+            if (!difficulty) {
+                alert('Please select a difficulty level.');
+                return;
+            }
+            const editor = document.getElementById('questionDiv').querySelector('.editor');
+            if (!editor.textContent.trim()) {
+                alert('Please enter the question.');
+                return;
+            }
+
+            if (typeof tabContent !== 'undefined' && Array.isArray(tabContent)) {
+                for (let i = 0; i < tabContent.length; i++) {
+                    const optionLabel = String.fromCharCode(65 + i); // A, B, C...
+                    const optionText = tabContent[i]?.html?.trim();
+                    if (!optionText) {
+                        alert(`Option ${optionLabel} is empty. Please fill it out before submitting.`);
+                        return false;
+                    }
+                }
+            } else {
+                alert('Options are not available.');
+                return false;
+            }
+
+            if (answers.size === 0) {
+                alert('Please select at least one answer.');
+                return false;
+            }
+            return true;
+        }
     })();
 </script>
 {{ end }}

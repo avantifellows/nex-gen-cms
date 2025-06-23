@@ -1,0 +1,58 @@
+{{ define "input_tags" }}
+<div id="tagsInput" class="flex flex-wrap items-center w-full border p-2 gap-2 cursor-text">
+    <!-- chips will go here -->
+    <input id="tagTextInput" type="text" class="flex-1 min-w-[100px] border-none outline-none p-1"
+        placeholder="Assign Hashtags" />
+</div>
+<script>
+    (() => {
+        const container = document.getElementById('tagsInput');
+        const input = document.getElementById('tagTextInput');
+        let tags = [];
+
+        container.addEventListener('click', () => input.focus());
+
+        function addTag(tag) {
+            tag = tag.trim();
+            if (tag && !tags.includes(tag)) {
+                tags.push(tag);
+                renderTags();
+            }
+            input.value = '';
+        }
+
+        function removeTag(tag) {
+            tags = tags.filter(t => t !== tag);
+            renderTags();
+        }
+
+        function renderTags() {
+            // Remove all existing chips
+            container.querySelectorAll('.chip').forEach(chip => chip.remove());
+
+            tags.forEach(tag => {
+                const chip = document.createElement('span');
+                chip.className = 'chip bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full flex items-center gap-1';
+                chip.innerHTML = `
+                    ${tag}
+                    <button type="button" class="ml-1 text-blue-800 hover:text-blue-900 font-bold">&times;</button>
+                `;
+                chip.querySelector('button').addEventListener('click', () => removeTag(tag));
+                container.insertBefore(chip, input);
+            });
+        }
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                addTag(input.value);
+            } else if (e.key === 'Backspace' && input.value === '') {
+                // optional: remove last tag on backspace
+                tags.pop();
+                renderTags();
+            }
+        });
+
+    })();
+</script>
+{{ end }}
