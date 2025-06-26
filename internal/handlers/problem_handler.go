@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -164,4 +165,31 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 	}
 	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, inputTagsTemplate)
+}
+
+func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, request *http.Request) {
+	// Declare a variable to hold the parsed JSON
+	var problemObj models.Problem
+
+	// bodyBytes, err := io.ReadAll(request.Body)
+	// if err != nil {
+	// 	http.Error(responseWriter, "failed to read body", http.StatusBadRequest)
+	// 	return
+	// }
+
+	// Print raw JSON
+	// fmt.Printf("raw body: %s\n", bodyBytes)
+
+	// Decode the JSON body into the object
+	err := json.NewDecoder(request.Body).Decode(&problemObj)
+	if err != nil {
+		http.Error(responseWriter, "Error parsing JSON", http.StatusBadRequest)
+		return
+	}
+
+	_, err = h.problemsService.AddObject(problemObj, problemsKey, resourcesEndPoint)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error adding test: %v", err), http.StatusInternalServerError)
+		return
+	}
 }

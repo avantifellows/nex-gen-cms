@@ -1,25 +1,26 @@
 {{ define "content" }}
-<form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event);">
+<form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event, {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}});">
     <h2 class="text-lg font-semibold mb-4">Add New Problem</h2>
 
     <!-- type, skills, concepts -->
     <div class="grid grid-cols-3 gap-6 mb-6">
         <div>
             <p class="font-semibold mb-2">Select Type:</p>
-            <select name="problem-type-dropdown" class="w-full border border-gray-300 rounded p-2">
+            <select id="problem-type-dropdown" name="problem-type-dropdown"
+                class="w-full border border-gray-300 rounded p-2">
                 {{ template "problem_type_options" }}
             </select>
         </div>
         <div>
             <p class="font-semibold mb-2">Select Skills:</p>
-            <select name="skills-dropdown" multiple hx-trigger="load"
+            <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
                 class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto" hx-get="/api/skills">
                 <option disabled>Loading skills...</option>
             </select>
         </div>
         <div>
             <p class="font-semibold mb-2">Select Concepts:</p>
-            <select name="concepts-dropdown" multiple hx-trigger="load"
+            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
                 class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
                 hx-get="/api/concepts?topic_id={{.TopicPtr.ID}}">
                 <option disabled>Loading concepts...</option>
@@ -31,9 +32,9 @@
     <!-- difficulty -->
     <div class="mb-6">
         <p class="font-semibold mb-2">Difficulty Rating</p>
-        <label class="mr-4"><input type="radio" name="difficulty"> 1</label>
-        <label class="mr-4"><input type="radio" name="difficulty"> 2</label>
-        <label class="mr-4"><input type="radio" name="difficulty"> 3</label>
+        <label class="mr-4"><input type="radio" name="difficulty" value="easy"> 1</label>
+        <label class="mr-4"><input type="radio" name="difficulty" value="medium"> 2</label>
+        <label class="mr-4"><input type="radio" name="difficulty" value="hard"> 3</label>
     </div>
 
     <!-- Question editor -->
@@ -65,7 +66,7 @@
     </div>
 
     <!-- Solution -->
-    <div class="mb-6">
+    <div class="mb-6" id="solutionDiv">
         <p class="font-semibold mb-2">Solution:</p>
         {{ template "editor" . }}
     </div>
@@ -246,17 +247,43 @@
         renderTabs();
         setActiveTab(0);
 
-        window.createProblem = function (event) {
-            console.log("create");
+        window.createProblem = function (event, topicId, chapterId) {
             event.preventDefault();  // Cancel the default form request
             // save latest option value visible; otherwise if save is pressed directly after entering value
             // in option A editor, it will show wrong alert aking to enter value in option A, because without
             // this save call we are saving tab content only on switching tabs and adding new tab
             saveCurrentContent();
+
             if (!validateFields()) {
                 return false;
             }
-            // Proceed
+
+            const prolemJson = buildProblemJson(topicId, chapterId);
+            const url = '/create-problem';
+            const method = 'POST';
+
+            fetch(url, {
+                method: method,
+                body: JSON.stringify(prolemJson),
+                headers: {
+                    'Content-Type': 'application/json',  // Specify content type as JSON
+                    'HX-Request': 'true'  // so that your server can detect HTMX if needed
+                }
+
+            }).then(res => {
+                if (!res.ok) {
+                    // Turn HTTP error into a real JS error to trigger .catch
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.text(); // if OK, read body
+
+            }).then(html => {
+                // go back to remove add/edit problem screen
+                goBackAfterDelay(0);
+
+            }).catch(err => {
+                console.error("Error during prolem creation:", err);
+            });
         };
 
         function validateFields() {
@@ -290,6 +317,59 @@
                 return false;
             }
             return true;
+        }
+
+        function buildProblemJson(topicId, chapterId) {
+            const subtype = document.getElementById('problem-type-dropdown').value;
+
+            const skillsDropdown = document.getElementById("skills-dropdown");
+            const selectedSkillIds = Array.from(skillsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
+
+            const curriculumId = parseInt(document.getElementById("curriculum-dropdown").value);
+            const gradeId = parseInt(document.getElementById("grade-dropdown").value);
+            const subjectId = parseInt(document.getElementById("subject-dropdown").value);
+
+            const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+
+            const question = document.getElementById('questionDiv').querySelector('.editor').innerHTML;
+            const options = tabContent.map(item => item.html);
+            // Convert the labels to their number indexes (+1), and then to strings
+            const answerNumbers = Array.from(answers).map(label => {
+                const index = labelPool.indexOf(label);
+                return (index + 1).toString();
+            });
+            const solution = document.getElementById('solutionDiv').querySelector('.editor').innerHTML;
+
+            const conceptsDropdown = document.getElementById("concepts-dropdown");
+            const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
+
+            return {
+                type: "problem",
+                subtype: subtype,
+                skill_ids: selectedSkillIds,
+                type_params: {
+                    test_ids: []
+                },
+                curriculum_id: curriculumId,
+                grade_id: gradeId,
+                subject_id: subjectId,
+                topic_id: topicId,
+                chapter_id: chapterId,
+                difficulty_level: difficulty,
+                meta_data: {
+                    text: question,
+                    options: options,
+                    answer: answerNumbers,
+                    solutions: [
+                        {
+                            type: "text",
+                            value: solution
+                        }
+                    ]
+                },
+                concept_ids: selectedConceptIds,
+                tags: window.getProblemTags()
+            };
         }
     })();
 </script>

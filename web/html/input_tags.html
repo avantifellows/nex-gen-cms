@@ -53,6 +53,10 @@
             }
         });
 
+        // Export tags array globally
+        window.getProblemTags = function () {
+            return tags;
+        };
     })();
 </script>
 {{ end }}
