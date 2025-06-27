@@ -1,9 +1,9 @@
 {{ define "problem_type_options" }}
-<option value="mcq_single_answer">Mcq Single Answer</option>
-<option value="mcq_multiple_answer">Mcq Multiple Answer</option>
-<option value="integer_type">Integer Type</option>
-<option value="matrix_match">Matrix Match</option>
-<option value="numerical_answer">Numerical Answer</option>
-<option value="comprehension_type">Comprehension Type</option>
-<option value="subjective_answer">Subjective Answer</option>
+<option value="mcq_single_answer" {{if eq . "mcq_single_answer"}}selected{{end}}>Mcq Single Answer</option>
+<option value="mcq_multiple_answer" {{if eq . "mcq_multiple_answer"}}selected{{end}}>Mcq Multiple Answer</option>
+<option value="integer_type" {{if eq . "integer_type"}}selected{{end}}>Integer Type</option>
+<option value="matrix_match" {{if eq . "matrix_match"}}selected{{end}}>Matrix Match</option>
+<option value="numerical_answer" {{if eq . "numerical_answer"}}selected{{end}}>Numerical Answer</option>
+<option value="comprehension_type" {{if eq . "comprehension_type"}}selected{{end}}>Comprehension Type</option>
+<option value="subjective_answer" {{if eq . "subjective_answer"}}selected{{end}}>Subjective Answer</option>
 {{ end }}

@@ -1,14 +1,19 @@
 {{ range . }}
 <tr class="border-b">
-    <td class="p-2 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
-        hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">{{.Code}}
-    </a></td>
+    <!-- hx-params="none" is added to prevent extra query parameters (curriculum-dropdown
+         and subject-dropdown) going from its parent problems.html file's problemTableBody -->
+    <td class="p-2 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}"
+            hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-params="none" hx-target="body"
+            hx-push-url="true">{{.Code}}
+        </a></td>
     <td class="p-2">{{.MetaData.Question}}</td>
     <td class="space-x-4">
-        <button class="action-button" hx-get="/edit-problem?id={{.ID}}" hx-target="#subContent" hx-push-url="true">
+        <button class="action-button"
+            hx-get="/problems/edit-problem?id={{.ID}}&curriculum_id={{.CurriculumID}}&topic_id={{.TopicID}}"
+            hx-params="none" hx-target="body" hx-push-url="true">
             <i class="fa-solid fa-pencil"></i>
         </button>
-        <button class="action-button" hx-delete="/delete-problem?id={{.ID}}"
+        <button class="action-button" hx-delete="/delete-problem?id={{.ID}}" hx-params="none"
             hx-confirm="Are you sure you want to delete problem?" hx-target="closest tr">
             <i class="fa-solid fa-trash"></i>
         </button>

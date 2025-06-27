@@ -1,6 +1,14 @@
 {{ define "content" }}
-<form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event, {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}});">
-    <h2 class="text-lg font-semibold mb-4">Add New Problem</h2>
+<form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event,        
+        {{if .TopicPtr}}
+        <!-- add problem -->
+            {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}
+        {{else}}
+        <!-- edit problem -->
+            {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}
+        {{end}}
+);">
+    <h2 class="text-lg font-semibold mb-4">{{if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
 
     <!-- type, skills, concepts -->
     <div class="grid grid-cols-3 gap-6 mb-6">
@@ -8,13 +16,18 @@
             <p class="font-semibold mb-2">Select Type:</p>
             <select id="problem-type-dropdown" name="problem-type-dropdown"
                 class="w-full border border-gray-300 rounded p-2">
-                {{ template "problem_type_options" }}
+                {{if .ProblemPtr}}
+                    {{template "problem_type_options" .ProblemPtr.Subtype}}
+                {{else}}
+                    {{template "problem_type_options"}}
+                {{end}}
             </select>
         </div>
         <div>
             <p class="font-semibold mb-2">Select Skills:</p>
             <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
-                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto" hx-get="/api/skills">
+                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto" 
+                hx-get="/api/skills{{if .ProblemPtr}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}">
                 <option disabled>Loading skills...</option>
             </select>
         </div>
@@ -22,7 +35,7 @@
             <p class="font-semibold mb-2">Select Concepts:</p>
             <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
                 class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
-                hx-get="/api/concepts?topic_id={{.TopicPtr.ID}}">
+                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}">
                 <option disabled>Loading concepts...</option>
             </select>
             <a href="#" class="text-blue-600 underline">Add Concept from other topic</a>

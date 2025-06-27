@@ -17,8 +17,8 @@ type Problem struct {
 	GradeID         int8     `json:"grade_id"`
 	SubjectID       int8     `json:"subject_id"`
 	Subject         Subject  `json:"-"`
-	TopicId         int16    `json:"topic_id"`
-	ChapterId       int16    `json:"chapter_id"`
+	TopicID         int16    `json:"topic_id"`
+	ChapterID       int16    `json:"chapter_id"`
 	ConceptIds      []int16  `json:"concept_ids"`
 	DifficultyLevel string   `json:"difficulty_level"`
 	Tags            []string `json:"tags"`

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"text/template"
 
@@ -44,7 +45,24 @@ func NewProblemsHandler(problemsService *services.Service[models.Problem],
 }
 
 func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	urlValues := request.URL.Query()
+	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	data := dto.HomeData{
+		ProblemPtr: selectedProblemPtr,
+	}
+
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"add":         utils.Add,
+		"stringToInt": utils.StringToInt,
+		"seq":         utils.Seq,
+	}, baseTemplate, problemTemplate)
+}
+
+func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int, error) {
 	problemIdStr := urlValues.Get("id")
 	problemId := utils.StringToInt(problemIdStr)
 	endPointWithId := fmt.Sprintf(problemEndPoint, problemId, urlValues.Get(QUERY_PARAM_CURRICULUM_ID))
@@ -55,12 +73,12 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 			return problem.ID == problemId
 		}, problemsKey, endPointWithId)
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching problem: %v", err)
 	}
 
 	skills, err := h.skillsService.GetList(skillsEndPoint, skillsKey, false, false)
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching skills: %v", err), http.StatusInternalServerError)
+		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching skills: %v", err)
 	} else {
 		// Create a map to quickly lookup skills by their ID
 		skillPtrsMap := make(map[int16]*models.Skill)
@@ -74,17 +92,8 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		for _, skillId := range selectedProblemPtr.SkillIDs {
 			selectedProblemPtr.Skills = append(selectedProblemPtr.Skills, *skillPtrsMap[skillId])
 		}
+		return selectedProblemPtr, http.StatusOK, nil
 	}
-
-	data := dto.HomeData{
-		ProblemPtr: selectedProblemPtr,
-	}
-
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"add":         utils.Add,
-		"stringToInt": utils.StringToInt,
-		"seq":         utils.Seq,
-	}, baseTemplate, problemTemplate)
 }
 
 func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
@@ -171,15 +180,6 @@ func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, requ
 	// Declare a variable to hold the parsed JSON
 	var problemObj models.Problem
 
-	// bodyBytes, err := io.ReadAll(request.Body)
-	// if err != nil {
-	// 	http.Error(responseWriter, "failed to read body", http.StatusBadRequest)
-	// 	return
-	// }
-
-	// Print raw JSON
-	// fmt.Printf("raw body: %s\n", bodyBytes)
-
 	// Decode the JSON body into the object
 	err := json.NewDecoder(request.Body).Decode(&problemObj)
 	if err != nil {
@@ -192,4 +192,20 @@ func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, requ
 		http.Error(responseWriter, fmt.Sprintf("Error adding test: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	data := dto.HomeData{
+		ProblemPtr: selectedProblemPtr,
+	}
+
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"joinInt16": utils.JoinInt16,
+	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate, inputTagsTemplate)
 }

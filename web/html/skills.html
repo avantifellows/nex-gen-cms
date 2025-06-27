@@ -1,3 +1,3 @@
-{{ range . }}
-    <option value="{{.ID}}">{{.Name}}</option>
+{{ range .Skills }}
+    <option value="{{.ID}}" {{ if index $.SelectedSkillIds .ID }}selected{{ end }}>{{.Name}}</option>
 {{ end }}
