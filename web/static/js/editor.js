@@ -4,6 +4,12 @@ document.querySelectorAll('.container').forEach(container => {
 
     const editor = editorWrapper.querySelector(".editor");
 
+    // for edit problem screen update preview on opening page itself, because content must already be there in editor
+    const latex = editor.innerHTML;
+    if (latex) {
+        renderMath(editor);
+    }
+
     // listener to display preview
     editor.addEventListener('input', () => {
         clearTimeout(editor.__renderTimeout);

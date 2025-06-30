@@ -34,30 +34,9 @@ function insertMath(editor) {
     });
 }
 
-// Render all \( ... \) in editor using MathLive
 function renderMath(editor) {
-    // Clone for safe processing
-    const clone = editor.cloneNode(true);
-
-    // Replace <math-field> with \(...\)
-    const realFields = editor.querySelectorAll('math-field');
-    const clonedFields = clone.querySelectorAll('math-field');
-
-    realFields.forEach((real, i) => {
-        const latex = real.getValue('latex')?.trim() || '';
-        const span = document.createElement('span');
-        span.textContent = `\\(${latex}\\)`;
-        clonedFields[i].replaceWith(span);
-    });
-
-    // Keep HTML structure for MathJax
-    const html = clone.innerHTML;
-
-    // Find corresponding output
     const container = editor.closest('.container');
     const output = container.querySelector('.output');
-
-    output.innerHTML = html;
-
+    output.innerHTML = editor.innerHTML;
     MathJax.typesetPromise([output]);
 }

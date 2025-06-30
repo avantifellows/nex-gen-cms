@@ -17,17 +17,17 @@
             <select id="problem-type-dropdown" name="problem-type-dropdown"
                 class="w-full border border-gray-300 rounded p-2">
                 {{if .ProblemPtr}}
-                    {{template "problem_type_options" .ProblemPtr.Subtype}}
+                {{template "problem_type_options" .ProblemPtr.Subtype}}
                 {{else}}
-                    {{template "problem_type_options"}}
+                {{template "problem_type_options"}}
                 {{end}}
             </select>
         </div>
         <div>
             <p class="font-semibold mb-2">Select Skills:</p>
             <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
-                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto" 
-                hx-get="/api/skills{{if .ProblemPtr}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}">
+                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
+                hx-get='/api/skills{{if .ProblemPtr}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
                 <option disabled>Loading skills...</option>
             </select>
         </div>
@@ -45,15 +45,22 @@
     <!-- difficulty -->
     <div class="mb-6">
         <p class="font-semibold mb-2">Difficulty Rating</p>
-        <label class="mr-4"><input type="radio" name="difficulty" value="easy"> 1</label>
-        <label class="mr-4"><input type="radio" name="difficulty" value="medium"> 2</label>
-        <label class="mr-4"><input type="radio" name="difficulty" value="hard"> 3</label>
+        <label class="mr-4"><input type="radio" name="difficulty" value="easy" {{if and .ProblemPtr (eq
+                .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}> 1</label>
+        <label class="mr-4"><input type="radio" name="difficulty" value="medium" {{if and .ProblemPtr (eq
+                .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}> 2</label>
+        <label class="mr-4"><input type="radio" name="difficulty" value="hard" {{if and .ProblemPtr (eq
+                .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}> 3</label>
     </div>
 
     <!-- Question editor -->
     <div id="questionDiv" class="mb-6">
         <p class="font-semibold mb-2">Text:</p>
-        {{ template "editor" . }}
+        {{ if .ProblemPtr }}
+        {{ template "editor" .ProblemPtr.MetaData.Question }}
+        {{ else }}
+        {{ template "editor" }}
+        {{ end }}
     </div>
 
     <!-- Options -->
@@ -69,7 +76,7 @@
         </div>
 
         <!-- Shared Editor -->
-        {{ template "editor" . }}
+        {{ template "editor" }}
     </div>
 
     <!-- Answer -->
@@ -81,7 +88,7 @@
     <!-- Solution -->
     <div class="mb-6" id="solutionDiv">
         <p class="font-semibold mb-2">Solution:</p>
-        {{ template "editor" . }}
+        {{ template "editor" }}
     </div>
 
     <!-- Tags -->
@@ -124,15 +131,37 @@
         const addTabButton = optionsDiv.querySelector('#addTab');
 
         const labelPool = 'ABCDEFGHIJ';
-        let tabs = new Array(4).fill(null); // Start with 4 tabs
-        let activeIndex = 0;
 
-        const tabContent = []; // Each entry: { html: '...', preview: '...' }
+        // Determine tab count
+        let tabs = new Array(
+            {{ if .ProblemPtr }}
+                {{ len .ProblemPtr.MetaData.Options }}
+            {{ else }}
+                4   // by default start with 4 tabs for add problem case
+            {{ end }}
+        ).fill(null);
+
+        let activeIndex = 0;
 
         const editor = optionsDiv.querySelector('.editor');
         const preview = optionsDiv.querySelector('.output');
 
         const answers = new Set(); // <=== tracks checked answer labels
+
+        // Initial setup
+        const tabContent = [
+            {{ if .ProblemPtr }}
+                {{ range .ProblemPtr.MetaData.Options }}
+                    { html: `{{ . }}`, preview: `{{ . }}` },
+                {{ end }}
+            {{ else }}
+                // Default empty tabs
+                ...[4].fill(null).map(() => ({ html: '', preview: '' }))
+            {{ end }}
+        ];
+        // Initial render
+        renderTabs();
+        setActiveTab(0);
 
         function getLabel(index) {
             return labelPool[index];
@@ -253,12 +282,6 @@
         }
 
         addTabButton.addEventListener('click', addTab);
-
-        // Initial setup
-        tabs.forEach(() => tabContent.push({ html: '', preview: '' }));
-        // Initial render
-        renderTabs();
-        setActiveTab(0);
 
         window.createProblem = function (event, topicId, chapterId) {
             event.preventDefault();  // Cancel the default form request

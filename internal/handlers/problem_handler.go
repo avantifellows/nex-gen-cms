@@ -172,7 +172,9 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 	data := dto.HomeData{
 		TopicPtr: selectedTopicPtr,
 	}
-	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"joinInt16": utils.JoinInt16,
+	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, inputTagsTemplate)
 }
 
