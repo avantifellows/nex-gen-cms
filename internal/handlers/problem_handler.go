@@ -173,7 +173,9 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		TopicPtr: selectedTopicPtr,
 	}
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16": utils.JoinInt16,
+		"joinInt16":   utils.JoinInt16,
+		"add":         utils.Add,
+		"stringToInt": utils.StringToInt,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, inputTagsTemplate)
 }
@@ -208,6 +210,8 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16": utils.JoinInt16,
+		"joinInt16":   utils.JoinInt16,
+		"add":         utils.Add,
+		"stringToInt": utils.StringToInt,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate, inputTagsTemplate)
 }

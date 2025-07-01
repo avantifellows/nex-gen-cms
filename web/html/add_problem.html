@@ -88,7 +88,11 @@
     <!-- Solution -->
     <div class="mb-6" id="solutionDiv">
         <p class="font-semibold mb-2">Solution:</p>
+        {{ if and .ProblemPtr (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
+        {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
+        {{ else }}
         {{ template "editor" }}
+        {{ end }}
     </div>
 
     <!-- Tags -->
@@ -146,7 +150,15 @@
         const editor = optionsDiv.querySelector('.editor');
         const preview = optionsDiv.querySelector('.output');
 
-        const answers = new Set(); // <=== tracks checked answer labels
+        const answers = new Set([
+            {{ if .ProblemPtr }}
+                {{ range .ProblemPtr.MetaData.Answers }}
+                    {{ if . }}
+                        '{{ printf "%c" (add 64 (stringToInt .)) }}',
+                    {{ end }}
+                {{ end }}
+            {{ end }}
+        ]); // <=== tracks checked answer labels
 
         // Initial setup
         const tabContent = [
