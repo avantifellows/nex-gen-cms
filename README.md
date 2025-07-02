@@ -36,3 +36,17 @@ To run the CMS locally, follow these steps:
    go run cmd/main.go
    ```
 7. Open your browser and go to http://localhost:8080 to view the application.
+
+### Tailwind Setup:
+#### ✅ Only Running the App?
+
+You do **not** need to install Tailwind if you only want to run the app. The compiled Tailwind CSS (`output.css`) is already included and used in the HTML templates. Just run the Go server as usual and the styles will work out of the box.
+
+#### 🛠️ Rebuilding Styles (Only if modifying Tailwind)?
+
+If you make changes to `input.css` or `tailwind.config.js`, follow these steps:
+
+```bash
+npm install        # Install Tailwind and dependencies
+npm run build:css  # Rebuild CSS
+
