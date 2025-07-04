@@ -4,7 +4,7 @@
         <!-- chips will go here -->
         <input id="tagTextInput" type="text" class="flex-1 min-w-[100px] border-none outline-none p-1"
             placeholder="Assign Hashtags" hx-get="/api/tags" hx-target="#tagAutocomplete"
-            hx-trigger="input changed delay:300ms" />
+            hx-trigger="input changed delay:300ms" hx-ext="tagInputExtension" />
     </div>
     <!-- Autocomplete dropdown -->
     <div id="tagAutocomplete"
@@ -19,28 +19,29 @@
         const autocompleteDiv = document.getElementById('tagAutocomplete');
         let tags = [];
 
-        document.body.addEventListener('htmx:configRequest', function (event) {
-            const input = event.detail.elt;
-            if (input.id === 'tagTextInput') {
-                const query = input.value;
+        htmx.defineExtension('tagInputExtension', {
+            onEvent: function (name, evt) {
+                if (name === 'htmx:configRequest') {
+                    const query = input.value;
 
-                // Cancel request if query is too short
-                if (query.length < 3) {
-                    event.preventDefault();
-                    return;
+                    // Cancel request if query is too short
+                    if (query.length < 3) {
+                        evt.preventDefault();
+                        return;
+                    }
+
+                    // Append tags to query string
+                    const url = new URL(evt.detail.path, window.location.origin);
+                    url.searchParams.set("q", query);
+                    tags.forEach(tag => {
+                        url.searchParams.append("selected", tag);
+                    });
+
+                    evt.detail.path = url.pathname + url.search;
+
+                    // Show autocomplete
+                    autocompleteDiv.classList.remove('hidden');
                 }
-
-                // Append tags to query string
-                const url = new URL(event.detail.path, window.location.origin);
-                url.searchParams.set("q", query);
-                tags.forEach(tag => {
-                    url.searchParams.append("selected", tag);
-                });
-
-                event.detail.path = url.pathname + url.search;
-
-                // Show autocomplete
-                autocompleteDiv.classList.remove('hidden');
             }
         });
 

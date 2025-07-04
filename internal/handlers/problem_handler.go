@@ -59,6 +59,7 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		"add":         utils.Add,
 		"stringToInt": utils.StringToInt,
 		"seq":         utils.Seq,
+		"getName":     getConceptName,
 	}, baseTemplate, problemTemplate)
 }
 

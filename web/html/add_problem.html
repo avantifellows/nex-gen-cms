@@ -392,14 +392,19 @@
             const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
 
             return {
+                lang_code: "en",
                 type: "problem",
                 subtype: subtype,
                 skill_ids: selectedSkillIds,
                 type_params: {
                     test_ids: []
                 },
-                curriculum_id: curriculumId,
-                grade_id: gradeId,
+                curriculum_grades: [
+                    {
+                        curriculum_id: curriculumId,
+                        grade_id: gradeId
+                    }
+                ],
                 subject_id: subjectId,
                 topic_id: topicId,
                 chapter_id: chapterId,
