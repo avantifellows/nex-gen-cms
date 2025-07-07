@@ -6,11 +6,13 @@
         </button>
         <h3 class="text-base font-semibold ml-4">{{.ProblemPtr.Code}}</h3>
         <div class="flex space-x-4 ml-auto pr-4">
-            <button class="action-button">
-                <i class="fas fa-pen">
+            <button class="action-button" 
+                hx-get="/problems/edit-problem?id={{.ProblemPtr.ID}}&curriculum_id={{.ProblemPtr.CurriculumID}}&topic_id={{.ProblemPtr.TopicID}}"
+                hx-target="body" hx-push-url="true">
+                <i class="fa-solid fa-pen">
                 </i></button>
             <button class="action-button">
-                <i class="fas fa-trash">
+                <i class="fa-solid fa-trash">
                 </i></button>
         </div>
     </div>

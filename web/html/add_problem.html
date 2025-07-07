@@ -2,10 +2,10 @@
 <form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event,        
         {{if .TopicPtr}}
         <!-- add problem -->
-            {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}
+            {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}, null
         {{else}}
         <!-- edit problem -->
-            {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}
+            {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
         {{end}}
 );">
     <h2 class="text-lg font-semibold mb-4">{{if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
@@ -98,7 +98,11 @@
     <!-- Tags -->
     <div class="mb-6">
         <p class="font-semibold mb-2">Tags:</p>
-        {{ template "input_tags" . }}
+        {{ if .ProblemPtr }}
+            {{ template "input_tags" .ProblemPtr.TagNames }}
+        {{ else }}
+            {{ template "input_tags" }}
+        {{ end }}
     </div>
 
     <!-- SOURCE -->
@@ -124,7 +128,7 @@
     </div> -->
 
     <!-- Save button -->
-    <button type="submit"
+    <button id="saveButton" type="submit"
         class="w-full bg-blue-500 text-white mb-4 py-3 font-semibold rounded hover:bg-blue-600">Save</button>
 </form>
 <script src="/web/static/js/editor.js"></script>
@@ -295,20 +299,26 @@
 
         addTabButton.addEventListener('click', addTab);
 
-        window.createProblem = function (event, topicId, chapterId) {
+        window.createProblem = function (event, topicId, chapterId, problemId) {
             event.preventDefault();  // Cancel the default form request
+
+            const saveBtn = document.getElementById('saveButton');
+            // Disable the button and change its text
+            toggleButton(saveBtn, true, 'Saving...');
+
             // save latest option value visible; otherwise if save is pressed directly after entering value
             // in option A editor, it will show wrong alert aking to enter value in option A, because without
             // this save call we are saving tab content only on switching tabs and adding new tab
             saveCurrentContent();
 
             if (!validateFields()) {
+                toggleButton(saveBtn, false, 'Save')
                 return false;
             }
 
             const prolemJson = buildProblemJson(topicId, chapterId);
-            const url = '/create-problem';
-            const method = 'POST';
+            const url = problemId ? `/update-problem?id=${problemId}` : '/create-problem';
+            const method = problemId ? 'PATCH' : 'POST';
 
             fetch(url, {
                 method: method,
@@ -330,9 +340,16 @@
                 goBackAfterDelay(0);
 
             }).catch(err => {
-                console.error("Error during prolem creation:", err);
+                console.error("Error during problem creation:", err);
+                alert("There was an error while saving the problem.");
+                toggleButton(saveBtn, false, 'Save');
             });
         };
+
+        function toggleButton(btn, disable, label) {
+            btn.disabled = disable;
+            if (label) btn.innerText = label;
+        }
 
         function validateFields() {
             const difficulty = document.querySelector('input[name="difficulty"]:checked');

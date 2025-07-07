@@ -15,7 +15,7 @@
          directly edit url is entered in browser -->
         <button class="action-button" hx-get="/edit-chapter?id={{.ID}}"
             hx-target="body" hx-push-url="true">
-            <i class="fa-solid fa-pencil"></i>
+            <i class="fa-solid fa-pen"></i>
         </button>
         <button class="action-button" hx-delete="/delete-chapter?id={{.ID}}"
             hx-confirm="Are you sure you want to delete chapter {{ getName . "en" }}?" hx-target="closest tr">

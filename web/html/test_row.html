@@ -16,7 +16,7 @@
          directly edit url is entered in browser -->
         <button class="action-button" hx-get="/tests/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
             hx-target="body" hx-push-url="true">
-            <i class="fa-solid fa-pencil"></i>
+            <i class="fa-solid fa-pen"></i>
         </button>
         <button class="action-button" hx-delete="/delete-test?id={{.ID}}"
             hx-confirm="Are you sure you want to delete test {{.Name}}?" hx-target="closest tr">

@@ -12,7 +12,7 @@
     <td></td>
     <td class="space-x-4">
         <button class="action-button" hx-get="/edit-topic?id={{.ID}}" hx-target="#subContent" hx-push-url="true">
-            <i class="fa-solid fa-pencil"></i>
+            <i class="fa-solid fa-pen"></i>
         </button>
         <button class="action-button" hx-delete="/delete-topic?id={{.ID}}"
             hx-confirm="Are you sure you want to delete topic {{ getName . "en" }}?" hx-target="closest tr">

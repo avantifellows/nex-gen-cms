@@ -17,7 +17,9 @@
         const container = document.getElementById('tagsInput');
         const input = document.getElementById('tagTextInput');
         const autocompleteDiv = document.getElementById('tagAutocomplete');
-        let tags = [];
+        let tags = {{ toJson . }} || [];  // initialize with existing tags if any
+
+        renderTags();  // show prefilled chips
 
         htmx.defineExtension('tagInputExtension', {
             onEvent: function (name, evt) {

@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"regexp"
 	"strconv"
@@ -103,13 +104,13 @@ func DisplaySubtype(subtype string) string {
 	}
 }
 
-func ToJson(v any) string {
+func ToJson(v any) template.JS {
 	b, err := json.Marshal(v)
 	if err != nil {
 		log.Printf("Error marshalling to JSON: %v", err)
-		return ""
+		return template.JS("[]") // fallback to empty JSON array
 	}
-	return string(b)
+	return template.JS(b)
 }
 
 func IntToString[T IntType](v T) string {

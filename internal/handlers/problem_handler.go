@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -35,13 +35,14 @@ type ProblemsHandler struct {
 	skillsService   *services.Service[models.Skill]
 	subjectsService *services.Service[models.Subject]
 	topicsService   *services.Service[models.Topic]
+	tagsService     *services.Service[models.Tag]
 }
 
 func NewProblemsHandler(problemsService *services.Service[models.Problem],
 	skillsService *services.Service[models.Skill], subjectsService *services.Service[models.Subject],
-	topicsService *services.Service[models.Topic]) *ProblemsHandler {
+	topicsService *services.Service[models.Topic], tagsService *services.Service[models.Tag]) *ProblemsHandler {
 	return &ProblemsHandler{problemsService: problemsService, skillsService: skillsService,
-		subjectsService: subjectsService, topicsService: topicsService}
+		subjectsService: subjectsService, topicsService: topicsService, tagsService: tagsService}
 }
 
 func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -120,9 +121,26 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	// set subject on each problem
-	for _, problem := range *problems {
-		problem.Subject = *subjectPtr
+	tags, err := h.tagsService.GetList(tagsEndPoint, tagsKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching tags: %v", err), http.StatusInternalServerError)
+		return
+	}
+	// Create a map to quickly lookup tag names by their ID
+	tagsMap := make(map[int]string)
+	// Fill the map with the string name of each tag
+	for _, tagPtr := range *tags {
+		tagsMap[tagPtr.ID] = tagPtr.Name
+	}
+
+	// set subject & tag names on each problem
+	for _, problemPtr := range *problems {
+		problemPtr.Subject = *subjectPtr
+
+		// Loop through tag ids and add corresponding tag names
+		for _, tagId := range problemPtr.TagIDs {
+			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagId])
+		}
 	}
 
 	filterProblems(problems, urlValues.Get("level-dropdown"), urlValues.Get("ptype-dropdown"), urlValues.Get("selected-ids"))
@@ -177,24 +195,21 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		"joinInt16":   utils.JoinInt16,
 		"add":         utils.Add,
 		"stringToInt": utils.StringToInt,
+		"toJson":      utils.ToJson,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, inputTagsTemplate)
 }
 
 func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	// Declare a variable to hold the parsed JSON
-	var problemObj models.Problem
-
-	// Decode the JSON body into the object
-	err := json.NewDecoder(request.Body).Decode(&problemObj)
+	reqBodyBytes, err := io.ReadAll(request.Body)
 	if err != nil {
-		http.Error(responseWriter, "Error parsing JSON", http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
-	_, err = h.problemsService.AddObject(problemObj, problemsKey, resourcesEndPoint)
+	_, err = h.problemsService.AddObject(reqBodyBytes, problemsKey, resourcesEndPoint)
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error adding test: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error adding problem: %v", err), http.StatusInternalServerError)
 		return
 	}
 }
@@ -214,5 +229,26 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 		"joinInt16":   utils.JoinInt16,
 		"add":         utils.Add,
 		"stringToInt": utils.StringToInt,
+		"toJson":      utils.ToJson,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate, inputTagsTemplate)
+}
+
+func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, request *http.Request) {
+	reqBodyBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		http.Error(responseWriter, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	problemIdStr := request.URL.Query().Get("id")
+	problemId := utils.StringToInt(problemIdStr)
+
+	_, err = h.problemsService.UpdateObject(problemIdStr, resourcesEndPoint, reqBodyBytes, problemsKey,
+		func(problem *models.Problem) bool {
+			return (*problem).ID == problemId
+		})
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error updating problem: %v", err), http.StatusInternalServerError)
+		return
+	}
 }
