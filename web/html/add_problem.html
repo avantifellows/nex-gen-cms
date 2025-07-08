@@ -82,7 +82,9 @@
     <!-- Answer -->
     <div class="mb-6" id="answerDiv">
         <p class="font-semibold mb-2">Answer:</p>
-        <!-- Checkboxes will be generated dynamically -->
+        <div id="answerContent">
+            <!-- Either checkboxes or integer input will be inserted here -->
+        </div>
     </div>
 
     <!-- Solution -->
@@ -151,9 +153,6 @@
 
         let activeIndex = 0;
 
-        const editor = optionsDiv.querySelector('.editor');
-        const preview = optionsDiv.querySelector('.output');
-
         const answers = new Set([
             {{ if .ProblemPtr }}
                 {{ range .ProblemPtr.MetaData.Answers }}
@@ -163,6 +162,72 @@
                 {{ end }}
             {{ end }}
         ]); // <=== tracks checked answer labels
+
+        const problemTypeDropdown = document.getElementById('problem-type-dropdown');
+
+        problemTypeDropdown.addEventListener('change', function () {
+            onProblemTypeSelection(this.value);
+        });
+
+        {{ if .ProblemPtr }}
+            onProblemTypeSelection(problemTypeDropdown.value);
+        {{ end }}
+
+        function onProblemTypeSelection(problemType) {
+            const optionsDiv = document.getElementById('optionsDiv');
+            const isMCQ = problemType === 'mcq_single_answer' || problemType === 'mcq_multiple_answer';
+            if (isMCQ) {
+                optionsDiv.classList.remove('hidden');
+            } else {
+                optionsDiv.classList.add('hidden');
+            }
+
+            updateAnswerInput(problemType);
+        }
+
+        function updateAnswerInput(problemType) {
+            const answerContent = document.getElementById('answerContent');
+            answerContent.innerHTML = ''; 
+
+            if (problemType === 'mcq_single_answer' || problemType === 'mcq_multiple_answer') {
+                // Add checkboxes
+                renderTabs();
+            } else {
+                // Add integer-only input
+                const answer = 
+                    {{ if .ProblemPtr }}
+                        '{{ index .ProblemPtr.MetaData.Answers 0 }}'
+                    {{ else }}
+                        ''
+                    {{ end }}; 
+
+                answerContent.innerHTML = `
+                    <input type="text" name="answer" id="intAnswerInput" class="w-full border border-gray-300 rounded p-2" 
+                    inputmode="numeric" value="${answer}">
+                `;
+
+                ensureIntAnswer();
+            }
+        }
+
+        function ensureIntAnswer() {
+            const input = document.getElementById("intAnswerInput");
+            input.addEventListener("input", function () {
+                let value = this.value;
+
+                // Remove all non-digit characters except '-'
+                value = value.replace(/[^0-9-]/g, '');
+
+                // Only allow '-' at the beginning
+                const hasLeadingMinus = value.startsWith('-');
+                value = (hasLeadingMinus ? '-' : '') + value.replace(/-/g, '');
+
+                this.value = value;
+            });
+        }
+
+        const editor = optionsDiv.querySelector('.editor');
+        const preview = optionsDiv.querySelector('.output');
 
         // Initial setup
         const tabContent = [
@@ -187,9 +252,8 @@
             // Clear old tabs
             document.querySelectorAll('.mcq-tab').forEach(tab => tab.remove());
             // Remove old checkboxes
-            const answerDiv = document.getElementById('answerDiv');
-            answerDiv.querySelectorAll('label').forEach(label => label.remove());
-
+            const answerContent = document.getElementById('answerContent');
+            answerContent.querySelectorAll('label').forEach(label => label.remove());
             tabs.forEach((_, index) => {
                 const label = getLabel(index);
 
@@ -231,7 +295,7 @@
                     }
                 });
 
-                answerDiv.appendChild(checkboxLabel);
+                answerContent.appendChild(checkboxLabel);
             });
 
             // Hide "+" button if 10 or more tabs
@@ -295,6 +359,17 @@
             const content = tabContent[activeIndex] || { html: '', preview: '' };
             editor.innerHTML = content.html;
             preview.innerHTML = content.preview;
+            // This is required for edit problem where by default MathJax is applied to only first option
+            applyMathJaxIfNeeded();
+        }
+
+        function applyMathJaxIfNeeded() {
+            const containsRawTex = preview.textContent.includes('\\(') || preview.textContent.includes('$$');
+            const alreadyRendered = preview.querySelector('.MathJax');
+
+            if (containsRawTex && !alreadyRendered) {
+                MathJax.typesetPromise([preview]);
+            }
         }
 
         addTabButton.addEventListener('click', addTab);
