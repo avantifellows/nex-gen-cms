@@ -153,7 +153,7 @@
 
         let activeIndex = 0;
 
-        const answers = new Set([
+        const answerLabels = new Set([
             {{ if .ProblemPtr }}
                 {{ range .ProblemPtr.MetaData.Answers }}
                     {{ if . }}
@@ -237,9 +237,10 @@
                 {{ end }}
             {{ else }}
                 // Default empty tabs
-                ...[4].fill(null).map(() => ({ html: '', preview: '' }))
+                ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
             {{ end }}
         ];
+        
         // Initial render
         renderTabs();
         setActiveTab(0);
@@ -284,14 +285,14 @@
 
                 const checkbox = checkboxLabel.querySelector('input');
                 // restore checked state if present
-                checkbox.checked = answers.has(label);
+                checkbox.checked = answerLabels.has(label);
 
-                // update answers set on change
+                // update answerLabels set on change
                 checkbox.addEventListener('change', (e) => {
                     if (e.target.checked) {
-                        answers.add(label);
+                        answerLabels.add(label);
                     } else {
-                        answers.delete(label);
+                        answerLabels.delete(label);
                     }
                 });
 
@@ -343,8 +344,8 @@
             tabContent.splice(index, 1);
 
             const removedLabel = getLabel(index); // label like 'A', 'B'
-            // Also remove this label from answers set
-            answers.delete(removedLabel);
+            // Also remove this label from answerLabels set
+            answerLabels.delete(removedLabel);
 
             if (activeIndex >= tabs.length) {
                 activeIndex = tabs.length - 1;
@@ -390,7 +391,7 @@
                 toggleButton(saveBtn, false, 'Save')
                 return false;
             }
-
+            
             const prolemJson = buildProblemJson(topicId, chapterId);
             const url = problemId ? `/update-problem?id=${problemId}` : '/create-problem';
             const method = problemId ? 'PATCH' : 'POST';
@@ -438,24 +439,35 @@
                 return;
             }
 
-            if (typeof tabContent !== 'undefined' && Array.isArray(tabContent)) {
-                for (let i = 0; i < tabContent.length; i++) {
-                    const optionLabel = String.fromCharCode(65 + i); // A, B, C...
-                    const optionText = tabContent[i]?.html?.trim();
-                    if (!optionText) {
-                        alert(`Option ${optionLabel} is empty. Please fill it out before submitting.`);
-                        return false;
+            const subtype = document.getElementById('problem-type-dropdown').value;
+            if (subtype === 'mcq_single_answer' || subtype === 'mcq_multiple_answer') {
+                if (typeof tabContent !== 'undefined' && Array.isArray(tabContent)) {
+                    for (let i = 0; i < tabContent.length; i++) {
+                        const optionLabel = String.fromCharCode(65 + i); // A, B, C...
+                        const optionText = tabContent[i]?.html?.trim();
+                        if (!optionText) {
+                            alert(`Option ${optionLabel} is empty. Please fill it out before submitting.`);
+                            return false;
+                        }
                     }
+                } else {
+                    alert('Options are not available.');
+                    return false;
                 }
-            } else {
-                alert('Options are not available.');
-                return false;
+
+                if (answerLabels.size === 0) {
+                    alert('Please select at least one answer.');
+                    return false;
+                }
+                
+            } else if (subtype === 'integer_type') {
+                const answerInput = document.getElementById("intAnswerInput");
+                if (!answerInput.value) {
+                    alert('Please enter the answer.');
+                    return false;
+                }
             }
 
-            if (answers.size === 0) {
-                alert('Please select at least one answer.');
-                return false;
-            }
             return true;
         }
 
@@ -471,14 +483,21 @@
 
             const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
 
-            const question = document.getElementById('questionDiv').querySelector('.editor').innerHTML;
-            const options = tabContent.map(item => item.html);
-            // Convert the labels to their number indexes (+1), and then to strings
-            const answerNumbers = Array.from(answers).map(label => {
-                const index = labelPool.indexOf(label);
-                return (index + 1).toString();
-            });
-            const solution = document.getElementById('solutionDiv').querySelector('.editor').innerHTML;
+            const question = document.getElementById('questionDiv').querySelector('.editor').innerHTML.trim();
+
+            let options = null;
+            let answers = [];
+            if (subtype === 'mcq_single_answer' || subtype === 'mcq_multiple_answer') {
+                options = tabContent.map(item => item.html);
+                // Convert the labels to their number indexes (+1), and then to strings
+                answers = Array.from(answerLabels).map(label => {
+                    const index = labelPool.indexOf(label);
+                    return (index + 1).toString();
+                });
+            } else {
+                answers = [document.getElementById("intAnswerInput").value];
+            }
+            const solution = document.getElementById('solutionDiv').querySelector('.editor').innerHTML.trim();
 
             const conceptsDropdown = document.getElementById("concepts-dropdown");
             const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
@@ -504,7 +523,7 @@
                 meta_data: {
                     text: question,
                     options: options,
-                    answer: answerNumbers,
+                    answer: answers,
                     solutions: [
                         {
                             type: "text",

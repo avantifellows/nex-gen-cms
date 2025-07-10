@@ -121,7 +121,8 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	tags, err := h.tagsService.GetList(tagsEndPoint, tagsKey, false, false)
+	// true is passed for onlyRemote, so that new tags inserted via create problem api can also be fetched
+	tags, err := h.tagsService.GetList(tagsEndPoint, tagsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tags: %v", err), http.StatusInternalServerError)
 		return
