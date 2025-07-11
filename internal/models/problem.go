@@ -21,6 +21,7 @@ type Problem struct {
 	DifficultyLevel string    `json:"difficulty_level"`
 	TagIDs          []int     `json:"tag_ids"`
 	TagNames        []string
+	Status          string `json:"cms_status"`
 }
 
 type ProbTypeParams struct {

@@ -11,7 +11,8 @@
                 hx-target="body" hx-push-url="true">
                 <i class="fa-solid fa-pen">
                 </i></button>
-            <button class="action-button">
+            <button class="action-button" hx-delete="/archive-problem?id={{.ProblemPtr.ID}}" hx-ext="goBackAfter"
+                hx-confirm="Are you sure you want to delete problem?">
                 <i class="fa-solid fa-trash">
                 </i></button>
         </div>
@@ -95,4 +96,14 @@
         </div>
     </div>
 </div>
+<script>
+    htmx.defineExtension('goBackAfter', {
+            onEvent: function (name, evt) {
+                if (name === 'htmx:afterRequest') {
+                    history.back();
+                }
+            }
+        }
+    );
+</script>
 {{ end }}

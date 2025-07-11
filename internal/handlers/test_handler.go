@@ -15,6 +15,7 @@ import (
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/utils"
+	"github.com/thoas/go-funk"
 )
 
 const TESTTYPE_DROPDOWN_NAME = "testtype-dropdown"
@@ -216,6 +217,10 @@ func (h *TestsHandler) getTestProblems(responseWriter http.ResponseWriter, reque
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
 	}
+	*problems = funk.Filter(*problems, func(p *models.Problem) bool {
+		return p.Status != constants.ResourceStatusArchived
+	}).([]*models.Problem)
+
 	return problems
 }
 

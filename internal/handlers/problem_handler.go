@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
@@ -168,7 +169,7 @@ func filterProblems(problems *[]*models.Problem, difficulty string, ptype string
 	n := 0
 	for _, p := range ps {
 		// "" means All is selected in dropdown
-		if (difficulty == "" || p.DifficultyLevel == difficulty) && (ptype == "" || p.Subtype == ptype) && !selectedIds[p.ID] {
+		if p.Status != constants.ResourceStatusArchived && (difficulty == "" || p.DifficultyLevel == difficulty) && (ptype == "" || p.Subtype == ptype) && !selectedIds[p.ID] {
 			ps[n] = p
 			n++
 		}
@@ -250,6 +251,24 @@ func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, requ
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating problem: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, request *http.Request) {
+	problemIdStr := request.URL.Query().Get("id")
+	problemId := utils.StringToInt(problemIdStr)
+	body := map[string]string{
+		"cms_status": constants.ResourceStatusArchived,
+		// "lang_code":  "en",
+	}
+
+	err := h.problemsService.ArchiveObject(problemIdStr, resourcesEndPoint, body, problemsKey,
+		func(problem *models.Problem) bool {
+			return problem.ID != problemId
+		})
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error archiving problem: %v", err), http.StatusInternalServerError)
 		return
 	}
 }

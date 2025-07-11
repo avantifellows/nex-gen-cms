@@ -147,3 +147,19 @@ func (s *Service[T]) DeleteObject(objIdStr string, objKeepingPredicate func(*T) 
 	}
 	return nil
 }
+
+func (s *Service[T]) ArchiveObject(objIdStr string, urlEndPoint string, body any, cacheKey string,
+	objKeepingPredicate func(*T) bool) error {
+	_, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodPatch, body)
+	if err != nil {
+		return err
+	}
+
+	// as archived from api without any error, now remove from cache also
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
+	if list != nil {
+		fmt.Println("ArchiveObj list l = ", len(*list))
+		*list = funk.Filter(*list, objKeepingPredicate).([]*T)
+	}
+	return nil
+}
