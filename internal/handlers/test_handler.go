@@ -83,10 +83,17 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
+	filtered := (*tests)[:0] // zero-length slice, same backing array
 	// set curriculum & grade id on each test
 	for _, test := range *tests {
+		// skip archived tests
+		if test.Status == constants.ResourceStatusArchived {
+			continue
+		}
 		test.SetCurriculumGrade(curriculumId, gradeId)
+		filtered = append(filtered, test)
 	}
+	*tests = filtered // assign filtered slice back to original
 
 	sortTests(*tests, sortColumn, sortOrder)
 	local_repo.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
@@ -409,6 +416,24 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating test: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *http.Request) {
+	testIdStr := request.URL.Query().Get("id")
+	testId := utils.StringToInt(testIdStr)
+	body := map[string]string{
+		"cms_status": constants.ResourceStatusArchived,
+		// "lang_code":  "en",
+	}
+
+	err := h.testsService.ArchiveObject(testIdStr, resourcesEndPoint, body, testsKey,
+		func(test *models.Test) bool {
+			return test.ID != testId
+		})
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error archiving test: %v", err), http.StatusInternalServerError)
 		return
 	}
 }

@@ -158,7 +158,6 @@ func (s *Service[T]) ArchiveObject(objIdStr string, urlEndPoint string, body any
 	// as archived from api without any error, now remove from cache also
 	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	if list != nil {
-		fmt.Println("ArchiveObj list l = ", len(*list))
 		*list = funk.Filter(*list, objKeepingPredicate).([]*T)
 	}
 	return nil

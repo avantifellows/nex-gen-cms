@@ -9,6 +9,7 @@ type Test struct {
 	SkillIDs         []int16           `json:"skill_ids,omitempty"`
 	CurriculumGrades []CurriculumGrade `json:"curriculum_grades"`
 	TypeParams       ResTypeParams     `json:"type_params"`
+	Status           string            `json:"cms_status"`
 }
 
 type CurriculumGrade struct {
