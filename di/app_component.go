@@ -43,6 +43,7 @@ func NewAppComponent() (*AppComponent, error) {
 	testsService := services.NewService[models.Test](cacheRepo, apiRepo)
 	problemsService := services.NewService[models.Problem](cacheRepo, apiRepo)
 	tagsService := services.NewService[models.Tag](cacheRepo, apiRepo)
+	testRulesService := services.NewService[models.TestRule](cacheRepo, apiRepo)
 
 	// Initialize handlers
 	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
@@ -53,7 +54,7 @@ func NewAppComponent() (*AppComponent, error) {
 	gradesHandler := handlers.NewGradesHandler(gradesService)
 	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
 	skillsHandler := handlers.NewSkillsHandler(skillsService)
-	testsHandler := handlers.NewTestsHandler(testsService, subjectsService, problemsService)
+	testsHandler := handlers.NewTestsHandler(testsService, subjectsService, problemsService, testRulesService)
 	problemsHandler := handlers.NewProblemsHandler(problemsService, skillsService, subjectsService, topicsService,
 		tagsService)
 	tagsHandler := handlers.NewTagsHandler(tagsService)

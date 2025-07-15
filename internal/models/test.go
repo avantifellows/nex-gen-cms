@@ -1,10 +1,11 @@
 package models
 
 type Test struct {
-	ID               int               `json:"id,omitempty"`
-	Name             []ResName         `json:"name"`
-	Code             string            `json:"code"`
-	Type             string            `json:"type"`
+	ID               int       `json:"id,omitempty"`
+	Name             []ResName `json:"name"`
+	Code             string    `json:"code"`
+	Type             string    `json:"type"`
+	ExamID           int8
 	Subtype          string            `json:"subtype"`
 	SkillIDs         []int16           `json:"skill_ids,omitempty"`
 	CurriculumGrades []CurriculumGrade `json:"curriculum_grades"`

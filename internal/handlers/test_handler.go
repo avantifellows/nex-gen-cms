@@ -40,21 +40,25 @@ const addCurriculumGradeSelectsTemplate = "add_curriculum_grade_selects.html"
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
 const testProblemsEndPoint = "/resource/test/%d/problems?lang_code=en&" + QUERY_PARAM_CURRICULUM_ID + "=%s"
+const testRulesEndPoint = "/test-rule"
 
 const testsKey = "tests"
+const testRulesKey = "testRules"
 
 type TestsHandler struct {
-	testsService    *services.Service[models.Test]
-	subjectsService *services.Service[models.Subject]
-	problemsService *services.Service[models.Problem]
+	testsService     *services.Service[models.Test]
+	subjectsService  *services.Service[models.Subject]
+	problemsService  *services.Service[models.Problem]
+	testRulesService *services.Service[models.TestRule]
 }
 
 func NewTestsHandler(testsService *services.Service[models.Test], subjectsService *services.Service[models.Subject],
-	problemsService *services.Service[models.Problem]) *TestsHandler {
+	problemsService *services.Service[models.Problem], testRulesService *services.Service[models.TestRule]) *TestsHandler {
 	return &TestsHandler{
-		testsService:    testsService,
-		subjectsService: subjectsService,
-		problemsService: problemsService,
+		testsService:     testsService,
+		subjectsService:  subjectsService,
+		problemsService:  problemsService,
+		testRulesService: testRulesService,
 	}
 }
 
@@ -260,11 +264,25 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 			GradeID:      gradeId,
 		})
 	}
+
+	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
+	if err != nil {
+		fmt.Println("invalid exam id")
+		return
+	}
+	testRule, err := h.getTestRule(testType, examId)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fmt.Println("test rule = ", testRule)
 	data := dto.HomeData{
 		TestPtr: &models.Test{
+			ExamID:           examId,
 			Subtype:          testType,
 			CurriculumGrades: curriculumGrades,
 		},
+		TestRule: *testRule,
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -451,4 +469,19 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 
 func (h *TestsHandler) AddCurriculumGradeDropdowns(responseWriter http.ResponseWriter, request *http.Request) {
 	local_repo.ExecuteTemplates(responseWriter, nil, nil, addCurriculumGradeSelectsTemplate, curriculumGradeSelectsTemplate)
+}
+
+func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRule, error) {
+	testRules, err := h.testRulesService.GetList(testRulesEndPoint, testRulesKey, false, false)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching test rules: %v", err)
+	}
+
+	for _, rule := range *testRules {
+		if rule.ExamID == examId && rule.TestType == testType {
+			return rule, nil
+		}
+	}
+
+	return nil, fmt.Errorf("no matching test rule found for examID=%d and testType=%s", examId, testType)
 }
