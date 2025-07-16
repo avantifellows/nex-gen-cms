@@ -18,6 +18,11 @@
         const subjectId = dataset.subject;
         const subtype = dataset.subtype;
         const difficulty = dataset.difficulty;
+
+        const testRuleJson = document.getElementById("test-rule-json").textContent;
+        const testRule = JSON.parse(testRuleJson);
+        // console.log("test rule = ", testRule);
+
         const questionsTableBody = document.querySelector("#questions-table-body");
 
         const subjectRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);

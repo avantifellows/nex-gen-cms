@@ -1,0 +1,22 @@
+{{ define "test_chip_editor" }}
+    {{ $label := .Label }}
+    {{ $id := .Id }}
+    {{ $marks := .Marks }}
+    {{ $readonly := .Readonly }}
+
+    <label class="font-semibold">{{ $label }}</label>
+    <div class="flex items-center border rounded p-2 w-full">
+        <span class="text-gray-500">{{ if eq $label "Award" }}+{{ else }}-{{ end }}</span>
+        <div id="chip-box" class="chip-box ml-2 w-full" onclick="focusEditable(this)">
+            <div id="{{ $id }}"
+                contenteditable="{{ if $readonly }}false{{ else }}true{{ end }}"
+                class="chip-editor"
+                onkeydown="handleEditableChips(event)">
+                {{ range $marks }}
+                    &nbsp;<span class="chip">{{ . }}</span>
+                {{ end }}
+                &nbsp;
+            </div>
+        </div>
+    </div>
+{{ end }}

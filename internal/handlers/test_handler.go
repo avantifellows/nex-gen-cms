@@ -26,6 +26,7 @@ const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
 const addTestTemplate = "add_test.html"
 const testTypeOptionsTemplate = "test_type_options.html"
+const testChipEditorTemplate = "test_chip_editor.html"
 const addTestDestProblemRowWithoutHeadersTemplate = "dest_problem_row_without_headers.html"
 const addTestDestProblemRowWithSubtypeTemplate = "dest_problem_row_with_subtype.html"
 const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.html"
@@ -270,19 +271,18 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		fmt.Println("invalid exam id")
 		return
 	}
+
 	testRule, err := h.getTestRule(testType, examId)
 	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
+		fmt.Println(err.Error())
 	}
-	fmt.Println("test rule = ", testRule)
 	data := dto.HomeData{
 		TestPtr: &models.Test{
 			ExamID:           examId,
 			Subtype:          testType,
 			CurriculumGrades: curriculumGrades,
 		},
-		TestRule: *testRule,
+		TestRule: testRule,
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -295,8 +295,8 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"dict":              utils.Dict,
 		"getDisplaySubtype": utils.DisplaySubtype,
 		"toJson":            utils.ToJson,
-	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
-		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -410,8 +410,8 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"dict":              utils.Dict,
 		"getDisplaySubtype": utils.DisplaySubtype,
 		"toJson":            utils.ToJson,
-	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, addTestDestSubjectRowTemplate,
-		addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
 func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *http.Request) {

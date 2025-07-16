@@ -132,28 +132,20 @@
 
         <h2 class="mt-4 text-lg font-semibold">Marking Scheme</h2>
         <div id="marking-scheme-div" class="mt-2 grid grid-cols-4 gap-4 items-center">
-            <label class="font-semibold">Award</label>
-            <div class="flex items-center border rounded p-2 w-full">
-                <span class="text-gray-500">+</span>
-                <div id="chip-box" class="chip-box ml-2 w-full" onclick="focusEditable(this)">
-                    <div id="chip-editor-pos" contenteditable="true" class="chip-editor"
-                        onkeydown="handleEditableChips(event)">
-                        {{if .Problems}}{{range .TestPtr.TypeParams.PosMarks}}&nbsp;<span
-                            class="chip">{{.}}</span>{{end}}&nbsp;{{end}}
-                    </div>
-                </div>
-            </div>
-            <label class="font-semibold">Deduct</label>
-            <div class="flex items-center border rounded p-2 w-full">
-                <span class="text-gray-500">-</span>
-                <div id="chip-box" class="chip-box ml-2 w-full" onclick="focusEditable(this)">
-                    <div id="chip-editor-neg" contenteditable="true" class="chip-editor"
-                        onkeydown="handleEditableChips(event)">
-                        {{if .Problems}}{{range .TestPtr.TypeParams.NegMarks}}&nbsp;<span
-                            class="chip">{{.}}</span>{{end}}&nbsp;{{end}}
-                    </div>
-                </div>
-            </div>
+            {{ $readonly := (ne .TestRule nil) }}
+            {{ $posMarks := slice }}
+            {{ $negMarks := slice }}
+
+            {{ if .TestRule }}
+                {{ $posMarks = .TestRule.Config.MarkingScheme.PosMarks }}
+                {{ $negMarks = .TestRule.Config.MarkingScheme.NegMarks }}
+            {{ else if .Problems }}
+                {{ $posMarks = .TestPtr.TypeParams.PosMarks }}
+                {{ $negMarks = .TestPtr.TypeParams.NegMarks }}
+            {{ end }}
+
+            {{ template "test_chip_editor" (dict "Label" "Award" "Id" "chip-editor-pos" "Marks" $posMarks "Readonly" $readonly) }}
+            {{ template "test_chip_editor" (dict "Label" "Deduct" "Id" "chip-editor-neg" "Marks" $negMarks "Readonly" $readonly) }}
         </div>
 
         {{ $easy := 0 }}
@@ -224,9 +216,21 @@
             </tbody>
         </table>
         <div class="grid grid-cols-[auto_1fr_auto_1fr] items-center gap-x-4 mt-2">
+
+            {{ $duration := "" }}
+
+            <!-- if config is available, fix duration based on test rule config -->
+            {{ if .TestRule }}
+                {{ $duration = .TestRule.Config.Duration }}
+            <!-- else for edit test case get it from test itself -->
+            {{ else if .Problems }}
+                {{ $duration = .TestPtr.TypeParams.Duration }}
+            {{ end }}
+
             <label class="text-sm font-medium">Duration (mins):</label>
             <input id="duration" type="number" class="w-1/4 border rounded p-2" placeholder="60"
-                value="{{if .Problems}}{{.TestPtr.TypeParams.Duration}}{{end}}" 
+                value="{{ $duration }}" 
+                {{ if .TestRule }}readonly{{ end }}
                 onchange="sessionStorage.setItem('selectedDuration', this.value);">
             <label class="text-sm font-medium">Total Marks:</label>
             <label id="total-marks" class="p-2">{{if .Problems}}{{.TestPtr.TypeParams.Marks}}{{else}}0{{end}}</label>
@@ -234,7 +238,9 @@
         <button type="submit" class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save</button>
     </form>
 </div>
-
+<script type="application/json" id="test-rule-json">
+  {{ .TestRule | toJson }}
+</script>
 <script>
     var problemRowsSelectors = "#questions-table-body tr[id^='problem-']";
     var chipEditorPosId = "#chip-editor-pos";
