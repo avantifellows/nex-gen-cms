@@ -130,9 +130,9 @@
             {{end}}
         </div>
 
+        {{ $hasTestRule := (ne .TestRule nil) }}
         <h2 class="mt-4 text-lg font-semibold">Marking Scheme</h2>
         <div id="marking-scheme-div" class="mt-2 grid grid-cols-4 gap-4 items-center">
-            {{ $readonly := (ne .TestRule nil) }}
             {{ $posMarks := slice }}
             {{ $negMarks := slice }}
 
@@ -144,8 +144,8 @@
                 {{ $negMarks = .TestPtr.TypeParams.NegMarks }}
             {{ end }}
 
-            {{ template "test_chip_editor" (dict "Label" "Award" "Id" "chip-editor-pos" "Marks" $posMarks "Readonly" $readonly) }}
-            {{ template "test_chip_editor" (dict "Label" "Deduct" "Id" "chip-editor-neg" "Marks" $negMarks "Readonly" $readonly) }}
+            {{ template "test_chip_editor" (dict "Label" "Award" "Id" "chip-editor-pos" "Marks" $posMarks "Readonly" $hasTestRule) }}
+            {{ template "test_chip_editor" (dict "Label" "Deduct" "Id" "chip-editor-neg" "Marks" $negMarks "Readonly" $hasTestRule) }}
         </div>
 
         {{ $easy := 0 }}
@@ -201,14 +201,15 @@
                     {{range .TestPtr.TypeParams.Subjects}}
                         {{ $subjectId := .SubjectID }}
                         {{ template "dest_subject_row" (dict "SubjectId" $subjectId "SubjectName" .Name 
-                        "PosMarks" .PosMarks "NegMarks" .NegMarks) }}
+                        "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule) }}
                         {{range .Sections}}
                             {{template "dest_subtype_row" (dict "SubjectId" $subjectId "Subtype" .Name 
-                            "DisplaySubtype" (getDisplaySubtype .Name) "PosMarks" .PosMarks "NegMarks" .NegMarks)}}
+                            "DisplaySubtype" (getDisplaySubtype .Name) "PosMarks" .PosMarks "NegMarks" .NegMarks
+                            "ReadOnlyMarks" $hasTestRule)}}
                             {{range .Compulsory.Problems}}
                                 {{ $sr = add $sr 1 }}
                                 {{template "dest_problem_row" (dict "Problem" (index $.Problems .ID) "SrNo" $sr
-                                "PosMarks" .PosMarks "NegMarks" .NegMarks)}}
+                                "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule)}}
                             {{end}}
                         {{end}}
                     {{end}}
@@ -453,7 +454,9 @@
 
     function focusEditable(containerDiv) {
         const editor = containerDiv.querySelector('[contenteditable="true"]');
-        editor.focus();
+        if (editor) {
+            editor.focus();
+        }
     }
 
     function updateTotalMarks() {

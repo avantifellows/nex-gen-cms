@@ -27,6 +27,31 @@
 
         const subjectRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
         const subtypeRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+        
+        if (testRule) {
+            const subjects = testRule.config.subjects;
+
+            if (subjects.length === 1) {
+                // Case 1: Only one subject is allowed
+                const allowedIds = subjects[0].subject_ids;
+
+                // Find subjects already added
+                const existingSubjectIds = new Set(
+                    Array.from(questionsTableBody.querySelectorAll("tr[id^='subject-']"))
+                        .map(row => parseInt(row.id.replace("subject-", ""), 10))
+                );
+                if (!allowedIds.includes(subjectId)) {
+                    alert(`Question from selected subject is not allowed for this test.`);
+                    return;
+                } else if (existingSubjectIds.size > 0 && !existingSubjectIds.has(subjectId)) {
+                    alert(`Question from only one subject is allowed for this test.`);
+                    return;
+                }
+
+            } else {
+                // Case 2: Multiple subjects are allowed
+            }
+        }
         const insertAfterId = getInsertAfterId(subjectRows, subtypeRows);
 
         // Hook a one-time global listener that just closes over this specific button's data
@@ -41,7 +66,8 @@
                 "curriculum-id": dataset.curriculum,
                 "subject-exists": subjectRows.length > 0,
                 "subtype-exists": subtypeRows.length > 0,
-                "insert-after-id": insertAfterId
+                "insert-after-id": insertAfterId,
+                "read-only-marks": !!testRule
             }
         });
     }

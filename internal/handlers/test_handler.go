@@ -326,6 +326,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	insertAfterId := request.FormValue("insert-after-id")
 	subjectExists := request.FormValue("subject-exists") == "true"
 	subtypeExists := request.FormValue("subtype-exists") == "true"
+	readOnlyMarks := request.FormValue("read-only-marks") == "true"
 
 	var filename string
 	var data any
@@ -334,7 +335,10 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	case !subjectExists && !subtypeExists:
 		// Need subject + subtype header
 		filename = addTestDestProblemRowWithHeadersTemplate
-		data = problemPtr
+		data = map[string]any{
+			"Problem":       problemPtr,
+			"ReadOnlyMarks": readOnlyMarks,
+		}
 
 	case subjectExists && !subtypeExists:
 		// Only subtype header needed
@@ -342,6 +346,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		data = map[string]any{
 			"Problem":       problemPtr,
 			"InsertAfterId": insertAfterId,
+			"ReadOnlyMarks": readOnlyMarks,
 		}
 
 	case subtypeExists:
@@ -350,6 +355,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		data = map[string]any{
 			"Problem":       problemPtr,
 			"InsertAfterId": insertAfterId,
+			"ReadOnlyMarks": readOnlyMarks,
 		}
 	}
 

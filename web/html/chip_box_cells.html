@@ -1,14 +1,16 @@
 {{ define "chip_box_cells" }}
 <td class="p-2 text-center w-[5rem]">
     <div id="chip-box" class="chip-box" onclick="focusEditable(this)">
-        <div id="chip-editor-pos" contenteditable="true" class="chip-editor" onkeydown="handleEditableChips(event)">
+        <div id="chip-editor-pos" contenteditable="{{if .ReadOnlyMarks}}false{{else}}true{{end}}" 
+            class="chip-editor" onkeydown="handleEditableChips(event)">
             {{range .PosMarks}}&nbsp;<span class="chip">{{.}}</span>{{end}}&nbsp;
         </div>
     </div>
 </td>
 <td class="p-2 text-center w-[5rem]">
     <div id="chip-box" class="chip-box" onclick="focusEditable(this)">
-        <div id="chip-editor-neg" contenteditable="true" class="chip-editor" onkeydown="handleEditableChips(event)">
+        <div id="chip-editor-neg" contenteditable="{{if .ReadOnlyMarks}}false{{else}}true{{end}}" 
+            class="chip-editor" onkeydown="handleEditableChips(event)">
             {{range .NegMarks}}&nbsp;<span class="chip">{{.}}</span>{{end}}&nbsp;
         </div>
     </div>
