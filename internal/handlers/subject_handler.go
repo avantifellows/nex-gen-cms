@@ -38,3 +38,19 @@ func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, reques
 func getSubjectName(s models.Subject, lang string) string {
 	return s.GetNameByLang(lang)
 }
+
+func getParentSubjectName(s models.Subject, lang string) string {
+	if s.ParentID != 0 {
+		return s.GetParentNameByLang(lang)
+	} else {
+		return s.GetNameByLang(lang)
+	}
+}
+
+func getParentSubjectId(s models.Subject) int8 {
+	if s.ParentID != 0 {
+		return s.ParentID
+	} else {
+		return s.ID
+	}
+}

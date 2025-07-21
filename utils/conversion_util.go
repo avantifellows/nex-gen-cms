@@ -99,6 +99,8 @@ func DisplaySubtype(subtype string) string {
 		return "MCQ Single Answer"
 	case "numerical_answer":
 		return "Numerical Answer"
+	case "integer_type":
+		return "Integer Type"
 	default:
 		return "Unknown"
 	}

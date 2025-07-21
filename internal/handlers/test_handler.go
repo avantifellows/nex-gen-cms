@@ -233,7 +233,28 @@ func (h *TestsHandler) getTestProblems(responseWriter http.ResponseWriter, reque
 		return p.Status != constants.ResourceStatusArchived
 	}).([]*models.Problem)
 
+	h.fillProblemSubjects(responseWriter, problems)
+
 	return problems
+}
+
+func (h *TestsHandler) fillProblemSubjects(responseWriter http.ResponseWriter, problems *[]*models.Problem) {
+	subjectPtrs, err := h.subjectsService.GetList(handlerutils.SubjectsEndPoint, handlerutils.SubjectsKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
+	} else {
+		// Create a map to quickly lookup subjects by their ID
+		subjectIdToSubMap := make(map[int8]models.Subject)
+
+		// fill the map with the address of each subject
+		for _, subjectPtr := range *subjectPtrs {
+			subjectIdToSubMap[subjectPtr.ID] = *subjectPtr
+		}
+		// loop through subjects of test and update subject name
+		for _, problem := range *problems {
+			problem.Subject = subjectIdToSubMap[problem.SubjectID]
+		}
+	}
 }
 
 func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -295,6 +316,7 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"dict":              utils.Dict,
 		"getDisplaySubtype": utils.DisplaySubtype,
 		"toJson":            utils.ToJson,
+		"getParentId":       getParentSubjectId,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
@@ -360,7 +382,8 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"getName":           getSubjectName,
+		"getParentName":     getParentSubjectName,
+		"getParentId":       getParentSubjectId,
 		"joinInt16":         utils.JoinInt16,
 		"dict":              utils.Dict,
 		"getDisplaySubtype": utils.DisplaySubtype,
@@ -416,6 +439,7 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"dict":              utils.Dict,
 		"getDisplaySubtype": utils.DisplaySubtype,
 		"toJson":            utils.ToJson,
+		"getParentId":       getParentSubjectId,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
