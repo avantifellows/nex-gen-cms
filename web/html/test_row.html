@@ -11,12 +11,21 @@
     <td class="text-center">{{.TypeParams.Marks}}</td>
     <td class="text-center">{{.TypeParams.Duration}}</td>
     <td></td>
-    <td class="space-x-4">
+    <td class="text-center space-x-4">
         <!-- target is kept body instead of #content, because using #content as target will not work when
          directly edit url is entered in browser -->
         <button class="action-button" hx-get="/tests/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
             hx-target="body" hx-push-url="true">
             <i class="fa-solid fa-pen"></i>
+        </button>
+        <a href="/download-question-pdf?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}" 
+            target="_blank" class="action-button" title="Download Questions PDF">
+                <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
+        </a>
+        <button class="action-button"
+            hx-get="/download-answer-pdf?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
+            hx-target="body" title="Download Answers PDF">
+            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
         </button>
         <button class="action-button" hx-delete="/archive-test?id={{.ID}}"
             hx-confirm="Are you sure you want to delete test {{(index .Name 0).Resource}}?" hx-target="closest tr">

@@ -658,6 +658,10 @@
             // set total marks on last section
             currentSection.marks = currentSectionMarks;
         }
+
+        const testRuleJson = document.getElementById("test-rule-json").textContent;
+        const testRule = JSON.parse(testRuleJson);
+
         return {
             code: code,
             name: [
@@ -668,6 +672,7 @@
             ],
             type: "test",
             subtype: subtype,
+            exam_ids: testRule ? [testRule.exam_id] : null,
             skill_ids: Array.from(skillIdSet),
             type_params: {
                 duration: document.getElementById('duration').value,

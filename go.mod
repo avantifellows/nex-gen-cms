@@ -7,6 +7,7 @@ require github.com/joho/godotenv v1.5.1
 require github.com/thoas/go-funk v0.9.3
 
 require (
+	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/stretchr/testify v1.4.0
 )

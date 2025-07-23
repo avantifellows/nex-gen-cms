@@ -151,7 +151,7 @@
                 
                 // Hide subject dropdown when "Tests" tab is active
                 const subjectDropdown = document.getElementById("subject-dropdown");
-                if (activeTabID === "tests-tab" && !currentPath.endsWith("/add-test")) {
+                if (activeTabID === "tests-tab" && !(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test"))) {
                     subjectDropdown.style.display = "none";
                 } else {
                     subjectDropdown.style.display = "inline-block";

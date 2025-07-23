@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -15,6 +16,7 @@ import (
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/utils"
+	"github.com/jung-kurt/gofpdf"
 	"github.com/thoas/go-funk"
 )
 
@@ -246,11 +248,11 @@ func (h *TestsHandler) fillProblemSubjects(responseWriter http.ResponseWriter, p
 		// Create a map to quickly lookup subjects by their ID
 		subjectIdToSubMap := make(map[int8]models.Subject)
 
-		// fill the map with the address of each subject
+		// fill the map with each subject
 		for _, subjectPtr := range *subjectPtrs {
 			subjectIdToSubMap[subjectPtr.ID] = *subjectPtr
 		}
-		// loop through subjects of test and update subject name
+		// loop through problems and update subject inside it
 		for _, problem := range *problems {
 			problem.Subject = subjectIdToSubMap[problem.SubjectID]
 		}
@@ -299,7 +301,7 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 	}
 	data := dto.HomeData{
 		TestPtr: &models.Test{
-			ExamID:           examId,
+			ExamIDs:          []int8{examId},
 			Subtype:          testType,
 			CurriculumGrades: curriculumGrades,
 		},
@@ -424,9 +426,20 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		problemsMap[p.ID] = p
 	}
 
+	var testRule *models.TestRule // nil by default
+	if len(selectedTestPtr.ExamIDs) > 0 {
+		tr, err := h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
+		if err != nil {
+			fmt.Println(err.Error())
+		} else {
+			testRule = tr
+		}
+	}
+
 	data := dto.HomeData{
 		TestPtr:  selectedTestPtr,
 		Problems: problemsMap,
+		TestRule: testRule,
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -473,7 +486,6 @@ func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *
 	testId := utils.StringToInt(testIdStr)
 	body := map[string]string{
 		"cms_status": constants.ResourceStatusArchived,
-		// "lang_code":  "en",
 	}
 
 	err := h.testsService.ArchiveObject(testIdStr, resourcesEndPoint, body, testsKey,
@@ -514,4 +526,32 @@ func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRu
 	}
 
 	return nil, fmt.Errorf("no matching test rule found for examID=%d and testType=%s", examId, testType)
+}
+
+func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, request *http.Request) {
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.SetFont("Arial", "", 12)
+	pdf.AddPage()
+
+	// selectedTestPtr, code, err := h.getTest(responseWriter, request)
+	// if err != nil {
+	// 	http.Error(responseWriter, err.Error(), code)
+	// 	return
+	// }
+	problems := h.getTestProblems(responseWriter, request)
+
+	for i, p := range *problems {
+		pdf.MultiCell(0, 10, fmt.Sprintf("%d. %s", i+1, p.MetaData.Question), "", "", false)
+	}
+
+	var buf bytes.Buffer
+	err := pdf.Output(&buf)
+	if err != nil {
+		http.Error(responseWriter, "Failed to generate PDF", http.StatusInternalServerError)
+		return
+	}
+
+	responseWriter.Header().Set("Content-Type", "application/pdf")
+	responseWriter.Header().Set("Content-Disposition", "attachment; filename=question-paper.pdf")
+	responseWriter.Write(buf.Bytes())
 }

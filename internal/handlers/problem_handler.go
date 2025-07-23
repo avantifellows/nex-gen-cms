@@ -260,7 +260,7 @@ func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, req
 	problemId := utils.StringToInt(problemIdStr)
 	body := map[string]string{
 		"cms_status": constants.ResourceStatusArchived,
-		// "lang_code":  "en",
+		"lang_code":  "en",
 	}
 
 	err := h.problemsService.ArchiveObject(problemIdStr, resourcesEndPoint, body, problemsKey,
