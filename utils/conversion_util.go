@@ -118,3 +118,7 @@ func ToJson(v any) template.JS {
 func IntToString[T IntType](v T) string {
 	return strconv.FormatInt(int64(v), 10)
 }
+
+func FloatPtr(v float64) *float64 {
+	return &v
+}

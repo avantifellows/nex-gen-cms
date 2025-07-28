@@ -2,12 +2,17 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
+	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
@@ -16,7 +21,8 @@ import (
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/utils"
-	"github.com/jung-kurt/gofpdf"
+	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/chromedp"
 	"github.com/thoas/go-funk"
 )
 
@@ -39,6 +45,7 @@ const chipBoxCellTemplate = "chip_box_cells.html"
 const addTestModalTemplate = "add_test_modal.html"
 const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
 const addCurriculumGradeSelectsTemplate = "add_curriculum_grade_selects.html"
+const questionPaperTemplate = "question_paper.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
@@ -529,29 +536,117 @@ func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRu
 }
 
 func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, request *http.Request) {
-	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.SetFont("Arial", "", 12)
-	pdf.AddPage()
-
-	// selectedTestPtr, code, err := h.getTest(responseWriter, request)
-	// if err != nil {
-	// 	http.Error(responseWriter, err.Error(), code)
-	// 	return
-	// }
+	selectedTestPtr, code, err := h.getTest(responseWriter, request)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
 	problems := h.getTestProblems(responseWriter, request)
 
-	for i, p := range *problems {
-		pdf.MultiCell(0, 10, fmt.Sprintf("%d. %s", i+1, p.MetaData.Question), "", "", false)
-	}
-
-	var buf bytes.Buffer
-	err := pdf.Output(&buf)
+	// Load template
+	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), questionPaperTemplate)
+	tmpl, err := template.New(questionPaperTemplate).Funcs(template.FuncMap{
+		"getName": getTestName,
+		"add":     utils.Add,
+	}).ParseFiles(tmplPath)
 	if err != nil {
-		http.Error(responseWriter, "Failed to generate PDF", http.StatusInternalServerError)
+		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	data := dto.PaperData{
+		TestPtr:  selectedTestPtr,
+		Problems: problems,
+	}
+
+	// Render HTML to buffer
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		http.Error(responseWriter, "Template execution error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	htmlContent := buf.String()
+
+	// Create Chrome context
+	ctx, cancel := chromedp.NewContext(context.Background())
+	defer cancel()
+
+	// Set a global timeout (for safety)
+	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	var pdfData []byte
+
+	tasks := chromedp.Tasks{
+		// Set page content
+		chromedp.Navigate("data:text/html," + url.PathEscape(htmlContent)),
+
+		// Inject HTML into page
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			script := `document.documentElement.innerHTML = ` + strconv.Quote(htmlContent)
+			return chromedp.Evaluate(script, nil).Do(ctx)
+		}),
+
+		// Wait for MathJax to render fully
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			js := `
+            new Promise(resolve => {
+                function check() {
+                    if (window.MathJax && MathJax.typesetPromise) {
+                        MathJax.typesetPromise().then(() => resolve(true));
+                    } else {
+                        setTimeout(check, 200);
+                    }
+                }
+                check();
+            });
+            `
+			return chromedp.Evaluate(js, nil).Do(ctx)
+		}),
+
+		// Generate PDF using CDP low-level API
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var err error
+			pdfData, _, err = page.PrintToPDF().
+				WithPrintBackground(true).
+				WithPaperWidth(8.27).   // A4 width in inches
+				WithPaperHeight(11.69). // A4 height in inches
+				WithMarginTop(0.5).
+				WithMarginBottom(1.0).
+				WithMarginLeft(0.3).
+				WithMarginRight(0.3).
+				WithDisplayHeaderFooter(true).
+				WithHeaderTemplate(`
+				<div style="width:100%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
+					<div style="margin-bottom:4px;"> </div>
+					<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
+				</div>
+				`).
+				WithFooterTemplate(`
+				<div style="width:100%; font-size:12px; font-family:Arial; position:relative; height:30px; padding:0 40px;">
+					<div style="position:absolute; top:0; left:40px; right:40px;">
+						<hr style="border:0; border-top:1px solid #000; margin:0;">
+					</div>
+					<div style="display:flex; justify-content:space-between; align-items:flex-end; height:100%; color:#444;">
+						<span></span>
+						<span>Avanti Learning Centres Pvt Ltd. All rights reserved.</span>
+						<span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+					</div>
+				</div>
+				`).
+				Do(ctx)
+			return err
+		}),
+	}
+
+	if err := chromedp.Run(ctx, tasks); err != nil {
+		http.Error(responseWriter, "PDF generation failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Send as response
 	responseWriter.Header().Set("Content-Type", "application/pdf")
-	responseWriter.Header().Set("Content-Disposition", "attachment; filename=question-paper.pdf")
-	responseWriter.Write(buf.Bytes())
+	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - Question Paper.pdf"`,
+		selectedTestPtr.GetNameByLang("en")))
+	_, _ = responseWriter.Write(pdfData)
 }
