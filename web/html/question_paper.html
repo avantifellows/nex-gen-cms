@@ -3,33 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <title>{{ getName .TestPtr "en" }}</title>
-<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-<style>
-    body { font-family: Arial, sans-serif; margin: 20px; font-size: 14px; }
-    .header { display: flex; justify-content: space-between; margin-bottom: 10px; }
-    .header h2 { margin: 5px 0; }
-    .meta { display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 10px; }
-    .student-info { display: flex; justify-content: space-between; margin-bottom: 15px; }
-    .instructions { border: 1px solid #000; padding: 10px; margin-bottom: 20px; }
-    .instructions h3 { margin-top: 0; }
-    .instructions ol { margin: 0; padding-left: 20px; }
-    .question { display: flex; margin-bottom: 10px; }
-    .q-number { width: 25px; }
-    .q-text { flex: 1; padding-left: 20px; white-space: pre-wrap; }
-    p { margin-bottom: 10px; }
-</style>
 </head>
-<body>
+<body class="font-sans text-[14px] m-5">
 
-<div class="header">
-    <h2>{{ getName .TestPtr "en" }}</h2>
-    <h2>Test Code: {{ .TestPtr.Code }}</h2>
+<div class="flex justify-between mb-3 w-full">
+    <h2 class="text-lg font-bold">{{ getName .TestPtr "en" }}</h2>
+    <h2 class="text-lg font-bold">Test Code: {{ .TestPtr.Code }}</h2>
 </div>
 
-<div class="instructions">
-    <h3>Instructions:</h3>
-    <ol>
+<div class="border border-black p-4 mb-5">
+    <h3 class="text-base font-semibold mb-2">Instructions:</h3>
+    <ol class="list-decimal pl-6">
         <li>Read all the questions carefully.</li>
         <li>Attempt all questions.</li>
         <li>Use blue or black ink only.</li>
@@ -38,21 +23,36 @@
     </ol>
 </div>
 
-<div class="meta">
+<div class="flex justify-between font-bold mb-3">
     <div>Maximum Time: {{ .TestPtr.TypeParams.Duration }} Minutes</div>
     <div>Total Marks: {{ .TestPtr.TypeParams.Marks }}</div>
 </div>
 
-<div class="student-info">
+<div class="flex justify-between mb-6">
     <div>Name: _____________________</div>
     <div>Roll Number: _____________________</div>
 </div>
 
-<h2>Questions:</h2>
+<h2 class="text-lg font-bold mb-4">Questions:</h2>
 {{range $i, $p := .Problems}}
-<div class="question">
-    <div class="q-number">Q{{ add $i 1 }}.</div>
-    <div class="q-text">{{$p.MetaData.Question}}</div>
+<div class="mb-6">
+    <!-- Question Row -->
+    <div class="flex items-start mb-2">
+        <div class="w-8 font-semibold">Q{{ add $i 1 }}.</div>
+        <div class="flex-1 pl-5 whitespace-pre-wrap">{{$p.MetaData.Question}}</div>
+    </div>
+
+    <!-- Show Options only if MCQ -->
+    {{if or (eq $p.Subtype "mcq_single_answer") (eq $p.Subtype "mcq_multiple_answer")}}
+    <div class="pl-12">
+        {{range $index, $option := $p.MetaData.Options}}
+        <div class="flex items-start mb-1">
+            <div class="w-8 font-semibold">{{ index labels $index }}</div>
+            <div class="flex-1 pl-2 whitespace-pre-wrap">{{$option}}</div>
+        </div>
+        {{end}}
+    </div>
+    {{end}}
 </div>
 {{end}}
 

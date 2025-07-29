@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -548,6 +549,7 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 	tmpl, err := template.New(questionPaperTemplate).Funcs(template.FuncMap{
 		"getName": getTestName,
 		"add":     utils.Add,
+		"labels":  optionLabels,
 	}).ParseFiles(tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
@@ -566,6 +568,14 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 		return
 	}
 	htmlContent := buf.String()
+
+	// for tailwind css lib. Including it from here, because chromedp is unable to resolve it using relative path in html <link>
+	cssBytes, err := os.ReadFile("web/static/css/output.css")
+	if err != nil {
+		http.Error(responseWriter, "CSS read error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style></head>", 1)
 
 	// Create Chrome context
 	ctx, cancel := chromedp.NewContext(context.Background())
@@ -649,4 +659,8 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - Question Paper.pdf"`,
 		selectedTestPtr.GetNameByLang("en")))
 	_, _ = responseWriter.Write(pdfData)
+}
+
+func optionLabels() []string {
+	return []string{"A)", "B)", "C)", "D)", "E)", "F)", "G)", "H)", "I)", "J)"}
 }
