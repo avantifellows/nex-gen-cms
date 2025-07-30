@@ -544,12 +544,19 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 	}
 	problems := h.getTestProblems(responseWriter, request)
 
+	problemsMap := make(map[int]*models.Problem)
+	for _, p := range *problems {
+		problemsMap[p.ID] = p
+	}
+
 	// Load template
 	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), questionPaperTemplate)
 	tmpl, err := template.New(questionPaperTemplate).Funcs(template.FuncMap{
-		"getName": getTestName,
-		"add":     utils.Add,
-		"labels":  optionLabels,
+		"getName":               getTestName,
+		"add":                   utils.Add,
+		"labels":                optionLabels,
+		"capitalize":            utils.Capitalize,
+		"problemDisplaySubtype": utils.DisplaySubtype,
 	}).ParseFiles(tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
@@ -557,8 +564,8 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 	}
 
 	data := dto.PaperData{
-		TestPtr:  selectedTestPtr,
-		Problems: problems,
+		TestPtr:     selectedTestPtr,
+		ProblemsMap: problemsMap,
 	}
 
 	// Render HTML to buffer
@@ -576,6 +583,12 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 		return
 	}
 	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style></head>", 1)
+
+	headerHTML := fmt.Sprintf(`
+		<div style="width:100%%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
+			<div style="margin-bottom:4px;">%s</div>
+			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
+		</div>`, selectedTestPtr.DisplaySubtype())
 
 	// Create Chrome context
 	ctx, cancel := chromedp.NewContext(context.Background())
@@ -626,12 +639,7 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 				WithMarginLeft(0.3).
 				WithMarginRight(0.3).
 				WithDisplayHeaderFooter(true).
-				WithHeaderTemplate(`
-				<div style="width:100%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
-					<div style="margin-bottom:4px;"> </div>
-					<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
-				</div>
-				`).
+				WithHeaderTemplate(headerHTML).
 				WithFooterTemplate(`
 				<div style="width:100%; font-size:12px; font-family:Arial; position:relative; height:30px; padding:0 40px;">
 					<div style="position:absolute; top:0; left:40px; right:40px;">
@@ -640,7 +648,7 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 					<div style="display:flex; justify-content:space-between; align-items:flex-end; height:100%; color:#444;">
 						<span></span>
 						<span>Avanti Learning Centres Pvt Ltd. All rights reserved.</span>
-						<span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+						<span>Page - <span class="pageNumber"></span> / <span class="totalPages"></span></span>
 					</div>
 				</div>
 				`).

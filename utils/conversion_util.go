@@ -122,3 +122,10 @@ func IntToString[T IntType](v T) string {
 func FloatPtr(v float64) *float64 {
 	return &v
 }
+
+func Capitalize(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(string(s[0])) + s[1:]
+}

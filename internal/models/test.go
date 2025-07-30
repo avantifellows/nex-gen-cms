@@ -116,3 +116,26 @@ func (test *Test) SetCurriculumGrade(curriculumID int16, gradeID int8) {
 	// Append if not found
 	test.CurriculumGrades = append(test.CurriculumGrades, newPair)
 }
+
+func (t *Test) DisplaySubtype() string {
+	switch t.Subtype {
+	case "chapter_test":
+		return "Chapter Test"
+	case "part_test":
+		return "Part Test"
+	case "major_test":
+		return "Major Test"
+	case "full_syllabus_test":
+		return "Full Syllabus Test"
+	case "evaluation_test":
+		return "Evaluation Test"
+	case "mock_test":
+		return "Mock Test"
+	case "nta_test":
+		return "NTA Test"
+	case "homework_assignment":
+		return "Homework Assignment"
+	default:
+		return "Unknown"
+	}
+}
