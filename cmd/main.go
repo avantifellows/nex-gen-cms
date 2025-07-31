@@ -91,8 +91,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/add-curriculum-grade-selects", testsHandler.AddCurriculumGradeDropdowns)
 	muxHandler.HandleFunc("/update-test", testsHandler.UpdateTest)
 	muxHandler.HandleFunc("/archive-test", testsHandler.ArchiveTest)
-	muxHandler.HandleFunc("/download-question-pdf", testsHandler.DownloadQuestionPdf)
-	// muxHandler.HandleFunc("/download-answer-pdf", testsHandler.DownloadAnswerPdf)
+	muxHandler.HandleFunc("/download-pdf", testsHandler.DownloadPdf)
 
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problem", problemsHandler.GetProblem)

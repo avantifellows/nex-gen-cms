@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>{{ getName .TestPtr "en" }}</title>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body class="font-sans text-[14px] m-5 mt-0">
+
+    <div class="flex justify-between mb-3 w-full">
+        <h2 class="text-lg font-bold">{{ getName .TestPtr "en" }}</h2>
+        <h2 class="text-lg font-bold">Test Code: {{ .TestPtr.Code }}</h2>
+    </div>
+
+        <!-- Table for Answer Sheet -->
+    <table class="table-auto w-full border border-gray-300 text-center text-sm">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="answer-pdf-table-row">Q No.</th>
+                <th class="answer-pdf-table-row">Answer</th>
+                <th class="answer-pdf-table-row">Difficulty Level</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{ $Counter := 0 }}
+            {{ range $subject := .TestPtr.TypeParams.Subjects }}
+                {{ range $section := $subject.Sections }}
+                    <!-- Compulsory Problems -->
+                    {{ range $prob := $section.Compulsory.Problems }}
+                        {{ $p := index $.ProblemsMap $prob.ID }}
+                        {{ $Counter = add $Counter 1 }}
+                        <tr>
+                            <td class="answer-pdf-table-row">{{ $Counter }}.</td>
+                            <td class="answer-pdf-table-row">
+                                {{ if eq $p.Subtype "mcq_single_answer" }}
+                                    {{ range $p.MetaData.Answers }}
+                                        {{ printf "%c" (add 64 (stringToInt .)) }}
+                                    {{ end }}
+                                {{ else }}
+                                    {{ range $p.MetaData.Answers }}
+                                        {{ . }}
+                                    {{ end }}
+                                {{ end }}
+                            </td>
+                            <td class="answer-pdf-table-row">{{ capitalize $p.DifficultyLevel }}</td>
+                        </tr>
+                    {{ end }}
+                {{ end }}
+            {{ end }}
+        </tbody>
+    </table>
+
+</body>
+</html>

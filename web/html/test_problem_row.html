@@ -1,11 +1,11 @@
 {{ range $index, $item := . }}
 <tr class="border-b hover:bg-gray-100 text-center">
     <!-- add is a custom function registered in test_handler.go -->
-    <td class="py-2 px-4">{{ add $index 1 }}</td>
-    <td class="px-4 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}"
+    <td class="w-16 py-2 px-4">{{ add $index 1 }}</td>
+    <td class="w-32 px-4 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}"
             hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body"
             hx-push-url="true">{{.Code}}</a>
     </td>
-    <td class="px-4 text-left">{{.MetaData.Question}}</td>
+    <td class="w-auto px-4 text-left">{{.MetaData.Question}}</td>
 </tr>
 {{ end }}

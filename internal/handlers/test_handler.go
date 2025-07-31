@@ -47,6 +47,7 @@ const addTestModalTemplate = "add_test_modal.html"
 const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
 const addCurriculumGradeSelectsTemplate = "add_curriculum_grade_selects.html"
 const questionPaperTemplate = "question_paper.html"
+const answerSolutionSheetTemplate = "answer_sheet.html"
 
 const resourcesEndPoint = "/resource"
 const resourcesCurriculumEndPoint = "/resources/curriculum"
@@ -221,6 +222,17 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 	if problems == nil {
 		return
 	}
+
+	urlVals := request.URL.Query()
+	subjectId, err := utils.StringToIntType[int8](urlVals.Get("subject_id"))
+	if err != nil {
+		fmt.Println("invalid subject id")
+		return
+	}
+
+	*problems = funk.Filter(*problems, func(p *models.Problem) bool {
+		return p.SubjectID == subjectId
+	}).([]*models.Problem)
 
 	// Passing custom function add to use in template for serial number by adding 1 to index
 	local_repo.ExecuteTemplate(testProblemRowTemplate, responseWriter, problems, template.FuncMap{
@@ -536,7 +548,7 @@ func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRu
 	return nil, fmt.Errorf("no matching test rule found for examID=%d and testType=%s", examId, testType)
 }
 
-func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *http.Request) {
 	selectedTestPtr, code, err := h.getTest(responseWriter, request)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
@@ -549,14 +561,28 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 		problemsMap[p.ID] = p
 	}
 
+	pdfType := request.URL.Query().Get("type") // "questions" or "answers"
+
+	var pdfTemplate, headerTxt, pdfSuffix string
+	if pdfType == "questions" {
+		pdfTemplate = questionPaperTemplate
+		headerTxt = selectedTestPtr.DisplaySubtype()
+		pdfSuffix = "Question Paper"
+	} else if pdfType == "answers" {
+		pdfTemplate = answerSolutionSheetTemplate
+		headerTxt = selectedTestPtr.DisplaySubtype() + " - Answer Sheet"
+		pdfSuffix = "Answer Sheet"
+	}
+
 	// Load template
-	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), questionPaperTemplate)
-	tmpl, err := template.New(questionPaperTemplate).Funcs(template.FuncMap{
+	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfTemplate)
+	tmpl, err := template.New(pdfTemplate).Funcs(template.FuncMap{
 		"getName":               getTestName,
 		"add":                   utils.Add,
 		"labels":                optionLabels,
 		"capitalize":            utils.Capitalize,
 		"problemDisplaySubtype": utils.DisplaySubtype,
+		"stringToInt":           utils.StringToInt,
 	}).ParseFiles(tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
@@ -588,7 +614,7 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 		<div style="width:100%%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
 			<div style="margin-bottom:4px;">%s</div>
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
-		</div>`, selectedTestPtr.DisplaySubtype())
+		</div>`, headerTxt)
 
 	// Create Chrome context
 	ctx, cancel := chromedp.NewContext(context.Background())
@@ -664,8 +690,8 @@ func (h *TestsHandler) DownloadQuestionPdf(responseWriter http.ResponseWriter, r
 
 	// Send as response
 	responseWriter.Header().Set("Content-Type", "application/pdf")
-	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - Question Paper.pdf"`,
-		selectedTestPtr.GetNameByLang("en")))
+	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - %s.pdf"`,
+		selectedTestPtr.GetNameByLang("en"), pdfSuffix))
 	_, _ = responseWriter.Write(pdfData)
 }
 

@@ -114,4 +114,8 @@
     .mcq-tab.active {
         @apply border-t border-l border-r border-b-0 border-gray-300 bg-gray-100;
     }
+
+    .answer-pdf-table-row {
+        @apply border border-gray-300 px-4 py-2;
+    }
 }
