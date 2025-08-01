@@ -583,6 +583,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		"capitalize":            utils.Capitalize,
 		"problemDisplaySubtype": utils.DisplaySubtype,
 		"stringToInt":           utils.StringToInt,
+		"trim":                  strings.TrimSpace,
 	}).ParseFiles(tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
@@ -673,7 +674,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 					</div>
 					<div style="display:flex; justify-content:space-between; align-items:flex-end; height:100%; color:#444;">
 						<span></span>
-						<span>Avanti Learning Centres Pvt Ltd. All rights reserved.</span>
+						<span>Avanti Fellows. All rights reserved.</span>
 						<span>Page - <span class="pageNumber"></span> / <span class="totalPages"></span></span>
 					</div>
 				</div>

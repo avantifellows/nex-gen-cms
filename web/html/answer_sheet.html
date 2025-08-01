@@ -12,7 +12,7 @@
         <h2 class="text-lg font-bold">Test Code: {{ .TestPtr.Code }}</h2>
     </div>
 
-        <!-- Table for Answer Sheet -->
+    <!-- Table for Answer Sheet -->
     <table class="table-auto w-full border border-gray-300 text-center text-sm">
         <thead class="bg-gray-100">
             <tr>
@@ -50,5 +50,25 @@
         </tbody>
     </table>
 
+    <!-- Solutions Section -->
+    <div class="mt-6">
+        <h2 class="text-lg font-bold mb-2">Solutions:</h2>
+        {{ $Counter := 0 }}
+        {{ range $subject := .TestPtr.TypeParams.Subjects }}
+            {{ range $section := $subject.Sections }}
+                <!-- Compulsory Problems -->
+                {{ range $prob := $section.Compulsory.Problems }}
+                    {{ $p := index $.ProblemsMap $prob.ID }}
+                    {{ $Counter = add $Counter 1 }}
+                    {{ if and (gt (len $p.MetaData.Solutions) 0) (ne (trim (printf "%s" (index $p.MetaData.Solutions 0).Value)) "") }}
+                        <div class="mb-4 flex">
+                            <span class="font-semibold">Q{{ $Counter }}.</span>
+                            <span class="ml-5 block flex-1">{{ (index $p.MetaData.Solutions 0).Value }}</span>
+                        </div>
+                    {{ end }}
+                {{ end }}
+            {{ end }}
+        {{ end }}
+    </div>
 </body>
 </html>

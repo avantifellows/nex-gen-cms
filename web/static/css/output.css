@@ -1022,6 +1022,10 @@ video {
   margin-left: 1rem;
 }
 
+.ml-5 {
+  margin-left: 1.25rem;
+}
+
 .ml-auto {
   margin-left: auto;
 }
