@@ -15,6 +15,8 @@ test.describe('Add Chapter', () => {
         await mockChaptersApi(page);
 
         await page.goto(HOME_PAGE_URL);
+        await page.click('#chapters-tab');
+        
         const addChapterLink = page.locator('#addChapterLink');
         await addChapterLink.click();
     });
