@@ -12,28 +12,12 @@ test.describe('Homepage Load', () => {
         await page.goto(HOME_PAGE_URL);
     });
 
-    test('should display all 4 tabs with the first tab selected by default', async ({ page }) => {
-        const chaptersTab = page.locator('#chapters-tab');
-
+    test('should display all 4 tabs', async ({ page }) => {
         // Check if all four tabs are visible
-        await expect(chaptersTab).toBeVisible();
+        await expect(page.locator('#chapters-tab')).toBeVisible();
         await expect(page.locator('#modules-tab')).toBeVisible();
         await expect(page.locator('#books-tab')).toBeVisible();
         await expect(page.locator('#tests-tab')).toBeVisible();
-
-        // Check that the first tab is selected by default
-        await expect(chaptersTab).toHaveClass(/active/);
-    });
-
-    test('Page load makes GET api call to /chapters', async ({ page }) => {
-        // Wait for the initial request to complete (on page load)
-        const requestPromise = page.waitForRequest(request =>
-            request.url().includes('/chapters') && request.method() === 'GET');
-
-        const request = await requestPromise;
-
-        // Verify that the request was made
-        expect(request.url()).toContain('/chapters');
     });
 
     for (const { name, urlPattern, content } of dropdowns) {
@@ -69,9 +53,9 @@ test.describe('Homepage Load', () => {
                         window.htmx.trigger = (...args) => {
                             setTimeout(() => {
                                 originalTrigger.apply(window.htmx, args);
-                            }, 100); // Delay of 100ms
+                            }, 1000); // Delay of 1000ms
                         };
-                        console.log("HTMX trigger delayed by 100ms.");
+                        console.log("HTMX trigger delayed by 1000ms.");
                     } else {
                         // Retry after a short delay if HTMX is not yet loaded
                         setTimeout(pollForHTMX, 30);
@@ -116,16 +100,13 @@ test.describe('Tabs', () => {
         const isChaptersRequest = (request) =>
             request.url().includes('/chapters') && request.method() === 'GET';
 
-        // Start waiting for the initial request (on page load)
-        let reqPromise = page.waitForRequest(isChaptersRequest);
         await page.goto(HOME_PAGE_URL);
-        await reqPromise;
 
         // Start waiting for request before clicking
-        reqPromise = page.waitForRequest(isChaptersRequest);
+        let reqPromise = page.waitForRequest(isChaptersRequest);
         // Click on the "Chapters" tab
         await page.click('#chapters-tab');
-        // Wait for the 2nd request to be made
+        // Wait for the request to be made
         const request = await reqPromise;
 
         // Verify that the request was made
@@ -163,7 +144,7 @@ dropdowns.forEach(function ({ name, key, selectedVal }) {
             await mockDropdownApi(page, urlPattern, content);
         });
 
-        // Set up the network interceptor to capture the request to /api/chapters
+        // Set up the network interceptor to capture the request to /api/chapters after changing the dropdown
         const apiRequestPromise = page.waitForRequest(request => {
             if (request.url().includes('/api/chapters') && request.method() === 'GET') {
                 const url = new URL(request.url());
@@ -176,6 +157,17 @@ dropdowns.forEach(function ({ name, key, selectedVal }) {
         // Navigate to the page with the dropdown
         await page.goto(HOME_PAGE_URL);
 
+        // Click on the "Chapters" tab
+        await page.click('#chapters-tab');
+        /**
+         * wait for api is required here; otherwise even before finishing api call it changes dropdown value, resetting
+         * session storage CHAPTERS_LOADED_KEY to false. But after this first /api/chapters call due to chapters tab click 
+         * finishes resetting flag again to true, hence preventing actual call required on changing dropdown value
+         */
+        await page.waitForResponse(resp =>
+            resp.url().includes('/api/chapters') && resp.status() === 200
+        );
+
         const dropdown = page.locator(`#${name}`);
         // Select a specific option by value
         await dropdown.selectOption({ value: selectedVal });
@@ -186,8 +178,9 @@ dropdowns.forEach(function ({ name, key, selectedVal }) {
         // Check sessionStorage value for corresponding key
         const storedSelectedVal = await page.evaluate((key) => sessionStorage.getItem(key), key);
         expect(storedSelectedVal).toBe(selectedVal);
-
+        
         const apiReq = await apiRequestPromise;
+        
         // Verify the API request was made
         expect(apiReq).toBeTruthy();
     });

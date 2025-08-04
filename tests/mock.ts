@@ -15,7 +15,15 @@ export async function mockTabContentApi(page: Page, urlPattern: RegExp, content:
     await page.route(urlPattern, async route => {
         await route.fulfill({
             status: 200,
-            body: `<p>${content}</p>`,
+            body: `
+                <body>
+                    <div class="m-7" id="nav-tabContent">
+                        <div id="content">
+                            <p>${content}</p>
+                        </div>
+                    </div>
+                </body>
+            `,
             headers: { 'Content-Type': 'text/html' }
         });
     });
