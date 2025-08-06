@@ -564,10 +564,17 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	pdfType := request.URL.Query().Get("type") // "questions" or "answers"
 
 	var pdfTemplate, headerTxt, pdfSuffix string
+	var testRule *models.TestRule
 	if pdfType == "questions" {
 		pdfTemplate = questionPaperTemplate
 		headerTxt = selectedTestPtr.DisplaySubtype()
 		pdfSuffix = "Question Paper"
+
+		testRule, err = h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+
 	} else if pdfType == "answers" {
 		pdfTemplate = answerSolutionSheetTemplate
 		headerTxt = selectedTestPtr.DisplaySubtype() + " - Answer Sheet"
@@ -593,6 +600,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	data := dto.PaperData{
 		TestPtr:     selectedTestPtr,
 		ProblemsMap: problemsMap,
+		TestRule:    testRule,
 	}
 
 	// Render HTML to buffer

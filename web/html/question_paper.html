@@ -12,16 +12,12 @@
     <h2 class="text-lg font-bold">Test Code: {{ .TestPtr.Code }}</h2>
 </div>
 
+{{ if .TestRule.Config.Instructions }}
 <div class="border border-black p-4 mb-5">
     <h3 class="text-base font-semibold mb-2">Instructions:</h3>
-    <ol class="list-decimal pl-6">
-        <li>Read all the questions carefully.</li>
-        <li>Attempt all questions.</li>
-        <li>Use blue or black ink only.</li>
-        <li>No electronic devices are allowed.</li>
-        <li>Maintain cleanliness in the answer sheet.</li>
-    </ol>
+    {{ .TestRule.Config.Instructions }}
 </div>
+{{ end }}
 
 <div class="flex justify-between font-bold mb-3">
     <div>Maximum Time: {{ .TestPtr.TypeParams.Duration }} Minutes</div>

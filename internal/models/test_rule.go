@@ -1,5 +1,7 @@
 package models
 
+import "html/template"
+
 type TestRule struct {
 	ExamID   int8   `json:"exam_id"`
 	TestType string `json:"test_type"`
@@ -10,6 +12,7 @@ type Config struct {
 	Subjects      []SubjectRule `json:"subjects"`
 	Duration      int16         `json:"duration"`
 	MarkingScheme MarkingScheme `json:"marking_scheme"`
+	Instructions  template.HTML `json:"instructions"`
 }
 
 type SubjectRule struct {
