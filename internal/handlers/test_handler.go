@@ -570,9 +570,11 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		headerTxt = selectedTestPtr.DisplaySubtype()
 		pdfSuffix = "Question Paper"
 
-		testRule, err = h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
-		if err != nil {
-			fmt.Println(err.Error())
+		if len(selectedTestPtr.ExamIDs) > 0 {
+			testRule, err = h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
+			if err != nil {
+				fmt.Println(err.Error())
+			}
 		}
 
 	} else if pdfType == "answers" {

@@ -118,7 +118,6 @@
     <script src="/web/static/js/nav-tracker.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            let lastPath = null;
             let debounceTimeout;
 
             function getTabURLFromPath(path) {
@@ -133,25 +132,26 @@
             function updateActiveTabFromURL() {
                 const currentPath = window.location.pathname;
 
-                // Avoid unnecessary updates
-                if (lastPath !== null && currentPath === lastPath) {
+                // Determine which tab should be active
+                const activeTabId = getTabURLFromPath(currentPath);
+                const currentlyActiveTab = document.querySelector('[data-toggle="tab"].active');
+
+                // Skip only if the correct tab is already active
+                if (currentlyActiveTab && currentlyActiveTab.id === activeTabId) {
                     return;
                 }
-                lastPath = currentPath;
 
                 const tabBtns = document.querySelectorAll('[data-toggle="tab"]');
                 tabBtns.forEach(tabBtn => tabBtn.classList.remove("active"));
 
-                // Determine which tab should be active
-                const activeTabID = getTabURLFromPath(currentPath);
-                if (activeTabID) {
-                    const activeTab = document.getElementById(activeTabID);
+                if (activeTabId) {
+                    const activeTab = document.getElementById(activeTabId);
                     if (activeTab) activeTab.classList.add("active");
                 }
                 
                 // Hide subject dropdown when "Tests" tab is active
                 const subjectDropdown = document.getElementById("subject-dropdown");
-                if (activeTabID === "tests-tab" && !(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test"))) {
+                if (activeTabId === "tests-tab" && !(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test"))) {
                     subjectDropdown.style.display = "none";
                 } else {
                     subjectDropdown.style.display = "inline-block";
