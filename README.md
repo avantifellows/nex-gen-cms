@@ -37,6 +37,10 @@ To run the CMS locally, follow these steps:
    ```
 7. Open your browser and go to http://localhost:8080 to view the application.
 
+### Temporary Branches to use until it gets merged to main:
+1. **nex-gen-cms:** [feat/tests](https://github.com/avantifellows/nex-gen-cms/tree/feat/tests)
+2. **db-service:** [adding-language-table](https://github.com/avantifellows/db-service/tree/adding-language-table)
+
 ### Tailwind Setup:
 #### ✅ Only Running the App?
 
