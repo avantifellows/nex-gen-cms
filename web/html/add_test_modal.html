@@ -1,0 +1,71 @@
+<div id="addTestModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
+        <h2 class="text-lg font-semibold mb-4">Create New Test</h2>
+        <form id="addTestForm">
+            <div id="curriculum-grade-container" class="space-y-4 mb-6">
+                <div class="curriculum-grade-set">
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="font-medium">Curriculum</label>
+                        <label class="font-medium">Grade</label>
+                    </div>
+                    <div id="curriculum-grade-set" name="curriculum-grade-set" class="grid grid-cols-2 gap-4 mt-1">
+                        {{ template "curriculum_grade_selects" }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Link to add more Curriculum-Grade sets -->
+            <div class="mb-6">
+                <a href="#" class="text-blue-500 text-sm hover:underline" hx-get="/add-curriculum-grade-selects"
+                    hx-target="#curriculum-grade-set" hx-swap="beforeend">+ Add one more set</a>
+            </div>
+
+            <!-- Test Type Dropdown -->
+            <div class="mb-6 flex items-center gap-4">
+                <label for="modal-testType" class="font-medium whitespace-nowrap">Test Type</label>
+                <select id="modal-testType" name="modal-testType" class="flex-1 border p-2 rounded">
+                    {{ template "test_type_options" }}
+                </select>
+            </div>
+
+            <!-- Exam Type Dropdown -->
+            <div class="mb-6 flex items-center gap-4">
+                <label for="modal-examType" class="font-medium whitespace-nowrap">Exam Type</label>
+                <select id="modal-examType" name="modal-examType" class="flex-1 border p-2 rounded">
+                    <option value="7">JEE Mains</option>
+                    <option value="8">JEE Advanced</option>
+                    <option value="2">NEET</option>
+                    <option value="3">CUET</option>
+                    <option value="9">CET</option>
+                    <option value="10">Miscellaneous</option>
+                </select>
+            </div>
+
+            <!-- Buttons -->
+            <div class="w-full flex-row flex justify-end space-x-2">
+                <button type="button" onclick="closeAddTestModal()"
+                    class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+                <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="true"
+                    hx-on::before-request="if (!validateTestType()) event.preventDefault()"
+                    class="bg-blue-500 text-white px-4 py-2 rounded">Continue</button>
+            </div>
+
+        </form>
+    </div>
+</div>
+<script>
+    function validateTestType() {
+        const testType = document.getElementById('modal-testType').value;
+        if (!testType) {
+            alert("Please select a test type.");
+            // block form submission
+            return false;
+        }
+        // allow form submission
+        return true;
+    }
+
+    function closeAddTestModal() {
+        goBackAfterDelay(0);
+    }
+</script>

@@ -10,15 +10,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
     - uses: actions/setup-node@v4
       with:
         node-version: lts/*
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: 1.23.4  # Update to match our Go version
+
     - name: Install dependencies
       run: npm ci
+
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
+
+    - name: Create .env file
+      run: echo "${{ secrets.ENV_FILE_FOR_PLAYWRIGHT_TESTS }}" > .env
+
+    - name: Start Go server
+      run: |
+        go run cmd/main.go > server.log 2>&1 &
+        echo $! > server.pid  # Save the PID of the server
+        sleep 10  # Give the server time to start
+
+    - name: Print server logs if failed
+      if: failure()
+      run: cat server.log
+
     - name: Run Playwright tests
       run: npx playwright test
+
+    - name: Stop Go server
+      if: always()  # Ensure this runs even if tests fail
+      run: |
+        kill $(cat server.pid) || true
+        rm server.pid
+
     - uses: actions/upload-artifact@v4
       if: ${{ !cancelled() }}
       with:

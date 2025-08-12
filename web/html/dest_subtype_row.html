@@ -1,0 +1,15 @@
+{{ define "dest_subtype_row" }}
+<tr id="subtype-{{.SubjectId}}-{{.Subtype}}" class="bg-gray-100">
+    <td class="p-2" colspan="4">
+        <div class="flex justify-between items-center whitespace-nowrap">
+            <span>{{.DisplaySubtype}}</span>
+            <div class="flex gap-2">
+                <!-- <button class="px-3 py-1 bg-blue-500 text-white rounded">Shuffle</button>
+                <button class="px-3 py-1 bg-green-500 text-white rounded">^</button> -->
+            </div>
+        </div>
+    </td>
+    {{ template "chip_box_cells" . }}
+    <td></td>
+</tr>
+{{ end }}

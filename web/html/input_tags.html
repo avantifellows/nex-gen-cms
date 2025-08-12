@@ -1,0 +1,117 @@
+{{ define "input_tags" }}
+<div class="relative">
+    <div id="tagsInput" class="flex flex-wrap items-center w-full border p-2 gap-2 cursor-text">
+        <!-- chips will go here -->
+        <input id="tagTextInput" type="text" class="flex-1 min-w-[100px] border-none outline-none p-1"
+            placeholder="Assign Hashtags" hx-get="/api/tags" hx-target="#tagAutocomplete"
+            hx-trigger="input changed delay:300ms" hx-ext="tagInputExtension" />
+    </div>
+    <!-- Autocomplete dropdown -->
+    <div id="tagAutocomplete"
+        class="absolute top-full left-0 right-0 bg-white border border-gray-300 border-t-0 rounded-b-md shadow-lg max-h-40 overflow-y-auto z-10">
+        <!-- suggestions will be inserted here -->
+    </div>
+</div>
+<script>
+    (() => {
+        const container = document.getElementById('tagsInput');
+        const input = document.getElementById('tagTextInput');
+        const autocompleteDiv = document.getElementById('tagAutocomplete');
+        let tags = {{ toJson . }} || [];  // initialize with existing tags if any
+
+        renderTags();  // show prefilled chips
+
+        htmx.defineExtension('tagInputExtension', {
+            onEvent: function (name, evt) {
+                if (name === 'htmx:configRequest') {
+                    const query = input.value;
+
+                    // Cancel request if query is too short
+                    if (query.length < 3) {
+                        evt.preventDefault();
+                        return;
+                    }
+
+                    // Append tags to query string
+                    const url = new URL(evt.detail.path, window.location.origin);
+                    url.searchParams.set("q", query);
+                    tags.forEach(tag => {
+                        url.searchParams.append("selected", tag);
+                    });
+
+                    evt.detail.path = url.pathname + url.search;
+
+                    // Show autocomplete
+                    autocompleteDiv.classList.remove('hidden');
+                }
+            }
+        });
+
+        container.addEventListener('click', () => input.focus());
+
+        window.addTag = function (tag) {
+            hideSuggestions();
+
+            tag = tag.trim();
+            if (tag && !tags.includes(tag)) {
+                tags.push(tag);
+                renderTags();
+            }
+            input.value = '';
+        };
+
+        function removeTag(tag) {
+            tags = tags.filter(t => t !== tag);
+            renderTags();
+        }
+
+        function renderTags() {
+            // Remove all existing chips
+            container.querySelectorAll('.chip').forEach(chip => chip.remove());
+
+            tags.forEach(tag => {
+                const chip = document.createElement('span');
+                chip.className = 'chip bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full flex items-center gap-1';
+                chip.innerHTML = `
+                    ${tag}
+                    <button type="button" class="ml-1 text-blue-800 hover:text-blue-900 font-bold">&times;</button>
+                `;
+                chip.querySelector('button').addEventListener('click', () => removeTag(tag));
+                container.insertBefore(chip, input);
+            });
+        }
+
+        function hideSuggestions() {
+            autocompleteDiv.classList.add('hidden');
+        }
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                addTag(input.value);
+
+            } else if (e.key === 'Backspace' && input.value === '') {
+                // optional: remove last tag on backspace
+                tags.pop();
+                renderTags();
+                hideSuggestions();
+
+            } else if (e.key === 'Escape') {
+                hideSuggestions();
+            }
+        });
+
+        // Hide suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!container.contains(e.target) && !autocompleteDiv.contains(e.target)) {
+                hideSuggestions();
+            }
+        });
+
+        // Export tags array globally
+        window.getProblemTags = function () {
+            return tags;
+        };
+    })();
+</script>
+{{ end }}

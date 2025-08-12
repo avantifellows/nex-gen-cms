@@ -1,7 +1,8 @@
 {{ range . }}
 <tr class="border-b hover:bg-gray-100">
     <td class="py-4 px-6">{{.Code}}</td>
-    <td class="px-6 text-blue-500 hover:underline"><a href="#">{{.Name}}</a></td>
+    <td class="px-6 text-blue-500 hover:underline"><a href="/chapter?id={{.ID}}" hx-get="/chapter?id={{.ID}}" 
+        hx-target="body" hx-push-url="true">{{ getName . "en" }}</a></td>
     <td class="px-6 text-center text-blue-500 hover:underline"><a href="#">{{.TopicCount}}</a></td>
     <td></td>
     <td></td>
@@ -12,12 +13,12 @@
     <td class="space-x-4">
         <!-- target is kept body instead of #content, because using #content as target will not work when
          directly edit url is entered in browser -->
-        <button class="text-blue-500 hover:text-red-500 hover:scale-110" hx-get="/edit-chapter?id={{.ID}}"
-            hx-target="body" hx-push-url="/edit-chapter?id={{.ID}}" hx-boost="true">
-            <i class="fa-solid fa-pencil"></i>
+        <button class="action-button" hx-get="/edit-chapter?id={{.ID}}"
+            hx-target="body" hx-push-url="true">
+            <i class="fa-solid fa-pen"></i>
         </button>
-        <button class="text-blue-500 hover:text-red-500 hover:scale-110" hx-delete="/delete-chapter?id={{.ID}}"
-            hx-confirm="Are you sure you want to delete chapter {{.Name}}?" hx-target="closest tr">
+        <button class="action-button" hx-delete="/delete-chapter?id={{.ID}}"
+            hx-confirm="Are you sure you want to delete chapter {{ getName . "en" }}?" hx-target="closest tr">
             <i class="fa-solid fa-trash"></i>
         </button>
     </td>

@@ -1,0 +1,34 @@
+{{ define "test_type_options" }}
+<option value="">Select Test type</option>
+{{ $selected := "" }}
+{{ if .Subtype }}{{ $selected = .Subtype }}{{ end }}
+{{ $values := slice
+"chapter_test"
+"part_test"
+"major_test"
+"full_syllabus_test"
+"evaluation_test"
+"mock_test"
+"nta_test"
+"homework_assignment"
+}}
+{{ $labels := slice
+"Chapter Test"
+"Part Test"
+"Major Test"
+"Full Syllabus Test"
+"Evaluation Test"
+"Mock Test"
+"NTA Test"
+"Homework Assignment"
+}}
+
+{{ $index := 0 }}
+{{range $v := $values}}
+<!-- Using directly .Subtype is throwing error when accessing from tests.html when we don't pass any parameters ,
+ Hence we are extracting it at the top using if condition and then using it as $selected over here -->
+<option value="{{$v}}" {{if eq $selected $v}}selected{{end}}>{{index $labels $index}}</option>
+{{$index = add $index 1}}
+{{end}}
+
+{{ end }}

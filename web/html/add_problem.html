@@ -1,0 +1,540 @@
+{{ define "content" }}
+<form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event,        
+        {{if .TopicPtr}}
+        <!-- add problem -->
+            {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}, null
+        {{else}}
+        <!-- edit problem -->
+            {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
+        {{end}}
+);">
+    <h2 class="text-lg font-semibold mb-4">{{if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
+
+    <!-- type, skills, concepts -->
+    <div class="grid grid-cols-3 gap-6 mb-6">
+        <div>
+            <p class="font-semibold mb-2">Select Type:</p>
+            <select id="problem-type-dropdown" name="problem-type-dropdown"
+                class="w-full border border-gray-300 rounded p-2">
+                {{if .ProblemPtr}}
+                {{template "problem_type_options" .ProblemPtr.Subtype}}
+                {{else}}
+                {{template "problem_type_options"}}
+                {{end}}
+            </select>
+        </div>
+        <div>
+            <p class="font-semibold mb-2">Select Skills:</p>
+            <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
+                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
+                hx-get='/api/skills{{if .ProblemPtr}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
+                <option disabled>Loading skills...</option>
+            </select>
+        </div>
+        <div>
+            <p class="font-semibold mb-2">Select Concepts:</p>
+            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
+                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
+                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}">
+                <option disabled>Loading concepts...</option>
+            </select>
+            <a href="#" class="text-blue-600 underline">Add Concept from other topic</a>
+        </div>
+    </div>
+
+    <!-- difficulty -->
+    <div class="mb-6">
+        <p class="font-semibold mb-2">Difficulty Rating</p>
+        <label class="mr-4"><input type="radio" name="difficulty" value="easy" {{if and .ProblemPtr (eq
+                .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}> 1</label>
+        <label class="mr-4"><input type="radio" name="difficulty" value="medium" {{if and .ProblemPtr (eq
+                .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}> 2</label>
+        <label class="mr-4"><input type="radio" name="difficulty" value="hard" {{if and .ProblemPtr (eq
+                .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}> 3</label>
+    </div>
+
+    <!-- Question editor -->
+    <div id="questionDiv" class="mb-6">
+        <p class="font-semibold mb-2">Text:</p>
+        {{ if .ProblemPtr }}
+        {{ template "editor" .ProblemPtr.MetaData.Question }}
+        {{ else }}
+        {{ template "editor" }}
+        {{ end }}
+    </div>
+
+    <!-- Options -->
+    <div id="optionsDiv" class="mb-6">
+        <p class="font-semibold mb-2">Options:</p>
+        <!-- MCQ Option Tabs -->
+        <div id="optionTabs" class="flex items-center overflow-x-auto">
+            <!-- Tabs will be inserted before this -->
+            <!-- Add (+) Tab -->
+            <!-- type="button" is added to prevent it from invoking form submit action (due to form's 
+             internal button's default type="submit") -->
+            <button id="addTab" type="button" title="Add Option" class="mcq-tab-add">+</button>
+        </div>
+
+        <!-- Shared Editor -->
+        {{ template "editor" }}
+    </div>
+
+    <!-- Answer -->
+    <div class="mb-6" id="answerDiv">
+        <p class="font-semibold mb-2">Answer:</p>
+        <div id="answerContent">
+            <!-- Either checkboxes or integer input will be inserted here -->
+        </div>
+    </div>
+
+    <!-- Solution -->
+    <div class="mb-6" id="solutionDiv">
+        <p class="font-semibold mb-2">Solution:</p>
+        {{ if and .ProblemPtr (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
+        {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
+        {{ else }}
+        {{ template "editor" }}
+        {{ end }}
+    </div>
+
+    <!-- Tags -->
+    <div class="mb-6">
+        <p class="font-semibold mb-2">Tags:</p>
+        {{ if .ProblemPtr }}
+            {{ template "input_tags" .ProblemPtr.TagNames }}
+        {{ else }}
+            {{ template "input_tags" }}
+        {{ end }}
+    </div>
+
+    <!-- SOURCE -->
+    <!-- <div class="mb-6">
+        <p class="font-semibold mb-2">SOURCE</p>
+        <table class="w-full text-left border border-gray-300">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="px-4 py-2">Name</th>
+                    <th class="px-4 py-2">Mode</th>
+                    <th class="px-4 py-2">Year</th>
+                    <th class="px-4 py-2">Description</th>
+                    <th class="px-4 py-2">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="px-4 py-2" colspan="5" align="center">No Source Added</td>
+                </tr>
+            </tbody>
+        </table>
+        <a href="#" class="text-blue-600 underline mt-2 inline-block">Add Source</a>
+    </div> -->
+
+    <!-- Save button -->
+    <button id="saveButton" type="submit"
+        class="w-full bg-blue-500 text-white mb-4 py-3 font-semibold rounded hover:bg-blue-600">Save</button>
+</form>
+<script src="/web/static/js/editor.js"></script>
+<script>
+    (() => {
+        const optionsDiv = document.getElementById('optionsDiv');
+        const optionTabs = optionsDiv.querySelector('#optionTabs');
+        const addTabButton = optionsDiv.querySelector('#addTab');
+
+        const labelPool = 'ABCDEFGHIJ';
+
+        // Determine tab count
+        let tabs = new Array(
+            {{ if .ProblemPtr }}
+                {{ len .ProblemPtr.MetaData.Options }}
+            {{ else }}
+                4   // by default start with 4 tabs for add problem case
+            {{ end }}
+        ).fill(null);
+
+        let activeIndex = 0;
+
+        const answerLabels = new Set([
+            {{ if .ProblemPtr }}
+                {{ range .ProblemPtr.MetaData.Answers }}
+                    {{ if . }}
+                        '{{ printf "%c" (add 64 (stringToInt .)) }}',
+                    {{ end }}
+                {{ end }}
+            {{ end }}
+        ]); // <=== tracks checked answer labels
+
+        const problemTypeDropdown = document.getElementById('problem-type-dropdown');
+
+        problemTypeDropdown.addEventListener('change', function () {
+            onProblemTypeSelection(this.value);
+        });
+
+        {{ if .ProblemPtr }}
+            onProblemTypeSelection(problemTypeDropdown.value);
+        {{ end }}
+
+        function onProblemTypeSelection(problemType) {
+            const optionsDiv = document.getElementById('optionsDiv');
+            const isMCQ = problemType === 'mcq_single_answer' || problemType === 'mcq_multiple_answer';
+            if (isMCQ) {
+                optionsDiv.classList.remove('hidden');
+            } else {
+                optionsDiv.classList.add('hidden');
+            }
+
+            updateAnswerInput(problemType);
+        }
+
+        function updateAnswerInput(problemType) {
+            const answerContent = document.getElementById('answerContent');
+            answerContent.innerHTML = ''; 
+
+            if (problemType === 'mcq_single_answer' || problemType === 'mcq_multiple_answer') {
+                // Add checkboxes
+                renderTabs();
+            } else {
+                // Add integer-only input
+                const answer = 
+                    {{ if .ProblemPtr }}
+                        '{{ index .ProblemPtr.MetaData.Answers 0 }}'
+                    {{ else }}
+                        ''
+                    {{ end }}; 
+
+                answerContent.innerHTML = `
+                    <input type="text" name="answer" id="intAnswerInput" class="w-full border border-gray-300 rounded p-2" 
+                    inputmode="numeric" value="${answer}">
+                `;
+
+                ensureIntAnswer();
+            }
+        }
+
+        function ensureIntAnswer() {
+            const input = document.getElementById("intAnswerInput");
+            input.addEventListener("input", function () {
+                let value = this.value;
+
+                // Remove all non-digit characters except '-'
+                value = value.replace(/[^0-9-]/g, '');
+
+                // Only allow '-' at the beginning
+                const hasLeadingMinus = value.startsWith('-');
+                value = (hasLeadingMinus ? '-' : '') + value.replace(/-/g, '');
+
+                this.value = value;
+            });
+        }
+
+        const editor = optionsDiv.querySelector('.editor');
+        const preview = optionsDiv.querySelector('.output');
+
+        // Initial setup
+        const tabContent = [
+            {{ if .ProblemPtr }}
+                {{ range .ProblemPtr.MetaData.Options }}
+                    { html: `{{ . }}`, preview: `{{ . }}` },
+                {{ end }}
+            {{ else }}
+                // Default empty tabs
+                ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
+            {{ end }}
+        ];
+        
+        // Initial render
+        renderTabs();
+        setActiveTab(0);
+
+        function getLabel(index) {
+            return labelPool[index];
+        }
+
+        function renderTabs() {
+            // Clear old tabs
+            document.querySelectorAll('.mcq-tab').forEach(tab => tab.remove());
+            // Remove old checkboxes
+            const answerContent = document.getElementById('answerContent');
+            answerContent.querySelectorAll('label').forEach(label => label.remove());
+            tabs.forEach((_, index) => {
+                const label = getLabel(index);
+
+                // Create option tab
+                const tab = document.createElement('div');
+                tab.className = 'mcq-tab' + (index === activeIndex ? ' active' : '');
+                tab.dataset.index = index;
+                tab.innerHTML = `
+                    <span class="mr-2">${label}</span>
+                    <button title="Remove" class="remove-btn">&times;</button>
+                `;
+                tab.addEventListener('click', () => {
+                    if (index === activeIndex) return;
+                    saveCurrentContent();
+                    setActiveTab(index)
+                });
+                tab.querySelector('.remove-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    saveCurrentContent();
+                    removeTab(index);
+                });
+                optionTabs.insertBefore(tab, addTabButton);
+
+                // Create answer checkbox
+                const checkboxLabel = document.createElement('label');
+                checkboxLabel.className = 'mr-4';
+                checkboxLabel.innerHTML = `<input type="checkbox" name="answer" value="${label}"> ${label}`;
+
+                const checkbox = checkboxLabel.querySelector('input');
+                // restore checked state if present
+                checkbox.checked = answerLabels.has(label);
+
+                // update answerLabels set on change
+                checkbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        answerLabels.add(label);
+                    } else {
+                        answerLabels.delete(label);
+                    }
+                });
+
+                answerContent.appendChild(checkboxLabel);
+            });
+
+            // Hide "+" button if 10 or more tabs
+            addTabButton.style.display = tabs.length >= 10 ? 'none' : 'flex';
+        }
+
+        function saveCurrentContent() {
+            tabContent[activeIndex] = {
+                html: editor.innerHTML,
+                preview: preview.innerHTML
+            };
+        }
+
+        function setActiveTab(index) {
+            activeIndex = index;
+            document.querySelectorAll('.mcq-tab').forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+
+            // Load saved content
+            loadActiveContent();
+        }
+
+        function addTab() {
+            if (tabs.length >= labelPool.length) return;
+
+            saveCurrentContent(); // Save current tab before adding new
+
+            tabs.push(null);
+            tabContent.push({ html: '', preview: '' });
+            activeIndex = tabs.length - 1;
+
+            renderTabs();
+            editor.innerHTML = '';
+            preview.innerHTML = '';
+        }
+
+        function removeTab(index) {
+            if (tabs.length <= 1) {
+                alert("At least one tab must remain.");
+                return;
+            }
+
+            tabs.splice(index, 1);
+            tabContent.splice(index, 1);
+
+            const removedLabel = getLabel(index); // label like 'A', 'B'
+            // Also remove this label from answerLabels set
+            answerLabels.delete(removedLabel);
+
+            if (activeIndex >= tabs.length) {
+                activeIndex = tabs.length - 1;
+            }
+            renderTabs();
+
+            // Load new active content
+            loadActiveContent();
+        }
+
+        function loadActiveContent() {
+            const content = tabContent[activeIndex] || { html: '', preview: '' };
+            editor.innerHTML = content.html;
+            preview.innerHTML = content.preview;
+            // This is required for edit problem where by default MathJax is applied to only first option
+            applyMathJaxIfNeeded();
+        }
+
+        function applyMathJaxIfNeeded() {
+            const containsRawTex = preview.textContent.includes('\\(') || preview.textContent.includes('$$');
+            const alreadyRendered = preview.querySelector('.MathJax');
+
+            if (containsRawTex && !alreadyRendered) {
+                MathJax.typesetPromise([preview]);
+            }
+        }
+
+        addTabButton.addEventListener('click', addTab);
+
+        window.createProblem = function (event, topicId, chapterId, problemId) {
+            event.preventDefault();  // Cancel the default form request
+
+            const saveBtn = document.getElementById('saveButton');
+            // Disable the button and change its text
+            toggleButton(saveBtn, true, 'Saving...');
+
+            // save latest option value visible; otherwise if save is pressed directly after entering value
+            // in option A editor, it will show wrong alert aking to enter value in option A, because without
+            // this save call we are saving tab content only on switching tabs and adding new tab
+            saveCurrentContent();
+
+            if (!validateFields()) {
+                toggleButton(saveBtn, false, 'Save')
+                return false;
+            }
+            
+            const prolemJson = buildProblemJson(topicId, chapterId);
+            const url = problemId ? `/update-problem?id=${problemId}` : '/create-problem';
+            const method = problemId ? 'PATCH' : 'POST';
+
+            fetch(url, {
+                method: method,
+                body: JSON.stringify(prolemJson),
+                headers: {
+                    'Content-Type': 'application/json',  // Specify content type as JSON
+                    'HX-Request': 'true'  // so that your server can detect HTMX if needed
+                }
+
+            }).then(res => {
+                if (!res.ok) {
+                    // Turn HTTP error into a real JS error to trigger .catch
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.text(); // if OK, read body
+
+            }).then(html => {
+                // go back to remove add/edit problem screen
+                goBackAfterDelay(0);
+
+            }).catch(err => {
+                console.error("Error during problem creation:", err);
+                alert("There was an error while saving the problem.");
+                toggleButton(saveBtn, false, 'Save');
+            });
+        };
+
+        function toggleButton(btn, disable, label) {
+            btn.disabled = disable;
+            if (label) btn.innerText = label;
+        }
+
+        function validateFields() {
+            const difficulty = document.querySelector('input[name="difficulty"]:checked');
+            if (!difficulty) {
+                alert('Please select a difficulty level.');
+                return;
+            }
+            const editor = document.getElementById('questionDiv').querySelector('.editor');
+            if (!editor.textContent.trim()) {
+                alert('Please enter the question.');
+                return;
+            }
+
+            const subtype = document.getElementById('problem-type-dropdown').value;
+            if (subtype === 'mcq_single_answer' || subtype === 'mcq_multiple_answer') {
+                if (typeof tabContent !== 'undefined' && Array.isArray(tabContent)) {
+                    for (let i = 0; i < tabContent.length; i++) {
+                        const optionLabel = String.fromCharCode(65 + i); // A, B, C...
+                        const optionText = tabContent[i]?.html?.trim();
+                        if (!optionText) {
+                            alert(`Option ${optionLabel} is empty. Please fill it out before submitting.`);
+                            return false;
+                        }
+                    }
+                } else {
+                    alert('Options are not available.');
+                    return false;
+                }
+
+                if (answerLabels.size === 0) {
+                    alert('Please select at least one answer.');
+                    return false;
+                }
+                
+            } else if (subtype === 'integer_type') {
+                const answerInput = document.getElementById("intAnswerInput");
+                if (!answerInput.value) {
+                    alert('Please enter the answer.');
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function buildProblemJson(topicId, chapterId) {
+            const subtype = document.getElementById('problem-type-dropdown').value;
+
+            const skillsDropdown = document.getElementById("skills-dropdown");
+            const selectedSkillIds = Array.from(skillsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
+
+            const curriculumId = parseInt(document.getElementById("curriculum-dropdown").value);
+            const gradeId = parseInt(document.getElementById("grade-dropdown").value);
+            const subjectId = parseInt(document.getElementById("subject-dropdown").value);
+
+            const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+
+            const question = document.getElementById('questionDiv').querySelector('.editor').innerHTML.trim();
+
+            let options = null;
+            let answers = [];
+            if (subtype === 'mcq_single_answer' || subtype === 'mcq_multiple_answer') {
+                options = tabContent.map(item => item.html);
+                // Convert the labels to their number indexes (+1), and then to strings
+                answers = Array.from(answerLabels).map(label => {
+                    const index = labelPool.indexOf(label);
+                    return (index + 1).toString();
+                });
+            } else {
+                answers = [document.getElementById("intAnswerInput").value];
+            }
+            const solution = document.getElementById('solutionDiv').querySelector('.editor').innerHTML.trim();
+
+            const conceptsDropdown = document.getElementById("concepts-dropdown");
+            const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
+
+            return {
+                lang_code: "en",
+                type: "problem",
+                subtype: subtype,
+                skill_ids: selectedSkillIds,
+                type_params: {
+                    test_ids: []
+                },
+                curriculum_grades: [
+                    {
+                        curriculum_id: curriculumId,
+                        grade_id: gradeId
+                    }
+                ],
+                subject_id: subjectId,
+                topic_id: topicId,
+                chapter_id: chapterId,
+                difficulty_level: difficulty,
+                meta_data: {
+                    text: question,
+                    options: options,
+                    answer: answers,
+                    solutions: [
+                        {
+                            type: "text",
+                            value: solution
+                        }
+                    ]
+                },
+                concept_ids: selectedConceptIds,
+                tags: window.getProblemTags()
+            };
+        }
+    })();
+</script>
+{{ end }}

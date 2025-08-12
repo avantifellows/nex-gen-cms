@@ -1,0 +1,32 @@
+{{ define "content" }}
+<div class="bg-white mb-4">
+    <div class="flex items-center">
+        <button class="action-button" onclick="window.history.back()">
+            <i class="fa-solid fa-chevron-left"></i> Back
+        </button>
+        <h3 class="text-base font-semibold ml-4">{{ getName .ChapterPtr "en" }}</h3>
+    </div>
+    <div class="flex space-x-4 py-4">
+        <button data-toggle="sub-tab" class="sub-tab active" onclick="updateSubtabState(this)" hx-trigger="click, load"
+            hx-get="/topics?id={{.ChapterPtr.ID}}" hx-target="#subContent">Topics</button>
+        <button data-toggle="sub-tab" class="sub-tab" onclick="updateSubtabState(this)" hx-get="/chapter-tests"
+            hx-target="#subContent">Chapter Tests</button>
+        <button data-toggle="sub-tab" class="sub-tab" onclick="updateSubtabState(this)" hx-get="/resources"
+            hx-target="#subContent">Resources</button>
+        <button data-toggle="sub-tab" class="sub-tab" onclick="updateSubtabState(this)" hx-get="/passages"
+            hx-target="#subContent">Passages</button>
+    </div>
+    <div id="sub-tabContent">
+        <div id="subContent">
+            <p>Select a tab to load content.</p>
+        </div>
+    </div>
+</div>
+<script>
+    function updateSubtabState(subtabBtn, event) {
+        const subtabBtns = document.querySelectorAll('[data-toggle="sub-tab"]');
+        subtabBtns.forEach(btn => btn.classList.remove("active"));
+        subtabBtn.classList.add("active");
+    }
+</script>
+{{ end }}

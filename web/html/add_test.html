@@ -1,0 +1,697 @@
+{{ define "content" }}
+<h1 class="text-lg font-semibold">{{if .Problems}}Edit{{else}}New{{end}} Test</h1>
+<div class="flex h-screen">
+    <!-- Left Panel -->
+    <div class="w-1/3 p-5 bg-white shadow overflow-auto">
+        <!-- Filters -->
+        <div class="grid grid-cols-2 gap-4">
+            <!-- name attribute is used, because query parameters passed via http request can be 
+                 identified by element names only. It is used in chapter_handler.go -->
+            <select id="chapter-dropdown" name="chapter-dropdown" hx-ext="cascade-clear"
+                class="p-2 border rounded w-full"
+                hx-trigger="load, onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
+                hx-get="/api/chapters?view=dropdown"
+                hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown"
+                onchange="sessionStorage.setItem('selectedChapter', this.value);"
+                hx-on::after-request="onDropdownLoaded(this, 'selectedChapter')">
+                <option>Select Chapter</option>
+            </select>
+            <select id="topic-dropdown" name="topic-dropdown" hx-ext="cascade-clear" class="p-2 border rounded w-full"
+                hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
+                hx-include="#chapter-dropdown" onchange="sessionStorage.setItem('selectedTopic', this.value);"
+                hx-on::after-request="onDropdownLoaded(this, 'selectedTopic')">
+                <option>Select Topic</option>
+            </select>
+            <label class="font-semibold">Level</label>
+            <label class="font-semibold">Problem Type</label>
+            <select id="level-dropdown" name="level-dropdown" class="p-2 border rounded w-full">
+                <option value="">All</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+            </select>
+            <select id="ptype-dropdown" name="ptype-dropdown" class="p-2 border rounded w-full">
+                <option value="">All</option>
+                {{ template "problem_type_options" }}
+            </select>
+        </div>
+        <!-- Questions List -->
+        <div class="mt-6">
+            <h2 class="text-lg font-semibold">Question Bank</h2>
+            <table class="mt-3 w-full border text-left">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="p-2">Code</th>
+                        <th class="p-2">Question</th>
+                        <th class="p-2">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems"
+                    hx-trigger="change from:(#topic-dropdown, #level-dropdown, #ptype-dropdown)"
+                    hx-include="#topic-dropdown, #curriculum-dropdown, #subject-dropdown, #level-dropdown, #ptype-dropdown"
+                    data-mathjax="true">
+                    <!-- Rows will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {{ $id := "null" }}
+    {{ $subtype := "null" }}
+    {{ $curriculumGrades := "null" }}
+
+    {{ if .Problems }}
+        <!-- edit test -->
+        {{ $id = printf "%d" .TestPtr.ID }}
+    {{ else }}
+        <!-- add test -->
+        {{ $subtype = printf "\"%s\"" .TestPtr.Subtype }}
+        {{ $curriculumGrades = .TestPtr.CurriculumGrades | toJson }}
+    {{ end }}
+
+    <!-- Right Panel -->
+    <!-- (event.target === this) check is added in before-request, because HTMX bubbles up events through the DOM. 
+    So when any child element inside the form (like our <a> tag with hx-get on clicking problem code) triggers 
+    an HTMX request, the before-request event is fired on the parent form, causing createTest(...) to be called 
+    even for unrelated hx-get actions -->
+    <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50" hx-post="/create-test"
+        hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}})'>
+
+        <label class="font-semibold">Select Test Code</label>
+        <div class="flex items-center gap-2 mt-2 mb-2">
+            {{/* Define variables with empty values first so as to access them out of if-end block */}}
+            {{ $program := "" }}
+            {{ $type := "" }}
+            {{ $seq := "" }}
+            {{ $year := "" }}
+
+            {{if .Problems}}
+            {{ $parts := split .TestPtr.Code "-" }}
+            {{ $program = index $parts 0 }}
+            {{ $type = index $parts 1 }}
+            {{ $seq = index $parts 2 }}
+            {{ $year = index $parts 3 }}
+            {{end}}
+            <select id="program-dropdown" class="p-2 border rounded flex-1"
+                onchange="sessionStorage.setItem('selectedProgram', this.value);">
+                {{range $opt := (slice "JN" "HP" "MH" "GJ" "TN" "PN" "UK" "OR" "DL" "X")}}
+                <option {{if eq $program $opt}}selected{{end}}>{{$opt}}</option>
+                {{end}}
+            </select>
+            <select id="test-type-code-dropdown" class="p-2 border rounded flex-1"
+                onchange="sessionStorage.setItem('selectedTestTypeCode', this.value);">
+                {{range $opt := (slice "P" "C" "M" "B" "CT" "CCT" "PT" "MT" "MoT" "FST")}}
+                <option {{if eq $type $opt}}selected{{end}}>{{$opt}}</option>
+                {{end}}
+            </select>
+            <select id="test-sequence-dropdown" class="p-2 border rounded flex-1"
+                onchange="sessionStorage.setItem('selectedSequence', this.value);">
+                {{range $i := seq 1 199}}
+                <!-- "%d" is used to convert $i to string so that it can be compared with $seq -->
+                <option {{if eq $seq (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
+                {{end}}
+            </select>
+            <select id="year-dropdown" class="p-2 border rounded flex-1"
+                onchange="sessionStorage.setItem('selectedYear', this.value);">
+                {{range $i := seq 16 25}}
+                <option {{if eq $year (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
+                {{end}}
+            </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1"
+                value="{{if .Problems}}{{getName .TestPtr "en"}}{{end}}" 
+                onchange="sessionStorage.setItem('selectedName', this.value);">
+            {{if .Problems}}
+            <select id="test-type-dropdown" class="p-2 border rounded flex-1">
+                {{ template "test_type_options" .TestPtr }}
+            </select>
+            {{end}}
+        </div>
+
+        {{ $hasTestRule := (ne .TestRule nil) }}
+        <h2 class="mt-4 text-lg font-semibold">Marking Scheme</h2>
+        <div id="marking-scheme-div" class="mt-2 grid grid-cols-4 gap-4 items-center">
+            {{ $posMarks := slice }}
+            {{ $negMarks := slice }}
+
+            {{ if .TestRule }}
+                {{ $posMarks = .TestRule.Config.MarkingScheme.PosMarks }}
+                {{ $negMarks = .TestRule.Config.MarkingScheme.NegMarks }}
+            {{ else if .Problems }}
+                {{ $posMarks = .TestPtr.TypeParams.PosMarks }}
+                {{ $negMarks = .TestPtr.TypeParams.NegMarks }}
+            {{ end }}
+
+            {{ template "test_chip_editor" (dict "Label" "Award" "Id" "chip-editor-pos" "Marks" $posMarks "Readonly" $hasTestRule) }}
+            {{ template "test_chip_editor" (dict "Label" "Deduct" "Id" "chip-editor-neg" "Marks" $negMarks "Readonly" $hasTestRule) }}
+        </div>
+
+        {{ $easy := 0 }}
+        {{ $medium := 0 }}
+        {{ $hard := 0 }}
+        {{if .Problems}}
+            {{range .Problems}}
+                {{ if eq .DifficultyLevel "easy" }}
+                    {{ $easy = add $easy 1 }}
+                {{ else if eq .DifficultyLevel "medium" }}
+                    {{ $medium = add $medium 1 }}
+                {{ else if eq .DifficultyLevel "hard" }}
+                    {{ $hard = add $hard 1 }}
+                {{ end }}
+            {{end}}
+        {{end}}
+
+        <!-- Levels Table -->
+        <table class="mt-4 w-full border text-center">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="p-2">Level 1</th>
+                    <th class="p-2">Level 2</th>
+                    <th class="p-2">Level 3</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td id="level-easy" class="p-2">{{$easy}}</td>
+                    <td id="level-medium" class="p-2">{{$medium}}</td>
+                    <td id="level-hard" class="p-2">{{$hard}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Questions Table -->
+        <table class="mt-4 w-full border text-left">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="p-2">S.No</th>
+                    <th class="p-2">Code</th>
+                    <th class="p-2">Level</th>
+                    <th class="p-2">Question</th>
+                    <th class="p-2 text-center">+ve Marks</th>
+                    <th class="p-2 text-center">-ve Marks</th>
+                    <th class="p-2">Action</th>
+                </tr>
+            </thead>
+            <tbody id="questions-table-body" name="questions-table-body">
+                <!-- if this is for edit test -->
+                {{if .Problems}}
+                    {{ $sr := 0 }}
+                    {{range .TestPtr.TypeParams.Subjects}}
+                        {{ $subjectId := .SubjectID }}
+                        {{ template "dest_subject_row" (dict "SubjectId" $subjectId "SubjectName" .Name 
+                        "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule) }}
+                        {{range .Sections}}
+                            {{template "dest_subtype_row" (dict "SubjectId" $subjectId "Subtype" .Name 
+                            "DisplaySubtype" (getDisplaySubtype .Name) "PosMarks" .PosMarks "NegMarks" .NegMarks
+                            "ReadOnlyMarks" $hasTestRule)}}
+                            {{range .Compulsory.Problems}}
+                                {{ $sr = add $sr 1 }}
+                                {{template "dest_problem_row" (dict "Problem" (index $.Problems .ID) "SrNo" $sr
+                                "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule)}}
+                            {{end}}
+                        {{end}}
+                    {{end}}
+                {{end}}
+            </tbody>
+        </table>
+        <div class="grid grid-cols-[auto_1fr_auto_1fr] items-center gap-x-4 mt-2">
+
+            {{ $duration := "" }}
+
+            <!-- if config is available, fix duration based on test rule config -->
+            {{ if .TestRule }}
+                {{ $duration = .TestRule.Config.Duration }}
+            <!-- else for edit test case get it from test itself -->
+            {{ else if .Problems }}
+                {{ $duration = .TestPtr.TypeParams.Duration }}
+            {{ end }}
+
+            <label class="text-sm font-medium">Duration (mins):</label>
+            <input id="duration" type="number" class="w-1/4 border rounded p-2" placeholder="60"
+                value="{{ $duration }}" 
+                {{ if .TestRule }}readonly{{ end }}
+                onchange="sessionStorage.setItem('selectedDuration', this.value);">
+            <label class="text-sm font-medium">Total Marks:</label>
+            <label id="total-marks" class="p-2">{{if .Problems}}{{.TestPtr.TypeParams.Marks}}{{else}}0{{end}}</label>
+        </div>
+        <button type="submit" class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save</button>
+    </form>
+</div>
+<script type="application/json" id="test-rule-json">
+  {{ .TestRule | toJson }}
+</script>
+<script>
+    var problemRowsSelectors = "#questions-table-body tr[id^='problem-']";
+    var chipEditorPosId = "#chip-editor-pos";
+    var chipEditorNegId = "#chip-editor-neg";
+
+    var SESSION_KEY_PROGRAM = "selectedProgram";
+    var SESSION_KEY_TEST_TYPE_CODE = "selectedTestTypeCode";
+    var SESSION_KEY_SEQUENCE = "selectedSequence";
+    var SESSION_KEY_YEAR = "selectedYear";
+    var SESSION_KEY_NAME = "selectedName";
+    var SESSION_KEY_DURATION = "selectedDuration";
+
+    (function () {        
+        if (window.lastPushedScreen === PUSHED_SCREEN_ADD_TEST) {
+            // clear session storage values stored earlier as this is new screen opened
+            sessionStorage.removeItem(SESSION_KEY_PROGRAM);
+            sessionStorage.removeItem(SESSION_KEY_TEST_TYPE_CODE);
+            sessionStorage.removeItem(SESSION_KEY_SEQUENCE);
+            sessionStorage.removeItem(SESSION_KEY_YEAR);
+            sessionStorage.removeItem(SESSION_KEY_NAME);
+            sessionStorage.removeItem(SESSION_KEY_DURATION);
+        }
+    })();
+
+    function setElementFromStorage(elementId, storageKey) {
+        const element = document.getElementById(elementId);
+        const storedVal = sessionStorage.getItem(storageKey);
+        if (storedVal) {
+            element.value = storedVal;
+        }
+    }
+
+    document.querySelector(ADD_TEST_DIV_SELECTOR).addEventListener(BACK_TO_ADD_TEST_EVT, () => {
+        setElementFromStorage('program-dropdown', SESSION_KEY_PROGRAM);
+        setElementFromStorage('test-type-code-dropdown', SESSION_KEY_TEST_TYPE_CODE);
+        setElementFromStorage('test-sequence-dropdown', SESSION_KEY_SEQUENCE);
+        setElementFromStorage('year-dropdown', SESSION_KEY_YEAR);
+        setElementFromStorage('test-name', SESSION_KEY_NAME);
+        setElementFromStorage('duration', SESSION_KEY_DURATION);
+    });
+
+    htmx.defineExtension('cascade-clear', {
+        onEvent: function (name, event) {
+            if (name === "htmx:afterSwap") {
+
+                const targetId = event.detail.target.id;
+                // Reset topic dropdown to default if afterSwap event is received for chapter-dropdown
+                if (targetId === "chapter-dropdown") {
+                    const topicDropdown = document.getElementById('topic-dropdown');
+                    if (topicDropdown) {
+                        topicDropdown.innerHTML = '<option>Select Topic</option>';
+                    }
+                }
+
+                // Clear problem list
+                const problemList = document.getElementById('question-bank');
+                if (problemList) {
+                    problemList.innerHTML = '';
+                }
+            }
+        }
+    });
+
+    htmx.defineExtension('addSelectedIds', {
+        onEvent: function (name, evt) {
+            if (name === "htmx:configRequest") {
+                // add already selected problem ids in parameters
+                const selectedIds = Array.from(document.querySelectorAll(problemRowsSelectors))
+                    .map(row => row.id.replace("problem-", ""));
+                evt.detail.parameters["selected-ids"] = selectedIds.join(",");
+            }
+        }
+    });
+
+    function removeQuestionFromTest(btn) {
+        // Remove problem row from the DOM
+        const problemRow = btn.closest("tr");
+        const prevRow = problemRow.previousElementSibling;
+        const prevPrevRow = prevRow.previousElementSibling;
+        let nextRow = problemRow.nextElementSibling;
+        problemRow.remove();
+
+        const dataset = btn.dataset;
+        const subject = problemRow.dataset.subject;
+        const subtype = problemRow.dataset.subtype;
+        const tableBody = document.getElementById("questions-table-body");
+
+        // Remove subtype header if no more problems of that subtype under same subject remain
+        const remainingSubtypeProblems = tableBody.querySelectorAll(`tr[data-subject="${subject}"][data-subtype="${subtype}"]`);
+        if (remainingSubtypeProblems.length === 0) {
+            prevRow.remove();
+
+            // Remove subject header if no more problems of that subject remain
+            const remainingSubjectProblems = tableBody.querySelectorAll(`tr[data-subject="${subject}"]`);
+            if (remainingSubjectProblems.length === 0) {
+                prevPrevRow.remove();
+            }
+        }
+
+        // Update serial numbers of all rows following removed row, skipping colspan header rows
+        while (nextRow) {
+            const firstTd = nextRow.querySelector("td");
+            if (!firstTd.hasAttribute("colspan")) {
+                firstTd.textContent = parseInt(firstTd.textContent - 1);
+            }
+            nextRow = nextRow.nextElementSibling;
+        }
+
+        // Decrement count in levels table
+        decrementLevelCount(dataset.difficulty);
+
+        updateTotalMarks();
+
+        // Refresh left panel questions
+        const topicDropdown = document.getElementById("topic-dropdown");
+        htmx.trigger(topicDropdown, "change");
+    }
+
+    function decrementLevelCount(difficulty) {
+        const levelCell = document.getElementById(`level-${difficulty}`);
+        levelCell.textContent = Math.max(0, parseInt(levelCell.textContent) - 1)
+    }
+
+    function handleEditableChips(e) {
+        const targetEditor = e.currentTarget;
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+
+        // Only handle Enter, Comma, or Space
+        if (['Enter', ',', ' '].includes(e.key)) {
+            e.preventDefault();
+
+            // Get and trim the typed value
+            const textNode = range.startContainer;
+            let value = textNode.textContent.trim();
+
+            // Remove the typed text
+            textNode.textContent = '';
+
+            // if not digit then return
+            if (!value || !/^\d+$/.test(value)) return;
+
+            // Get all existing chips in the same editor
+            const existingMarks = Array.from(targetEditor.querySelectorAll('.chip')).map(chip => chip.textContent.trim());
+            // if duplicate then return
+            if (existingMarks.includes(value)) return;
+
+            // Create chip element
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.contentEditable = 'false';
+            chip.textContent = value;
+
+            // Insert chip & space at cursor
+            range.insertNode(chip);
+            range.insertNode(document.createTextNode('\u00A0'));
+
+            // Move cursor after the inserted chip
+            const newRange = document.createRange();
+            newRange.setStartAfter(chip.nextSibling || chip);
+            newRange.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+
+            // Clone .chip-editor content
+            const questionsTableBody = document.querySelector("#questions-table-body");
+            const clonedContent = targetEditor.cloneNode(true);
+
+            const closestTr = targetEditor.closest('tr');
+            if (closestTr) {
+                const trId = closestTr.id;
+
+                if (trId.startsWith('subtype-')) {
+                    // section level marking scheme change - apply same marking scheme to all problems under this section
+                    const trIdComponents = trId.split('-');
+                    const subjectId = trIdComponents[1];
+                    const subtype = trIdComponents[2];
+
+                    const subtypeRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+                    cloneChips(subtypeRows, targetEditor.id, clonedContent);
+
+                } else if (trId.startsWith('subject-')) {
+                    // subject level marking scheme change - apply same marking scheme to all problems under this subject
+                    const trIdComponents = trId.split('-');
+                    const subjectId = trIdComponents[1];
+
+                    const subjectRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+                    cloneChips(subjectRows, targetEditor.id, clonedContent);
+                }
+
+            } else {
+                // entire test level marking scheme change - apply same change to all problems
+                const problemRows = questionsTableBody.querySelectorAll(`tr[id^="problem-"]`);
+                cloneChips(problemRows, targetEditor.id, clonedContent);
+            }
+
+            if (targetEditor.id === "chip-editor-pos") {
+                updateTotalMarks();
+            }
+        }
+    }
+
+    function cloneChips(rows, targetEditorId, clonedContent) {
+        rows.forEach(row => {
+            // apply change to element having same id as target editor (chip-editor-pos or chip-editor-neg)
+            const chipEditor = row.querySelector(`div[id="${targetEditorId}"]`);
+            chipEditor.innerHTML = clonedContent.innerHTML;
+        });
+    }
+
+    function focusEditable(containerDiv) {
+        const editor = containerDiv.querySelector('[contenteditable="true"]');
+        if (editor) {
+            editor.focus();
+        }
+    }
+
+    function updateTotalMarks() {
+        const problemRows = document.querySelectorAll(problemRowsSelectors);
+
+        let totalMarks = 0;
+        problemRows.forEach(row => {
+            const chipEditor = row.querySelector(chipEditorPosId);
+            const chips = chipEditor.querySelectorAll(".chip");
+            let maxMarks = 0;
+            chips.forEach(chip => {
+                maxMarks = Math.max(maxMarks, chip.textContent);
+            });
+            totalMarks += maxMarks;
+        });
+        document.getElementById("total-marks").textContent = totalMarks;
+    }
+
+    var dropdownDebounceTimers = {};
+
+    function onDropdownLoaded(dropdown, storageKey) {
+        // restore last selected value from sessionStorage
+        const lastSelectedValue = sessionStorage.getItem(storageKey);
+        // dropdown value is blank sometimes on coming back from problem screen
+        if (lastSelectedValue && dropdown.value !== "") {
+            dropdown.value = lastSelectedValue;
+
+            // Clear any previous pending trigger for this dropdown
+            if (dropdownDebounceTimers[dropdown.id]) {
+                clearTimeout(dropdownDebounceTimers[dropdown.id]);
+            }
+
+            /**
+             * Debounce trigger to avoid firing event multiple times rapidly
+             * This happens on refreshing this screen or on clicking any problem and then coming back to this screen,
+             * which in turn calls topic dropdown loading and problems loading apis mutiple times
+             */
+            dropdownDebounceTimers[dropdown.id] = setTimeout(() => {
+                htmx.trigger(dropdown, 'change');
+                delete dropdownDebounceTimers[dropdown.id];
+            }, 500);
+        }
+    }
+
+    function createTest(event, testId, subtype, curriculumGrades) {
+        event.preventDefault();  // Cancel the request
+
+        if (!validateFields()) {
+            return false;
+        }
+
+        const testJson = buildTestJson(subtype, curriculumGrades);
+        if (testJson) {
+            const url = curriculumGrades ? '/create-test' : `/update-test?id=${testId}`;
+            const method = curriculumGrades ? 'POST' : 'PATCH';
+
+            fetch(url, {
+                method: method,
+                body: JSON.stringify(testJson),
+                headers: {
+                    'Content-Type': 'application/json',  // Specify content type as JSON
+                    'HX-Request': 'true'  // so that your server can detect HTMX if needed
+                }
+
+            }).then(res => {
+                  if (!res.ok) {
+                      // Turn HTTP error into a real JS error to trigger .catch
+                      throw new Error(`HTTP error! status: ${res.status}`);
+                  }
+                  return res.text(); // if OK, read body
+
+              }).then(html => {
+                  // go back to remove add/edit test screen
+                  goBackAfterDelay(0);
+                  if (curriculumGrades) {
+                      // remove add test dialog
+                      goBackAfterDelay(0);
+                  }
+
+              }).catch(err => {
+                  console.error(curriculumGrades ? "Error during test creation:" : "Error during test updation:", err);
+              });
+        }
+
+        return false;
+    }
+
+    function validateFields() {
+        const testName = document.getElementById('test-name').value.trim();
+        if (!testName) {
+            alert("Please fill in the Test Name before saving.");
+            return false;
+        }
+
+        const duration = document.getElementById('duration').value.trim();
+        if (!duration) {
+            alert("Please fill in the Test Duration before saving.");
+            return false;
+        }
+        return true;
+    }
+
+    function buildTestJson(subtype, curriculumGrades) {
+        const program = document.getElementById('program-dropdown').value;
+        const testTypeCode = document.getElementById('test-type-code-dropdown').value;
+        const testSequence = document.getElementById('test-sequence-dropdown').value;
+        const year = document.getElementById('year-dropdown').value;
+
+        const code = `${program}-${testTypeCode}-${testSequence}-${year}`;
+
+        if (subtype == null) {
+            subtype = document.getElementById('test-type-dropdown').value;
+        }
+
+        const markingSchemeDiv = document.getElementById('marking-scheme-div');
+        const posChips = markingSchemeDiv.querySelectorAll(`${chipEditorPosId} .chip`);
+        const negChips = markingSchemeDiv.querySelectorAll(`${chipEditorNegId} .chip`);
+
+        const subjects = [];
+        let currentSubject = null, currentSection = null;
+        let currentSubjectMarks = 0, currentSectionMarks = 0;
+        // set is used to have unique skill ids only
+        const skillIdSet = new Set();
+
+        const tableBody = document.getElementById('questions-table-body');
+        const rows = tableBody.querySelectorAll('tr');
+        for (const row of rows) {
+            const posChips = row.querySelectorAll(`${chipEditorPosId} .chip`);
+            const negChips = row.querySelectorAll(`${chipEditorNegId} .chip`);
+
+            const id = row.id;
+            // if it is subject row
+            if (id.startsWith("subject-")) {
+                if (currentSubject) {
+                    // set total marks on previous subject and reset marks variable
+                    currentSubject.marks = currentSubjectMarks;
+                    currentSubjectMarks = 0;
+                }
+                currentSubject = {
+                    subject_id: parseInt(id.split("-")[1]),
+                    pos_marks: getMarksArray(posChips),
+                    neg_marks: getMarksArray(negChips),
+                    sections: []
+                };
+                subjects.push(currentSubject);
+
+            } else if (id.startsWith("subtype-")) {
+                // it is section row
+                if (currentSection) {
+                    // set total marks on previous section and reset marks variable
+                    currentSection.marks = currentSectionMarks;
+                    currentSectionMarks = 0;
+                }
+                currentSection = {
+                    name: id.split("-")[2],
+                    pos_marks: getMarksArray(posChips),
+                    neg_marks: getMarksArray(negChips),
+                    compulsory: {
+                        problems: []
+                    },
+                    // right now optional section is not needed
+                };
+                currentSubject.sections.push(currentSection);
+
+            } else {
+                // it's problem row
+                const posMarksArr = getMarksArray(posChips);
+                if (posMarksArr.length === 0) {
+                    alert("Please fill in all the Problem Marks before saving.");
+                    return;
+                }
+
+                const problem = {
+                    id: parseInt(id.split("-")[1]),
+                    pos_marks: posMarksArr,
+                    neg_marks: getMarksArray(negChips),
+                };
+                currentSection.compulsory.problems.push(problem);
+
+                // find maximum marks for this problem and add it into both current section and subject marks' total
+                const maxMarks = Math.max(...posMarksArr);
+                currentSubjectMarks += maxMarks;
+                currentSectionMarks += maxMarks;
+
+                const skillIds = row.dataset.skillIds;
+                if (skillIds) {
+                    for (const skillId of skillIds.split(',')) {
+                        skillIdSet.add(parseInt(skillId.trim()));
+                    }
+                }
+            }
+        }
+
+        if (currentSubject) {
+            // set total marks on last subject
+            currentSubject.marks = currentSubjectMarks;
+        }
+        if (currentSection) {
+            // set total marks on last section
+            currentSection.marks = currentSectionMarks;
+        }
+
+        const testRuleJson = document.getElementById("test-rule-json").textContent;
+        const testRule = JSON.parse(testRuleJson);
+
+        return {
+            code: code,
+            name: [
+                {
+                    lang_code: "en",
+                    resource: document.getElementById('test-name').value
+                }
+            ],
+            type: "test",
+            subtype: subtype,
+            exam_ids: testRule ? [testRule.exam_id] : null,
+            skill_ids: Array.from(skillIdSet),
+            type_params: {
+                duration: document.getElementById('duration').value,
+                marks: parseInt(document.getElementById('total-marks').textContent.trim()),
+                pos_marks: getMarksArray(posChips),
+                neg_marks: getMarksArray(negChips),
+                subjects: subjects
+            },
+            // Used spread operator to add curriculum_grades node only for add new test scenario; otherwise it won't add this node
+            ...(curriculumGrades ? { curriculum_grades: curriculumGrades } : {})
+        };
+    }
+
+    function getMarksArray(chips) {
+        const marks = [];
+        chips.forEach(chip => {
+            marks.push(parseInt(chip.textContent.trim()));
+        });
+        return marks;
+    }
+</script>
+{{ end }}

@@ -1,0 +1,190 @@
+{{ define "editor" }}
+<div class="container flex gap-4 items-stretch max-w-full -mt-px">
+
+    <!-- Editor Container -->
+    <div class="editor-wrapper w-1/2 border border-gray-300">
+
+        <!-- Toolbar with icons -->
+        <div class="toolbar bg-gray-100 border-b border-gray-300 flex flex-wrap gap-2 p-2">
+            <select title="Font Family"
+                class="fontSelector border border-gray-300 rounded px-2 py-1 text-sm cursor-pointer">
+                <option value="Arial" style="font-family: Arial;">Arial</option>
+                <option value="'Courier New', monospace" style="font-family: 'Courier New', monospace;">Courier New
+                </option>
+                <option value="Helvetica" style="font-family: Helvetica;">Helvetica</option>
+                <option value="'Noto Sans Devanagari', sans-serif" style="font-family: 'Noto Sans Devanagari';">
+                    हिन्दी</option>
+            </select>
+
+            <!-- Bold/Italic/Underline grouped buttons -->
+            <div class="flex gap-0 border border-gray-300 rounded overflow-hidden">
+                <button title="Bold" type="button"
+                    class="boldBtn px-3 py-1 text-sm bg-white hover:bg-blue-100 border-r border-gray-300"><i
+                        class="fas fa-bold"></i></button>
+                <button title="Italic" type="button"
+                    class="italicBtn px-3 py-1 text-sm bg-white hover:bg-blue-100 border-r border-gray-300"><i
+                        class="fas fa-italic"></i></button>
+                <button title="Underline" type="button"
+                    class="underlineBtn px-3 py-1 text-sm bg-white hover:bg-blue-100"><i
+                        class="fas fa-underline"></i></button>
+            </div>
+
+            <!-- Font Size Selector -->
+            <select title="Font Size"
+                class="fontSizeSelector border border-gray-300 rounded px-2 py-1 text-sm cursor-pointer">
+                <option value="8px">8</option>
+                <option value="9px">9</option>
+                <option value="10px">10</option>
+                <option value="11px" selected>11</option>
+                <option value="12px">12</option>
+                <option value="14px">14</option>
+                <option value="18px">18</option>
+                <option value="24px">24</option>
+                <option value="36px">36</option>
+            </select>
+
+            <!-- Color Pickers with Icons -->
+            <div class="flex items-center border border-gray-300 rounded overflow-hidden">
+                <!-- Foreground/Text Color -->
+                <label title="Text Color"
+                    class="foreColorLabel flex items-center justify-center w-8 h-8 border-r border-gray-300 bg-white hover:bg-blue-100 cursor-pointer">
+                    <i class="fas fa-font text-black"></i>
+                    <input type="color" class="foreColor hidden" />
+                </label>
+
+                <!-- Background Color -->
+                <label title="Background Color"
+                    class="backColorLabel flex items-center justify-center w-8 h-8 bg-white hover:bg-blue-100 cursor-pointer">
+                    <i class="fas fa-fill-drip text-black"></i>
+                    <input type="color" class="backColor hidden" />
+                </label>
+            </div>
+
+            <!-- Ordered and Unordered List Buttons -->
+            <div class="flex gap-0 border border-gray-300 rounded overflow-hidden">
+                <button title="Unordered List" type="button"
+                    class="ulBtn px-3 py-1 text-sm bg-white hover:bg-blue-100 border-r border-gray-300">
+                    <i class="fas fa-list-ul"></i>
+                </button>
+                <button title="Ordered List" type="button" class="olBtn px-3 py-1 text-sm bg-white hover:bg-blue-100">
+                    <i class="fas fa-list-ol"></i>
+                </button>
+            </div>
+
+            <!-- Paragraph Formatting Dropdown -->
+            <div class="relative flex-shrink-0">
+                <button title="Alignment" type="button"
+                    class="paragraphDropdownBtn px-3 py-1 text-sm bg-white hover:bg-blue-100 border border-gray-300 rounded h-full flex items-center justify-center">
+                    <i class="fas fa-align-left"></i>
+                    <i class="fas fa-caret-down text-xs ml-1"></i>
+                </button>
+
+                <!-- Dropdown: 3x2 Grid of Icon Buttons -->
+                <div
+                    class="paragraphDropdownMenu absolute mt-1 hidden bg-white border border-gray-300 rounded shadow-md p-2 grid grid-cols-3 gap-2 w-32">
+                    <button data-cmd="justifyLeft" type="button"
+                        class="w-8 h-8 flex items-center justify-center hover:bg-blue-100 rounded" title="Align Left">
+                        <i class="fas fa-align-left"></i>
+                    </button>
+                    <button data-cmd="justifyCenter" type="button"
+                        class="w-8 h-8 flex items-center justify-center hover:bg-blue-100 rounded" title="Align Center">
+                        <i class="fas fa-align-center"></i>
+                    </button>
+                    <button data-cmd="justifyRight" type="button"
+                        class="w-8 h-8 flex items-center justify-center hover:bg-blue-100 rounded" title="Align Right">
+                        <i class="fas fa-align-right"></i>
+                    </button>
+                    <button data-cmd="justifyFull" type="button"
+                        class="w-8 h-8 flex items-center justify-center hover:bg-blue-100 rounded" title="Justify">
+                        <i class="fas fa-align-justify"></i>
+                    </button>
+                    <button data-cmd="outdent" type="button"
+                        class="w-8 h-8 flex items-center justify-center hover:bg-blue-100 rounded" title="Outdent">
+                        <i class="fas fa-indent fa-rotate-180"></i>
+                    </button>
+                    <button data-cmd="indent" type="button"
+                        class="w-8 h-8 flex items-center justify-center hover:bg-blue-100 rounded" title="Indent">
+                        <i class="fas fa-indent"></i>
+                    </button>
+                </div>
+            </div>
+
+            <select title="Line Height"
+                class="lineHeightSelector border border-gray-300 rounded px-2 py-1 text-sm cursor-pointer">
+                <option value="1">1</option>
+                <option value="1.2">1.2</option>
+                <option value="1.5" selected>1.5</option>
+                <option value="2">2</option>
+                <option value="2.5">2.5</option>
+            </select>
+
+            <!-- Insert Table Button + Grid Popup -->
+            <div class="relative">
+                <button title="Table" type="button"
+                    class="insertTableBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100 h-full">
+                    <i class="fas fa-table"></i>
+                </button>
+
+                <!-- Table Grid Picker -->
+                <div
+                    class="tableGridPopup absolute left-0 mt-1 p-2 border border-gray-300 bg-white shadow-md rounded hidden z-50 w-max">
+                    <div class="tableGrid grid grid-cols-10 gap-1"></div>
+                    <div class="tableGridLabel text-xs text-center mt-2 text-gray-600">0 × 0</div>
+                </div>
+            </div>
+
+            <button title="Link" type="button"
+                class="linkBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100">
+                <i class="fas fa-link"></i>
+            </button>
+
+            <button title="Horizontal Rule" type="button"
+                class="hrBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100">
+                <i class="fas fa-minus"></i>
+            </button>
+
+            <input type="file" accept="image/*" class="imageUpload hidden">
+            <button title="Image" type="button"
+                class="imageBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100"><i
+                    class="fas fa-image"></i></button>
+
+            <div class="flex gap-0 border border-gray-300 rounded overflow-hidden">
+                <button title="Toggle Fullscreen" type="button"
+                    class="fullscreenBtn bg-white border-r border-gray-300 px-3 py-1 text-sm hover:bg-blue-100">
+                    <i class="fas fa-expand-arrows-alt"></i>
+                </button>
+
+                <button title="Toggle Code View" type="button"
+                    class="codeViewBtn bg-white px-3 py-1 text-sm hover:bg-blue-100">
+                    <i class="fas fa-code"></i>
+                </button>
+            </div>
+
+            <button title="Math" type="button"
+                class="mathBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100"><i
+                    class="fas fa-square-root-variable"></i></button>
+
+            <button title="Toggle Preview" type="button"
+                class="previewToggleBtn bg-white border border-gray-300 rounded px-3 py-1 text-sm hover:bg-blue-100">
+                <i class="fas fa-eye"></i>
+            </button>
+
+        </div>
+
+        <div contenteditable="true" class="editor h-52 p-2 overflow-y-auto">{{.}}
+        </div>
+
+        <pre contenteditable="true"
+            class="codeView whitespace-pre-wrap text-sm p-2 h-52 bg-gray-100 border border-gray-300 rounded overflow-y-auto hidden"></pre>
+
+    </div>
+
+    <div class="output w-1/2 self-end bg-gray-100 border border-gray-300 p-2 h-52 overflow-y-auto">
+    </div>
+</div>
+
+<div id="math-keyboard" class="ML__keyboard mt-4"></div>
+
+<script src="/web/static/js/editor-math.js"></script>
+<script src="/web/static/js/editor-image.js"></script>
+{{ end }}

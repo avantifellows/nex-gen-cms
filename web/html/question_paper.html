@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>{{ getName .TestPtr "en" }}</title>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body class="font-sans text-[14px] m-5 mt-0">
+
+<div class="flex justify-between mb-3 w-full">
+    <h2 class="text-lg font-bold">{{ getName .TestPtr "en" }}</h2>
+    <h2 class="text-lg font-bold">Test Code: {{ .TestPtr.Code }}</h2>
+</div>
+
+{{ if and .TestRule .TestRule.Config.Instructions }}
+<div class="border border-black p-4 mb-5">
+    <h3 class="text-base font-semibold mb-2">Instructions:</h3>
+    {{ .TestRule.Config.Instructions }}
+</div>
+{{ end }}
+
+<div class="flex justify-between font-bold mb-3">
+    <div>Maximum Time: {{ .TestPtr.TypeParams.Duration }} Minutes</div>
+    <div>Total Marks: {{ .TestPtr.TypeParams.Marks }}</div>
+</div>
+
+<div class="flex justify-between mb-6">
+    <div>Name: _____________________</div>
+    <div>Roll Number: _____________________</div>
+</div>
+
+{{ $Counter := 0 }}
+{{ range $subject := .TestPtr.TypeParams.Subjects }}
+    {{ range $section := $subject.Sections }}
+        <!-- Combined Header -->
+        <div class="text-center font-semibold text-lg bg-gray-100 border-t-2 border-t-gray-500 border-b border-b-gray-300 py-1 mb-4">
+            {{ capitalize $subject.Name }}{{ if $section.Name }} - {{ problemDisplaySubtype $section.Name }}{{ end }}
+        </div>
+
+        <!-- Compulsory Problems -->
+        {{ range $prob := $section.Compulsory.Problems }}
+            {{ $p := index $.ProblemsMap $prob.ID }}
+            {{ $Counter = add $Counter 1 }}
+
+            <div class="mb-6">
+                <!-- Question Row -->
+                <div class="flex items-start mb-2">
+                    <div class="w-6 font-semibold">Q{{ $Counter }}.</div>
+                    <div class="flex-1 pl-5 whitespace-pre-wrap">{{$p.MetaData.Question}}</div>
+                </div>
+
+                <!-- Show Options only if MCQ -->
+                {{if or (eq $p.Subtype "mcq_single_answer") (eq $p.Subtype "mcq_multiple_answer")}}
+                <div class="pl-11">
+                    {{ $long := false }}
+                    {{ range $p.MetaData.Options }}
+                        {{ if gt (len .) 50 }}{{ $long = true }}{{ end }}
+                    {{ end }}
+
+                    <!-- Grid: 1 column if long, else 2 columns -->
+                    <div class="grid gap-x-4 gap-y-1 {{ if $long }}grid-cols-1{{ else }}grid-cols-2{{ end }}">
+                        {{range $index, $option := $p.MetaData.Options}}
+                        <div class="flex items-start">
+                            <div class="font-semibold mr-2">{{ index labels $index }}</div>
+                            <div class="flex-1 whitespace-pre-wrap">{{$option}}</div>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        {{ end }}
+    {{ end }}
+{{ end }}
+</body>
+</html>

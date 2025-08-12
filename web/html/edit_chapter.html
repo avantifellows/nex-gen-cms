@@ -2,10 +2,10 @@
 <!-- Edit Chapter Form -->
 <div class="container mx-auto bg-white shadow-md rounded p-6 mt-4">
   <h1 class="text-2xl font-semibold mb-4">Editing chapter</h1>
-  <form hx-patch="/update-chapter?id={{.ChapterPtr.ID}}">
+  <form hx-patch="/update-chapter?id={{.ChapterPtr.ID}}" hx-on::after-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">
     <div class="mb-4">
       <label for="name" class="block text-gray-700 font-medium mb-2">Chapter Title</label>
-      <input type="text" id="name" name="name" class="w-full p-3 border border-gray-300 rounded" value="{{.ChapterPtr.Name}}">
+      <input type="text" id="name" name="name" class="w-full p-3 border border-gray-300 rounded" value="{{ getName .ChapterPtr "en" }}">
     </div>
     <div class="mb-4">
       <label for="description" class="block text-gray-700 font-medium mb-2">Description</label>

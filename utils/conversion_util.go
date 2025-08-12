@@ -1,9 +1,13 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
+	"html/template"
+	"log"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 func StringToInt(s string) int {
@@ -61,4 +65,67 @@ func ExtractNumericSuffix(s string) int {
 	}
 	// return 0 if no numeric suffix is found
 	return 0
+}
+
+func JoinInt16(intArr []int16, separator string) string {
+	var stringArr []string
+	for _, integer := range intArr {
+		stringArr = append(stringArr, strconv.Itoa(int(integer)))
+	}
+	return strings.Join(stringArr, separator)
+}
+
+/**
+ * Custom Slice() is defined to handle any number of arguments; otherwise default Slice() has
+ * restriction on number of arguments (mostly 7)
+ */
+func Slice(args ...any) []any {
+	return args
+}
+
+func Dict(values ...any) map[string]any {
+	dict := make(map[string]any)
+	for i := 0; i < len(values); i += 2 {
+		key := values[i].(string)
+		value := values[i+1]
+		dict[key] = value
+	}
+	return dict
+}
+
+func DisplaySubtype(subtype string) string {
+	switch subtype {
+	case "mcq_single_answer":
+		return "MCQ Single Answer"
+	case "numerical_answer":
+		return "Numerical Answer"
+	case "integer_type":
+		return "Integer Type"
+	default:
+		return "Unknown"
+	}
+}
+
+func ToJson(v any) template.JS {
+	b, err := json.Marshal(v)
+	if err != nil {
+		log.Printf("Error marshalling to JSON: %v", err)
+		return template.JS("[]") // fallback to empty JSON array
+	}
+	return template.JS(b)
+}
+
+func IntToString[T IntType](v T) string {
+	return strconv.FormatInt(int64(v), 10)
+}
+
+func FloatPtr(v float64) *float64 {
+	return &v
+}
+
+func Capitalize(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	return strings.ToUpper(string(s[0])) + s[1:]
 }

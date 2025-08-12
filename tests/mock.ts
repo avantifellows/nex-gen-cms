@@ -15,7 +15,15 @@ export async function mockTabContentApi(page: Page, urlPattern: RegExp, content:
     await page.route(urlPattern, async route => {
         await route.fulfill({
             status: 200,
-            body: `<p>${content}</p>`,
+            body: `
+                <body>
+                    <div class="m-7" id="nav-tabContent">
+                        <div id="content">
+                            <p>${content}</p>
+                        </div>
+                    </div>
+                </body>
+            `,
             headers: { 'Content-Type': 'text/html' }
         });
     });
@@ -40,7 +48,7 @@ export async function mockChaptersApiUsingHtml(page: Page, filepath: string, cha
     let htmlData = fs.readFileSync(filepath, 'utf-8');
     htmlData = htmlData.replace("{{.ID}}", chapterObj.id);
     htmlData = htmlData.replace("{{.Code}}", chapterObj.code);
-    htmlData = htmlData.replace("{{.Name}}", chapterObj.name);
+    htmlData = htmlData.replace(/{{\s*getName\s+\.\s+"en"\s*}}/g, chapterObj.name);
 
     // Intercept the API request and respond with the HTML data
     await page.route(/\/api\/chapters/, async route => {
@@ -74,7 +82,7 @@ export async function mockEditChapterUsingHtml(page: Page, filepath: string, bas
     chapterObj: { id: string; name: string; code: string }) {
     let contentData = fs.readFileSync(filepath, 'utf-8');
     contentData = contentData.replace("{{.ChapterPtr.ID}}", chapterObj.id);
-    contentData = contentData.replace("{{.ChapterPtr.Name}}", chapterObj.name);
+    contentData = contentData.replace(/{{\s*getName\s+\.ChapterPtr\s+"en"\s*}}/g, chapterObj.name);
     contentData = contentData.replace("{{.ChapterPtr.Code}}", chapterObj.code);
 
     let baseData = fs.readFileSync(baseFilepath, 'utf-8');

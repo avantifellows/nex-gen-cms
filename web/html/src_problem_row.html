@@ -1,0 +1,232 @@
+{{ range . }}
+<tr class="border-b">
+    <td class="p-2 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
+        hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">{{.Code}}
+    </a></td>
+    <td class="p-2">{{.MetaData.Question}}</td>
+    <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded" data-id="{{.ID}}"
+            data-subject="{{.Subject.ID}}" data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
+            data-curriculum="{{.CurriculumID}}" data-subject-parent="{{if .Subject.ParentID}}{{.Subject.ParentID}}{{end}}" 
+            hx-on:click="addQuestionToTest(this)">+</button>
+    </td>
+</tr>
+
+<script>
+    var chipClass = ".chip";
+
+    function addQuestionToTest(btn) {
+        const dataset = btn.dataset;
+        // unary operator + is used to convert string to number
+        // Use parent subject id, because we want to show biology as section for zoology & botany
+        const subjectId = +(dataset.subjectParent || dataset.subject);
+        const subtype = dataset.subtype;
+        const difficulty = dataset.difficulty;
+
+        const testRuleJson = document.getElementById("test-rule-json").textContent;
+        const testRule = JSON.parse(testRuleJson);
+
+        const questionsTableBody = document.querySelector("#questions-table-body");
+
+        const subjectRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+        const subtypeRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+        
+        if (testRule && !validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, subtypeRows, questionsTableBody)) {
+            return; // validation failed
+        }
+
+        const insertAfterId = getInsertAfterId(subjectRows, subtypeRows);
+
+        // Hook a one-time global listener that just closes over this specific button's data
+        const handler = createAfterRequestHandler(difficulty, insertAfterId, questionsTableBody);
+        document.body.addEventListener("htmx:afterRequest", handler);
+
+        htmx.ajax("POST", "/add-question-to-test", {
+            target: btn.closest("tr"),
+            swap: "delete",
+            values: {
+                "id": dataset.id,
+                "curriculum-id": dataset.curriculum,
+                "subject-exists": subjectRows.length > 0,
+                "subtype-exists": subtypeRows.length > 0,
+                "insert-after-id": insertAfterId,
+                "read-only-marks": !!testRule
+            }
+        });
+    }
+
+    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, subtypeRows, questionsTableBody) {
+        const subjects = testRule.config.subjects;
+
+        if (subjects.length === 1) {
+            // Case 1: Only one subject is allowed
+            const allowedIds = subjects[0].subject_ids;
+
+            if (!allowedIds.includes(subjectId)) {
+                alert(`Question from selected subject is not allowed for this test.`);
+                return false;
+            }
+
+            // Find subject already added
+            const firstRow = questionsTableBody.querySelector("tr[id^='subject-']");
+            const existingSubjectId = firstRow ? parseInt(firstRow.id.replace("subject-", ""), 10) : null;
+
+            if (existingSubjectId && existingSubjectId !== subjectId) {
+                alert(`Question from only one subject is allowed for this test.`);
+                return false;
+            }
+
+        } else {
+            // Case 2: Multiple subjects are allowed
+            const allowedIds = subjects.map(sub => sub.subject_ids[0]);
+            if (!allowedIds.includes(subjectId)) {
+                alert(`Question from this subject is not allowed for this test.`);
+                return false;
+            }
+        }
+
+        const subjectRule = subjects.find(s => s.subject_ids.includes(subjectId));
+        if (subjectRule) {
+            const allowedTypes = subjectRule.rules.sections.map(s => s.type);
+            if (!allowedTypes.includes(subtype)) {
+                alert(`Questions of type "${subtype}" are not allowed for this subject.`);
+                return false;
+            }
+
+            // Count how many existing questions are there of this subtype and subject
+            const sectionRule = subjectRule.rules.sections.find(s => s.type === subtype);
+            const sectionCount = subtypeRows.length;
+
+            if (sectionCount >= sectionRule.count) {
+                alert(`Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`);
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function getInsertAfterId(subjectRows, subtypeRows) {
+        if (subtypeRows.length > 0) {
+            // Subtype exists — insert after last row of this subtype
+            return subtypeRows[subtypeRows.length - 1].id;
+        }
+
+        if (subjectRows.length > 0) {
+            // Subtype doesn't exist but subject does — insert after last subject-related row
+            return subjectRows[subjectRows.length - 1].id;
+        }
+
+        return "";
+    }
+
+    function createAfterRequestHandler(difficulty, insertAfterId, tableBody) {
+        return function handler(event) {
+            if (event.detail.successful) {
+                incrementLevelCount(difficulty);
+                const newlyInsertedRow = updateSerialNumbers(insertAfterId, tableBody);
+                inheritMarkingScheme(tableBody, newlyInsertedRow);
+                updateTotalMarks();
+            }
+            document.body.removeEventListener("htmx:afterRequest", handler);
+        }
+    }
+
+    function incrementLevelCount(difficulty) {
+        // Increase the count in the levels table
+        const levelCell = document.getElementById(`level-${difficulty}`);
+        if (levelCell) {
+            levelCell.textContent = parseInt(levelCell.textContent) + 1;
+        }
+    }
+
+    function updateSerialNumbers(insertAfterId, tableBody) {
+        // Assign serial number to newly added row and Update serial numbers of all affected rows
+        let serial = 0;
+        let currentRow;
+
+        if (insertAfterId !== "") {
+            const insertAfterRow = document.getElementById(insertAfterId);
+            const firstTd = insertAfterRow.querySelector("td");
+            serial = parseInt(firstTd.textContent);
+            currentRow = insertAfterRow.nextElementSibling;
+            /**
+             * when subject exists but section is new, then insertAfterId belongs to last problem id
+             * under its subtype under same subject. And 2 rows are inserted in this case - subtype, problem.
+             * So its 1st nextElementSibling will be subtype row, hence again go to nextElementSibling to select 
+             * actual problem row
+             */
+            if (!currentRow.id.startsWith("problem-")) {
+                currentRow = currentRow.nextElementSibling;
+            }
+
+        } else {
+            // Inserted without known insertAfterId — find previous valid row with serial number
+            const allRows = Array.from(tableBody.querySelectorAll("tr"));
+            // loop in reverse order
+            for (let i = allRows.length - 1; i >= 0; i--) {
+                const row = allRows[i];
+                const firstTd = row.querySelector("td");
+
+                // find valid problem rows (excluding subject/problem type header rows)
+                if (!firstTd.hasAttribute("colspan")) {
+
+                    // last problem row added just now
+                    if (firstTd.textContent.trim() === "") {
+                        currentRow = row;
+
+                    } else {
+                        // serial number of 2nd last problem
+                        serial = parseInt(firstTd.textContent.trim());
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Save reference to return
+        const newlyInsertedProblemRow = currentRow;
+
+        // Update serial numbers, skipping colspan header rows
+        while (currentRow) {
+            const firstTd = currentRow.querySelector("td");
+            if (!firstTd.hasAttribute("colspan")) {
+                firstTd.textContent = ++serial;
+            }
+            currentRow = currentRow.nextElementSibling;
+        }
+
+        return newlyInsertedProblemRow;
+    }
+
+    function inheritMarkingScheme(tableBody, newlyInsertedRow) {
+        const subtype = newlyInsertedRow.dataset.subtype.replace("subtype-", "");
+        const subjectId = newlyInsertedRow.dataset.subject.replace("subject-", "");
+
+        const posMarksEditor = newlyInsertedRow.querySelector(chipEditorPosId);
+        const negMarksEditor = newlyInsertedRow.querySelector(chipEditorNegId);
+
+        // copy marking scheme from subtype header row
+        const subtypeRow = tableBody.querySelector(`tr[id="subtype-${subjectId}-${subtype}"]`);
+        if (copyChipsFrom(subtypeRow, posMarksEditor, negMarksEditor)) return;
+
+        // else copy marking scheme from subject header row
+        const subjectRow = tableBody.querySelector(`tr[id="subject-${subjectId}"]`);
+        if (copyChipsFrom(subjectRow, posMarksEditor, negMarksEditor)) return;
+
+        // else copy marking scheme from test level
+        const markingSchemeDiv = document.getElementById('marking-scheme-div');
+        if (copyChipsFrom(markingSchemeDiv, posMarksEditor, negMarksEditor)) return;
+    }
+
+    function copyChipsFrom(fromElement, toPosMarksEditor, toNegMarksEditor) {
+        const fromPosMarks = fromElement.querySelector(chipEditorPosId);
+        const fromNegMarks = fromElement.querySelector(chipEditorNegId);
+        if (fromPosMarks.querySelector(chipClass) !== null || fromNegMarks.querySelector(chipClass) !== null) {
+            toPosMarksEditor.innerHTML = fromPosMarks.cloneNode(true).innerHTML;
+            toNegMarksEditor.innerHTML = fromNegMarks.cloneNode(true).innerHTML;
+            return true;
+        }
+        return false;
+    }
+</script>
+{{ end }}

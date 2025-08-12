@@ -5,63 +5,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avanti Next Generation CMS</title>
-    <script src="https://unpkg.com/htmx.org@2.0.2"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <!-- For tailwind css library -->
     <link href="/web/static/css/output.css" rel="stylesheet">
     <!-- For Font Awesome library -->
-    <script src="https://kit.fontawesome.com/76cfc651ea.js" crossorigin="anonymous"></script>
-</head>
-
-<body>
-    <div>
-        <nav>
-            <div class="nav nav-tabs" id="nav-tab">
-                <button class="nav-link active" id="chapters-tab" hx-get="/chapters"
-                    hx-target="#content" data-toggle="tab" onclick="updateTabState(this)">Chapters</button>
-                <div {{ if .InitialLoad }} hx-trigger="load" hx-get="/chapters" {{ end }} hx-target="#content"></div>
-                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-target="#content"
-                    data-toggle="tab" onclick="updateTabState(this)">Modules</button>
-                <button class="nav-link" id="books-tab" hx-get="/books" hx-target="#content"
-                    data-toggle="tab" onclick="updateTabState(this)">Books</button>
-                <button class="nav-link" id="major-tests-tab" hx-get="/major-tests" hx-target="#content"
-                    data-toggle="tab" onclick="updateTabState(this)">Major Tests</button>
-
-                <!-- name attribute is used, because query parameters passed via http request can be 
-                 identified by element names only. It is used in chapter_handler.go -->
-                <select class="ms-8" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
-                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }})"
-                    onchange="sessionStorage.setItem('selectedCurriculum', this.value)">
-                    <!-- HTMX will replace this with the new options -->
-                    <option disabled selected>Loading curriculums...</option>
-                </select>
-                <select class="ms-4" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
-                    hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }})"
-                    onchange="sessionStorage.setItem('selectedGrade', this.value)">
-                    <!-- HTMX will replace this with the new options -->
-                    <option disabled selected>Loading grades...</option>
-                </select>
-                <select class="ms-4" id="subject-dropdown" name="subject-dropdown" hx-get="/api/subjects"
-                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, {{ .InitialLoad }})"
-                    onchange="sessionStorage.setItem('selectedSubject', this.value)">
-                    <!-- HTMX will replace this with the new options -->
-                    <option disabled selected>Loading subjects...</option>
-                </select>
-            </div>
-        </nav>
-
-        <div class="m-7" id="nav-tabContent">
-            <div id="content" hx-history-elt>
-                {{ block "content" . }}<p>Select a tab to load content.</p>{{ end }}
-            </div>
-        </div>
-    </div>
-
+    <!-- data-fa-style="color" is added to tell Font Awesome to allow color CSS to apply to the SVGs, which is 
+    required for difficulty rating stars on problem screen -->
+    <script src="https://kit.fontawesome.com/76cfc651ea.js" crossorigin="anonymous" data-fa-style="color"></script>
+    <script src="https://unpkg.com/mathlive"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    <script src="/web/static/js/constants.js"></script>
     <script>
-        function afterDropdownReq(dropdown, initialLoad) {
-            // trigger event to reload chapters if needed [not needed when moving to edit chapter screen]
-            if (initialLoad) {
+        function afterDropdownReq(dropdown, selectedValue) {
+            /* 
+             * execute code inside setTimeout(); otherwise playwright test related to onLoaded event trigger 
+             * fails on firefox & webkit sometimes, because 'onLoaded' gets triggered even before setting 
+             * listener for this event to verify
+             */
+            setTimeout(function () {
                 htmx.trigger('#' + dropdown.id, 'onLoaded');
-            }
+            }, 0);
 
             // update dropdown value to last selected value from session storage
             var sessionStorageKey;
@@ -81,17 +45,130 @@
                 default:
                     break;
             }
-            var selectedValue = sessionStorage.getItem(sessionStorageKey);
+            if (!selectedValue) {
+                // if dropdown selection is not known from url then get it from sessionStorage
+                selectedValue = sessionStorage.getItem(sessionStorageKey);
+            }
             if (selectedValue) {
                 dropdown.value = selectedValue;
             }
         }
+    </script>
+</head>
 
-        function updateTabState(tabBtn, event) {
-            const tabBtns = document.querySelectorAll('[data-toggle="tab"]');
-            tabBtns.forEach(tabBtn => tabBtn.classList.remove("active"));  
-            tabBtn.classList.add("active");       
-        }
+<body hx-ext="mathJaxLoader">
+    <div>
+        <nav>
+            <div class="nav nav-tabs" id="nav-tab">
+                <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="true" hx-target="body"
+                    data-toggle="tab"
+                    hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
+                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-push-url="true" hx-target="body"
+                    data-toggle="tab">Modules</button>
+                <button class="nav-link" id="books-tab" hx-get="/books" hx-push-url="true" hx-target="body"
+                    data-toggle="tab">Books</button>
+                <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
+                    data-toggle="tab"
+                    hx-on::before-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false')">Tests</button>
+
+                <!-- name attribute is used, because query parameters passed via http request can be 
+                 identified by element names only. It is used in chapter_handler.go -->
+                <select class="ms-8" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
+                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, 
+                    {{ if .CurriculumID }}{{ .CurriculumID }}{{ else }}null{{ end }})"
+                    onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');">
+                    <!-- HTMX will replace this with the new options -->
+                    <option disabled selected>Loading curriculums...</option>
+                </select>
+                <select class="ms-4" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
+                    hx-on::after-request="afterDropdownReq(this, 
+                    {{ if .GradeID }}{{ .GradeID }}{{ else }}null{{ end }})"
+                    onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');">
+                    <!-- HTMX will replace this with the new options -->
+                    <option disabled selected>Loading grades...</option>
+                </select>
+                <select class="ms-4" id="subject-dropdown" name="subject-dropdown" hx-get="/api/subjects"
+                    hx-trigger="load"
+                    hx-on::after-request="afterDropdownReq(this, {{ if .SubjectID }}{{ .SubjectID }}{{ else }}null{{ end }})"
+                    onchange="sessionStorage.setItem('selectedSubject', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false');">
+                    <!-- HTMX will replace this with the new options -->
+                    <option disabled selected>Loading subjects...</option>
+                </select>
+            </div>
+        </nav>
+
+        <div class="m-7" id="nav-tabContent">
+            <div id="content">
+                {{ block "content" . }}<p>Select a tab to load content.</p>{{ end }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Modules (type="module") are scoped, meaning functions are not global by default.
+     Direct imports work only inside module scripts. Need to attach such functions to window if we need them 
+     in non-module scripts. Otherwise we need to convert all scripts to module type and import 
+     it wherever we want to use isInt() and then any function defined inside such module script cannot be 
+     accessed from same file's html code -->
+    <script type="module">
+        import { isInt } from '/web/static/js/utils.js';
+
+        // Attach to window to make it globally accessible
+        window.isInt = isInt;
+    </script>
+    <script src="/web/static/js/nav-tracker.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let debounceTimeout;
+
+            function getTabURLFromPath(path) {
+                // Define URL-to-tab mapping based on expected paths
+                if (path.startsWith("/chapter")) return "chapters-tab";
+                if (path === "/modules") return "modules-tab";
+                if (path === "/books") return "books-tab";
+                if (path.startsWith("/test")) return "tests-tab";
+                return null;
+            }
+
+            function updateActiveTabFromURL() {
+                const currentPath = window.location.pathname;
+
+                // Determine which tab should be active
+                const activeTabId = getTabURLFromPath(currentPath);
+                const currentlyActiveTab = document.querySelector('[data-toggle="tab"].active');
+
+                // Skip only if the correct tab is already active
+                if (currentlyActiveTab && currentlyActiveTab.id === activeTabId) {
+                    return;
+                }
+
+                const tabBtns = document.querySelectorAll('[data-toggle="tab"]');
+                tabBtns.forEach(tabBtn => tabBtn.classList.remove("active"));
+
+                if (activeTabId) {
+                    const activeTab = document.getElementById(activeTabId);
+                    if (activeTab) activeTab.classList.add("active");
+                }
+                
+                // Hide subject dropdown when "Tests" tab is active
+                const subjectDropdown = document.getElementById("subject-dropdown");
+                if (activeTabId === "tests-tab" && !(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test"))) {
+                    subjectDropdown.style.display = "none";
+                } else {
+                    subjectDropdown.style.display = "inline-block";
+                }
+            }
+
+            /*
+             * function to minimize same multiple calls happening within 50ms 
+             * due to multiple quick afterSettle events received 
+             */
+            function debounceUpdate() {
+                clearTimeout(debounceTimeout);
+                debounceTimeout = setTimeout(updateActiveTabFromURL, 100); // Delay execution slightly
+            }
+
+            document.body.addEventListener("htmx:afterSettle", debounceUpdate);
+        });
 
         // Function to go back after delay
         function goBackAfterDelay(milliseconds) {
@@ -109,6 +186,42 @@
             }, milliseconds);
         }
 
+        htmx.defineExtension('mathJaxLoader', {
+            onEvent: function (name, event) {
+                /**
+                 * window.MathJax condition is not required right now because it will always return non-null
+                 * value for our case as we have included MathJax script in this home.html file which is 
+                 * used as base template for all screens, but still it is recommended way to handle cases 
+                 * where MathJax can not be loaded due to network or cdn issues OR in future if we create
+                 * some pages not requiring MathJax and hence shift its script declaration from this file
+                 * to files where it is required
+                 * 
+                 * htmx:oobAfterSwap is received when problem is added from question bank in test from add_test.html
+                 */
+                if ((name === "htmx:afterSwap" || name === "htmx:oobAfterSwap") && window.MathJax) {
+                    let targetElement = event.detail.target;
+
+                    // Check if the target element itself has data-mathjax
+                    let hasMathJax = targetElement.hasAttribute("data-mathjax");
+                    
+                    // Check if any nested elements have data-mathjax
+                    if (!hasMathJax) {
+                        hasMathJax = targetElement.querySelector('[data-mathjax]') !== null;
+                    }
+                    
+                    // Apply MathJax.typesetPromise() only if at least one element has data-mathjax
+                    if (hasMathJax) {
+                        /**
+                         * Applying typesetPromise() to parent of targetElement instead of targetElement itself,
+                         * because otherwise while adding problem rows in test from add_test.html, it shows
+                         * targetElement as row before the new row inserted, hence newly inserted row's math symbols
+                         * are not converted. In this case applying typesetPromise() to its parent solves the issue
+                         */
+                        MathJax.typesetPromise([targetElement.parentElement]).catch(console.error);
+                    }
+                }
+            }
+        })
     </script>
 </body>
 

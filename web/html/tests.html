@@ -1,0 +1,191 @@
+{{ define "content" }}
+<div>
+    <div class="flex justify-between items-center mb-4">
+
+        <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on 
+        coming back from single test to tests list screen -->
+        <select id="testtype-dropdown" hx-ext="testsLoader" name="testtype-dropdown"
+            class="border border-gray-400 p-2 rounded" hx-get="/api/tests"
+            hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
+            hx-target="#testTableBody" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
+            onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');"
+            hx-on::after-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'true')">
+            {{ template "test_type_options" }}
+        </select>
+
+        <!-- Add New Test Link -->
+        <h4 class="text-sm font-semibold text-blue-500 hover:underline ml-4">
+            <a href="#" 
+                hx-get="/tests/add-test-dialog" 
+                hx-target="body" 
+                hx-push-url="true"
+                hx-swap="beforeend">Add New Test</a>
+        </h4>
+    </div>
+
+    <!-- Content Area -->
+    <div id="subcontent">
+        <div class="shadow-md my-6 overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead>
+                    <tr class="bg-gray-200 text-gray-600 text-sm">
+                        <th class="py-4 px-6 text-left">
+                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateSortState(event, '1');">
+                                Code <i class="fas fa-sort"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-left">
+                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateSortState(event, '2');">
+                                Name <i class="fas fa-sort"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">
+                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateSortState(event, '3');">
+                                # of questions <i class="fas fa-sort"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">
+                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateSortState(event, '4');">
+                                Marks <i class="fas fa-sort"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">
+                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateSortState(event, '5');">
+                                Duration <i class="fas fa-sort"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">
+                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateSortState(event, '6');">
+                                Set <i class="fas fa-sort"></i>
+                            </a>
+                        </th>
+                        <th class="px-6 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="testTableBody" class="text-gray-600 text-sm">
+                    <!-- Rows will be dynamically inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+
+    // Ensure the script is executed only once (event listener is attached and constants are declared only once)
+    if (!window.scriptExecutedOnce) {
+        window.scriptExecutedOnce = true;
+
+        document.body.addEventListener('htmx:load', function () {
+
+            // Function to restore tests tab state (testtype dropdown, sort) and trigger HTMX request
+            function restoreState() {
+                const dropdown = document.getElementById('testtype-dropdown');
+                if (!dropdown) return;
+
+                const storedTesttype = sessionStorage.getItem('selectedTesttype');
+
+                if (storedTesttype && dropdown.value !== storedTesttype) {
+                    // Set the dropdown value
+                    dropdown.value = storedTesttype;
+                    updateSortIcons(sessionStorage.getItem(TESTS_SORT_COLUMN), sessionStorage.getItem(TESTS_SORT_ORDER));
+
+                    // Trigger native change event which should activate HTMX
+                    htmx.trigger(dropdown, 'change');
+                }
+            }
+
+            restoreState();
+        });
+
+        const TESTS_SORT_COLUMN = "testsSortColumn";
+        const TESTS_SORT_ORDER = "testsSortOrder";
+
+        function updateSortState(event, column) {
+            // Retrieve previous sort state from sessionStorage
+            let previousColumn = sessionStorage.getItem(TESTS_SORT_COLUMN);
+            let previousOrder = sessionStorage.getItem(TESTS_SORT_ORDER);
+
+            let newOrder = "asc"; // Default to ascending order
+            if (previousColumn === column) {
+                newOrder = previousOrder === "asc" ? "desc" : "asc";
+            }
+
+            // Store new state
+            sessionStorage.setItem(TESTS_SORT_COLUMN, column);
+            sessionStorage.setItem(TESTS_SORT_ORDER, newOrder);
+        }
+
+        function updateSortIcons(column, order) {
+            // Reset all icons
+            document.querySelectorAll("th i.fas").forEach(icon => {
+                icon.classList.remove("fa-sort-up", "fa-sort-down");
+                icon.classList.add("fa-sort");
+            });
+
+            // Find the correct header and update its icon
+            document.querySelectorAll("th").forEach(th => {
+                let link = th.querySelector("a");
+                if (link && link.getAttribute("hx-on:click")?.includes(column)) {
+                    let icon = th.querySelector("i.fas");
+                    if (icon) {
+                        icon.classList.remove("fa-sort");
+                        icon.classList.add(order === "asc" ? "fa-sort-up" : "fa-sort-down");
+                    }
+                }
+            });
+        }
+
+        document.body.addEventListener('htmx:configRequest', function (event) {
+            if (event.detail.path === "/api/tests") {
+                // Get sessionStorage values
+                let sortColumn = sessionStorage.getItem(TESTS_SORT_COLUMN);
+                let sortOrder = sessionStorage.getItem(TESTS_SORT_ORDER);
+                if (sortColumn) {
+                    // Add them to the request parameters
+                    event.detail.parameters.sortColumn = sortColumn;
+                    event.detail.parameters.sortOrder = sortOrder;
+                }
+            }
+        });
+    }
+
+    htmx.defineExtension('testsLoader', {
+        onEvent: function (name, event) {
+            if (name === "htmx:beforeRequest") {
+                const requestPath = event.detail.elt.getAttribute("hx-get");
+
+                if (requestPath === "/api/tests") {
+                    if (sessionStorage.getItem(window.TESTS_LOADED_KEY) === "true") {
+                        console.log("Skipping /api/tests request because tests are already loaded.");
+                        event.preventDefault();
+
+                    } else {
+                        const params = event.detail.requestConfig.parameters;
+                        const curriculum = params["curriculum-dropdown"];
+                        const grade = params["grade-dropdown"];
+
+                        // if dropdown values are showing default value like "Loading...", then don't execute request
+                        if (!isInt(curriculum) || !isInt(grade)) {
+                            console.log("Skipping /api/tests request because dropdowns are not loaded yet.");
+                            event.preventDefault();
+
+                        } else {
+                            const storedCurriculum = sessionStorage.getItem("selectedCurriculum");
+                            const storedGrade = sessionStorage.getItem("selectedGrade");
+
+                            if ((storedCurriculum && storedCurriculum !== curriculum) ||
+                                (storedGrade && storedGrade !== grade)) {
+                                // at least 1 dropdown value is 1 (1st item value) and its correct value is yet to be retained from sessionStorage
+                                console.log("Skipping /api/tests request because dropdowns values are not yet retained.");
+                                event.preventDefault();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{{ end }}

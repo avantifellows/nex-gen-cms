@@ -2,15 +2,15 @@ package handlers
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 
+	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 )
 
-const getSubjectsEndPoint = "/subject"
-const subjectsKey = "subjects"
 const subjectsTemplate = "subjects.html"
 
 type SubjectsHandler struct {
@@ -23,13 +23,34 @@ func NewSubjectsHandler(service *services.Service[models.Subject]) *SubjectsHand
 	}
 }
 
-func (h *SubjectsHandler) GetSubjects(w http.ResponseWriter, r *http.Request) {
-	subjects, err := h.service.GetList(getSubjectsEndPoint, subjectsKey, false)
+func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, request *http.Request) {
+	subjects, err := h.service.GetList(handlerutils.SubjectsEndPoint, handlerutils.SubjectsKey, false, false)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Load subjects.html
-	local_repo.ExecuteTemplate(subjectsTemplate, w, subjects)
+	local_repo.ExecuteTemplate(subjectsTemplate, responseWriter, subjects, template.FuncMap{
+		"getName": getSubjectName,
+	})
+}
+
+func getSubjectName(s models.Subject, lang string) string {
+	return s.GetNameByLang(lang)
+}
+
+func getParentSubjectName(s models.Subject, lang string) string {
+	if s.ParentID != 0 {
+		return s.GetParentNameByLang(lang)
+	} else {
+		return s.GetNameByLang(lang)
+	}
+}
+
+func getParentSubjectId(s models.Subject) int8 {
+	if s.ParentID != 0 {
+		return s.ParentID
+	} else {
+		return s.ID
+	}
 }

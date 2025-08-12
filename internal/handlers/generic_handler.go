@@ -1,31 +1,33 @@
 package handlers
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/utils"
 )
+
+const CURRICULUM_DROPDOWN_NAME = "curriculum-dropdown"
+const GRADE_DROPDOWN_NAME = "grade-dropdown"
+const SUBJECT_DROPDOWN_NAME = "subject-dropdown"
+
+const baseTemplate = "home.html"
 
 /*
 Handles loading html template files having same name as that of path passed
 in request. Path containing only '/' is considered as "/home", resulting in
 loading web/html/home.html file
 */
-func GenericHandler(w http.ResponseWriter, r *http.Request) {
+func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
 
 	// Extract the requested path
-	path := r.URL.Path
-	var data HomeChapterData
-	if initialLoad := path == "/"; initialLoad {
-		data = HomeChapterData{
-			true,
-			nil,
-		}
-	}
+	path := request.URL.Path
 
 	if path == "/" {
 		path = "/home"
@@ -38,14 +40,31 @@ func GenericHandler(w http.ResponseWriter, r *http.Request) {
 	// Parse the template
 	tmpl, err := template.ParseFiles(filePath)
 	if err != nil {
-		http.NotFound(w, r)
+		http.NotFound(responseWriter, request)
 		log.Printf("Template not found: %s", filePath)
 		return
 	}
 
 	// Render the template
-	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, "Error rendering template", http.StatusInternalServerError)
+	if err := tmpl.Execute(responseWriter, nil); err != nil {
+		http.Error(responseWriter, "Error rendering template", http.StatusInternalServerError)
 		log.Printf("Error executing template: %s", err)
 	}
+}
+
+func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
+	// these query parameters can be queried by element names only, not ids
+	curriculumId, err := utils.StringToIntType[int16](urlValues.Get(CURRICULUM_DROPDOWN_NAME))
+	if err != nil {
+		fmt.Println("Selected Curriculum is invalid")
+	}
+	gradeId, err := utils.StringToIntType[int8](urlValues.Get(GRADE_DROPDOWN_NAME))
+	if err != nil {
+		fmt.Println("Selected Grade is invalid")
+	}
+	subjectId, err := utils.StringToIntType[int8](urlValues.Get(SUBJECT_DROPDOWN_NAME))
+	if err != nil {
+		fmt.Println("Selected Subject is invalid")
+	}
+	return curriculumId, gradeId, subjectId
 }

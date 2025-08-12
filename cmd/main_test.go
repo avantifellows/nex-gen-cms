@@ -9,6 +9,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/di"
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers"
+	"github.com/avantifellows/nex-gen-cms/internal/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -57,6 +58,7 @@ func TestSetup(t *testing.T) {
 	mockServeMux := NewMockServeMux()
 	appComponentPtr, _ := di.NewAppComponent()
 	chaptersHandler := appComponentPtr.ChaptersHandler
+	topicsHandler := appComponentPtr.TopicsHandler
 
 	expectedRouteHandlers := []struct {
 		pattern string
@@ -66,17 +68,25 @@ func TestSetup(t *testing.T) {
 		{"/", http.HandlerFunc(handlers.GenericHandler)},
 		{"/modules", http.HandlerFunc(handlers.GenericHandler)},
 		{"/books", http.HandlerFunc(handlers.GenericHandler)},
-		{"/major-tests", http.HandlerFunc(handlers.GenericHandler)},
+		{"/tests", http.HandlerFunc(handlers.GenericHandler)},
 		{"/add-chapter", http.HandlerFunc(handlers.GenericHandler)},
 		{"/chapters", http.HandlerFunc(chaptersHandler.LoadChapters)},
 		{"/api/curriculums", http.HandlerFunc(appComponentPtr.CurriculumsHandler.GetCurriculums)},
 		{"/api/grades", http.HandlerFunc(appComponentPtr.GradesHandler.GetGrades)},
 		{"/api/subjects", http.HandlerFunc(appComponentPtr.SubjectsHandler.GetSubjects)},
 		{"/api/chapters", http.HandlerFunc(chaptersHandler.GetChapters)},
-		{"/edit-chapter", http.HandlerFunc(chaptersHandler.EditChapter)},
+		{"/edit-chapter", middleware.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter))},
 		{"/update-chapter", http.HandlerFunc(chaptersHandler.UpdateChapter)},
 		{"/create-chapter", http.HandlerFunc(chaptersHandler.AddChapter)},
 		{"/delete-chapter", http.HandlerFunc(chaptersHandler.DeleteChapter)},
+		{"/chapter", http.HandlerFunc(chaptersHandler.GetChapter)},
+		{"/topics", http.HandlerFunc(chaptersHandler.LoadTopics)},
+		{"/api/topics", http.HandlerFunc(chaptersHandler.GetTopics)},
+		{"/add-topic", http.HandlerFunc(topicsHandler.OpenAddTopic)},
+		{"/create-topic", http.HandlerFunc(topicsHandler.AddTopic)},
+		{"/delete-topic", http.HandlerFunc(topicsHandler.DeleteTopic)},
+		{"/edit-topic", middleware.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic))},
+		{"/update-topic", http.HandlerFunc(topicsHandler.UpdateTopic)},
 	}
 
 	setup(mockConfig, mockServeMux, appComponentPtr)

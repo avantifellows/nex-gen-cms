@@ -1,0 +1,35 @@
+{{ range . }}
+{{ $curriculumGrade := (index .CurriculumGrades 0) }}
+{{ $curriculumId := $curriculumGrade.CurriculumID }}
+{{ $gradeId := $curriculumGrade.GradeID }}
+<tr class="border-b hover:bg-gray-100">
+    <td class="py-4 px-6">{{.Code}}</td>
+    <td class="px-6 text-blue-500 hover:underline"><a href="/test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}" 
+        hx-get="/test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}" hx-target="body"
+        hx-push-url="true">{{ (index .Name 0).Resource }}</a></td>
+    <td class="px-6 text-center text-blue-500 hover:underline">{{.ProblemCount}}</td>
+    <td class="text-center">{{.TypeParams.Marks}}</td>
+    <td class="text-center">{{.TypeParams.Duration}}</td>
+    <td></td>
+    <td class="text-center space-x-4">
+        <!-- target is kept body instead of #content, because using #content as target will not work when
+         directly edit url is entered in browser -->
+        <button class="action-button" hx-get="/tests/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
+            hx-target="body" hx-push-url="true">
+            <i class="fa-solid fa-pen"></i>
+        </button>
+        <a href="/download-pdf?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions" 
+            target="_blank" class="action-button" title="Download Questions PDF">
+                <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
+        </a>
+        <a href="/download-pdf?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=answers"  
+            target="_blank"class="action-button" title="Download Answers PDF">
+                <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
+        </a>
+        <button class="action-button" hx-delete="/archive-test?id={{.ID}}"
+            hx-confirm="Are you sure you want to delete test {{(index .Name 0).Resource}}?" hx-target="closest tr">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    </td>
+</tr>
+{{ end }}

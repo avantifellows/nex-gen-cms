@@ -1,0 +1,19 @@
+<div class="container mx-auto bg-white shadow-md rounded p-6 mt-4">
+  <h1 class="text-2xl font-semibold mb-4">Editing topic</h1>
+  <form hx-patch="/update-topic?id={{.ID}}">
+    <div class="mb-4">
+      <label for="name" class="block text-gray-700 font-medium mb-2">Topic Title</label>
+      <input type="text" id="name" name="name" class="w-full p-3 border border-gray-300 rounded" value="{{ getName . "en" }}">
+    </div>
+    <div class="mb-4">
+      <label for="description" class="block text-gray-700 font-medium mb-2">Description</label>
+      <textarea id="description" name="description" class="w-full p-3 border border-gray-300 rounded"
+        placeholder="Enter topic description..."></textarea>
+    </div>
+    <div class="mb-4">
+      <label for="code" class="block text-gray-700 font-medium mb-2">Topic Code</label>
+      <input type="text" id="code" name="code" class="w-full p-3 border border-gray-300 rounded" value="{{.Code}}">
+    </div>
+    <button type="submit" class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition">SAVE</button>
+  </form>
+</div>

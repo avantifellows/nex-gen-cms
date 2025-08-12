@@ -9,7 +9,9 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 )
 
-const getCurriculumsEndPoint = "/curriculum"
+const QUERY_PARAM_CURRICULUM_ID = "curriculum_id"
+
+const getCurriculumsEndPoint = "curriculum"
 const curriculumsKey = "curriculums"
 const curriculumsTemplate = "curriculums.html"
 
@@ -23,13 +25,12 @@ func NewCurriculumsHandler(service *services.Service[models.Curriculum]) *Curric
 	}
 }
 
-func (h *CurriculumsHandler) GetCurriculums(w http.ResponseWriter, r *http.Request) {
-	curriculums, err := h.service.GetList(getCurriculumsEndPoint, curriculumsKey, false)
+func (h *CurriculumsHandler) GetCurriculums(responseWriter http.ResponseWriter, request *http.Request) {
+	curriculums, err := h.service.GetList(getCurriculumsEndPoint, curriculumsKey, false, false)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching curriculums: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, fmt.Sprintf("Error fetching curriculums: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// Load curriculums.html
-	local_repo.ExecuteTemplate(curriculumsTemplate, w, curriculums)
+	local_repo.ExecuteTemplate(curriculumsTemplate, responseWriter, curriculums, nil)
 }

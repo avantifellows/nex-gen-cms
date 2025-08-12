@@ -24,15 +24,17 @@ func NewService[T any](cacheRepo *local_repo.CacheRepository, apiRepo *remote_re
 }
 
 // GetList returns data from cache or API
-func (s *Service[T]) GetList(urlEndPoint string, cacheKey string, onlyCache bool) (*[]*T, error) {
+func (s *Service[T]) GetList(urlEndPoint string, cacheKey string, onlyCache bool, onlyRemote bool) (*[]*T, error) {
 
-	// Check if data is in cache
-	if list, found := s.cacheRepository.Get(cacheKey); found {
-		return list.(*[]*T), nil
-	}
+	if !onlyRemote {
+		// Check if data is in cache
+		if list, found := s.cacheRepository.Get(cacheKey); found {
+			return list.(*[]*T), nil
+		}
 
-	if onlyCache {
-		return nil, nil
+		if onlyCache {
+			return nil, nil
+		}
 	}
 
 	// Otherwise, fetch from API
@@ -57,27 +59,37 @@ func (s *Service[T]) GetObject(objIdStr string, objFindingPredicate func(*T) boo
 	urlEndPoint string) (*T, error) {
 
 	// check in the cache for list
-	list, _ := s.GetList(urlEndPoint, cacheKey, true)
-	objPtr := new(T)
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	if list != nil {
-		objPtr = funk.Find(*list, objFindingPredicate).(*T)
+		found := funk.Find(*list, objFindingPredicate)
+		if found != nil {
+			return found.(*T), nil
+		}
+	}
 
+	var fullURL string
+	if objIdStr == "" {
+		fullURL = urlEndPoint
 	} else {
-		// call api to fetch single object
-		respBytes, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodGet, nil)
-		if err != nil {
-			return nil, err
-		}
+		fullURL = urlEndPoint + "/" + objIdStr
+	}
 
-		// Unmarshal the response bytes into pointer to object
-		if err := json.Unmarshal(respBytes, objPtr); err != nil {
-			return nil, fmt.Errorf("error parsing response: %v", err)
-		}
+	// call api to fetch single object
+	respBytes, err := s.apiRepository.CallAPI(fullURL, http.MethodGet, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	objPtr := new(T)
+	// Unmarshal the response bytes into pointer to object
+	if err := json.Unmarshal(respBytes, objPtr); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
 	}
 	return objPtr, nil
 }
 
-func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any) (*T, error) {
+func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any, cacheKey string,
+	objFindingPredicate func(*T) bool) (*T, error) {
 
 	respBytes, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodPatch, body)
 	if err != nil {
@@ -88,6 +100,13 @@ func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any)
 	// Unmarshal the response bytes into pointer to object
 	if err := json.Unmarshal(respBytes, objPtr); err != nil {
 		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	// Update in cache
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
+	if list != nil {
+		selectedObjPtr := funk.Find(*list, objFindingPredicate).(*T)
+		*selectedObjPtr = *objPtr
 	}
 
 	return objPtr, nil
@@ -107,7 +126,7 @@ func (s *Service[T]) AddObject(body any, cacheKey string, urlEndPoint string) (*
 	}
 
 	// Add in cache
-	list, _ := s.GetList(urlEndPoint, cacheKey, true)
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	if list != nil {
 		*list = append(*list, objPtr)
 	}
@@ -122,7 +141,22 @@ func (s *Service[T]) DeleteObject(objIdStr string, objKeepingPredicate func(*T) 
 	}
 
 	// as deleted from api without any error, now delete from cache also
-	list, _ := s.GetList(urlEndPoint, cacheKey, true)
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
+	if list != nil {
+		*list = funk.Filter(*list, objKeepingPredicate).([]*T)
+	}
+	return nil
+}
+
+func (s *Service[T]) ArchiveObject(objIdStr string, urlEndPoint string, body any, cacheKey string,
+	objKeepingPredicate func(*T) bool) error {
+	_, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodPatch, body)
+	if err != nil {
+		return err
+	}
+
+	// as archived from api without any error, now remove from cache also
+	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	if list != nil {
 		*list = funk.Filter(*list, objKeepingPredicate).([]*T)
 	}
