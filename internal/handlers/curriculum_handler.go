@@ -11,7 +11,7 @@ import (
 
 const QUERY_PARAM_CURRICULUM_ID = "curriculum_id"
 
-const getCurriculumsEndPoint = "/curriculum"
+const getCurriculumsEndPoint = "curriculum"
 const curriculumsKey = "curriculums"
 const curriculumsTemplate = "curriculums.html"
 

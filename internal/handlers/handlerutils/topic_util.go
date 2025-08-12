@@ -9,7 +9,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const TopicsEndPoint = "/topic"
+const TopicsEndPoint = "topic"
 const TopicsKey = "topics"
 
 func GetTopicById(topicIdStr string, topicsService *services.Service[models.Topic]) (*models.Topic, int, error) {

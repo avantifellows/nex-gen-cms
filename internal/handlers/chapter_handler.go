@@ -16,7 +16,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const chaptersEndPoint = "/chapter"
+const chaptersEndPoint = "chapter"
 
 const chaptersKey = "chapters"
 

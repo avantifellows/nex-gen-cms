@@ -9,7 +9,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const SubjectsEndPoint = "/subject"
+const SubjectsEndPoint = "subject"
 const SubjectsKey = "subjects"
 
 func FetchSelectedSubject(

@@ -11,7 +11,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const conceptsEndPoint = "/concept"
+const conceptsEndPoint = "concept"
 
 const conceptsKey = "concepts"
 

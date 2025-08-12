@@ -9,7 +9,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 )
 
-const getGradesEndPoint = "/grade"
+const getGradesEndPoint = "grade"
 const gradesKey = "grades"
 const gradesTemplate = "grades.html"
 
