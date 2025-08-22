@@ -16,7 +16,7 @@ env:
   TF_VAR_cloudflare_email: ${{ secrets.TF_VAR_CLOUDFLARE_EMAIL }}
   TF_VAR_cloudflare_api_key: ${{ secrets.TF_VAR_CLOUDFLARE_API_KEY }}
   TF_VAR_cloudflare_zone_name: ${{ secrets.TF_VAR_CLOUDFLARE_ZONE_NAME }}
-  TF_VAR_subdomain: ${{ new-cms }}
+  TF_VAR_subdomain: ${{ 'new-cms' }}
   TF_VAR_letsencrypt_email: ${{ secrets.TF_VAR_LETSENCRYPT_EMAIL }}
   TF_VAR_repo_url: ${{ 'https://github.com/avantifellows/nex-gen-cms.git' }}
   TF_VAR_repo_branch: ${{ github.ref_name }}
