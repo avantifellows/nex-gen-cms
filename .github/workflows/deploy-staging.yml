@@ -8,7 +8,7 @@ on:
 
 env:
   AWS_REGION: ap-south-1
-  TERRAFORM_VERSION: 1.5.0
+  TERRAFORM_VERSION: 1.5.7
   # Terraform Variables - defined once and used in both plan and apply
   TF_VAR_environment: ${{ 'staging' }}
   TF_VAR_aws_region: ${{ 'ap-south-1' }}

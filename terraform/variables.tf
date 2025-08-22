@@ -9,7 +9,7 @@ variable "environment" {
   description = "Environment name (staging, prod)"
   type        = string
   default     = "staging"
-  
+
   validation {
     condition     = contains(["staging", "prod"], var.environment)
     error_message = "Environment must be either 'staging' or 'prod'."
@@ -19,7 +19,7 @@ variable "environment" {
 variable "ssh_cidr" {
   description = "CIDR block allowed for SSH access"
   type        = string
-  default     = "0.0.0.0/0"  # Restrict this in production
+  default     = "0.0.0.0/0" # Restrict this in production
 }
 
 # Cloudflare DNS variables
@@ -79,7 +79,7 @@ variable "db_service_token" {
 variable "instance_type" {
   description = "EC2 instance type"
   type        = string
-  default     = "t4g.small"  # ARM-based instance
+  default     = "t4g.small" # ARM-based instance
 }
 
 variable "key_pair_name" {

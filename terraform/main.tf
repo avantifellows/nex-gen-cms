@@ -25,7 +25,7 @@ data "cloudflare_zone" "main" {
 
 # Local values
 locals {
-  domain = var.environment == "prod" ? "${var.subdomain}.${var.cloudflare_zone_name}" : "${var.environment}-${var.subdomain}.${var.cloudflare_zone_name}"
+  domain      = var.environment == "prod" ? "${var.subdomain}.${var.cloudflare_zone_name}" : "${var.environment}-${var.subdomain}.${var.cloudflare_zone_name}"
   name_prefix = "nex-gen-cms-${var.environment}"
 }
 
@@ -78,7 +78,7 @@ resource "aws_security_group" "web" {
 # Elastic IP
 resource "aws_eip" "web" {
   domain = "vpc"
-  
+
   tags = {
     Name = "${local.name_prefix}-eip"
   }
@@ -120,12 +120,12 @@ EOF
 
 # EC2 Instance
 resource "aws_instance" "web" {
-  ami                     = data.aws_ami.amazon_linux.id
-  instance_type           = var.instance_type
-  key_name                = var.key_pair_name
-  vpc_security_group_ids  = [aws_security_group.web.id]
-  availability_zone       = data.aws_availability_zones.available.names[0]
-  
+  ami                    = data.aws_ami.amazon_linux.id
+  instance_type          = var.instance_type
+  key_name               = var.key_pair_name
+  vpc_security_group_ids = [aws_security_group.web.id]
+  availability_zone      = data.aws_availability_zones.available.names[0]
+
   user_data = local.user_data
 
   root_block_device {
@@ -157,7 +157,7 @@ resource "cloudflare_record" "web" {
   content = aws_eip.web.public_ip
   type    = "A"
   ttl     = 300
-  proxied = false  # Set to false initially for Let's Encrypt HTTP-01 challenge
+  proxied = false # Set to false initially for Let's Encrypt HTTP-01 challenge
 
   comment = "Terraform managed - ${var.environment} environment for nex-gen-cms"
 }
