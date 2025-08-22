@@ -61,22 +61,68 @@ jobs:
         run: terraform validate
       
       - name: Terraform Plan
-        run: terraform plan -out=tfplan -detailed-exitcode
-        continue-on-error: false
-      
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        id: plan
+        run: |
+          set -e
+          echo "Running terraform plan with detailed exit code..."
+          # detailed-exitcode: 0=no changes, 2=changes present, 1=error
+          set +e
+          terraform plan -out=tfplan -detailed-exitcode | tee plan_output.txt
+          PLAN_EXIT_CODE=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$PLAN_EXIT_CODE" -eq 2 ]; then
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Terraform plan indicates changes."
+          elif [ "$PLAN_EXIT_CODE" -eq 0 ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "Terraform plan indicates no changes."
+          else
+            echo "Terraform plan failed with exit code $PLAN_EXIT_CODE"
+            exit $PLAN_EXIT_CODE
+          fi
+
+      - name: Terraform Apply (when changes)
+        if: steps.plan.outputs.has_changes == 'true'
+        id: apply
         run: terraform apply -auto-approve tfplan
-      
+
+      - name: Capture Instance ID
+        id: instance
+        run: |
+          set -e
+          IID=$(terraform output -raw instance_id)
+          echo "instance_id=${IID}" >> "$GITHUB_OUTPUT"
+          echo "Instance ID: ${IID}"
+
+      - name: Reboot EC2 Instance (no infra changes)
+        if: steps.plan.outputs.has_changes == 'false' && steps.instance.outputs.instance_id != ''
+        run: |
+          echo "No infra changes detected. Rebooting EC2 instance to pick latest app changes..."
+          aws ec2 reboot-instances --instance-ids "${{ steps.instance.outputs.instance_id }}"
+          echo "Reboot signal sent."
+
+      - name: Wait for Instance to be Running
+        if: steps.instance.outputs.instance_id != ''
+        run: |
+          echo "Waiting for instance to be running..."
+          aws ec2 wait instance-running --instance-ids "${{ steps.instance.outputs.instance_id }}"
+          echo "Instance is running."
+
+      - name: Wait for Instance Status Checks
+        if: steps.instance.outputs.instance_id != ''
+        run: |
+          echo "Waiting for instance status checks to pass..."
+          aws ec2 wait instance-status-ok --instance-ids "${{ steps.instance.outputs.instance_id }}"
+          echo "Instance passed status checks."
+
       - name: Output Application URL
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           echo "🚀 Application deployed successfully!"
           echo "URL: $(terraform output -raw application_url)"
           echo "IP: $(terraform output -raw instance_public_ip)"
-      
+
       - name: Wait for Application
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: |
           echo "Waiting for application to be ready..."
           URL=$(terraform output -raw application_url)
