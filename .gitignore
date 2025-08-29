@@ -4,7 +4,3 @@ node_modules/*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
-.terraform/
-terraform.tfstate
-terraform.tfstate.backup
-/infra/envs
