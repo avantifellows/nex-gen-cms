@@ -43,15 +43,6 @@ EOF
 chown "$APP_USER:$APP_USER" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 
-# Also create .env file in application directory for godotenv
-log "Creating .env file for application"
-cat > "$APP_DIR/.env" << 'EOF'
-DB_SERVICE_ENDPOINT=${db_service_endpoint}
-DB_SERVICE_TOKEN=${db_service_token}
-EOF
-chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
-chmod 600 "$APP_DIR/.env"
-
 # Clone or update repository
 log "Setting up application code"
 cd "$APP_DIR"
@@ -66,6 +57,15 @@ else
     rm -rf "$APP_DIR"/.*
     sudo -u "$APP_USER" git clone -b ${repo_branch} ${repo_url} .
 fi
+
+# Create .env file in application directory for godotenv (after git clone)
+log "Creating .env file for application"
+cat > "$APP_DIR/.env" << 'EOF'
+DB_SERVICE_ENDPOINT=${db_service_endpoint}
+DB_SERVICE_TOKEN=${db_service_token}
+EOF
+chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
+chmod 600 "$APP_DIR/.env"
 
 # Build the application
 log "Building application"
