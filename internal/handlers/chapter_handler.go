@@ -40,45 +40,8 @@ func NewChaptersHandler(chaptersService *services.Service[models.Chapter],
 	}
 }
 
-var chapterSortState = dto.SortState{
-	Column: "0",
-	Order:  constants.SortOrderAsc,
-}
-
-var topicSortState = dto.SortState{
-	Column: "0",
-	Order:  constants.SortOrderAsc,
-}
-
 func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, request *http.Request) {
-	updateSortState(request, &chapterSortState)
-	data := dto.HomeData{
-		ChapterSortState: chapterSortState,
-	}
-	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, chaptersTemplate)
-}
-
-func updateSortState(request *http.Request, sortState *dto.SortState) {
-	urlVals := request.URL.Query()
-	const queryParam = "sortColumn"
-
-	// change sort state if it is called due to click on any column header
-	if urlVals.Has(queryParam) {
-		sortColumn := urlVals.Get(queryParam)
-
-		// if same column is clicked, toggle the order
-		if sortColumn == sortState.Column {
-			if sortState.Order == constants.SortOrderAsc {
-				sortState.Order = constants.SortOrderDesc
-			} else {
-				sortState.Order = constants.SortOrderAsc
-			}
-		} else {
-			// If a new column is clicked, default to ascending order
-			sortState.Column = sortColumn
-			sortState.Order = constants.SortOrderAsc
-		}
-	}
+	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, chaptersTemplate)
 }
 
 func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, request *http.Request) {
@@ -97,7 +60,10 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 	}
 
 	h.getTopics(responseWriter, *chapters)
-	sortChapters(*chapters)
+
+	sortColumn := urlValues.Get("sortColumn")
+	sortOrder := urlValues.Get("sortOrder")
+	sortChapters(*chapters, sortColumn, sortOrder)
 
 	view := urlValues.Get("view")
 	var filename string
@@ -239,10 +205,10 @@ func (h *ChaptersHandler) DeleteChapter(responseWriter http.ResponseWriter, requ
 	}
 }
 
-func sortChapters(chapterPtrs []*models.Chapter) {
+func sortChapters(chapterPtrs []*models.Chapter, sortColumn string, sortOrder string) {
 	slices.SortStableFunc(chapterPtrs, func(c1, c2 *models.Chapter) int {
 		var sortResult int
-		switch chapterSortState.Column {
+		switch sortColumn {
 		case "1":
 			c1Suffix := utils.ExtractNumericSuffix(c1.Code)
 			c2Suffix := utils.ExtractNumericSuffix(c2.Code)
@@ -261,7 +227,7 @@ func sortChapters(chapterPtrs []*models.Chapter) {
 			sortResult = 0
 		}
 
-		if chapterSortState.Order == constants.SortOrderDesc {
+		if constants.SortOrder(sortOrder) == constants.SortOrderDesc {
 			sortResult = -sortResult
 		}
 		return sortResult
@@ -311,11 +277,8 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 
 func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request *http.Request) {
 	chapterIdStr := request.URL.Query().Get("id")
-	updateSortState(request, &topicSortState)
-
 	data := dto.TopicsData{
-		ChapterId:       chapterIdStr,
-		TopicsSortState: topicSortState,
+		ChapterId: chapterIdStr,
 	}
 	local_repo.ExecuteTemplate(topicsTemplate, responseWriter, data, nil)
 }
@@ -350,7 +313,10 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	if len(selectedChapterPtr.Topics) == 0 {
 		h.getTopics(responseWriter, []*models.Chapter{selectedChapterPtr})
 	}
-	sortTopics(selectedChapterPtr.Topics)
+
+	sortColumn := urlVals.Get("sortColumn")
+	sortOrder := urlVals.Get("sortOrder")
+	sortTopics(selectedChapterPtr.Topics, sortColumn, sortOrder)
 
 	local_repo.ExecuteTemplate(filename, responseWriter, selectedChapterPtr.Topics, template.FuncMap{
 		"getName": getTopicName,
