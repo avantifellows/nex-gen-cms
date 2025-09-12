@@ -28,6 +28,7 @@ const problemsTemplate = "problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
 const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
+const addConceptModalTemplate = "add_concept_modal.html"
 const editorTemplate = "editor.html"
 const inputTagsTemplate = "input_tags.html"
 
@@ -200,6 +201,10 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		"toJson":      utils.ToJson,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, inputTagsTemplate)
+}
+
+func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, request *http.Request) {
+	local_repo.ExecuteTemplates(responseWriter, nil, nil, addConceptModalTemplate, curriculumGradeSelectsTemplate)
 }
 
 func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, request *http.Request) {

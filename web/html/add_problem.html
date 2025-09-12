@@ -38,7 +38,8 @@
                 hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}">
                 <option disabled>Loading concepts...</option>
             </select>
-            <a href="#" class="text-blue-600 underline">Add Concept from other topic</a>
+            <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog" 
+                hx-target="body" hx-push-url="true" hx-swap="beforeend">Add Concept from other topic</a>
         </div>
     </div>
 

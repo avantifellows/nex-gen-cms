@@ -1,4 +1,4 @@
-<option selected>Select Chapter</option>
+<option value="" selected hidden>Select Chapter</option>
 {{ range . }}
     <option value="{{.ID}}">{{ getName . "en" }}</option>
 {{ end }}

@@ -98,6 +98,8 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/api/topic/problems", problemsHandler.GetTopicProblems)
 	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)
 	muxHandler.HandleFunc("/topic/add-problem", problemsHandler.AddProblem)
+	muxHandler.Handle("/topic/add-problem/add-concept-dialog", middleware.RequireHTMX(http.HandlerFunc(
+		problemsHandler.AddConceptModal)))
 	muxHandler.HandleFunc("/create-problem", problemsHandler.CreateProblem)
 	muxHandler.HandleFunc("/problems/edit-problem", problemsHandler.EditProblem)
 	muxHandler.HandleFunc("/update-problem", problemsHandler.UpdateProblem)

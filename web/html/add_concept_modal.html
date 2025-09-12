@@ -1,0 +1,113 @@
+<div id="addConceptModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-5xl">
+        <h2 class="text-lg font-semibold mb-4">Add Concept</h2>
+        
+        <form id="addConceptForm" class="space-y-6">
+
+            <!-- Search section -->
+            <div>
+                <h3 class="text-md font-semibold mb-2">Search concept by topic name</h3>
+                <div class="flex gap-2 mb-3">
+                    <!-- Curriculum -->
+                    <select id="curriculum-dropdown" name="curriculum-dropdown"
+                            class="border p-2 rounded w-40" hx-get="/api/curriculums"
+                            hx-trigger="load" hx-on::after-request="afterConceptModalDropdownReq(this)">
+                        <option disable selected>Loading curriculums...</option>
+                    </select>
+
+                    <!-- Grade -->
+                    <select id="grade-dropdown" name="grade-dropdown"
+                            class="border p-2 rounded w-40" hx-get="/api/grades"
+                            hx-trigger="load" hx-on::after-request="afterConceptModalDropdownReq(this)">
+                        <option disabled selected>Loading grades...</option>
+                    </select>
+
+                    <!-- Subject -->
+                    <select id="subject-dropdown" name="subject-dropdown"
+                            class="border p-2 rounded w-40" hx-get="/api/subjects"
+                            hx-trigger="load" hx-on::after-request="afterConceptModalDropdownReq(this)">
+                        <option disabled selected>Loading subjects...</option>
+                    </select>
+
+                    <!-- Chapter -->
+                    <select id="chapter-dropdown" name="chapter-dropdown"
+                            class="border p-2 rounded w-40" hx-get="/api/chapters"
+                            hx-trigger="loadChapters, change from:(#addConceptModal #curriculum-dropdown, #addConceptModal #grade-dropdown, #addConceptModal #subject-dropdown)"
+                            hx-include="#addConceptModal #curriculum-dropdown, #addConceptModal #grade-dropdown, #addConceptModal #subject-dropdown"
+                            hx-params="not chapter-dropdown" hx-on::before-request="beforeChaptersRequest();">
+                        <option disabled selected>Loading chapters...</option>
+                    </select>
+
+                    <!-- Topic -->
+                    <select id="topic-dropdown" name="topic_id"
+                            class="border p-2 rounded w-40" hx-get="/api/topics?view=dropdown" 
+                            hx-trigger="change from:#chapter-dropdown" hx-include="#chapter-dropdown"
+                            hx-on::before-request="beforeTopicsRequest();">
+                        <option disabled selected>Select a chapter first</option>
+                    </select>
+
+                </div>
+
+                <!-- Concept -->
+                <div class="flex flex-col w-full">
+                    <label for="concept-dropdown" class="text-sm font-medium mb-1">Concepts</label>
+                    <select id="concept-dropdown" name="concept-dropdown" multiple 
+                            class="border p-2 rounded w-full max-h-48 overflow-y-auto"
+                            hx-get="/api/concepts?view=dropdown" 
+                            hx-trigger="change from:#topic-dropdown" hx-include="#topic-dropdown"
+                            hx-on::before-request="this.innerHTML = '<option disabled>Loading concepts...</option>'">
+                        <option disabled>Select a topic first</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="w-full flex-row flex justify-end space-x-2">
+                <button type="button" onclick="closeAddConceptModal()"
+                        class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+                <button type="button" hx-post="/concepts/add" hx-target="#concepts-dropdown" 
+                        hx-swap="beforeend" class="bg-blue-500 text-white px-4 py-2 rounded">
+                    Add
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function afterConceptModalDropdownReq(dropdown) {
+        dropdown.dataset.loaded = "true";
+
+        const modal = document.getElementById("addConceptModal");
+        const allReady =
+            modal.querySelector("#curriculum-dropdown").dataset.loaded &&
+            modal.querySelector("#grade-dropdown").dataset.loaded &&
+            modal.querySelector("#subject-dropdown").dataset.loaded;
+
+        if (allReady) {
+            // Fire once when all 3 have completed
+            htmx.trigger("#chapter-dropdown", "loadChapters");
+        }
+    }
+    
+    function closeAddConceptModal() {
+        document.getElementById("addConceptModal").remove();
+        goBackAfterDelay(0);
+    }
+
+    function beforeChaptersRequest() {
+        const chapterDropdown = document.getElementById("chapter-dropdown");
+        chapterDropdown.innerHTML = '<option disabled selected>Loading chapters...</option>';
+        const topicDropdown = document.getElementById("topic-dropdown");
+        topicDropdown.innerHTML = '<option disabled selected>Select a chapter first</option>';
+        const conceptDropdown = document.getElementById("concept-dropdown");
+        conceptDropdown.innerHTML = '<option disabled>Select a topic first</option>';
+    }
+
+    function beforeTopicsRequest() {
+        const topicDropdown = document.getElementById("topic-dropdown");
+        topicDropdown.innerHTML = '<option disabled selected>Loading topics...</option>';
+        const conceptDropdown = document.getElementById("concept-dropdown");
+        conceptDropdown.innerHTML = '<option disabled>Select a topic first</option>';        
+    }
+</script>
