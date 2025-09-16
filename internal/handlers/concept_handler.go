@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
@@ -45,7 +46,33 @@ func (h *ConceptsHandler) GetConcepts(responseWriter http.ResponseWriter, reques
 		http.Error(responseWriter, fmt.Sprintf("Error fetching concepts: %v", err), http.StatusInternalServerError)
 		return
 	}
-	local_repo.ExecuteTemplate(conceptRowTemplate, responseWriter, concepts, template.FuncMap{
+
+	excludeStr := urlVals.Get("exclude")
+	var filtered *[]*models.Concept
+
+	if excludeStr == "" {
+		// no exclusion, just reuse
+		filtered = concepts
+	} else {
+		excludeIds := make(map[int32]struct{})
+		for _, idStr := range strings.Split(excludeStr, ",") {
+			if idStr == "" {
+				continue
+			}
+			if id, err := utils.StringToIntType[int32](idStr); err == nil {
+				excludeIds[id] = struct{}{}
+			}
+		}
+		tmp := make([]*models.Concept, 0, len(*concepts))
+		for _, c := range *concepts {
+			if _, found := excludeIds[c.ID]; !found {
+				tmp = append(tmp, c)
+			}
+		}
+		filtered = &tmp
+	}
+
+	local_repo.ExecuteTemplate(conceptRowTemplate, responseWriter, filtered, template.FuncMap{
 		"getName": getConceptName,
 	})
 }

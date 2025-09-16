@@ -19,8 +19,8 @@ import (
 
 const problemsKey = "problems"
 
-const problemsEndPoint = "/problems"
-const problemEndPoint = "/resource/problem/%d/en/%s"
+const problemsEndPoint = "problems"
+const problemEndPoint = "resource/problem/%d/en/%s"
 
 const problemTemplate = "problem.html"
 const srcProblemRowTemplate = "src_problem_row.html"
@@ -195,10 +195,11 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		TopicPtr: selectedTopicPtr,
 	}
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16":   utils.JoinInt16,
-		"add":         utils.Add,
-		"stringToInt": utils.StringToInt,
-		"toJson":      utils.ToJson,
+		"joinInt16":      utils.JoinInt16,
+		"add":            utils.Add,
+		"stringToInt":    utils.StringToInt,
+		"toJson":         utils.ToJson,
+		"getConceptName": getConceptName,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, inputTagsTemplate)
 }
@@ -233,10 +234,11 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 	}
 
 	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16":   utils.JoinInt16,
-		"add":         utils.Add,
-		"stringToInt": utils.StringToInt,
-		"toJson":      utils.ToJson,
+		"joinInt16":      utils.JoinInt16,
+		"add":            utils.Add,
+		"stringToInt":    utils.StringToInt,
+		"toJson":         utils.ToJson,
+		"getConceptName": getConceptName,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate, inputTagsTemplate)
 }
 

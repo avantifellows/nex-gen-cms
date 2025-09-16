@@ -33,13 +33,20 @@
         </div>
         <div>
             <p class="font-semibold mb-2">Select Concepts:</p>
-            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
-                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
-                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}">
-                <option disabled>Loading concepts...</option>
+            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="revealed once"
+                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto" hx-swap="beforeend"
+                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}">
+                    {{ if .ProblemPtr }}
+                        {{ range .ProblemPtr.Concepts }}
+                            <!-- These are already mapped concepts -->
+                            <option value="{{.ID}}" selected>{{ getConceptName . "en" }}</option>
+                        {{ end }}
+                    {{ else }}
+                        <option disabled>Loading concepts...</option>
+                    {{ end }}
             </select>
             <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog" 
-                hx-target="body" hx-push-url="true" hx-swap="beforeend">Add Concept from other topic</a>
+                hx-target="body" hx-swap="beforeend">Add Concept from other topic</a>
         </div>
     </div>
 

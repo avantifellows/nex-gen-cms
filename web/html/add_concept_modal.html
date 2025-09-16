@@ -65,10 +65,8 @@
             <div class="w-full flex-row flex justify-end space-x-2">
                 <button type="button" onclick="closeAddConceptModal()"
                         class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
-                <button type="button" hx-post="/concepts/add" hx-target="#concepts-dropdown" 
-                        hx-swap="beforeend" class="bg-blue-500 text-white px-4 py-2 rounded">
-                    Add
-                </button>
+                <button type="button" onclick="addConcepts()" 
+                        class="bg-blue-500 text-white px-4 py-2 rounded">Add</button>
             </div>
         </form>
     </div>
@@ -92,7 +90,6 @@
     
     function closeAddConceptModal() {
         document.getElementById("addConceptModal").remove();
-        goBackAfterDelay(0);
     }
 
     function beforeChaptersRequest() {
@@ -109,5 +106,37 @@
         topicDropdown.innerHTML = '<option disabled selected>Loading topics...</option>';
         const conceptDropdown = document.getElementById("concept-dropdown");
         conceptDropdown.innerHTML = '<option disabled>Select a topic first</option>';        
+    }
+
+    function addConcepts() {
+        const conceptDropdown = document.getElementById("concept-dropdown");
+        const selected = Array.from(conceptDropdown.selectedOptions);
+
+        if (selected.length === 0) {
+            alert("Please select at least one concept");
+            return;
+        }
+
+        // Target dropdown in back screen
+        const backConceptsDropdown = document.querySelector("#concepts-dropdown");
+
+        selected.forEach(opt => {
+            const existing = backConceptsDropdown.querySelector(`option[value="${opt.value}"]`);
+
+            if (existing) {
+                // If already exists, just mark it selected
+                existing.selected = true;
+            } else {
+                // If not, create a new option
+                const newOpt = document.createElement("option");
+                newOpt.value = opt.value;
+                newOpt.text = opt.text;
+                newOpt.selected = true;   // select it by default
+                backConceptsDropdown.appendChild(newOpt);
+            }
+        });
+
+        // Close the modal
+        closeAddConceptModal();
     }
 </script>
