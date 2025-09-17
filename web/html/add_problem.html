@@ -35,7 +35,7 @@
             <p class="font-semibold mb-2">Select Concepts:</p>
             <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="revealed once"
                 class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto" hx-swap="beforeend"
-                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}">
+                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if .ProblemPtr}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
                     {{ if .ProblemPtr }}
                         {{ range .ProblemPtr.Concepts }}
                             <!-- These are already mapped concepts -->
