@@ -2,16 +2,26 @@
 <div>
     <div class="flex justify-between items-center mb-4">
 
-        <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on 
-        coming back from single test to tests list screen -->
-        <select id="testtype-dropdown" hx-ext="testsLoader" name="testtype-dropdown"
-            class="border border-gray-400 p-2 rounded" hx-get="/api/tests"
-            hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
-            hx-target="#testTableBody" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
-            onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');"
-            hx-on::after-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'true')">
-            {{ template "test_type_options" }}
-        </select>
+        <!-- Left side: Test type dropdown + Search -->
+        <div class="flex items-center space-x-4">
+
+            <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on 
+            coming back from single test to tests list screen -->
+            <select id="testtype-dropdown" hx-ext="testsLoader" name="testtype-dropdown"
+                class="border border-gray-400 p-2 rounded" hx-get="/api/tests"
+                hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
+                hx-target="#testTableBody" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
+                onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');"
+                hx-on::after-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'true')">
+                {{ template "test_type_options" }}
+            </select>
+
+            <!-- Search field -->
+            <input type="text" id="test-search" name="search" placeholder="Search tests by code or name..."
+                class="border border-gray-400 p-2 rounded w-64" hx-get="/api/tests"
+                hx-trigger="keyup changed delay:500ms" hx-target="#testTableBody">
+
+        </div>
 
         <!-- Add New Test Link -->
         <h4 class="text-sm font-semibold text-blue-500 hover:underline ml-4">
