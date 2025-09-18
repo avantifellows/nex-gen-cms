@@ -8,7 +8,6 @@ set -euo pipefail
 LOG_FILE="/var/log/nexgencms-setup.log"
 APP_DIR="/opt/nex-gen-cms"
 APP_USER="app"
-ENV_FILE="/etc/nexgencms.env"
 SERVICE_NAME="nexgencms"
 
 # Logging function
@@ -34,14 +33,7 @@ log "Creating application directories"
 mkdir -p "$APP_DIR" "/var/log/nexgencms"
 chown "$APP_USER:$APP_USER" "$APP_DIR" "/var/log/nexgencms"
 
-# Write environment files
-log "Writing environment configuration"
-cat > "$ENV_FILE" << 'EOF'
-DB_SERVICE_ENDPOINT=${db_service_endpoint}
-DB_SERVICE_TOKEN=${db_service_token}
-EOF
-chown "$APP_USER:$APP_USER" "$ENV_FILE"
-chmod 600 "$ENV_FILE"
+# Note: Environment variables will be written to .env file after git clone
 
 # Clone or update repository
 log "Setting up application code"
@@ -85,7 +77,6 @@ Type=simple
 User=app
 Group=app
 WorkingDirectory=/opt/nex-gen-cms
-EnvironmentFile=/etc/nexgencms.env
 ExecStart=/opt/nex-gen-cms/nex-gen-cms
 Restart=always
 RestartSec=5

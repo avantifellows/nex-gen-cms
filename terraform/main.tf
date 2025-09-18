@@ -1,18 +1,24 @@
-# Data sources
-data "aws_ami" "amazon_linux" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["al2023-ami-*-arm64"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
+# Data sources - AMI pinned to avoid drift
+# Use this pinned AMI instead of most_recent to prevent unnecessary instance replacements
+locals {
+  pinned_ami_id = "ami-0cbbd6270b5993bd9"  # Amazon Linux 2023 ARM64 - current stable version
 }
+
+# Commented out to use pinned AMI above
+# data "aws_ami" "amazon_linux" {
+#   most_recent = true
+#   owners      = ["amazon"]
+#
+#   filter {
+#     name   = "name"
+#     values = ["al2023-ami-*-arm64"]
+#   }
+#
+#   filter {
+#     name   = "virtualization-type"
+#     values = ["hvm"]
+#   }
+# }
 
 data "aws_availability_zones" "available" {
   state = "available"
@@ -120,7 +126,7 @@ EOF
 
 # EC2 Instance
 resource "aws_instance" "web" {
-  ami                    = data.aws_ami.amazon_linux.id
+  ami                    = local.pinned_ami_id
   instance_type          = var.instance_type
   key_name               = var.key_pair_name
   vpc_security_group_ids = [aws_security_group.web.id]

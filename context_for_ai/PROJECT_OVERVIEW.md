@@ -45,15 +45,22 @@ This document provides a comprehensive overview of the Next Generation CMS codeb
   - `static/`: Tailwind output CSS and JS utilities (editor, math, images, nav-tracking, constants).
 - `tests/`
   - Playwright tests and mocks for UI flows and HTMX interactions.
+- `terraform/`
+  - Complete AWS infrastructure as code: EC2, security groups, EIP, Cloudflare DNS, S3/DynamoDB backend.
+  - `user-data.sh`: Instance initialization script with application deployment, NGINX setup, and SSL configuration.
+- `.github/workflows/`
+  - `deploy-staging.yml`: GitHub Actions CI/CD pipeline for automated deployment to AWS (staging).
+  - `deploy-prod.yml`: GitHub Actions CI/CD pipeline for automated deployment to AWS (production).
 
 
 ### Runtime and Configuration
 
 - **Port**: The server listens on `0.0.0.0:8080` (see `cmd/main.go`).
-- **Environment**: `.env` is loaded via `github.com/joho/godotenv`.
+- **Environment**: `.env` is loaded via `github.com/joho/godotenv` from the application working directory.
   - `DB_SERVICE_ENDPOINT`: Base URL of the remote DB service (e.g., `https://api.example.com/`).
   - `DB_SERVICE_TOKEN`: Bearer token used for all calls to the DB service.
 - **Template path**: Determined at runtime by `internal/constants`. Defaults to `web/html`. A special case exists for Windows test runs.
+- **Deployment**: Terraform configuration for AWS EC2 deployment with NGINX reverse proxy, SSL via Let's Encrypt, and GitHub Actions CI/CD (see `terraform/` directory).
 
 
 ### Request Flow Overview
@@ -263,6 +270,45 @@ go run ./cmd
 ```
 
 
+### Deployment & Infrastructure
+
+The project includes Terraform configuration for AWS deployment with GitHub Actions CI/CD:
+
+#### Infrastructure Components
+- **EC2 Instance**: ARM-based Amazon Linux 2023 (`t4g.small` for staging, `t4g.medium` for prod)
+- **Load Balancer**: NGINX reverse proxy with SSL termination
+- **SSL Certificate**: Let's Encrypt certificate via Certbot (auto-renewal)
+- **DNS**: Cloudflare A record pointing to Elastic IP
+- **Storage**: S3 + DynamoDB backend for Terraform state management
+
+#### Deployment Files
+- `terraform/`: Complete Terraform configuration
+  - `main.tf`: Core infrastructure (EC2, security groups, EIP, Cloudflare DNS)
+  - `user-data.sh`: Instance initialization script (idempotent, runs on every boot)
+  - `variables.tf`: Input variables for customization
+  - `backend.tf`: S3/DynamoDB state backend configuration
+  - `bootstrap.sh`: One-time setup script for Terraform backend resources
+- `.github/workflows/deploy-staging.yml`: GitHub Actions workflow for automated deployment
+- `.github/workflows/deploy-prod.yml`: GitHub Actions workflow for production deployment
+
+#### Environment Setup
+The deployment script (`user-data.sh`) creates a `.env` file in `/opt/nex-gen-cms/` with:
+- `DB_SERVICE_ENDPOINT`: Database service URL
+- `DB_SERVICE_TOKEN`: Authentication token
+
+The application runs as a systemd service (`nexgencms`) under a dedicated `app` user, with NGINX proxying requests from port 80/443 to the Go server on port 8080.
+
+#### Deployment Flow
+1. **Bootstrap** (one-time): Run `terraform/bootstrap.sh` to create S3 bucket and DynamoDB table
+2. **Configure**: Set Terraform variables in `terraform.tfvars`
+3. **Deploy**:
+   - Staging: GitHub Actions automatically deploys on push to `main`.
+   - Production: GitHub Actions deploys on push to `release` (separate backend key `nex-gen-cms/prod.tfstate`).
+4. **Updates**: Instance automatically pulls latest code on reboot; GitHub Actions can trigger reboots for code-only changes. For local ops, `terraform apply` will re-render user data and rebuild the app as needed.
+
+See `terraform/README.md` for detailed setup instructions.
+
+
 ### Conventions & Utilities
 
 - Sorting:
@@ -312,15 +358,18 @@ To add a new resource type (e.g., “Passage”):
 - Remote API: `internal/repositories/remote/api_repository.go`
 - Templates: `web/html/home.html` (base), plus content templates under `web/html/`
 - Tests: `tests/` (Playwright), `cmd/main_test.go`, `config/env_test.go`
+- Deployment: `terraform/README.md` → infrastructure setup, `terraform/main.tf` → AWS resources, `.github/workflows/deploy-staging.yml` → CI/CD pipeline
 
 
-### Maintainers’ Checklist for Changes
+### Maintainers' Checklist for Changes
 
 - Add/modify routes in `cmd/main.go`.
 - Wire new services/handlers in `di/app_component.go`.
 - Keep template names synchronized with route expectations (e.g., `chapter_row.html`).
 - Use `Service[T]` for remote access and cache consistency across CRUD.
 - Add Playwright coverage for new user flows; keep Tailwind build updated if classes change.
+- For deployment changes: Update Terraform variables in `terraform.tfvars`, test infrastructure changes in staging before production.
+- Environment variables: Add new variables to both `.env` (local development) and `terraform/user-data.sh` (deployment).
 
 
 This document should evolve alongside the codebase; please update sections when introducing new resources, routes, or architectural changes.
