@@ -178,14 +178,12 @@ func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http
 	}
 
 	curriculumId, err := utils.StringToIntType[int16](urlVals.Get(QUERY_PARAM_CURRICULUM_ID))
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid Curriculum ID: %v", err)
+	if err == nil {
+		gradeId, err := utils.StringToIntType[int8](urlVals.Get("grade_id"))
+		if err == nil {
+			selectedTestPtr.SetCurriculumGrade(curriculumId, gradeId)
+		}
 	}
-	gradeId, err := utils.StringToIntType[int8](urlVals.Get("grade_id"))
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid Grade ID: %v", err)
-	}
-	selectedTestPtr.SetCurriculumGrade(curriculumId, gradeId)
 
 	// Fill subject names in test
 	h.fillSubjectNames(responseWriter, selectedTestPtr)
@@ -708,4 +706,51 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 func optionLabels() []string {
 	return []string{"A)", "B)", "C)", "D)", "E)", "F)", "G)", "H)", "I)", "J)"}
+}
+
+func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedTestPtr, code, err := h.getTest(responseWriter, request)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	problems := h.getTestProblems(responseWriter, request)
+	if problems == nil {
+		return
+	}
+	problemsMap := make(map[int]*models.Problem)
+	for _, p := range *problems {
+		problemsMap[p.ID] = p
+	}
+
+	var testRule *models.TestRule // nil by default
+	if len(selectedTestPtr.ExamIDs) > 0 {
+		tr, err := h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
+		if err != nil {
+			fmt.Println(err.Error())
+		} else {
+			testRule = tr
+		}
+	}
+
+	data := dto.HomeData{
+		TestPtr:  selectedTestPtr,
+		Problems: problemsMap,
+		TestRule: testRule,
+	}
+
+	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"split":             strings.Split,
+		"slice":             utils.Slice,
+		"seq":               utils.Seq,
+		"getName":           getTestName,
+		"add":               utils.Add,
+		"joinInt16":         utils.JoinInt16,
+		"dict":              utils.Dict,
+		"getDisplaySubtype": utils.DisplaySubtype,
+		"toJson":            utils.ToJson,
+		"getParentId":       getParentSubjectId,
+	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
