@@ -7,8 +7,8 @@ import (
 
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
 const subjectsTemplate = "subjects.html"
@@ -30,7 +30,7 @@ func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	local_repo.ExecuteTemplate(subjectsTemplate, responseWriter, subjects, template.FuncMap{
+	views.ExecuteTemplate(subjectsTemplate, responseWriter, subjects, template.FuncMap{
 		"getName": getSubjectName,
 	})
 }
