@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
 const examsEndPoint = "exam"
@@ -30,5 +30,5 @@ func (h *ExamsHandler) GetExams(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
-	local_repo.ExecuteTemplate(examsTemplate, responseWriter, exams, nil)
+	views.ExecuteTemplate(examsTemplate, responseWriter, exams, nil)
 }

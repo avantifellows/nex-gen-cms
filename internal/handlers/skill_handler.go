@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
 const skillsKey = "skills"
@@ -56,5 +56,5 @@ func (h *SkillsHandler) GetSkills(responseWriter http.ResponseWriter, request *h
 		SelectedSkillIds: selectedIDs,
 	}
 
-	local_repo.ExecuteTemplate(skillsTemplate, responseWriter, data, nil)
+	views.ExecuteTemplate(skillsTemplate, responseWriter, data, nil)
 }
