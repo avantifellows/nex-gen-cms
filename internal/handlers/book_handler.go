@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
 const booksTemplate = "books.html"
@@ -19,5 +19,5 @@ func NewBooksHandler( /*service *services.Service[models.Test]*/ ) *BooksHandler
 }
 
 func (h *BooksHandler) LoadBooks(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, booksTemplate)
+	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, booksTemplate)
 }
