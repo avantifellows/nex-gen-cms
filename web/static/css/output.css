@@ -915,6 +915,21 @@ video {
   padding-bottom: 0.5rem;
 }
 
+.concept-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 0.25rem;
+  --tw-bg-opacity: 1;
+  background-color: rgb(219 234 254 / var(--tw-bg-opacity));
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  --tw-text-opacity: 1;
+  color: rgb(30 64 175 / var(--tw-text-opacity));
+}
+
 .\!visible {
   visibility: visible !important;
 }
@@ -1136,6 +1151,10 @@ video {
 
 .max-h-48 {
   max-height: 12rem;
+}
+
+.min-h-\[44px\] {
+  min-height: 44px;
 }
 
 .w-1\/2 {
@@ -1692,6 +1711,11 @@ video {
 .text-gray-700 {
   --tw-text-opacity: 1;
   color: rgb(55 65 81 / var(--tw-text-opacity));
+}
+
+.text-red-500 {
+  --tw-text-opacity: 1;
+  color: rgb(239 68 68 / var(--tw-text-opacity));
 }
 
 .text-white {

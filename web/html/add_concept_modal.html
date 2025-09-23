@@ -4,7 +4,30 @@
         
         <form id="addConceptForm" class="space-y-6">
 
-            <!-- Search section -->
+            <!-- Search by word -->
+            <div>
+                <h3 class="text-md font-semibold mb-2">Search concept by word</h3>
+                <div id="chip-container" class="flex flex-wrap gap-2 border rounded p-2 min-h-[44px] cursor-text"
+                    onclick="showConceptDropdown()">
+                    <!-- Chips will be added here dynamically -->
+                    <input id="chip-input" type="text" class="flex-1 min-w-[100px] outline-none"
+                           placeholder="Type to search concepts..." 
+                           onfocus="showConceptDropdown()" oninput="filterConceptDropdown(this.value)">
+                </div>
+                <div id="concept-suggestion-box" class="relative">
+                    <ul id="concept-suggestions"
+                        class="absolute bg-white border rounded mt-1 max-h-48 overflow-y-auto hidden w-full z-10">
+                        <!-- Options inserted dynamically -->
+                    </ul>
+                </div>
+                <!-- Separate Add button for word search -->
+                <div class="w-full flex justify-end mt-2">
+                    <button type="button" onclick="addWordSearchConcepts()"
+                            class="bg-blue-500 text-white px-4 py-2 rounded">Add</button>
+                </div>
+            </div>
+
+            <!-- Search by topic name -->
             <div>
                 <h3 class="text-md font-semibold mb-2">Search concept by topic name</h3>
                 <div class="flex gap-2 mb-3">
@@ -73,6 +96,140 @@
 </div>
 
 <script>
+    var allConcepts = [
+        {
+            id: 1,
+            topic_id: 101,
+            name: [{lang_code: "en", concept: "Addition"}, {lang_code: "hi", concept: "जोड़"}]
+        },
+        {
+            id: 2,
+            topic_id: 102,
+            name: [{lang_code: "en", concept: "Subtraction"}, {lang_code: "hi", concept: "घटाना"}]
+        },
+        {
+            id: 3,
+            topic_id: 103,
+            name: [{lang_code: "en", concept: "Multiplication"}]
+        }
+    ];
+
+    function showConceptDropdown() {
+        const box = document.getElementById("concept-suggestions");
+        renderConceptSuggestions("");
+        box.classList.remove("hidden");
+
+        // Attach listener on the modal, not document.body
+        const modal = document.getElementById("addConceptModal");
+        modal.onclick = function(e) {
+            const chipBox = document.getElementById("chip-container");
+            const suggestionBox = document.getElementById("concept-suggestion-box");
+
+            // If click outside chip or suggestion area → close
+            if (!chipBox.contains(e.target) && !suggestionBox.contains(e.target)) {
+                box.classList.add("hidden");
+                cleanup();
+            }
+        };
+
+        modal.onkeydown = function(e) {
+            if (e.key === "Escape") {
+                box.classList.add("hidden");
+                cleanup();
+            }
+        };
+
+        function cleanup() {
+            modal.onclick = null;
+            modal.onkeydown = null;
+            modal._conceptCleanup = null;
+        }
+
+        // save cleanup reference for reuse later
+        modal._conceptCleanup = cleanup;
+    }
+
+    function filterConceptDropdown(query) {
+        renderConceptSuggestions(query.toLowerCase());
+    }
+
+    function renderConceptSuggestions(query) {
+        const ul = document.getElementById("concept-suggestions");
+        ul.innerHTML = "";
+
+        const selectedIds = getSelectedChipIds();
+        allConcepts
+            .filter(c => !selectedIds.includes(c.id))
+            .filter(c => getConceptName(c).toLowerCase().includes(query.toLowerCase()))
+            .forEach(c => {
+                const li = document.createElement("li");
+                li.textContent = getConceptName(c);
+                li.className = "px-3 py-2 hover:bg-gray-100 cursor-pointer";
+                li.onclick = () => addChip(c);
+                ul.appendChild(li);
+            });
+
+        ul.classList.toggle("hidden", ul.children.length === 0);
+    }
+
+    function getConceptName(concept, lang = "en") {
+        let match = concept.name.find(n => n.lang_code === lang);
+        return match ? match.concept : concept.name[0].concept;
+    }
+
+    function addChip(concept) {
+        const chipContainer = document.getElementById("chip-container");
+        const chip = document.createElement("div");
+        chip.className = "concept-chip";
+        chip.innerHTML = `${getConceptName(concept)} <span class="cursor-pointer text-red-500" onclick="removeChip(${concept.id}, this)">×</span>`;
+        chip.dataset.id = concept.id;
+        chipContainer.insertBefore(chip, document.getElementById("chip-input"));
+
+        document.getElementById("chip-input").value = "";
+        document.getElementById("concept-suggestions").classList.add("hidden");
+    }
+
+    function getSelectedChipIds() {
+        const chipContainer = document.getElementById("chip-container");
+        return Array.from(chipContainer.querySelectorAll(".concept-chip"))
+                    .map(chip => parseInt(chip.dataset.id, 10));
+    }
+
+    function removeChip(id, el) {
+        el.parentElement.remove();
+    }
+
+    function addWordSearchConcepts() {
+        const selectedIds = getSelectedChipIds();
+        if (!validateConceptSelection(selectedIds)) return;
+
+        const backConceptsDropdown = document.querySelector("#concepts-dropdown");
+
+        selectedIds.forEach(id => {
+            const concept = allConcepts.find(c => c.id === id);
+            const existing = backConceptsDropdown.querySelector(`option[value="${id}"]`);
+            if (existing) {
+                existing.selected = true;
+            } else {
+                const newOpt = document.createElement("option");
+                newOpt.value = id;
+                newOpt.text = getConceptName(concept);
+                newOpt.selected = true;
+                backConceptsDropdown.appendChild(newOpt);
+            }
+        });
+
+        closeAddConceptModal();
+    }
+
+    function validateConceptSelection(selectedIds) {
+        if (!selectedIds || selectedIds.length === 0) {
+            alert("Please select at least one concept");
+            return false;
+        }
+        return true;
+    }
+
     function afterConceptModalDropdownReq(dropdown) {
         dropdown.dataset.loaded = "true";
 
@@ -89,7 +246,14 @@
     }
     
     function closeAddConceptModal() {
-        document.getElementById("addConceptModal").remove();
+        const modal = document.getElementById("addConceptModal");
+
+        // call cleanup if it exists
+        if (typeof modal._conceptCleanup === "function") {
+            modal._conceptCleanup();
+        }
+
+        modal.remove();
     }
 
     function beforeChaptersRequest() {
@@ -112,10 +276,7 @@
         const conceptDropdown = document.getElementById("concept-dropdown");
         const selected = Array.from(conceptDropdown.selectedOptions);
 
-        if (selected.length === 0) {
-            alert("Please select at least one concept");
-            return;
-        }
+        if (!validateConceptSelection(selected)) return;
 
         // Target dropdown in back screen
         const backConceptsDropdown = document.querySelector("#concepts-dropdown");
