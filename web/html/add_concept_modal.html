@@ -7,12 +7,12 @@
             <!-- Search by word -->
             <div>
                 <h3 class="text-md font-semibold mb-2">Search concept by word</h3>
-                <div id="chip-container" class="flex flex-wrap gap-2 border rounded p-2 min-h-[44px] cursor-text"
-                    onclick="showConceptDropdown()">
+                <div id="chip-container" class="flex flex-wrap gap-2 border rounded p-2 min-h-[44px] cursor-text">
                     <!-- Chips will be added here dynamically -->
                     <input id="chip-input" type="text" class="flex-1 min-w-[100px] outline-none"
-                           placeholder="Type to search concepts..." 
-                           onfocus="showConceptDropdown()" oninput="filterConceptDropdown(this.value)">
+                           placeholder="Type to search concepts..." onfocus="showConceptDropdown()" 
+                           oninput="filterConceptDropdown(this.value)" onkeydown="handleChipInputKey(event)"
+                           onblur="hideConceptDropdown()">
                 </div>
                 <div id="concept-suggestion-box" class="relative">
                     <ul id="concept-suggestions"
@@ -96,42 +96,31 @@
 </div>
 
 <script>
-    var allConcepts = [
-        {
-            id: 1,
-            topic_id: 101,
-            name: [{lang_code: "en", concept: "Addition"}, {lang_code: "hi", concept: "जोड़"}]
-        },
-        {
-            id: 2,
-            topic_id: 102,
-            name: [{lang_code: "en", concept: "Subtraction"}, {lang_code: "hi", concept: "घटाना"}]
-        },
-        {
-            id: 3,
-            topic_id: 103,
-            name: [{lang_code: "en", concept: "Multiplication"}]
-        }
-    ];
+    var allConcepts = [];
 
     function showConceptDropdown() {
-        const box = document.getElementById("concept-suggestions");
-        renderConceptSuggestions("");
-        box.classList.remove("hidden");
+        if (allConcepts.length === 0) {
+            // show loading placeholder
+            const box = document.getElementById("concept-suggestions");
+            box.classList.remove("hidden");
+            box.innerHTML = `<li class="px-3 py-2 text-gray-500">Loading concepts...</li>`;
+
+            fetch('/api/concepts?mode=data')
+                .then(res => res.json())
+                .then(data => {
+                    allConcepts = data;
+                    renderConceptSuggestions("");
+                })
+                .catch(err => {
+                    console.error("Failed to load concepts", err);
+                    box.innerHTML = `<li class="px-3 py-2 text-red-500">Failed to load concepts</li>`;
+                });
+        } else {
+            renderConceptSuggestions("");
+        }
 
         // Attach listener on the modal, not document.body
         const modal = document.getElementById("addConceptModal");
-        modal.onclick = function(e) {
-            const chipBox = document.getElementById("chip-container");
-            const suggestionBox = document.getElementById("concept-suggestion-box");
-
-            // If click outside chip or suggestion area → close
-            if (!chipBox.contains(e.target) && !suggestionBox.contains(e.target)) {
-                box.classList.add("hidden");
-                cleanup();
-            }
-        };
-
         modal.onkeydown = function(e) {
             if (e.key === "Escape") {
                 box.classList.add("hidden");
@@ -140,7 +129,6 @@
         };
 
         function cleanup() {
-            modal.onclick = null;
             modal.onkeydown = null;
             modal._conceptCleanup = null;
         }
@@ -156,6 +144,7 @@
     function renderConceptSuggestions(query) {
         const ul = document.getElementById("concept-suggestions");
         ul.innerHTML = "";
+        highlightedIndex = -1; // reset highlight
 
         const selectedIds = getSelectedChipIds();
         allConcepts
@@ -165,10 +154,15 @@
                 const li = document.createElement("li");
                 li.textContent = getConceptName(c);
                 li.className = "px-3 py-2 hover:bg-gray-100 cursor-pointer";
-                li.onclick = () => addChip(c);
+                li.onmousedown = (e) => {
+                    // preventDefault() ensures the input doesn’t lose focus by preventing call to onblur. 
+                    // Without it suggestions box would hide as we are calling hideConceptDropdownWithDelay() onblur
+                    e.preventDefault();
+                    addChip(c);
+                };
                 ul.appendChild(li);
             });
-
+            
         ul.classList.toggle("hidden", ul.children.length === 0);
     }
 
@@ -186,7 +180,7 @@
         chipContainer.insertBefore(chip, document.getElementById("chip-input"));
 
         document.getElementById("chip-input").value = "";
-        document.getElementById("concept-suggestions").classList.add("hidden");
+        renderConceptSuggestions(""); // refresh to show all again
     }
 
     function getSelectedChipIds() {
@@ -299,5 +293,69 @@
 
         // Close the modal
         closeAddConceptModal();
+    }
+
+    var highlightedIndex = -1; // no suggestion highlighted by default
+
+    function handleChipInputKey(e) {
+        const suggestions = document.querySelectorAll("#concept-suggestions li");
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            if (suggestions.length > 0) {
+                highlightedIndex = (highlightedIndex + 1) % suggestions.length;
+                updateHighlight(suggestions);
+            }
+
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            if (suggestions.length > 0) {
+                highlightedIndex = (highlightedIndex - 1 + suggestions.length) % suggestions.length;
+                updateHighlight(suggestions);
+            }
+
+        } else if (e.key === "Enter") {
+            // prevent default form submission on enter press
+            e.preventDefault();
+            
+            if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+                suggestions[highlightedIndex].dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+            } else {
+                // no suggestion selected → just clear typed text
+                e.target.value = "";
+                renderConceptSuggestions("");
+            }
+            highlightedIndex = -1; // reset
+        }
+    }
+
+    function updateHighlight(suggestions) {
+        suggestions.forEach((li, idx) => {
+            if (idx === highlightedIndex) {
+                li.classList.add("bg-blue-100");
+                ensureVisible(li);  // keep highlighted li in view
+            } else {
+                li.classList.remove("bg-blue-100");
+            }
+        });
+    }
+
+    function ensureVisible(el) {
+        const container = el.parentElement;
+        const containerRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+
+        if (elRect.top < containerRect.top) {
+            // item is above the visible area → scroll up
+            container.scrollTop -= (containerRect.top - elRect.top);
+        } else if (elRect.bottom > containerRect.bottom) {
+            // item is below the visible area → scroll down
+            container.scrollTop += (elRect.bottom - containerRect.bottom);
+        }
+    }
+
+    function hideConceptDropdown() {
+        const box = document.getElementById("concept-suggestions");
+        box.classList.add("hidden");
     }
 </script>

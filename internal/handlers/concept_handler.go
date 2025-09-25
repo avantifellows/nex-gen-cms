@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -72,9 +73,17 @@ func (h *ConceptsHandler) GetConcepts(responseWriter http.ResponseWriter, reques
 		filtered = &tmp
 	}
 
-	local_repo.ExecuteTemplate(conceptRowTemplate, responseWriter, filtered, template.FuncMap{
-		"getName": getConceptName,
-	})
+	// send only data if mode is data
+	if urlVals.Get("mode") == "data" {
+		responseWriter.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(responseWriter).Encode(filtered); err != nil {
+			http.Error(responseWriter, fmt.Sprintf("Error encoding concepts: %v", err), http.StatusInternalServerError)
+		}
+	} else {
+		local_repo.ExecuteTemplate(conceptRowTemplate, responseWriter, filtered, template.FuncMap{
+			"getName": getConceptName,
+		})
+	}
 }
 
 func getConceptName(c models.Concept, lang string) string {
