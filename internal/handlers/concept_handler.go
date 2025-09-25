@@ -8,8 +8,8 @@ import (
 	"text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
@@ -80,7 +80,7 @@ func (h *ConceptsHandler) GetConcepts(responseWriter http.ResponseWriter, reques
 			http.Error(responseWriter, fmt.Sprintf("Error encoding concepts: %v", err), http.StatusInternalServerError)
 		}
 	} else {
-		local_repo.ExecuteTemplate(conceptRowTemplate, responseWriter, filtered, template.FuncMap{
+		views.ExecuteTemplate(conceptRowTemplate, responseWriter, filtered, template.FuncMap{
 			"getName": getConceptName,
 		})
 	}

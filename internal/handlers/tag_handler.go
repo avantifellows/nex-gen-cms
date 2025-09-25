@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
 const tagsEndPoint = "tag"
@@ -49,5 +49,5 @@ func (h *TagsHandler) GetTags(responseWriter http.ResponseWriter, request *http.
 		}
 	}
 
-	local_repo.ExecuteTemplate(tagRowTemplate, responseWriter, filteredTags, nil)
+	views.ExecuteTemplate(tagRowTemplate, responseWriter, filteredTags, nil)
 }

@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
 const getGradesEndPoint = "grade"
@@ -31,5 +31,5 @@ func (h *GradesHandler) GetGrades(responseWriter http.ResponseWriter, request *h
 	}
 
 	// Load grades.html
-	local_repo.ExecuteTemplate(gradesTemplate, responseWriter, grades, nil)
+	views.ExecuteTemplate(gradesTemplate, responseWriter, grades, nil)
 }

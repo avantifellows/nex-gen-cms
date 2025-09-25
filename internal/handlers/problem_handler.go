@@ -12,8 +12,8 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
@@ -58,7 +58,7 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		ProblemPtr: selectedProblemPtr,
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"add":         utils.Add,
 		"stringToInt": utils.StringToInt,
 		"seq":         utils.Seq,
@@ -156,7 +156,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		// for topic screen's Problems tab
 		tmpl = topicProblemRowTemplate
 	}
-	local_repo.ExecuteTemplate(tmpl, responseWriter, problems, nil)
+	views.ExecuteTemplate(tmpl, responseWriter, problems, nil)
 }
 
 func filterProblems(problems *[]*models.Problem, difficulty string, ptype string, selectedIdsRaw string) {
@@ -180,7 +180,7 @@ func filterProblems(problems *[]*models.Problem, difficulty string, ptype string
 
 func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	local_repo.ExecuteTemplate(problemsTemplate, responseWriter, topicIdStr, nil)
+	views.ExecuteTemplate(problemsTemplate, responseWriter, topicIdStr, nil)
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -194,7 +194,7 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 	data := dto.HomeData{
 		TopicPtr: selectedTopicPtr,
 	}
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"joinInt16":      utils.JoinInt16,
 		"add":            utils.Add,
 		"stringToInt":    utils.StringToInt,
@@ -205,7 +205,7 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 }
 
 func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, nil, addConceptModalTemplate, curriculumGradeSelectsTemplate)
+	views.ExecuteTemplates(responseWriter, nil, nil, addConceptModalTemplate, curriculumGradeSelectsTemplate)
 }
 
 func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -233,7 +233,7 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 		ProblemPtr: selectedProblemPtr,
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"joinInt16":      utils.JoinInt16,
 		"add":            utils.Add,
 		"stringToInt":    utils.StringToInt,

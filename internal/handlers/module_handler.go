@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
 const modulesTemplate = "modules.html"
@@ -19,5 +19,5 @@ func NewModulesHandler( /*service *services.Service[models.Test]*/ ) *ModulesHan
 }
 
 func (h *ModulesHandler) LoadModules(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, modulesTemplate)
+	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, modulesTemplate)
 }
