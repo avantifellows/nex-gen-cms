@@ -21,13 +21,13 @@ func StringToInt(s string) int {
 }
 
 type IntType interface {
-	int8 | int16
+	int8 | int16 | int32
 }
 
 // Generic function to convert string to int8 or int16
 func StringToIntType[T IntType](str string) (T, error) {
 	// Parse the string as an int64
-	num, err := strconv.ParseInt(str, 10, 16)
+	num, err := strconv.ParseInt(str, 10, 32)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return 0, err
@@ -41,15 +41,19 @@ func StringToIntType[T IntType](str string) (T, error) {
 			fmt.Println("value out of range for int8")
 			return 0, fmt.Errorf("value out of range for int8")
 		}
-		result = T(num)
 	case int16:
 		if num < -32768 || num > 32767 {
 			fmt.Println("value out of range for int16")
 			return 0, fmt.Errorf("value out of range for int16")
 		}
-		result = T(num)
+	case int32:
+		if num < -2147483648 || num > 2147483647 {
+			fmt.Println("value out of range for int32")
+			return 0, fmt.Errorf("value out of range for int32")
+		}
 	}
 
+	result = T(num)
 	return result, nil
 }
 

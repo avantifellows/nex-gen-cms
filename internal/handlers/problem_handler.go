@@ -19,8 +19,8 @@ import (
 
 const problemsKey = "problems"
 
-const problemsEndPoint = "/problems"
-const problemEndPoint = "/resource/problem/%d/en/%s"
+const problemsEndPoint = "problems"
+const problemEndPoint = "resource/problem/%d/en/%s"
 
 const problemTemplate = "problem.html"
 const srcProblemRowTemplate = "src_problem_row.html"
@@ -28,6 +28,7 @@ const problemsTemplate = "problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
 const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
+const addConceptModalTemplate = "add_concept_modal.html"
 const editorTemplate = "editor.html"
 const inputTagsTemplate = "input_tags.html"
 
@@ -194,12 +195,17 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		TopicPtr: selectedTopicPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16":   utils.JoinInt16,
-		"add":         utils.Add,
-		"stringToInt": utils.StringToInt,
-		"toJson":      utils.ToJson,
+		"joinInt16":      utils.JoinInt16,
+		"add":            utils.Add,
+		"stringToInt":    utils.StringToInt,
+		"toJson":         utils.ToJson,
+		"getConceptName": getConceptName,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, inputTagsTemplate)
+}
+
+func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, request *http.Request) {
+	views.ExecuteTemplates(responseWriter, nil, nil, addConceptModalTemplate, curriculumGradeSelectsTemplate)
 }
 
 func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -228,10 +234,11 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16":   utils.JoinInt16,
-		"add":         utils.Add,
-		"stringToInt": utils.StringToInt,
-		"toJson":      utils.ToJson,
+		"joinInt16":      utils.JoinInt16,
+		"add":            utils.Add,
+		"stringToInt":    utils.StringToInt,
+		"toJson":         utils.ToJson,
+		"getConceptName": getConceptName,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate, inputTagsTemplate)
 }
 

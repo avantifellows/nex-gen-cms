@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
@@ -45,9 +47,43 @@ func (h *ConceptsHandler) GetConcepts(responseWriter http.ResponseWriter, reques
 		http.Error(responseWriter, fmt.Sprintf("Error fetching concepts: %v", err), http.StatusInternalServerError)
 		return
 	}
-	views.ExecuteTemplate(conceptRowTemplate, responseWriter, concepts, template.FuncMap{
-		"getName": getConceptName,
-	})
+
+	excludeStr := urlVals.Get("exclude")
+	var filtered *[]*models.Concept
+
+	if excludeStr == "" {
+		// no exclusion, just reuse
+		filtered = concepts
+	} else {
+		excludeIds := make(map[int32]struct{})
+		for _, idStr := range strings.Split(excludeStr, ",") {
+			if idStr == "" {
+				continue
+			}
+			if id, err := utils.StringToIntType[int32](idStr); err == nil {
+				excludeIds[id] = struct{}{}
+			}
+		}
+		tmp := make([]*models.Concept, 0, len(*concepts))
+		for _, c := range *concepts {
+			if _, found := excludeIds[c.ID]; !found {
+				tmp = append(tmp, c)
+			}
+		}
+		filtered = &tmp
+	}
+
+	// send only data if mode is data
+	if urlVals.Get("mode") == "data" {
+		responseWriter.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(responseWriter).Encode(filtered); err != nil {
+			http.Error(responseWriter, fmt.Sprintf("Error encoding concepts: %v", err), http.StatusInternalServerError)
+		}
+	} else {
+		views.ExecuteTemplate(conceptRowTemplate, responseWriter, filtered, template.FuncMap{
+			"getName": getConceptName,
+		})
+	}
 }
 
 func getConceptName(c models.Concept, lang string) string {

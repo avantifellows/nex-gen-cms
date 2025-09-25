@@ -118,4 +118,8 @@
     .answer-pdf-table-row {
         @apply border border-gray-300 px-4 py-2;
     }
+
+    .concept-chip {
+        @apply flex items-center bg-blue-100 text-blue-800 rounded px-2 py-1 gap-1;
+    }
 }
