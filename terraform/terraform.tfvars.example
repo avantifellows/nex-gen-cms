@@ -1,0 +1,29 @@
+# Example Terraform variables file
+# Copy this to terraform.tfvars and fill in your values
+# Do NOT commit terraform.tfvars to version control
+
+# Infrastructure settings
+environment = "staging"
+aws_region  = "ap-south-1"
+ssh_cidr    = "0.0.0.0/0"  # Restrict this to your IP range for security
+
+# Cloudflare DNS settings
+cloudflare_email     = "your-email@example.com"
+cloudflare_api_key   = "your-cloudflare-global-api-key"
+cloudflare_zone_name = "your-domain.com"
+subdomain           = "your-app-name"  # Will create staging-your-app-name.your-domain.com (staging) or your-app-name.your-domain.com (prod)
+
+# Let's Encrypt certificate
+letsencrypt_email = "your-email@example.com"
+
+# Git repository settings
+repo_url    = "https://github.com/your-org/nex-gen-cms.git"
+repo_branch = "main"
+
+# Application environment variables
+db_service_endpoint = "https://your-db-service.example.com/"
+db_service_token    = "your-database-service-token"
+
+# EC2 settings
+instance_type   = "t4g.small"
+key_pair_name   = null  # Set to your EC2 key pair name if you want SSH access
