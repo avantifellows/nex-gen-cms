@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
 const QUERY_PARAM_CURRICULUM_ID = "curriculum_id"
@@ -32,5 +32,5 @@ func (h *CurriculumsHandler) GetCurriculums(responseWriter http.ResponseWriter, 
 		return
 	}
 
-	local_repo.ExecuteTemplate(curriculumsTemplate, responseWriter, curriculums, nil)
+	views.ExecuteTemplate(curriculumsTemplate, responseWriter, curriculums, nil)
 }

@@ -19,8 +19,8 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
@@ -75,7 +75,7 @@ func NewTestsHandler(testsService *services.Service[models.Test], subjectsServic
 }
 
 func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, nil, template.FuncMap{
 		"slice": utils.Slice,
 		"add":   utils.Add,
 	}, baseTemplate, testsTemplate, testTypeOptionsTemplate)
@@ -112,7 +112,7 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	*tests = filtered // assign filtered slice back to original
 
 	sortTests(*tests, sortColumn, sortOrder)
-	local_repo.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
+	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
 }
 
 func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string) {
@@ -161,7 +161,7 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 		TestPtr:      selectedTestPtr,
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, data, nil, baseTemplate, testTemplate)
+	views.ExecuteTemplates(responseWriter, data, nil, baseTemplate, testTemplate)
 }
 
 func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http.Request) (*models.Test, int, error) {
@@ -233,7 +233,7 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 	}).([]*models.Problem)
 
 	// Passing custom function add to use in template for serial number by adding 1 to index
-	local_repo.ExecuteTemplate(testProblemRowTemplate, responseWriter, problems, template.FuncMap{
+	views.ExecuteTemplate(testProblemRowTemplate, responseWriter, problems, template.FuncMap{
 		"add": utils.Add,
 	})
 }
@@ -326,7 +326,7 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		TestRule: testRule,
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"split":             strings.Split,
 		"slice":             utils.Slice,
 		"seq":               utils.Seq,
@@ -401,7 +401,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		}
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getParentName":     getParentSubjectName,
 		"getParentId":       getParentSubjectId,
 		"joinInt16":         utils.JoinInt16,
@@ -460,7 +460,7 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		TestRule: testRule,
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"split":             strings.Split,
 		"slice":             utils.Slice,
 		"seq":               utils.Seq,
@@ -521,14 +521,14 @@ func getTestName(t models.Test, lang string) string {
 }
 
 func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, nil, template.FuncMap{
 		"slice": utils.Slice,
 		"add":   utils.Add,
 	}, addTestModalTemplate, testTypeOptionsTemplate, curriculumGradeSelectsTemplate)
 }
 
 func (h *TestsHandler) AddCurriculumGradeDropdowns(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, nil, addCurriculumGradeSelectsTemplate, curriculumGradeSelectsTemplate)
+	views.ExecuteTemplates(responseWriter, nil, nil, addCurriculumGradeSelectsTemplate, curriculumGradeSelectsTemplate)
 }
 
 func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRule, error) {

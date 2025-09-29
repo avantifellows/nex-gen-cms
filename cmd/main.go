@@ -107,6 +107,9 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	tagsHandler := appComponentPtr.TagsHandler
 	muxHandler.HandleFunc("/api/tags", tagsHandler.GetTags)
 
+	examsHandler := appComponentPtr.ExamsHandler
+	muxHandler.HandleFunc("/api/exams", examsHandler.GetExams)
+
 	modulesHandler := appComponentPtr.ModulesHandler
 	muxHandler.HandleFunc("/modules", modulesHandler.LoadModules)
 

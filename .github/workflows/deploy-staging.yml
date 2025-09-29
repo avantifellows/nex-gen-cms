@@ -1,0 +1,139 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:  # Allow manual triggering from any branch
+
+env:
+  AWS_REGION: ap-south-1
+  TERRAFORM_VERSION: 1.5.7
+  # Terraform Variables - defined once and used in both plan and apply
+  TF_VAR_environment: ${{ 'staging' }}
+  TF_VAR_aws_region: ${{ 'ap-south-1' }}
+  TF_VAR_ssh_cidr: ${{ '0.0.0.0/0' }}
+  TF_VAR_cloudflare_email: ${{ secrets.TF_VAR_CLOUDFLARE_EMAIL }}
+  TF_VAR_cloudflare_api_key: ${{ secrets.TF_VAR_CLOUDFLARE_API_KEY }}
+  TF_VAR_cloudflare_zone_name: ${{ secrets.TF_VAR_CLOUDFLARE_ZONE_NAME }}
+  TF_VAR_subdomain: ${{ 'new-cms' }}
+  TF_VAR_letsencrypt_email: ${{ secrets.TF_VAR_LETSENCRYPT_EMAIL }}
+  TF_VAR_repo_url: ${{ 'https://github.com/avantifellows/nex-gen-cms.git' }}
+  TF_VAR_repo_branch: ${{ github.ref_name }}
+  TF_VAR_db_service_endpoint: ${{ 'https://staging-db.avantifellows.org/api/' }}
+  TF_VAR_db_service_token: ${{ secrets.TF_VAR_DB_SERVICE_TOKEN_STAGING }}
+  TF_VAR_instance_type: ${{ 't4g.small' }}
+  TF_VAR_key_pair_name: ${{ secrets.TF_VAR_KEY_PAIR_NAME }}
+
+jobs:
+  deploy:
+    name: Deploy to AWS
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        working-directory: terraform
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Terraform Format Check
+        run: terraform fmt -check
+        continue-on-error: true
+      
+      - name: Terraform Init
+        run: terraform init -reconfigure
+      
+      - name: Terraform Validate
+        run: terraform validate
+      
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        id: apply
+        run: |
+          echo "🚀 Running terraform apply..."
+          set -e
+          terraform apply -auto-approve -input=false -lock-timeout=5m tfplan | tee apply_output.txt
+
+          # Default to no changes
+          echo "apply_changes=false" >> "$GITHUB_OUTPUT"
+
+          if grep -q "Apply complete! Resources:" apply_output.txt; then
+            changes_line=$(grep "Apply complete! Resources:" apply_output.txt | tail -n1)
+            if echo "$changes_line" | grep -q "0 added, 0 changed, 0 destroyed"; then
+              echo "✅ No infrastructure changes were needed: $changes_line"
+            else
+              echo "apply_changes=true" >> "$GITHUB_OUTPUT"
+              echo "📦 Terraform made changes: $changes_line"
+            fi
+          elif grep -q "No changes\." apply_output.txt; then
+            echo "✅ No changes reported by terraform apply"
+          else
+            echo "ℹ️ Could not determine changes from apply output; assuming no-op"
+          fi
+
+          rm -f apply_output.txt
+
+      - name: Capture Instance ID
+        id: instance
+        run: |
+          set -e
+          IID=$(terraform output -raw instance_id)
+          echo "instance_id=${IID}" >> "$GITHUB_OUTPUT"
+          echo "Instance ID: ${IID}"
+
+      - name: Reboot EC2 Instance (no infra changes)
+        if: steps.apply.outputs.apply_changes == 'false' && steps.instance.outputs.instance_id != ''
+        run: |
+          echo "No infra changes detected. Rebooting EC2 instance to pick latest app changes..."
+          aws ec2 reboot-instances --instance-ids "${{ steps.instance.outputs.instance_id }}"
+          echo "Reboot signal sent."
+
+      - name: Wait for Instance to be Running
+        if: steps.instance.outputs.instance_id != ''
+        run: |
+          echo "Waiting for instance to be running..."
+          aws ec2 wait instance-running --instance-ids "${{ steps.instance.outputs.instance_id }}"
+          echo "Instance is running."
+
+      - name: Wait for Instance Status Checks
+        if: steps.instance.outputs.instance_id != ''
+        run: |
+          echo "Waiting for instance status checks to pass..."
+          aws ec2 wait instance-status-ok --instance-ids "${{ steps.instance.outputs.instance_id }}"
+          echo "Instance passed status checks."
+
+      - name: Output Application URL
+        run: |
+          echo "🚀 Application deployed successfully!"
+          echo "URL: $(terraform output -raw application_url)"
+          echo "IP: $(terraform output -raw instance_public_ip)"
+
+      - name: Wait for Application
+        run: |
+          echo "Waiting for application to be ready..."
+          URL=$(terraform output -raw application_url)
+          for i in {1..30}; do
+            if curl -sf "$URL" > /dev/null; then
+              echo "✅ Application is ready at $URL"
+              exit 0
+            fi
+            echo "Attempt $i/30: Application not ready yet, waiting 30 seconds..."
+            sleep 30
+          done
+          echo "⚠️  Application might not be ready yet, but deployment completed"
