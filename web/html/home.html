@@ -55,6 +55,7 @@
 </head>
 
 <body hx-ext="mathJaxLoader">
+    <script src="/web/static/js/nav-tracker.js"></script>
     <div>
         <nav>
             <div class="nav nav-tabs" id="nav-tab">
@@ -113,7 +114,6 @@
         // Attach to window to make it globally accessible
         window.isInt = isInt;
     </script>
-    <script src="/web/static/js/nav-tracker.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             let debounceTimeout;
@@ -149,7 +149,8 @@
                 
                 // Hide subject dropdown when "Tests" tab is active
                 const subjectDropdown = document.getElementById("subject-dropdown");
-                if (activeTabId === "tests-tab" && !(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test"))) {
+                if (activeTabId === "tests-tab" && !(currentPath.endsWith("/add-test") 
+                    || currentPath.endsWith("/edit-test") || currentPath.endsWith("/copy-test"))) {
                     subjectDropdown.style.display = "none";
                 } else {
                     subjectDropdown.style.display = "inline-block";
