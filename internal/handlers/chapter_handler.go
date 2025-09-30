@@ -45,8 +45,8 @@ func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, reque
 }
 
 func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, request *http.Request) {
-	urlValues := request.URL.Query()
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlValues)
+	urlVals := request.URL.Query()
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlVals)
 	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
 		return
 	}
@@ -61,11 +61,11 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 
 	h.getTopics(responseWriter, *chapters)
 
-	sortColumn := urlValues.Get("sortColumn")
-	sortOrder := urlValues.Get("sortOrder")
+	sortColumn := urlVals.Get("sortColumn")
+	sortOrder := urlVals.Get("sortOrder")
 	sortChapters(*chapters, sortColumn, sortOrder)
 
-	view := urlValues.Get("view")
+	view := urlVals.Get("view")
 	var filename string
 	if view == "list" {
 		filename = chapterRowTemplate
