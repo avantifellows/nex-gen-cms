@@ -1,26 +1,18 @@
 <div>
-    <div class="shadow-md overflow-x-auto">
+    <div class="shadow-md overflow-x-auto" hx-ext="table-sort" data-sort-scope="topics">
         <table class="min-w-full bg-white">
             <thead>
                 <tr class="bg-gray-200 text-gray-600 text-sm">
                     <th class="py-4 px-6 text-left">
-                        <a href="#" hx-get="/topics?id={{.ChapterId}}&sortColumn=1" hx-target="#subContent">
-                            Code <i class="fas 
-                            {{ if eq .TopicsSortState.Column "1" }}
-                                {{ if eq .TopicsSortState.Order "asc" }} fa-sort-up
-                                {{ else if eq .TopicsSortState.Order "desc" }} fa-sort-down
-                                {{ else }} fa-sort {{ end }}
-                            {{ else }} fa-sort {{ end }}"></i>
+                        <a href="#" hx-get="/topics?id={{.ChapterId}}" hx-target="#subContent"
+                            hx-on:click="updateTableSortState('1', 'topics');">
+                            Code <i class="fas fa-sort"></i>
                         </a>
                     </th>
                     <th class="px-6 text-left">
-                        <a href="#" hx-get="/topics?id={{.ChapterId}}&sortColumn=2" hx-target="#subContent">
-                            Name <i class="fas 
-                            {{ if eq .TopicsSortState.Column "2" }}
-                                {{ if eq .TopicsSortState.Order "asc" }} fa-sort-up
-                                {{ else if eq .TopicsSortState.Order "desc" }} fa-sort-down
-                                {{ else }} fa-sort {{ end }}
-                            {{ else }} fa-sort {{ end }}"></i>
+                        <a href="#" hx-get="/topics?id={{.ChapterId}}" hx-target="#subContent"
+                            hx-on:click="updateTableSortState('2', 'topics');">
+                            Name <i class="fas fa-sort"></i>
                         </a>
                     </th>
                     <th class="px-6 text-center">ICTs</th>
