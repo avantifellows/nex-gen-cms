@@ -127,10 +127,10 @@ func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request 
 	views.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Topic", nil)
 }
 
-func sortTopics(topics []*models.Topic) {
+func sortTopics(topics []*models.Topic, sortColumn string, sortOrder string) {
 	slices.SortStableFunc(topics, func(t1, t2 *models.Topic) int {
 		var sortResult int
-		switch topicSortState.Column {
+		switch sortColumn {
 		case "1":
 			t1Suffix := utils.ExtractNumericSuffix(t1.Code)
 			t2Suffix := utils.ExtractNumericSuffix(t2.Code)
@@ -147,7 +147,7 @@ func sortTopics(topics []*models.Topic) {
 			sortResult = 0
 		}
 
-		if topicSortState.Order == constants.SortOrderDesc {
+		if constants.SortOrder(sortOrder) == constants.SortOrderDesc {
 			sortResult = -sortResult
 		}
 		return sortResult
