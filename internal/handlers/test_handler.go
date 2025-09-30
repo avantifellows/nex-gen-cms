@@ -715,6 +715,10 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
+	// Make a copy so the original is not mutated
+	copiedTest := *selectedTestPtr
+	copiedTest.ID = 0
+
 	problems := h.getTestProblems(responseWriter, request)
 	if problems == nil {
 		return
@@ -724,23 +728,12 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		problemsMap[p.ID] = p
 	}
 
-	var testRule *models.TestRule // nil by default
-	if len(selectedTestPtr.ExamIDs) > 0 {
-		tr, err := h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
-		if err != nil {
-			fmt.Println(err.Error())
-		} else {
-			testRule = tr
-		}
-	}
-
 	data := dto.HomeData{
-		TestPtr:  selectedTestPtr,
+		TestPtr:  &copiedTest,
 		Problems: problemsMap,
-		TestRule: testRule,
 	}
 
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"split":             strings.Split,
 		"slice":             utils.Slice,
 		"seq":               utils.Seq,
