@@ -11,8 +11,8 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
@@ -37,7 +37,7 @@ func NewTopicsHandler(service *services.Service[models.Topic]) *TopicsHandler {
 
 func (h *TopicsHandler) OpenAddTopic(responseWriter http.ResponseWriter, request *http.Request) {
 	chapterId := request.URL.Query().Get("chapterId")
-	local_repo.ExecuteTemplate(addTopicTemplate, responseWriter, chapterId, nil)
+	views.ExecuteTemplate(addTopicTemplate, responseWriter, chapterId, nil)
 }
 
 func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *http.Request) {
@@ -64,7 +64,7 @@ func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *ht
 	}
 
 	topicPtrs := []*models.Topic{newTopicPtr}
-	local_repo.ExecuteTemplate(topicRowTemplate, responseWriter, topicPtrs, template.FuncMap{
+	views.ExecuteTemplate(topicRowTemplate, responseWriter, topicPtrs, template.FuncMap{
 		"getName": getTopicName,
 	})
 }
@@ -97,7 +97,7 @@ func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *h
 		return
 	}
 
-	local_repo.ExecuteTemplate(editTopicTemplate, responseWriter, selectedTopicPtr, template.FuncMap{
+	views.ExecuteTemplate(editTopicTemplate, responseWriter, selectedTopicPtr, template.FuncMap{
 		"getName": getTopicName,
 	})
 }
@@ -124,7 +124,7 @@ func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request 
 		http.Error(responseWriter, fmt.Sprintf("Error updating topic: %v", err), http.StatusInternalServerError)
 	}
 
-	local_repo.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Topic", nil)
+	views.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Topic", nil)
 }
 
 func sortTopics(topics []*models.Topic, sortColumn string, sortOrder string) {
@@ -168,7 +168,7 @@ func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *ht
 		SubjectID:    subjectId,
 		TopicPtr:     selectedTopicPtr,
 	}
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getTopicName,
 	}, baseTemplate, topicTemplate)
 }

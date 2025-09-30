@@ -11,8 +11,8 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
-	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
@@ -41,7 +41,7 @@ func NewChaptersHandler(chaptersService *services.Service[models.Chapter],
 }
 
 func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, request *http.Request) {
-	local_repo.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, chaptersTemplate)
+	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, chaptersTemplate)
 }
 
 func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, request *http.Request) {
@@ -72,7 +72,7 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 	} else {
 		filename = chapterDropdownTemplate
 	}
-	local_repo.ExecuteTemplate(filename, responseWriter, chapters, template.FuncMap{
+	views.ExecuteTemplate(filename, responseWriter, chapters, template.FuncMap{
 		"getName": getChapterName,
 	})
 }
@@ -122,7 +122,7 @@ func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, reques
 		SubjectID:    selectedChapterPtr.SubjectID,
 		ChapterPtr:   selectedChapterPtr,
 	}
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getChapterName,
 	}, baseTemplate, editChapterTemplate)
 }
@@ -150,7 +150,7 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 		return
 	}
 
-	local_repo.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Chapter", nil)
+	views.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Chapter", nil)
 }
 
 func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request *http.Request) {
@@ -183,7 +183,7 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 	}
 
 	chapterPtrs := []*models.Chapter{newChapterPtr}
-	local_repo.ExecuteTemplate(chapterRowTemplate, responseWriter, chapterPtrs, template.FuncMap{
+	views.ExecuteTemplate(chapterRowTemplate, responseWriter, chapterPtrs, template.FuncMap{
 		"getName": getChapterName,
 	})
 }
@@ -270,7 +270,7 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 		SubjectID:    selectedChapterPtr.SubjectID,
 		ChapterPtr:   selectedChapterPtr,
 	}
-	local_repo.ExecuteTemplates(responseWriter, data, template.FuncMap{
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getChapterName,
 	}, baseTemplate, chapterTemplate)
 }
@@ -280,7 +280,7 @@ func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request
 	data := dto.TopicsData{
 		ChapterId: chapterIdStr,
 	}
-	local_repo.ExecuteTemplate(topicsTemplate, responseWriter, data, nil)
+	views.ExecuteTemplate(topicsTemplate, responseWriter, data, nil)
 }
 
 func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request *http.Request) {
@@ -302,7 +302,7 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 		 * then just return empty response.
 		 */
 		if chapterDropdownVal == "Select Chapter" || chapterDropdownVal == "" {
-			local_repo.ExecuteTemplate(filename, responseWriter, nil, template.FuncMap{
+			views.ExecuteTemplate(filename, responseWriter, nil, template.FuncMap{
 				"getName": getTopicName,
 			})
 		} else {
@@ -318,7 +318,7 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	sortOrder := urlVals.Get("sortOrder")
 	sortTopics(selectedChapterPtr.Topics, sortColumn, sortOrder)
 
-	local_repo.ExecuteTemplate(filename, responseWriter, selectedChapterPtr.Topics, template.FuncMap{
+	views.ExecuteTemplate(filename, responseWriter, selectedChapterPtr.Topics, template.FuncMap{
 		"getName": getTopicName,
 	})
 }
