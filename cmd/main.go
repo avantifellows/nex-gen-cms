@@ -48,7 +48,15 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	// this is for output.css file used in home.html
 	muxHandler.Handle("/web/", appComponentPtr.CssPathHandler)
 
-	muxHandler.HandleFunc("/", handlers.GenericHandler)
+	loginHandler := appComponentPtr.LoginHandler
+	// Root should redirect to /login
+	muxHandler.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+	})
+	muxHandler.HandleFunc("/login", loginHandler.Login)
+	muxHandler.HandleFunc("/logout", loginHandler.Logout)
+
+	muxHandler.HandleFunc("/home", handlers.GenericHandler)
 	muxHandler.HandleFunc("/add-chapter", handlers.GenericHandler)
 
 	chaptersHandler := appComponentPtr.ChaptersHandler

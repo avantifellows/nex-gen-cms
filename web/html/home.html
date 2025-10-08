@@ -60,7 +60,7 @@
 <body hx-ext="mathJaxLoader">
     <div>
         <nav>
-            <div class="nav nav-tabs" id="nav-tab">
+            <div class="nav nav-tabs flex" id="nav-tab">
                 <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
@@ -95,6 +95,12 @@
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading subjects...</option>
                 </select>
+
+                <!-- Logout button at far right -->
+                <button hx-post="/logout"
+                    class="text-sm font-semibold px-3 py-1 ms-auto me-2 my-1 rounded bg-blue-500 text-white hover:bg-blue-600">
+                    Logout
+                </button>
             </div>
         </nav>
 
