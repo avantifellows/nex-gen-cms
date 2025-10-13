@@ -229,6 +229,23 @@
                 }
             }
         })
+    
+        window.addEventListener("pageshow", function(event) {
+            // Session check
+            if (!document.cookie.includes("cms_session")) {
+                window.location.href = "/login";
+                return;
+            }
+
+            // Reset chaptersLoaded **only if the chapters tab is active**
+            const chaptersTab = document.getElementById("chapters-tab");
+            // when moving forward in history, it generates pageshow event with persisted=true. Don't reset flag in that case
+            if (chaptersTab.classList.contains("active") && !event.persisted) {
+                // reset flag to reload chapters on page refresh or direct url entry
+                console.log("Fresh load with chapters tab active. Resetting chaptersLoaded.");
+                sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, "false");
+            }
+        });
     </script>
 </body>
 

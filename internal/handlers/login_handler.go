@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/avantifellows/nex-gen-cms/config"
 	"github.com/avantifellows/nex-gen-cms/internal/middleware"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
@@ -19,7 +20,6 @@ func NewLoginHandler() *LoginHandler {
 func (h *LoginHandler) Login(responseWriter http.ResponseWriter, request *http.Request) {
 	// First time visit by entering /login or just / in browser
 	if request.Method == http.MethodGet {
-
 		// If the user is already logged in, redirect to /home
 		if middleware.IsLoggedIn(request) {
 			http.Redirect(responseWriter, request, "/home", http.StatusSeeOther)
@@ -36,7 +36,7 @@ func (h *LoginHandler) Login(responseWriter http.ResponseWriter, request *http.R
 	username := request.FormValue("username")
 	password := request.FormValue("password")
 
-	if username == "username" && password == "password" {
+	if username == config.GetEnv("CMS_USERNAME", "") && password == config.GetEnv("CMS_PASSWORD", "") {
 		middleware.SetSessionCookie(responseWriter)
 
 		responseWriter.Header().Set("HX-Redirect", "/home")

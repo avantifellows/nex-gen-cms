@@ -19,7 +19,9 @@ func main() {
 	}
 
 	setup(new(Config), mux, appComponentPtr)
-	http.ListenAndServe("0.0.0.0:8080", mux)
+	// Paths that don't require login
+	exceptions := []string{"/login", "/favicon.ico", "/web/static/css/output.css"}
+	http.ListenAndServe("0.0.0.0:8080", middleware.RequireLogin(mux, exceptions...))
 }
 
 type ConfigLoader interface {
@@ -48,11 +50,23 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	// this is for output.css file used in home.html
 	muxHandler.Handle("/web/", appComponentPtr.CssPathHandler)
 
-	loginHandler := appComponentPtr.LoginHandler
-	// Root should redirect to /login
 	muxHandler.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		// Only root should redirect to /login. Without this condition directly entering other paths like
+		// /chapters were also matching this handler due to blank "/" in first argument to HandleFunc(),
+		// hence calling /login --> /home, although in the end correct chapters page was visible
+		if r.URL.Path == "/" {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		http.NotFound(w, r)
 	})
+
+	// Prevent redundant call from browser's automatic favicon request: /favicon.ico --> /login --> /home redirection
+	muxHandler.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	loginHandler := appComponentPtr.LoginHandler
 	muxHandler.HandleFunc("/login", loginHandler.Login)
 	muxHandler.HandleFunc("/logout", loginHandler.Logout)
 

@@ -7,11 +7,10 @@ const sessionCookieName = "cms_session"
 // Set a cookie for a logged-in user
 func SetSessionCookie(w http.ResponseWriter) {
 	cookie := &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    "true",
-		Path:     "/",
-		HttpOnly: true,
-		MaxAge:   7200, // 2 hours
+		Name:   sessionCookieName,
+		Value:  "true",
+		Path:   "/",
+		MaxAge: 7200, // 2 hours
 	}
 	http.SetCookie(w, cookie)
 }
@@ -28,18 +27,27 @@ func IsLoggedIn(r *http.Request) bool {
 // Logout by clearing the cookie
 func Logout(w http.ResponseWriter) {
 	cookie := &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
+		Name:   sessionCookieName,
+		Value:  "",
+		Path:   "/",
+		MaxAge: -1,
 	}
 	http.SetCookie(w, cookie)
 }
 
 // Middleware to restrict access
-func RequireLogin(next http.Handler) http.Handler {
+func RequireLogin(next http.Handler, exceptions ...string) http.Handler {
+	exceptionSet := make(map[string]struct{}, len(exceptions))
+	for _, e := range exceptions {
+		exceptionSet[e] = struct{}{}
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := exceptionSet[r.URL.Path]; ok {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		if !IsLoggedIn(r) {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
