@@ -33,7 +33,20 @@ jobs:
       run: |
         go run cmd/main.go > server.log 2>&1 &
         echo $! > server.pid  # Save the PID of the server
-        sleep 10  # Give the server time to start
+
+    - name: Wait for server to be ready
+      run: |
+        for i in {1..20}; do
+          if curl -s http://localhost:8080/login > /dev/null; then
+            echo "Server is up"
+            exit 0
+          fi
+          echo "Waiting for server..."
+          sleep 1
+        done
+        echo "Server did not start in time"
+        cat server.log
+        exit 1
 
     - name: Print server logs if failed
       if: failure()
