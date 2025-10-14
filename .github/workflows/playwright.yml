@@ -1,9 +1,9 @@
 name: Playwright Tests
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, release ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, release ]
 jobs:
   test:
     timeout-minutes: 60
@@ -39,8 +39,17 @@ jobs:
       if: failure()
       run: cat server.log
 
+    # Delete old auth state (if any)
+    - name: Remove old auth state
+      run: rm -f playwright/.auth/user.json
+
+    # Generate fresh storage state
+    - name: Generate fresh Playwright auth state
+      run: npx playwright test tests/auth.setup.spec.ts
+
+    # Run all other Playwright tests
     - name: Run Playwright tests
-      run: npx playwright test
+      run: npx playwright test --grep-invert "@auth-setup"
 
     - name: Stop Go server
       if: always()  # Ensure this runs even if tests fail
