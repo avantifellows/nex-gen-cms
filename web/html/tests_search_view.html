@@ -1,0 +1,111 @@
+<table class="min-w-full bg-white">
+    <thead>
+        <tr class="bg-gray-200 text-gray-600 text-sm">
+            <th class="py-4 px-6 text-left">
+                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('1', 'tests');">
+                    Code <i class="fas fa-sort"></i>
+                </a>
+            </th>
+            <th class="px-6 text-left">
+                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('2', 'tests');">
+                    Name <i class="fas fa-sort"></i>
+                </a>
+            </th>
+            <th class="px-6 text-center">
+                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('3', 'tests');">
+                    Curriculum <i class="fas fa-sort"></i>
+                </a>
+            </th>
+            <th class="px-6 text-center">
+                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('4', 'tests');">
+                    Grade <i class="fas fa-sort"></i>
+                </a>
+            </th>
+            <th class="px-6 text-center">
+                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('5', 'tests');">
+                    Test Type <i class="fas fa-sort"></i>
+                </a>
+            </th>
+            <th class="px-6 text-center">Actions</th>
+        </tr>
+    </thead>
+    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-ext="infiniteScroll" hx-get="/api/tests?limit=10&offset=0"
+        hx-trigger="load" hx-swap="beforeend" data-limit="10" data-offset="0" hx-include="#test-search">
+        <!-- Rows will be dynamically inserted here -->
+    </tbody>
+</table>
+<script>
+    htmx.defineExtension('infiniteScroll', {
+        onEvent: function (name, evt) {
+            // when new content is swapped in
+            if (name === 'htmx:afterSwap') {
+                const target = evt.detail.target;
+                console.log("htmx:afterSwap event for infiniteScroll extension", target);
+                const request = evt.detail.xhr.responseURL;
+                const queryString = request.split("?")[1] || "";
+                target.setAttribute("data-last-params", queryString);
+
+                const limit = parseInt(target.getAttribute("data-limit") || "10", 10);
+                const offset = parseInt(target.getAttribute("data-offset") || "0", 10);
+                target.setAttribute("data-offset", offset + limit);
+                target.removeAttribute("data-loading");
+
+                // avoid duplicate scroll handlers
+                if (target.__infiniteScrollAttached) return;
+                target.__infiniteScrollAttached = true;
+                console.log("infiniteScroll: attaching scroll handler");
+
+                target._lastY = window.scrollY;
+
+                function onScroll() {
+                    const currY = window.scrollY;
+
+                    // Only proceed if user scrolled DOWN
+                    if (currY <= (target._lastY || 0)) {
+                        target._lastY = currY;
+                        return;
+                    }
+                    target._lastY = currY;
+
+                    // don’t re-request while loading
+                    if (target.getAttribute("data-loading") === "true") return;
+
+                    // near bottom?
+                    const doc = document.documentElement;
+                    const nearBottom = window.innerHeight + currY >= doc.scrollHeight - 100;
+                    if (nearBottom) {
+                        target.setAttribute("data-loading", "true");
+
+                        let limit = target.getAttribute("data-limit") || "10";
+                        let offset = target.getAttribute("data-offset") || "0";
+                        let baseUrl = target.getAttribute("hx-get");
+                        let params = new URLSearchParams();
+
+                        // Preserve previous search term if it existed
+                        const lastParams = target.getAttribute("data-last-params");
+                        if (lastParams) {
+                            params = new URLSearchParams(lastParams);
+                        }
+
+                        // Add/overwrite pagination params
+                        params.set("limit", limit);
+                        params.set("offset", offset);
+
+                        const finalUrl = `${baseUrl}?${params.toString()}`;
+                        htmx.ajax("GET", finalUrl, {
+                            target: target,
+                            swap: "beforeend"
+                        });
+                    }
+                }
+
+                // cleanup when node is removed
+                target.addEventListener("remove", () => {
+                    window.removeEventListener("scroll", onScroll);
+                });
+
+                window.addEventListener("scroll", onScroll);
+            }
+        }
+    });
+</script>

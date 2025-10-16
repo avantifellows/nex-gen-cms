@@ -7,19 +7,18 @@
 
             <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on 
             coming back from single test to tests list screen -->
-            <select id="testtype-dropdown" hx-ext="testsLoader" name="testtype-dropdown"
-                class="border border-gray-400 p-2 rounded" hx-get="/api/tests"
+            <select id="testtype-dropdown" name="testtype-dropdown" hx-ext="testsViewLoader" 
+                class="border border-gray-400 p-2 rounded" hx-get="/tests?mode=filter"
                 hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
-                hx-target="#testTableBody" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
-                onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');"
-                hx-on::after-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'true')">
+                hx-target="#test-table-wrapper" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
+                onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
                 {{ template "test_type_options" }}
             </select>
 
             <!-- Search field -->
             <input type="text" id="test-search" name="search" placeholder="Search tests by code or name..."
-                class="border border-gray-400 p-2 rounded w-64" hx-get="/api/tests"
-                hx-trigger="keyup changed delay:500ms" hx-target="#testTableBody">
+                class="border border-gray-400 p-2 rounded w-64" hx-get="/tests?mode=search"
+                hx-trigger="keyup[this.value.length>=3] delay:500ms" hx-target="#test-table-wrapper">
 
         </div>
 
@@ -35,47 +34,8 @@
 
     <!-- Content Area -->
     <div id="subcontent">
-        <div class="shadow-md my-6 overflow-x-auto">
-            <table class="min-w-full bg-white">
-                <thead>
-                    <tr class="bg-gray-200 text-gray-600 text-sm">
-                        <th class="py-4 px-6 text-left">
-                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('1', 'tests');">
-                                Code <i class="fas fa-sort"></i>
-                            </a>
-                        </th>
-                        <th class="px-6 text-left">
-                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('2', 'tests');">
-                                Name <i class="fas fa-sort"></i>
-                            </a>
-                        </th>
-                        <th class="px-6 text-center">
-                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('3', 'tests');">
-                                # of questions <i class="fas fa-sort"></i>
-                            </a>
-                        </th>
-                        <th class="px-6 text-center">
-                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('4', 'tests');">
-                                Marks <i class="fas fa-sort"></i>
-                            </a>
-                        </th>
-                        <th class="px-6 text-center">
-                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('5', 'tests');">
-                                Duration <i class="fas fa-sort"></i>
-                            </a>
-                        </th>
-                        <th class="px-6 text-center">
-                            <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('6', 'tests');">
-                                Set <i class="fas fa-sort"></i>
-                            </a>
-                        </th>
-                        <th class="px-6 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="testTableBody" class="text-gray-600 text-sm">
-                    <!-- Rows will be dynamically inserted here -->
-                </tbody>
-            </table>
+        <div id="test-table-wrapper" class="shadow-md my-6 overflow-x-auto">
+            <!-- Table content will be loaded here based on mode filter or search -->
         </div>
     </div>
 
@@ -83,7 +43,7 @@
 
 <script>
     (function () {
-        htmx.defineExtension('testsLoader', {
+        htmx.defineExtension('testsViewLoader', {
             onEvent: function (name, event) {
                 if (name === "htmx:afterProcessNode") {
                     restoreState();
@@ -91,19 +51,25 @@
                 } else if (name === "htmx:beforeRequest") {
                     const requestPath = event.detail.elt.getAttribute("hx-get");
 
-                    if (requestPath === "/api/tests") {
-                        if (sessionStorage.getItem(window.TESTS_LOADED_KEY) === "true") {
-                            console.log("Skipping /api/tests request because tests are already loaded.");
+                    if (requestPath === "/tests?mode=filter") {
+                        if (sessionStorage.getItem(window.TESTS_VIEW_LOADED_KEY) === "true") {
+                            console.log("Skipping /tests request because tests view is already loaded.");
+                            event.preventDefault();
+                            return;
+                        }
+
+                        const params = event.detail.requestConfig.parameters;
+                        if (params["testtype-dropdown"] === "") {
+                            console.log("Skipping /tests request because test type is not yet selected.");
                             event.preventDefault();
 
                         } else {
-                            const params = event.detail.requestConfig.parameters;
                             const curriculum = params["curriculum-dropdown"];
                             const grade = params["grade-dropdown"];
 
                             // if dropdown values are showing default value like "Loading...", then don't execute request
                             if (!isInt(curriculum) || !isInt(grade)) {
-                                console.log("Skipping /api/tests request because dropdowns are not loaded yet.");
+                                console.log("Skipping /tests request because dropdowns are not loaded yet.");
                                 event.preventDefault();
 
                             } else {
@@ -113,10 +79,23 @@
                                 if ((storedCurriculum && storedCurriculum !== curriculum) ||
                                     (storedGrade && storedGrade !== grade)) {
                                     // at least 1 dropdown value is 1 (1st item value) and its correct value is yet to be retained from sessionStorage
-                                    console.log("Skipping /api/tests request because dropdowns values are not yet retained.");
+                                    console.log("Skipping /tests request because dropdowns values are not yet retained.");
                                     event.preventDefault();
                                 }
                             }
+                        }
+                    }
+                
+                } else if (name === "htmx:afterRequest") {
+                    const requestPath = event.detail.elt.getAttribute("hx-get");
+
+                    if (requestPath === "/tests?mode=filter") {
+                        const status = event.detail.xhr.status;
+                        if (status >= 200 && status < 300) {
+                            // reset TESTS_LOADED_KEY here so that tests_filter_view can load tests
+                            sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');
+                            
+                            sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'true');
                         }
                     }
                 }
@@ -136,6 +115,22 @@
                 htmx.trigger(dropdown, 'change');
             }
         }
+
+        // document.getElementById("test-search")?.addEventListener("htmx:configRequest", function (evt) {
+        //     const params = evt.detail.parameters;
+        //     params.limit = params.limit || 10;
+        //     params.offset = params.offset || 0;
+        // });
+
+        // function resetTestsPagination() {
+        //     const tbody = document.getElementById("test-table-body");
+        //     if (!tbody) return;
+        //     tbody.setAttribute("data-offset", "0");
+        //     tbody.innerHTML = "";
+        //     // DO NOT trigger fetch here — let HTMX search field do it
+        // }
+
+        // document.getElementById("test-search")?.addEventListener("keyup", resetTestsPagination);
     })();
 </script>
 {{ end }}

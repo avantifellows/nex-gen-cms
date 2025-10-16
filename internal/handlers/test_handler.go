@@ -30,7 +30,10 @@ import (
 const TESTTYPE_DROPDOWN_NAME = "testtype-dropdown"
 
 const testsTemplate = "tests.html"
+const testsFilterViewTemplate = "tests_filter_view.html"
+const testsSearchViewTemplate = "tests_search_view.html"
 const testRowTemplate = "test_row.html"
+const testSearchRowTemplate = "test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
 const addTestTemplate = "add_test.html"
@@ -75,25 +78,52 @@ func NewTestsHandler(testsService *services.Service[models.Test], subjectsServic
 }
 
 func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
-	views.ExecuteTemplates(responseWriter, nil, template.FuncMap{
-		"slice": utils.Slice,
-		"add":   utils.Add,
-	}, baseTemplate, testsTemplate, testTypeOptionsTemplate)
+	urlVals := request.URL.Query()
+	mode := urlVals.Get("mode")
+
+	switch mode {
+	case "filter":
+		// return filter-view content
+		views.ExecuteTemplate(testsFilterViewTemplate, responseWriter, nil, nil)
+
+	case "search":
+		// return search-view content
+		views.ExecuteTemplate(testsSearchViewTemplate, responseWriter, nil, nil)
+
+	default:
+		// Initial tests page load
+		views.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+			"slice": utils.Slice,
+			"add":   utils.Add,
+		}, baseTemplate, testsTemplate, testTypeOptionsTemplate)
+	}
 }
 
 func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *http.Request) {
-	urlValues := request.URL.Query()
-	curriculumId, gradeId, _ := getCurriculumGradeSubjectIds(urlValues)
-	if curriculumId == 0 || gradeId == 0 {
-		return
+	urlVals := request.URL.Query()
+	search := urlVals.Get("search")
+
+	var urlEndPoint, queryParams, templateFile string
+	var curriculumId int16
+	var gradeId int8
+
+	if search != "" {
+		// search mode
+		urlEndPoint = resourcesEndPoint
+		queryParams = "?search=" + url.QueryEscape(search) + "&limit=" + urlVals.Get("limit") + "&offset=" + urlVals.Get("offset")
+		templateFile = testSearchRowTemplate
+	} else {
+		urlEndPoint = resourcesCurriculumEndPoint
+		curriculumId, gradeId, _ = getCurriculumGradeSubjectIds(urlVals)
+		if curriculumId == 0 || gradeId == 0 {
+			return
+		}
+		testtype := urlVals.Get(TESTTYPE_DROPDOWN_NAME)
+		queryParams = fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
+		templateFile = testRowTemplate
 	}
-	testtype := urlValues.Get(TESTTYPE_DROPDOWN_NAME)
-	sortColumn := urlValues.Get("sortColumn")
-	sortOrder := urlValues.Get("sortOrder")
 
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
-	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
-
+	tests, err := h.testsService.GetList(urlEndPoint+queryParams, testsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
 		return
@@ -106,13 +136,21 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 		if test.Status == constants.ResourceStatusArchived {
 			continue
 		}
-		test.SetCurriculumGrade(curriculumId, gradeId)
+		if curriculumId != 0 {
+			test.SetCurriculumGrade(curriculumId, gradeId)
+		} else {
+			// TODO: Need to remove following line once api returns this info
+			// test.SetCurriculumGrade(41, 1)
+		}
 		filtered = append(filtered, test)
 	}
 	*tests = filtered // assign filtered slice back to original
 
+	sortColumn := urlVals.Get("sortColumn")
+	sortOrder := urlVals.Get("sortOrder")
 	sortTests(*tests, sortColumn, sortOrder)
-	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
+
+	views.ExecuteTemplate(templateFile, responseWriter, tests, nil)
 }
 
 func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string) {
