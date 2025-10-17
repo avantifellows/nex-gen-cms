@@ -33,14 +33,9 @@ cd terraform
 
 # Run the bootstrap script to create backend resources
 ./bootstrap.sh
-
-# After the script completes successfully:
-# 1. Uncomment the backend block in backend.tf
-# 2. Initialize terraform with the backend
-terraform init -migrate-state
 ```
 
-**Important**: The backend block in `backend.tf` is commented out by default. After running the bootstrap script, you need to uncomment it before running `terraform init -migrate-state`.
+**Note**: The backend block in `backend.tf` uses partial configuration. Backend settings are provided via separate `.hcl` files for each environment.
 
 ### 2. Configure Variables
 
@@ -62,17 +57,37 @@ Required variables:
 - `db_service_endpoint`: Your database service URL
 - `db_service_token`: Your database service authentication token
 
-### 3. Deploy Infrastructure
+### 3. Initialize Terraform for Specific Environment
+
+Initialize Terraform with the appropriate backend configuration:
 
 ```bash
-# Plan the deployment
-terraform plan
+# For staging environment
+terraform init -backend-config=backend-staging.hcl
 
-# Apply the configuration
-terraform apply
+# For production environment
+terraform init -backend-config=backend-prod.hcl
 ```
 
-### 4. Verify Deployment
+**Important**: You must run `terraform init` with the backend config file every time you switch between environments or when working in a new directory.
+
+### 4. Deploy Infrastructure
+
+```bash
+# Plan the deployment (staging)
+terraform plan -var-file="terraform.tfvars"
+
+# Plan the deployment (production)
+terraform plan -var-file="terraform.prod.tfvars"
+
+# Apply the configuration (staging)
+terraform apply -var-file="terraform.tfvars"
+
+# Apply the configuration (production)
+terraform apply -var-file="terraform.prod.tfvars"
+```
+
+### 5. Verify Deployment
 
 After deployment, check the outputs:
 
@@ -134,21 +149,75 @@ jobs:
 
 This will pause the workflow before the apply step and require approval from designated reviewers.
 
-## Environments
+## Multi-Environment Setup
 
-This configuration supports multiple environments using Terraform variables:
+This configuration supports multiple environments (staging and production) using separate backend configs and tfvars files.
 
-### Staging
-- Domain: `staging.your-domain.com`
-- Instance: `t4g.small`
-- Branch: `main`
+### Environment Structure
 
-### Production (Future)
-Change these variables for production:
-- `environment = "prod"`
-- `repo_branch = "main"` or `"prod"`
-- `instance_type = "t4g.medium"` or larger
-- Restrict `ssh_cidr` to your IP range
+```
+terraform/
+├── backend-staging.hcl      # Backend config for staging
+├── backend-prod.hcl          # Backend config for production
+├── terraform.tfvars          # Variables for staging
+├── terraform.prod.tfvars     # Variables for production
+└── backend.tf                # Shared backend configuration
+```
+
+### Working with Staging
+
+```bash
+# Initialize for staging
+terraform init -backend-config=backend-staging.hcl
+
+# Plan and apply
+terraform plan -var-file="terraform.tfvars"
+terraform apply -var-file="terraform.tfvars"
+```
+
+State file: `s3://tfstate-nex-gen-cms/nex-gen-cms/staging.tfstate`
+
+### Working with Production
+
+```bash
+# Initialize for production
+terraform init -backend-config=backend-prod.hcl
+
+# Plan and apply
+terraform plan -var-file="terraform.prod.tfvars"
+terraform apply -var-file="terraform.prod.tfvars"
+```
+
+State file: `s3://tfstate-nex-gen-cms/nex-gen-cms/prod.tfstate`
+
+### Switching Between Environments
+
+When switching environments, you **must** re-run `terraform init` with the correct backend config:
+
+```bash
+# Switch to staging
+terraform init -reconfigure -backend-config=backend-staging.hcl
+
+# Switch to production
+terraform init -reconfigure -backend-config=backend-prod.hcl
+```
+
+The `-reconfigure` flag tells Terraform to reconfigure the backend without attempting to migrate state.
+
+### For Team Members
+
+When a team member wants to work on this:
+
+1. **Get the `.tfvars` files** (not in git for security)
+2. **Configure AWS credentials** with access to the S3 backend
+3. **Initialize with the environment** they want to work on:
+   ```bash
+   terraform init -backend-config=backend-staging.hcl
+   ```
+4. **Run plan** to see changes:
+   ```bash
+   terraform plan -var-file="terraform.tfvars"
+   ```
 
 ## Troubleshooting
 
