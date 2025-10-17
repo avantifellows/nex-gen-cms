@@ -1,4 +1,9 @@
-export const HOME_PAGE_URL = 'http://localhost:8080';
+// Base URL
+export const BASE_URL = 'http://localhost:8080';
+
+// Specific pages
+export const LOGIN_PAGE_URL = `${BASE_URL}/login`;
+export const HOME_PAGE_URL = `${BASE_URL}/home`;
 
 export const dropdowns = [
     { name: 'curriculum-dropdown', urlPattern: /\/api\/curriculums/, content: ['1', '2'], key: 'selectedCurriculum', selectedVal: '2' },

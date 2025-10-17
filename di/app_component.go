@@ -13,6 +13,7 @@ import (
 
 type AppComponent struct {
 	CssPathHandler     http.Handler
+	LoginHandler       *handlers.LoginHandler
 	ChaptersHandler    *handlers.ChaptersHandler
 	TopicsHandler      *handlers.TopicsHandler
 	ConceptsHandler    *handlers.ConceptsHandler
@@ -49,6 +50,7 @@ func NewAppComponent() (*AppComponent, error) {
 
 	// Initialize handlers
 	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
+	loginHandler := handlers.NewLoginHandler()
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
 	topicsHandler := handlers.NewTopicsHandler(topicsService)
 	conceptsHandler := handlers.NewConceptsHandler(conceptsService)
@@ -67,6 +69,7 @@ func NewAppComponent() (*AppComponent, error) {
 
 	return &AppComponent{
 		CssPathHandler:     cssPathHandler,
+		LoginHandler:       loginHandler,
 		ChaptersHandler:    chaptersHandler,
 		TopicsHandler:      topicsHandler,
 		ConceptsHandler:    conceptsHandler,
