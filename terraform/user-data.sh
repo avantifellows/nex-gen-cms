@@ -55,6 +55,8 @@ log "Creating .env file for application"
 cat > "$APP_DIR/.env" << 'EOF'
 DB_SERVICE_ENDPOINT=${db_service_endpoint}
 DB_SERVICE_TOKEN=${db_service_token}
+CMS_USERNAME=${cms_username}
+CMS_PASSWORD=${cms_password}
 EOF
 chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
 chmod 600 "$APP_DIR/.env"

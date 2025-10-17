@@ -4,6 +4,8 @@ node_modules/*
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+# Playwright authenticated storage
+playwright/.auth/
 
 # Terraform
 terraform/.terraform/

@@ -22,7 +22,7 @@ func NewAPIRepository() *APIRepository {
 func (r *APIRepository) CallAPI(urlEndPoint string, method string, body any) ([]byte, error) {
 	// Create an HTTP client
 	client := &http.Client{
-		Timeout: time.Second * 10,
+		Timeout: time.Second * 30,
 	}
 
 	var reqBody io.Reader

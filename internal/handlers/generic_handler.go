@@ -21,17 +21,11 @@ const baseTemplate = "home.html"
 
 /*
 Handles loading html template files having same name as that of path passed
-in request. Path containing only '/' is considered as "/home", resulting in
-loading web/html/home.html file
+in request.
 */
 func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
-
 	// Extract the requested path
 	path := request.URL.Path
-
-	if path == "/" {
-		path = "/home"
-	}
 	// All urls contain -, which are replaced by _ in file names, hence replace hyphens by underscores
 	filename := strings.ReplaceAll(path, "-", "_")
 	// Define the template file path
