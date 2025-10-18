@@ -57,7 +57,7 @@ jobs:
         continue-on-error: true
       
       - name: Terraform Init
-        run: terraform init -reconfigure
+        run: terraform init -reconfigure -backend-config=backend-staging.hcl
       
       - name: Terraform Validate
         run: terraform validate
