@@ -59,7 +59,7 @@ jobs:
         continue-on-error: true
       
       - name: Terraform Init (Production Backend)
-        run: terraform init -reconfigure -backend-config="key=nex-gen-cms/prod.tfstate"
+        run: terraform init -reconfigure -backend-config=backend-prod.hcl
       
       - name: Terraform Validate
         run: terraform validate
