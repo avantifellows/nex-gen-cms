@@ -23,6 +23,8 @@ repo_branch = "main"
 # Application environment variables
 db_service_endpoint = "https://your-db-service.example.com/"
 db_service_token    = "your-database-service-token"
+cms_username = "your-cms-username"
+cms_password = "your-cms-password"
 
 # EC2 settings
 instance_type   = "t4g.small"

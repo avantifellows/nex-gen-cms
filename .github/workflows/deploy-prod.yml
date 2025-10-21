@@ -21,6 +21,8 @@ env:
   TF_VAR_repo_branch: ${{ github.ref_name }}
   TF_VAR_db_service_endpoint: ${{ 'https://db.avantifellows.org/api/' }}
   TF_VAR_db_service_token: ${{ secrets.TF_VAR_DB_SERVICE_TOKEN_PROD }}
+  TF_VAR_cms_username: ${{ secrets.TF_VAR_CMS_USERNAME }}
+  TF_VAR_cms_password: ${{ secrets.TF_VAR_CMS_PASSWORD }}
   TF_VAR_instance_type: ${{ 't4g.medium' }}
   TF_VAR_key_pair_name: ${{ secrets.TF_VAR_KEY_PAIR_NAME }}
 
@@ -57,7 +59,7 @@ jobs:
         continue-on-error: true
       
       - name: Terraform Init (Production Backend)
-        run: terraform init -reconfigure -backend-config="key=nex-gen-cms/prod.tfstate"
+        run: terraform init -reconfigure -backend-config=backend-prod.hcl
       
       - name: Terraform Validate
         run: terraform validate

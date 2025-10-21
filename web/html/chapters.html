@@ -50,16 +50,6 @@
     </div>
 
     <script>
-
-        // reset flag to reload chapters on page refresh or direct url entry
-        window.addEventListener("pageshow", function (event) {
-            // when moving forward in history, it generates pageshow event with persisted=true. Don't reset flag in that case
-            if (!event.persisted) {
-                console.log("Fresh page load detected, resetting chaptersLoaded.");
-                sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, "false");
-            }
-        });
-
         /**
          * Directly added htmx:beforeRequest event listener on chapterTableBody is not called back in some cases like
          * 1. Chapters tab -> Edit chapter -> back
