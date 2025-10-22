@@ -34,13 +34,27 @@
         <!-- Rows will be dynamically inserted here -->
     </tbody>
 </table>
+<div id="loader" class="hidden flex justify-center py-4">
+    <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+</div>
 <script>
     htmx.defineExtension('infiniteScroll', {
         onEvent: function (name, evt) {
+            // Show loader before any request (including first load)
+            if (name === 'htmx:beforeRequest') {
+                const el = evt.detail.elt;
+                if (el.getAttribute("hx-ext")?.includes("infiniteScroll")) {
+                    document.getElementById("loader").classList.remove("hidden");
+                }
+            }
+
             // when new content is swapped in
             if (name === 'htmx:afterSwap') {
                 const target = evt.detail.target;
-                console.log("htmx:afterSwap event for infiniteScroll extension", target);
+                if (target.getAttribute("hx-ext")?.includes("infiniteScroll")) {
+                    document.getElementById("loader").classList.add("hidden");
+                }
+
                 const request = evt.detail.xhr.responseURL;
                 const queryString = request.split("?")[1] || "";
                 target.setAttribute("data-last-params", queryString);
@@ -50,61 +64,65 @@
                 target.setAttribute("data-offset", offset + limit);
                 target.removeAttribute("data-loading");
 
-                // avoid duplicate scroll handlers
-                if (target.__infiniteScrollAttached) return;
-                target.__infiniteScrollAttached = true;
-                console.log("infiniteScroll: attaching scroll handler");
+                // Create sentinel once
+                if (!target.__sentinel) {
+                    const sentinel = document.createElement("tr");
+                    sentinel.className = "infinite-scroll-sentinel";
+                    sentinel.style.height = "1px";
+                    target.appendChild(sentinel);
+                    target.__sentinel = sentinel;
 
-                target._lastY = window.scrollY;
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting && target.getAttribute("data-loading") !== "true") {
+                                target.setAttribute("data-loading", "true");
+                                document.getElementById("loader").classList.remove("hidden");
 
-                function onScroll() {
-                    const currY = window.scrollY;
+                                let limit = target.getAttribute("data-limit") || "10";
+                                let offset = target.getAttribute("data-offset") || "0";
+                                let baseUrl = target.getAttribute("hx-get");
+                                let params = new URLSearchParams(target.getAttribute("data-last-params") || "");
+                                params.set("limit", limit);
+                                params.set("offset", offset);
 
-                    // Only proceed if user scrolled DOWN
-                    if (currY <= (target._lastY || 0)) {
-                        target._lastY = currY;
-                        return;
-                    }
-                    target._lastY = currY;
+                                const [basePath] = baseUrl.split("?");
+                                const finalUrl = `${basePath}?${params.toString()}`;
 
-                    // don’t re-request while loading
-                    if (target.getAttribute("data-loading") === "true") return;
-
-                    // near bottom?
-                    const doc = document.documentElement;
-                    const nearBottom = window.innerHeight + currY >= doc.scrollHeight - 100;
-                    if (nearBottom) {
-                        target.setAttribute("data-loading", "true");
-
-                        let limit = target.getAttribute("data-limit") || "10";
-                        let offset = target.getAttribute("data-offset") || "0";
-                        let baseUrl = target.getAttribute("hx-get");
-                        let params = new URLSearchParams();
-
-                        // Preserve previous search term if it existed
-                        const lastParams = target.getAttribute("data-last-params");
-                        if (lastParams) {
-                            params = new URLSearchParams(lastParams);
-                        }
-
-                        // Add/overwrite pagination params
-                        params.set("limit", limit);
-                        params.set("offset", offset);
-
-                        const finalUrl = `${baseUrl}?${params.toString()}`;
-                        htmx.ajax("GET", finalUrl, {
-                            target: target,
-                            swap: "beforeend"
+                                htmx.ajax("GET", finalUrl, {
+                                    target: target,
+                                    swap: "beforeend",
+                                    afterSwap: () => {
+                                        document.getElementById("loader").classList.add("hidden");
+                                        target.removeAttribute("data-loading");
+                                    },
+                                    onError: () => {
+                                        document.getElementById("loader").classList.add("hidden");
+                                        target.removeAttribute("data-loading");
+                                    }
+                                });
+                            }
                         });
-                    }
+                    }, {
+                        root: null,
+                        rootMargin: "100px",
+                        threshold: 0
+                    });
+
+                    observer.observe(sentinel);
+
+                    // MutationObserver to clean up when table is removed
+                    const cleanupObserver = new MutationObserver(() => {
+                        if (!document.contains(target)) {
+                            observer.disconnect();
+                            cleanupObserver.disconnect();
+                        }
+                    });
+                    cleanupObserver.observe(document.body, { childList: true, subtree: true });
+
+                } else {
+                    // Sentinel already exists — ensure it stays last after swap
+                    target.appendChild(target.__sentinel);
                 }
-
-                // cleanup when node is removed
-                target.addEventListener("remove", () => {
-                    window.removeEventListener("scroll", onScroll);
-                });
-
-                window.addEventListener("scroll", onScroll);
             }
         }
     });
