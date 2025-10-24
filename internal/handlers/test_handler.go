@@ -106,12 +106,15 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	var urlEndPoint, queryParams, templateFile string
 	var curriculumId int16
 	var gradeId int8
+	var limit int
 
 	if search != "" {
 		// search mode
 		urlEndPoint = resourcesEndPoint
-		queryParams = "?search=" + url.QueryEscape(search) + "&limit=" + urlVals.Get("limit") + "&offset=" + urlVals.Get("offset")
+		limit = utils.StringToInt(urlVals.Get("limit"))
+		queryParams = "?search=" + url.QueryEscape(search) + "&type=test&limit=" + strconv.Itoa(limit) + "&offset=" + urlVals.Get("offset")
 		templateFile = testSearchRowTemplate
+
 	} else {
 		urlEndPoint = resourcesCurriculumEndPoint
 		curriculumId, gradeId, _ = getCurriculumGradeSubjectIds(urlVals)
@@ -149,6 +152,11 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	sortColumn := urlVals.Get("sortColumn")
 	sortOrder := urlVals.Get("sortOrder")
 	sortTests(*tests, sortColumn, sortOrder)
+
+	// Check if items < limit, then set hasMore to false
+	if search != "" && len(*tests) < limit {
+		responseWriter.Header().Set("hasMore", "false")
+	}
 
 	views.ExecuteTemplate(templateFile, responseWriter, tests, nil)
 }

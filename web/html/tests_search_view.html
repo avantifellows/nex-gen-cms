@@ -64,6 +64,17 @@
                 target.setAttribute("data-offset", offset + limit);
                 target.removeAttribute("data-loading");
 
+                // Check server flag if present
+                const hasMore = evt.detail.xhr.getResponseHeader("hasMore");
+                if (hasMore === "false") {
+                    // Server indicates no more results, disabling sentinel.
+                    if (target.__sentinel) {
+                        target.__sentinel.remove();
+                        target.__sentinel = null;
+                    }
+                    return;
+                }
+
                 // Create sentinel once
                 if (!target.__sentinel) {
                     const sentinel = document.createElement("tr");
