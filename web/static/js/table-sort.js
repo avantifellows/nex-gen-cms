@@ -22,6 +22,23 @@
                 const SORT_ORDER = scope + "SortOrder";
 
                 if (evt.detail.path.startsWith("/api/" + scope)) {
+                    // Parse URL to inspect query parameters
+                    let url = new URL(evt.detail.path, window.location.origin);
+                    let colParam = url.searchParams.get("col");
+                    if (colParam) {
+                        // update Sort State in session storage before modifying URL/params
+                        updateTableSortState(colParam, scope);
+
+                        // Remove 'col' from the URL
+                        url.searchParams.delete("col");
+
+                        // Rebuild the path without the 'col' parameter
+                        evt.detail.path = url.pathname + (url.searchParams.toString() ? "?" + url.searchParams.toString() : "");
+
+                        // update sort icon on UI
+                        restoreState(scope, SORT_COLUMN, SORT_ORDER);
+                    }
+
                     // Get sessionStorage values
                     let sortColumn = sessionStorage.getItem(SORT_COLUMN);
                     let sortOrder = sessionStorage.getItem(SORT_ORDER);
@@ -74,7 +91,9 @@
         // Highlight active column
         table.querySelectorAll("th").forEach(th => {
             let link = th.querySelector("a");
-            if (link && link.getAttribute("hx-on:click")?.includes(column)) {
+            // hx-get condition is for tests
+            if (link && (link.getAttribute("hx-on:click")?.includes(column) 
+                    || link.getAttribute("hx-get")?.includes(`col=${column}`))) {
                 let icon = th.querySelector("i.fas");
                 if (icon) {
                     icon.classList.remove("fa-sort");
