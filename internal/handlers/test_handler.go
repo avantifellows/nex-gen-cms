@@ -61,19 +61,24 @@ const testsKey = "tests"
 const testRulesKey = "testRules"
 
 type TestsHandler struct {
-	testsService     *services.Service[models.Test]
-	subjectsService  *services.Service[models.Subject]
-	problemsService  *services.Service[models.Problem]
-	testRulesService *services.Service[models.TestRule]
+	testsService       *services.Service[models.Test]
+	subjectsService    *services.Service[models.Subject]
+	problemsService    *services.Service[models.Problem]
+	testRulesService   *services.Service[models.TestRule]
+	curriculumsService *services.Service[models.Curriculum]
+	gradesService      *services.Service[models.Grade]
 }
 
 func NewTestsHandler(testsService *services.Service[models.Test], subjectsService *services.Service[models.Subject],
-	problemsService *services.Service[models.Problem], testRulesService *services.Service[models.TestRule]) *TestsHandler {
+	problemsService *services.Service[models.Problem], testRulesService *services.Service[models.TestRule],
+	curriculumsService *services.Service[models.Curriculum], gradesService *services.Service[models.Grade]) *TestsHandler {
 	return &TestsHandler{
-		testsService:     testsService,
-		subjectsService:  subjectsService,
-		problemsService:  problemsService,
-		testRulesService: testRulesService,
+		testsService:       testsService,
+		subjectsService:    subjectsService,
+		problemsService:    problemsService,
+		testRulesService:   testRulesService,
+		curriculumsService: curriculumsService,
+		gradesService:      gradesService,
 	}
 }
 
@@ -133,17 +138,10 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	}
 
 	filtered := (*tests)[:0] // zero-length slice, same backing array
-	// set curriculum & grade id on each test
 	for _, test := range *tests {
 		// skip archived tests
 		if test.Status == constants.ResourceStatusArchived {
 			continue
-		}
-		if curriculumId != 0 {
-			test.SetCurriculumGrade(curriculumId, gradeId)
-		} else {
-			// TODO: Need to remove following line once api returns this info
-			// test.SetCurriculumGrade(41, 1)
 		}
 		filtered = append(filtered, test)
 	}
@@ -153,12 +151,53 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	sortOrder := urlVals.Get("sortOrder")
 	sortTests(*tests, sortColumn, sortOrder)
 
-	// Check if items < limit, then set hasMore to false
-	if search != "" && len(*tests) < limit {
-		responseWriter.Header().Set("hasMore", "false")
-	}
+	if search != "" {
+		// Check if items < limit, then set hasMore to false
+		if len(*tests) < limit {
+			responseWriter.Header().Set("hasMore", "false")
+		}
 
-	views.ExecuteTemplate(templateFile, responseWriter, tests, nil)
+		curriculums, err := h.curriculumsService.GetList(getCurriculumsEndPoint, curriculumsKey, false, false)
+		if err != nil {
+			http.Error(responseWriter, fmt.Sprintf("Error fetching curriculums: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Convert curriculums slice → map[id] = name
+		curriculumMap := make(map[int16]string)
+		for _, c := range *curriculums {
+			curriculumMap[c.ID] = c.Name
+		}
+
+		grades, err := h.gradesService.GetList(getGradesEndPoint, gradesKey, false, false)
+		if err != nil {
+			http.Error(responseWriter, fmt.Sprintf("Error fetching grades: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		// Convert grades slice → map[id] = number
+		gradeMap := make(map[int8]int8)
+		for _, g := range *grades {
+			gradeMap[g.ID] = g.Number
+		}
+
+		// Pass both tests and curriculum map to template
+		data := struct {
+			Tests       *[]*models.Test
+			Curriculums map[int16]string
+			Grades      map[int8]int8
+		}{
+			Tests:       tests,
+			Curriculums: curriculumMap,
+			Grades:      gradeMap,
+		}
+		views.ExecuteTemplate(templateFile, responseWriter, data, template.FuncMap{
+			"dict": utils.Dict,
+		})
+
+	} else {
+		views.ExecuteTemplate(templateFile, responseWriter, tests, nil)
+	}
 }
 
 func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string) {

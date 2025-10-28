@@ -29,7 +29,7 @@
             <th class="px-6 text-center">Actions</th>
         </tr>
     </thead>
-    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-ext="infiniteScroll" hx-get="/api/tests?limit=10&offset=0"
+    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-ext="infinite-scroll" hx-get="/api/tests?limit=10&offset=0"
         hx-trigger="load" hx-swap="beforeend" data-limit="10" data-offset="0" hx-include="#test-search">
         <!-- Rows will be dynamically inserted here -->
     </tbody>
@@ -38,12 +38,12 @@
     <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
 </div>
 <script>
-    htmx.defineExtension('infiniteScroll', {
+    htmx.defineExtension('infinite-scroll', {
         onEvent: function (name, evt) {
             // Show loader before any request (including first load)
             if (name === 'htmx:beforeRequest') {
                 const el = evt.detail.elt;
-                if (el.getAttribute("hx-ext")?.includes("infiniteScroll")) {
+                if (el.getAttribute("hx-ext")?.includes("infinite-scroll")) {
                     document.getElementById("loader").classList.remove("hidden");
                 }
             }
@@ -51,7 +51,7 @@
             // when new content is swapped in
             if (name === 'htmx:afterSwap') {
                 const target = evt.detail.target;
-                if (target.getAttribute("hx-ext")?.includes("infiniteScroll")) {
+                if (target.getAttribute("hx-ext")?.includes("infinite-scroll")) {
                     document.getElementById("loader").classList.add("hidden");
                 }
 

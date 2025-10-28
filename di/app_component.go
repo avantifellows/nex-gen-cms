@@ -58,7 +58,8 @@ func NewAppComponent() (*AppComponent, error) {
 	gradesHandler := handlers.NewGradesHandler(gradesService)
 	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
 	skillsHandler := handlers.NewSkillsHandler(skillsService)
-	testsHandler := handlers.NewTestsHandler(testsService, subjectsService, problemsService, testRulesService)
+	testsHandler := handlers.NewTestsHandler(testsService, subjectsService, problemsService, testRulesService,
+		curriculumsService, gradesService)
 	problemsHandler := handlers.NewProblemsHandler(problemsService, skillsService, subjectsService, topicsService,
 		tagsService)
 	tagsHandler := handlers.NewTagsHandler(tagsService)
