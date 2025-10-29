@@ -17,7 +17,7 @@
         {{ $curriculumId := $cg.CurriculumID }}
         {{ $gradeId := $cg.GradeID }}
 
-        <tr class="border-b hover:bg-gray-100">
+        <tr class="border-b hover:bg-gray-100" hx-swap="outerHTML">
             {{ if eq $i 0 }}
                 <!-- Show code and name only for first curriculum-grade -->
                 <td class="py-4 px-6" rowspan="{{ $total }}">{{ $test.Code }}</td>
@@ -25,8 +25,7 @@
                 <td class="px-6 text-blue-500 hover:underline" rowspan="{{ $total }}">
                     <a href="/test?id={{ $test.ID }}&curriculum_id={{ $curriculumId }}&grade_id={{ $gradeId }}"
                        hx-get="/test?id={{ $test.ID }}&curriculum_id={{ $curriculumId }}&grade_id={{ $gradeId }}"
-                       hx-target="body"
-                       hx-push-url="true">
+                       hx-target="body" hx-push-url="true">
                        {{ (index $test.Name 0).Resource }}
                     </a>
                 </td>

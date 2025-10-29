@@ -20,12 +20,16 @@
 
                 const SORT_COLUMN = scope + "SortColumn";
                 const SORT_ORDER = scope + "SortOrder";
-
+                
                 if (evt.detail.path.startsWith("/api/" + scope)) {
                     // Parse URL to inspect query parameters
                     let url = new URL(evt.detail.path, window.location.origin);
                     let colParam = url.searchParams.get("col");
                     if (colParam) {
+                        // Without below code, Api call is going with previously stored values for sort column & order, because
+                        // Onclick updates correct sort state but it is called after config request. Hence we have used col param instead
+                        // of onclick for tests
+                        
                         // update Sort State in session storage before modifying URL/params
                         updateTableSortState(colParam, scope);
 

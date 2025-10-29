@@ -1,50 +1,66 @@
-<table class="min-w-full bg-white">
-    <thead>
+<table class="min-w-full bg-white" hx-ext="table-sort" data-sort-scope="search-tests">
+    <thead hx-target="#test-table-body" hx-include="#test-search">
         <tr class="bg-gray-200 text-gray-600 text-sm">
             <th class="py-4 px-6 text-left">
-                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('1', 'tests');">
+                <a href="#" hx-get="/api/search-tests?col=1&limit=10&offset=0">
                     Code <i class="fas fa-sort"></i>
                 </a>
             </th>
             <th class="px-6 text-left">
-                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('2', 'tests');">
+                <a href="#" hx-get="/api/search-tests?col=2&limit=10&offset=0">
                     Name <i class="fas fa-sort"></i>
                 </a>
             </th>
             <th class="px-6 text-center">
-                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('3', 'tests');">
+                <a href="#" hx-get="/api/search-tests?col=3&limit=10&offset=0">
                     Curriculum <i class="fas fa-sort"></i>
                 </a>
             </th>
             <th class="px-6 text-center">
-                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('4', 'tests');">
+                <a href="#" hx-get="/api/search-tests?col=4&limit=10&offset=0">
                     Grade <i class="fas fa-sort"></i>
                 </a>
             </th>
             <th class="px-6 text-center">
-                <a href="#" hx-get="/tests" hx-target="body" hx-on:click="updateTableSortState('5', 'tests');">
+                <a href="#" hx-get="/api/search-tests?col=5&limit=10&offset=0">
                     Test Type <i class="fas fa-sort"></i>
                 </a>
             </th>
             <th class="px-6 text-center">Actions</th>
         </tr>
     </thead>
-    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-ext="infinite-scroll" hx-get="/api/tests?limit=10&offset=0"
+    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-ext="infinite-scroll" hx-get="/api/search-tests?limit=10&offset=0"
         hx-trigger="load" hx-swap="beforeend" data-limit="10" data-offset="0" hx-include="#test-search">
         <!-- Rows will be dynamically inserted here -->
     </tbody>
 </table>
-<div id="loader" class="hidden flex justify-center py-4">
+<div id="search-loader" class="hidden flex justify-center py-4">
     <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
 </div>
 <script>
     htmx.defineExtension('infinite-scroll', {
         onEvent: function (name, evt) {
+            const loader = document.getElementById("search-loader");
+
             // Show loader before any request (including first load)
             if (name === 'htmx:beforeRequest') {
                 const el = evt.detail.elt;
                 if (el.getAttribute("hx-ext")?.includes("infinite-scroll")) {
-                    document.getElementById("loader").classList.remove("hidden");
+                    loader.classList.remove("hidden");
+                }
+            }
+
+            // Hide loader if request fails
+            if (name === 'htmx:responseError') {
+                const el = evt.detail.elt;
+                if (el.getAttribute("hx-ext")?.includes("infinite-scroll")) {
+                    loader.classList.add("hidden");
+                    el.removeAttribute("data-loading");
+
+                    let status = evt.detail.xhr?.status || "Network";
+                    let message = evt.detail.xhr?.statusText || "Request failed";
+
+                    alert(`Error loading tests: ${status} ${message}`);
                 }
             }
 
@@ -52,7 +68,7 @@
             if (name === 'htmx:afterSwap') {
                 const target = evt.detail.target;
                 if (target.getAttribute("hx-ext")?.includes("infinite-scroll")) {
-                    document.getElementById("loader").classList.add("hidden");
+                    loader.classList.add("hidden");
                 }
 
                 const request = evt.detail.xhr.responseURL;
@@ -87,7 +103,7 @@
                         entries.forEach(entry => {
                             if (entry.isIntersecting && target.getAttribute("data-loading") !== "true") {
                                 target.setAttribute("data-loading", "true");
-                                document.getElementById("loader").classList.remove("hidden");
+                                loader.classList.remove("hidden");
 
                                 let limit = target.getAttribute("data-limit") || "10";
                                 let offset = target.getAttribute("data-offset") || "0";
@@ -103,11 +119,11 @@
                                     target: target,
                                     swap: "beforeend",
                                     afterSwap: () => {
-                                        document.getElementById("loader").classList.add("hidden");
+                                        loader.classList.add("hidden");
                                         target.removeAttribute("data-loading");
                                     },
                                     onError: () => {
-                                        document.getElementById("loader").classList.add("hidden");
+                                        loader.classList.add("hidden");
                                         target.removeAttribute("data-loading");
                                     }
                                 });
