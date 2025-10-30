@@ -1,4 +1,4 @@
-<table class="min-w-full bg-white" hx-ext="table-sort" data-sort-scope="search-tests">
+<table class="min-w-full bg-white" hx-ext="table-sort,infinite-scroll" data-sort-scope="search-tests">
     <thead hx-target="#test-table-body" hx-include="#test-search">
         <tr class="bg-gray-200 text-gray-600 text-sm">
             <th class="py-4 px-6 text-left">
@@ -29,7 +29,7 @@
             <th class="px-6 text-center">Actions</th>
         </tr>
     </thead>
-    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-ext="infinite-scroll" hx-get="/api/search-tests?limit=10&offset=0"
+    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-get="/api/search-tests?limit=10&offset=0"
         hx-trigger="load" hx-swap="beforeend" data-limit="10" data-offset="0" hx-include="#test-search">
         <!-- Rows will be dynamically inserted here -->
     </tbody>
@@ -41,20 +41,26 @@
     htmx.defineExtension('infinite-scroll', {
         onEvent: function (name, evt) {
             const loader = document.getElementById("search-loader");
+            const requestPath = evt.detail?.elt?.getAttribute("hx-get");
 
             // Show loader before any request (including first load)
-            if (name === 'htmx:beforeRequest') {
-                const el = evt.detail.elt;
-                if (el.getAttribute("hx-ext")?.includes("infinite-scroll")) {
+            if (name === 'htmx:beforeRequest') {                
+                if (requestPath.startsWith("/api/search-tests")) {
+                    if (requestPath.includes("col=")) {
+                        const tbody = document.getElementById("test-table-body");
+                        tbody.setAttribute("data-offset", "0");
+                        tbody.innerHTML = "";
+                    }
                     loader.classList.remove("hidden");
                 }
             }
 
             // Hide loader if request fails
             if (name === 'htmx:responseError') {
-                const el = evt.detail.elt;
-                if (el.getAttribute("hx-ext")?.includes("infinite-scroll")) {
+                if (requestPath.startsWith("/api/search-tests")) {
                     loader.classList.add("hidden");
+
+                    const el = evt.detail.elt;
                     el.removeAttribute("data-loading");
 
                     let status = evt.detail.xhr?.status || "Network";
@@ -67,7 +73,7 @@
             // when new content is swapped in
             if (name === 'htmx:afterSwap') {
                 const target = evt.detail.target;
-                if (target.getAttribute("hx-ext")?.includes("infinite-scroll")) {
+                if (requestPath.startsWith("/api/search-tests")) {
                     loader.classList.add("hidden");
                 }
 
