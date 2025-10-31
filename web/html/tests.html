@@ -47,6 +47,7 @@
             onEvent: function (name, event) {
                 if (name === "htmx:afterProcessNode") {
                     restoreState();
+                    attachSearchListener();
 
                 } else if (name === "htmx:beforeRequest") {
                     const requestPath = event.detail.elt.getAttribute("hx-get");
@@ -81,6 +82,16 @@
                                     // at least 1 dropdown value is 1 (1st item value) and its correct value is yet to be retained from sessionStorage
                                     console.log("Skipping /tests request because dropdowns values are not yet retained.");
                                     event.preventDefault();
+                                    
+                                } else {
+                                    // all dropdown values are correctly retained, proceed with request
+
+                                    // Clear stored search text and visible input value
+                                    sessionStorage.removeItem('testSearchValue');
+                                    const searchInput = document.getElementById('test-search');
+                                    if (searchInput) {
+                                        searchInput.value = '';
+                                    }
                                 }
                             }
                         }
@@ -116,21 +127,28 @@
             }
         }
 
-        // document.getElementById("test-search")?.addEventListener("htmx:configRequest", function (evt) {
-        //     const params = evt.detail.parameters;
-        //     params.limit = params.limit || 10;
-        //     params.offset = params.offset || 0;
-        // });
+        function attachSearchListener() {
+            console.log("Attaching search input listener");
+            const searchInput = document.getElementById('test-search');
+            if (!searchInput || searchInput.dataset.listenerAttached === "true") return;
+            searchInput.dataset.listenerAttached = "true";
 
-        // function resetTestsPagination() {
-        //     const tbody = document.getElementById("test-table-body");
-        //     if (!tbody) return;
-        //     tbody.setAttribute("data-offset", "0");
-        //     tbody.innerHTML = "";
-        //     // DO NOT trigger fetch here — let HTMX search field do it
-        // }
+            let searchTimer = null;
+            console.log("Search input listener attached");
+            searchInput.addEventListener("keyup", function () {
+                const value = this.value;
+                console.log("Search input changed:", value);
+                // mirror HTMX’s trigger condition: keyup[this.value.length>=3] delay:500ms
+                if (searchTimer) clearTimeout(searchTimer);
 
-        // document.getElementById("test-search")?.addEventListener("keyup", resetTestsPagination);
+                searchTimer = setTimeout(() => {
+                    if (value.length >= 3) {
+                        console.log("Storing search value in sessionStorage:", value);
+                        sessionStorage.setItem('testSearchValue', value);
+                    }
+                }, 500);
+            });
+        }
     })();
 </script>
 {{ end }}

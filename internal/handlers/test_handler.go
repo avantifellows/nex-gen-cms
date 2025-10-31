@@ -144,8 +144,28 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 	urlVals := request.URL.Query()
 	search := urlVals.Get("search")
 	limit := utils.StringToInt(urlVals.Get("limit"))
+	sortColumn := urlVals.Get("sortColumn")
+	sortOrder := urlVals.Get("sortOrder")
 	queryParams := "?search=" + url.QueryEscape(search) + "&type=test&limit=" + strconv.Itoa(limit) + "&offset=" + urlVals.Get("offset")
 
+	// Add sorting params if present
+	if sortColumn != "" {
+		var sortBy string
+		switch sortColumn {
+		case "1":
+			sortBy = "code"
+		case "2":
+			sortBy = "name"
+		case "5":
+			sortBy = "subtype"
+		default:
+			sortBy = "" // no valid mapping
+		}
+
+		if sortBy != "" {
+			queryParams += "&sort_by=" + url.QueryEscape(sortBy) + "&sort_order=" + url.QueryEscape(sortOrder)
+		}
+	}
 	tests, err := h.testsService.GetList(resourcesEndPoint+queryParams, testsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
@@ -178,9 +198,7 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		gradeMap[g.ID] = g.Number
 	}
 
-	sortColumn := urlVals.Get("sortColumn")
-	sortOrder := urlVals.Get("sortOrder")
-	sortTests(*tests, sortColumn, sortOrder, curriculumMap, gradeMap)
+	// sortTests(*tests, sortColumn, sortOrder, curriculumMap, gradeMap)
 
 	// Check if items < limit, then set hasMore to false
 	if len(*tests) < limit {
