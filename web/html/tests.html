@@ -114,6 +114,24 @@
         });
 
         function restoreState() {
+            // Restore search field
+            const searchInput = document.getElementById('test-search');
+            if (!searchInput) return;
+
+            const storedSearch = sessionStorage.getItem('testSearchValue') || '';
+            searchInput.value = storedSearch;
+            let searchRestored = false;
+
+            // If search was active previously, trigger the HTMX search again
+            if (storedSearch.length >= 3) {
+                // Explicit HTMX request
+                htmx.ajax('GET', '/tests?mode=search', {
+                    target: '#test-table-wrapper',
+                    values: { search: storedSearch }
+                });
+                searchRestored = true;
+            }
+
             const dropdown = document.getElementById('testtype-dropdown');
             if (!dropdown) return;
 
@@ -123,27 +141,25 @@
                 dropdown.value = storedTesttype;
 
                 // Trigger native change event so HTMX picks it up
-                htmx.trigger(dropdown, 'change');
+                if (!searchRestored) {
+                    htmx.trigger(dropdown, 'change');
+                }
             }
         }
 
         function attachSearchListener() {
-            console.log("Attaching search input listener");
             const searchInput = document.getElementById('test-search');
             if (!searchInput || searchInput.dataset.listenerAttached === "true") return;
             searchInput.dataset.listenerAttached = "true";
 
             let searchTimer = null;
-            console.log("Search input listener attached");
             searchInput.addEventListener("keyup", function () {
                 const value = this.value;
-                console.log("Search input changed:", value);
                 // mirror HTMX’s trigger condition: keyup[this.value.length>=3] delay:500ms
                 if (searchTimer) clearTimeout(searchTimer);
 
                 searchTimer = setTimeout(() => {
                     if (value.length >= 3) {
-                        console.log("Storing search value in sessionStorage:", value);
                         sessionStorage.setItem('testSearchValue', value);
                     }
                 }, 500);
