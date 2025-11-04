@@ -7,7 +7,7 @@
 
             <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on 
             coming back from single test to tests list screen -->
-            <select id="testtype-dropdown" name="testtype-dropdown" hx-ext="testsViewLoader" 
+            <select id="testtype-dropdown" name="testtype-dropdown" hx-ext="tests-view-loader" 
                 class="border border-gray-400 p-2 rounded" hx-get="/tests?mode=filter"
                 hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
                 hx-target="#test-table-wrapper" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
@@ -17,7 +17,7 @@
 
             <!-- Search field -->
             <input type="text" id="test-search" name="search" placeholder="Search tests by code or name..."
-                class="border border-gray-400 p-2 rounded w-64" hx-get="/tests?mode=search"
+                class="border border-gray-400 p-2 rounded w-64" hx-get="/tests?mode=search" hx-ext="search-store"
                 hx-trigger="keyup[this.value.length>=3] delay:500ms" hx-target="#test-table-wrapper">
 
         </div>
@@ -43,11 +43,10 @@
 
 <script>
     (function () {
-        htmx.defineExtension('testsViewLoader', {
+        htmx.defineExtension('tests-view-loader', {
             onEvent: function (name, event) {
                 if (name === "htmx:afterProcessNode") {
                     restoreState();
-                    attachSearchListener();
 
                 } else if (name === "htmx:beforeRequest") {
                     const requestPath = event.detail.elt.getAttribute("hx-get");
@@ -147,24 +146,17 @@
             }
         }
 
-        function attachSearchListener() {
-            const searchInput = document.getElementById('test-search');
-            if (!searchInput || searchInput.dataset.listenerAttached === "true") return;
-            searchInput.dataset.listenerAttached = "true";
-
-            let searchTimer = null;
-            searchInput.addEventListener("keyup", function () {
-                const value = this.value;
-                // mirror HTMX’s trigger condition: keyup[this.value.length>=3] delay:500ms
-                if (searchTimer) clearTimeout(searchTimer);
-
-                searchTimer = setTimeout(() => {
-                    if (value.length >= 3) {
-                        sessionStorage.setItem('testSearchValue', value);
+        htmx.defineExtension('search-store', {
+            onEvent: function (name, evt) {
+                if (name === 'htmx:beforeRequest') {
+                    const input = document.getElementById('test-search');
+                    const search = input.value.trim();
+                    if (search.length >= 3) {
+                        sessionStorage.setItem('testSearchValue', search);
                     }
-                }, 500);
-            });
-        }
+                }
+            }
+        });
     })();
 </script>
 {{ end }}
