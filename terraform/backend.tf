@@ -16,14 +16,10 @@ terraform {
     }
   }
 
-  # Comment out this backend block for initial bootstrap
-  # Uncomment after creating the S3 bucket and DynamoDB table
+  # Backend configuration using partial configuration
+  # Initialize with: terraform init -backend-config=backend-staging.hcl (or backend-prod.hcl)
   backend "s3" {
-    bucket         = "tfstate-nex-gen-cms"
-    key            = "nex-gen-cms/staging.tfstate"
-    region         = "ap-south-1"
-    dynamodb_table = "tfstate-nex-gen-cms-locks"
-    encrypt        = true
+    # Backend config provided via -backend-config flag during init
   }
 }
 

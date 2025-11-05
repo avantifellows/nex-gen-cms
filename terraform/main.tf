@@ -118,6 +118,8 @@ ${templatefile("${path.module}/user-data.sh", {
   repo_branch         = var.repo_branch
   db_service_endpoint = var.db_service_endpoint
   db_service_token    = var.db_service_token
+  cms_username        = var.cms_username
+  cms_password        = var.cms_password
   letsencrypt_email   = var.letsencrypt_email
 })}
 --//
