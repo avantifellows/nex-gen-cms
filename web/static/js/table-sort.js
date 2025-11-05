@@ -2,7 +2,7 @@
     htmx.defineExtension('table-sort', {
         onEvent: function(name, evt) {
             if (name === "htmx:afterProcessNode") {
-                let scope = evt.target.getAttribute("data-sort-scope");
+                let scope = evt.target?.getAttribute("data-sort-scope");
                 if (!scope) return;
 
                 const SORT_COLUMN = scope + "SortColumn";

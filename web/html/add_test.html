@@ -1,5 +1,44 @@
 {{ define "content" }}
-<h1 class="text-lg font-semibold">{{if .TestPtr.ID}}Edit{{else if .TestPtr.Name}}Copy{{else}}New{{end}} Test</h1>
+<script>
+    var dropdownDebounceTimers = {};
+
+    function onDropdownLoaded(dropdown, storageKey) {
+        // restore last selected value from sessionStorage
+        const lastSelectedValue = sessionStorage.getItem(storageKey);
+        // dropdown value is blank sometimes on coming back from problem screen
+        if (lastSelectedValue && dropdown.value !== "") {
+            dropdown.value = lastSelectedValue;
+
+            // Clear any previous pending trigger for this dropdown
+            if (dropdownDebounceTimers[dropdown.id]) {
+                clearTimeout(dropdownDebounceTimers[dropdown.id]);
+            }
+
+            /**
+             * Debounce trigger to avoid firing event multiple times rapidly
+             * This happens on refreshing this screen or on clicking any problem and then coming back to this screen,
+             * which in turn calls topic dropdown loading and problems loading apis mutiple times
+             */
+            dropdownDebounceTimers[dropdown.id] = setTimeout(() => {
+                htmx.trigger(dropdown, 'change');
+                delete dropdownDebounceTimers[dropdown.id];
+            }, 500);
+        }
+    }
+</script>
+{{ $mode := "" }}
+{{ if .TestPtr.ID }}
+  {{ $mode = "edit" }}
+{{ else if .TestPtr.Name }}
+  {{ $mode = "copy" }}
+{{ else }}
+  {{ $mode = "new" }}
+{{ end }}
+<h1 class="text-lg font-semibold">
+    {{ if eq $mode "edit" }}Edit
+    {{ else if eq $mode "copy" }}Copy
+    {{ else }}New{{ end }} Test
+</h1>
 <div class="flex h-screen">
     <!-- Left Panel -->
     <div class="w-1/3 p-5 bg-white shadow overflow-auto">
@@ -60,11 +99,9 @@
     {{ $subtype := "null" }}
     {{ $curriculumGrades := "null" }}
 
-    {{ if .TestPtr.ID }}
-        <!-- edit test -->
+    {{ if eq $mode "edit" }}
         {{ $id = printf "%d" .TestPtr.ID }}
-    {{ else }}
-        <!-- add test -->
+    {{ else if eq $mode "new" }}
         {{ $subtype = printf "\"%s\"" .TestPtr.Subtype }}
         {{ $curriculumGrades = .TestPtr.CurriculumGrades | toJson }}
     {{ end }}
@@ -85,7 +122,7 @@
             {{ $seq := "" }}
             {{ $year := "" }}
 
-            {{if .TestPtr.Code}}
+            {{ if eq $mode "edit" }}
             {{ $parts := split .TestPtr.Code "-" }}
             {{ $program = index $parts 0 }}
             {{ $type = index $parts 1 }}
@@ -123,7 +160,7 @@
             <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1"
                 value='{{if .TestPtr.Name}}{{.TestPtr.GetNameByLang "en"}}{{end}}' 
                 onchange="sessionStorage.setItem('selectedName', this.value);">
-            {{if .TestPtr.ID}}
+            {{ if eq $mode "edit" }}
             <select id="test-type-dropdown" class="p-2 border rounded flex-1">
                 {{ template "test_type_options" .TestPtr }}
             </select>
@@ -243,6 +280,8 @@
   {{ .TestRule | toJson }}
 </script>
 <script>
+    var mode = "{{ $mode }}";  // "new", "edit", or "copy"
+
     var problemRowsSelectors = "#questions-table-body tr[id^='problem-']";
     var chipEditorPosId = "#chip-editor-pos";
     var chipEditorNegId = "#chip-editor-neg";
@@ -475,32 +514,6 @@
         document.getElementById("total-marks").textContent = totalMarks;
     }
 
-    var dropdownDebounceTimers = {};
-
-    function onDropdownLoaded(dropdown, storageKey) {
-        // restore last selected value from sessionStorage
-        const lastSelectedValue = sessionStorage.getItem(storageKey);
-        // dropdown value is blank sometimes on coming back from problem screen
-        if (lastSelectedValue && dropdown.value !== "") {
-            dropdown.value = lastSelectedValue;
-
-            // Clear any previous pending trigger for this dropdown
-            if (dropdownDebounceTimers[dropdown.id]) {
-                clearTimeout(dropdownDebounceTimers[dropdown.id]);
-            }
-
-            /**
-             * Debounce trigger to avoid firing event multiple times rapidly
-             * This happens on refreshing this screen or on clicking any problem and then coming back to this screen,
-             * which in turn calls topic dropdown loading and problems loading apis mutiple times
-             */
-            dropdownDebounceTimers[dropdown.id] = setTimeout(() => {
-                htmx.trigger(dropdown, 'change');
-                delete dropdownDebounceTimers[dropdown.id];
-            }, 500);
-        }
-    }
-
     function createTest(event, testId, subtype, curriculumGrades, examId) {
         event.preventDefault();  // Cancel the request
 
@@ -510,8 +523,16 @@
 
         const testJson = buildTestJson(subtype, curriculumGrades, examId);
         if (testJson) {
-            const url = curriculumGrades ? '/create-test' : `/update-test?id=${testId}`;
-            const method = curriculumGrades ? 'POST' : 'PATCH';
+            let url, method;
+
+            if (mode === "edit") {
+                url = `/update-test?id=${testId}`;
+                method = 'PATCH';
+                
+            } else {
+                url = '/create-test';
+                method = 'POST';
+            }
 
             fetch(url, {
                 method: method,
@@ -531,13 +552,13 @@
               }).then(html => {
                   // go back to remove add/edit test screen
                   goBackAfterDelay(0);
-                  if (curriculumGrades) {
+                  if (mode === "new") {
                       // remove add test dialog
                       goBackAfterDelay(0);
                   }
 
               }).catch(err => {
-                  console.error(curriculumGrades ? "Error during test creation:" : "Error during test updation:", err);
+                  console.error(mode === "edit" ? "Error during test updation:" : "Error during test creation:", err);
               });
         }
 
@@ -555,7 +576,7 @@
         if (!duration) {
             alert("Please fill in the Test Duration before saving.");
             return false;
-        }
+        }        
         return true;
     }
 
@@ -567,8 +588,9 @@
 
         const code = `${program}-${testTypeCode}-${testSequence}-${year}`;
 
-        if (subtype == null) {
-            subtype = document.getElementById('test-type-dropdown').value;
+        if (mode === "edit") {
+            // for edit test scenario, get subtype from dropdown
+            subtype = document.getElementById('test-type-dropdown')?.value;
         }
 
         const markingSchemeDiv = document.getElementById('marking-scheme-div');
@@ -678,8 +700,8 @@
                 neg_marks: getMarksArray(negChips),
                 subjects: subjects
             },
-            // Used spread operator to add curriculum_grades node only for add new test scenario; otherwise it won't add this node
-            ...(curriculumGrades ? { curriculum_grades: curriculumGrades } : {})
+            // Used spread operator to add curriculum_grades node only for add/copy test scenario; otherwise it won't add this node
+            ...(mode !== "edit" ? { curriculum_grades: curriculumGrades } : {})
         };
     }
 
