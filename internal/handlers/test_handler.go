@@ -198,8 +198,6 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		gradeMap[g.ID] = g.Number
 	}
 
-	// sortTests(*tests, sortColumn, sortOrder, curriculumMap, gradeMap)
-
 	// Check if items < limit, then set hasMore to false
 	if len(*tests) < limit {
 		responseWriter.Header().Set("hasMore", "false")
