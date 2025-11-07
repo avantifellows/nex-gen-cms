@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -521,7 +522,35 @@ func getTestName(t models.Test, lang string) string {
 }
 
 func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request *http.Request) {
-	views.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+	var data dto.AddTestDialogData
+
+	query := request.URL.Query()
+
+	if len(query) > 0 {
+		subtype := query.Get("subtype")
+		examIdStr := query.Get("exam_id")
+		curriculumGradesStr := query.Get("curriculum_grades")
+
+		// Decode exam_id
+		examId, _ := utils.StringToIntType[int8](examIdStr)
+
+		// Decode curriculum_grades JSON string
+		var curriculumGrades []models.CurriculumGrade
+		if err := json.Unmarshal([]byte(curriculumGradesStr), &curriculumGrades); err != nil {
+			log.Println("Error decoding curriculum_grades:", err)
+		}
+
+		data = dto.AddTestDialogData{
+			Subtype:          subtype,
+			CurriculumGrades: curriculumGrades,
+			ExamID:           examId,
+		}
+
+	} else {
+		data = dto.AddTestDialogData{}
+	}
+
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"slice": utils.Slice,
 		"add":   utils.Add,
 	}, addTestModalTemplate, testTypeOptionsTemplate, curriculumGradeSelectsTemplate)

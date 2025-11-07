@@ -1,8 +1,20 @@
 {{ define "curriculum_grade_selects" }}
-<select name="curriculum[]" class="border p-2 rounded w-full" hx-get="/api/curriculums" hx-trigger="load">
+<select name="curriculum[]" class="border p-2 rounded w-full" hx-get="/api/curriculums" hx-trigger="load"
+    data-selected="{{.CurriculumID}}" hx-on::after-request="selectPreloadedOption(this)">
     <option disabled selected>Loading curriculums...</option>
 </select>
-<select name="grade[]" class="border p-2 rounded w-full" hx-get="/api/grades" hx-trigger="load">
+<select name="grade[]" class="border p-2 rounded w-full" hx-get="/api/grades" hx-trigger="load"
+    data-selected="{{.GradeID}}" hx-on::after-request="selectPreloadedOption(this)">
     <option disabled selected>Loading grades...</option>
 </select>
+<script>
+    function selectPreloadedOption(selectEl) {
+        const selectedValue = selectEl.dataset.selected;
+        if (!selectedValue) return;
+        const option = selectEl.querySelector(`option[value='${selectedValue}']`);
+        if (option) {
+            option.selected = true;
+        }
+    }
+</script>
 {{ end }}

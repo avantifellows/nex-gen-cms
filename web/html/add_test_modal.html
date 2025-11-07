@@ -1,6 +1,8 @@
 <div id="addTestModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
     <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
-        <h2 class="text-lg font-semibold mb-4">Create New Test</h2>
+        <h2 class="text-lg font-semibold mb-4">
+            {{ if .Subtype }}Copy Test{{ else }}Create New Test{{ end }}
+        </h2>
         <form id="addTestForm">
             <div id="curriculum-grade-container" class="space-y-4 mb-6">
                 <div class="curriculum-grade-set">
@@ -9,7 +11,13 @@
                         <label class="font-medium">Grade</label>
                     </div>
                     <div id="curriculum-grade-set" name="curriculum-grade-set" class="grid grid-cols-2 gap-4 mt-1">
-                        {{ template "curriculum_grade_selects" }}
+                        {{ if .CurriculumGrades }}
+                            {{ range .CurriculumGrades }}
+                                {{ template "curriculum_grade_selects" . }}
+                            {{ end }}
+                        {{ else }}
+                            {{ template "curriculum_grade_selects" }}
+                        {{ end }}
                     </div>
                 </div>
             </div>

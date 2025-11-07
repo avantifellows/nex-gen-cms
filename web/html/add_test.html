@@ -101,7 +101,8 @@
 
     {{ if eq $mode "edit" }}
         {{ $id = printf "%d" .TestPtr.ID }}
-    {{ else if eq $mode "new" }}
+    {{ else }}
+        <!-- add/copy test -->
         {{ $subtype = printf "\"%s\"" .TestPtr.Subtype }}
         {{ $curriculumGrades = .TestPtr.CurriculumGrades | toJson }}
     {{ end }}
@@ -111,8 +112,19 @@
     So when any child element inside the form (like our <a> tag with hx-get on clicking problem code) triggers 
     an HTMX request, the before-request event is fired on the parent form, causing createTest(...) to be called 
     even for unrelated hx-get actions -->
-    <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50" hx-post="/create-test"
-        hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}}, {{index .TestPtr.ExamIDs 0}})'>
+    <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50"
+        {{ if eq $mode "copy" }}
+            hx-get="/tests/add-test-dialog" hx-target="body" hx-swap="beforeend" hx-push-url="true"
+            hx-vals='{
+                "subtype": {{$subtype}},
+                "curriculum_grades": {{ $curriculumGrades | toJson }},
+                "exam_id": {{index .TestPtr.ExamIDs 0}}
+            }'
+            hx-on::before-request="if (!validateFields()) event.preventDefault()"
+        {{ else }}
+            hx-post="/create-test"
+            hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}}, {{index .TestPtr.ExamIDs 0}})'
+        {{ end }}>
 
         <label class="font-semibold">Select Test Code</label>
         <div class="flex items-center gap-2 mt-2 mb-2">
