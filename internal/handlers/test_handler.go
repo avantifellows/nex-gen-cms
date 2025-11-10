@@ -553,6 +553,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"slice": utils.Slice,
 		"add":   utils.Add,
+		"dict":  utils.Dict,
 	}, addTestModalTemplate, testTypeOptionsTemplate, curriculumGradeSelectsTemplate)
 }
 

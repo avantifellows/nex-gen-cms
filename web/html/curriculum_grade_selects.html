@@ -1,20 +1,17 @@
 {{ define "curriculum_grade_selects" }}
-<select name="curriculum[]" class="border p-2 rounded w-full" hx-get="/api/curriculums" hx-trigger="load"
-    data-selected="{{.CurriculumID}}" hx-on::after-request="selectPreloadedOption(this)">
-    <option disabled selected>Loading curriculums...</option>
-</select>
-<select name="grade[]" class="border p-2 rounded w-full" hx-get="/api/grades" hx-trigger="load"
-    data-selected="{{.GradeID}}" hx-on::after-request="selectPreloadedOption(this)">
-    <option disabled selected>Loading grades...</option>
-</select>
-<script>
-    function selectPreloadedOption(selectEl) {
-        const selectedValue = selectEl.dataset.selected;
-        if (!selectedValue) return;
-        const option = selectEl.querySelector(`option[value='${selectedValue}']`);
-        if (option) {
-            option.selected = true;
-        }
-    }
-</script>
+{{ $count := .Count }}
+{{ if not $count }}{{ $count = 1 }}{{ end }}
+<div class="grid grid-cols-[1fr_1fr_auto] gap-4 items-center curriculum-grade-row">
+    <select name="curriculum[]" class="border p-2 rounded w-full" hx-get="/api/curriculums" hx-trigger="load"
+        data-selected="{{with .Item}}{{.CurriculumID}}{{end}}" hx-on::after-request="selectPreloadedOption(this)">
+        <option disabled selected>Loading curriculums...</option>
+    </select>
+    <select name="grade[]" class="border p-2 rounded w-full" hx-get="/api/grades" hx-trigger="load"
+        data-selected="{{with .Item}}{{.GradeID}}{{end}}" hx-on::after-request="selectPreloadedOption(this)">
+        <option disabled selected>Loading grades...</option>
+    </select>
+
+    <button type="button" class="text-red-500 text-sm hover:font-bold w-6 text-center {{ if eq $count 1 }}invisible{{ end }}"
+        hx-on:click="removeCurriculumGradeRow(this)">✕</button>
+</div>
 {{ end }}
