@@ -55,9 +55,18 @@
             <div class="w-full flex-row flex justify-end space-x-2">
                 <button type="button" onclick="closeAddTestModal()"
                     class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+
+                <!-- Continue (normal new test flow) -->
                 <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="true"
                     hx-on::before-request="if (!validateTestType()) event.preventDefault()"
-                    class="bg-blue-500 text-white px-4 py-2 rounded">Continue</button>
+                    class="bg-blue-500 text-white px-4 py-2 rounded {{ if .Subtype }}hidden{{ end }}">Continue</button>
+
+                <!-- Validate (copy mode initial) -->
+                <button type="button" hx-post="/tests/validate-test" hx-swap="none"
+                    class="bg-blue-500 text-white px-4 py-2 rounded {{ if not .Subtype }}hidden{{ end }}"
+                    hx-on::after-request="handleValidateTestResponse(event)">
+                    Validate
+                </button>
             </div>
 
         </form>
@@ -106,6 +115,28 @@
         if (rows.length === 1) {
             // Hide the only remaining remove button
             rows[0].querySelector('button').classList.add('invisible');
+        }
+    }
+
+    function handleValidateTestResponse(evt) {
+        if (!evt.detail.successful) {
+            alert("Failed to fetch test rules.");
+            return;
+        }
+
+        try {
+            const data = JSON.parse(evt.detail.xhr.responseText);
+            closeAddTestModal();
+            
+            // setTimeout is used to ensure the modal is closed and backside screen is refreshed 
+            // before validation starts
+            setTimeout(() => {
+                validateTest(data);
+            }, 10);
+
+        } catch (err) {
+            console.error("Error parsing rule:", err);
+            alert("Invalid response format.");
         }
     }
 

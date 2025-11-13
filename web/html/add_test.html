@@ -285,7 +285,7 @@
             <label class="text-sm font-medium">Total Marks:</label>
             <label id="total-marks" class="p-2">{{if .Problems}}{{.TestPtr.TypeParams.Marks}}{{else}}0{{end}}</label>
         </div>
-        <button type="submit" class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save</button>
+        <button type="submit" class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">{{ if eq $mode "copy" }}Continue{{ else }}Save{{ end }}</button>
     </form>
 </div>
 <script type="application/json" id="test-rule-json">
@@ -723,6 +723,108 @@
             marks.push(parseInt(chip.textContent.trim()));
         });
         return marks;
+    }
+
+    function validateTest(data) {
+        const testPtr = data.TestPtr || {};
+        // const curriculumGrades = testPtr.CurriculumGrades || [];
+        // const examIds = testPtr.ExamIDs || [];
+        // const subtype = testPtr.Subtype || "";
+        const testRule = data.TestRule || {};
+
+        validateCopiedQuestions(testRule);
+    }
+
+    function validateCopiedQuestions(testRule) {
+        const questionsTableBody = document.getElementById("questions-table-body");
+        const questionRows = questionsTableBody.querySelectorAll("tr[id^='problem-']");
+        const subjectRows = questionsTableBody.querySelectorAll("tr[id^='subject-']");
+        const subtypeRows = questionsTableBody.querySelectorAll("tr[id^='subtype-']");
+
+        let invalidCount = 0;
+
+        questionRows.forEach(row => {
+            const subjectId = parseInt(row.dataset.subject.replace("subject-", ""), 10);
+            const subtype = row.dataset.subtype.replace("subtype-", "");
+
+            const isValid = validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, subtypeRows,
+                questionsTableBody);
+
+            // Visually mark valid/invalid questions
+            if (!isValid) {
+                row.classList.add("bg-red-100");
+                row.classList.remove("bg-green-100");
+                invalidCount++;
+
+            } else {
+                row.classList.remove("bg-red-100");
+                row.classList.add("bg-green-100");
+            }
+        });
+
+        // summary alert
+        if (invalidCount > 0) {
+            alert(`${invalidCount} question(s) failed validation.`);
+        } else {
+            alert("All questions are valid.");
+        }
+        return true;
+    }
+
+    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, subtypeRows, questionsTableBody) {
+        if (!testRule || !testRule.config) {
+            // No test rule means no restrictions — treat as valid
+            return true;
+        }
+
+        const subjects = testRule.config.subjects;
+
+        if (subjects.length === 1) {
+            // Case 1: Only one subject is allowed
+            const allowedIds = subjects[0].subject_ids;
+
+            if (!allowedIds.includes(subjectId)) {
+                alert(`Question from selected subject is not allowed for this test.`);
+                return false;
+            }
+
+            // Find subject already added
+            const firstRow = questionsTableBody.querySelector("tr[id^='subject-']");
+            const existingSubjectId = firstRow ? parseInt(firstRow.id.replace("subject-", ""), 10) : null;
+
+            if (existingSubjectId && existingSubjectId !== subjectId) {
+                alert(`Question from only one subject is allowed for this test.`);
+                return false;
+            }
+
+        } else {
+            // Case 2: Multiple subjects are allowed
+            const allowedIds = subjects.map(sub => sub.subject_ids[0]);
+            if (!allowedIds.includes(subjectId)) {
+                alert(`Question from this subject is not allowed for this test.`);
+                return false;
+            }
+        }
+
+        const subjectRule = subjects.find(s => s.subject_ids.includes(subjectId));
+        if (subjectRule) {
+            const allowedTypes = subjectRule.rules.sections.map(s => s.type);
+            if (!allowedTypes.includes(subtype)) {
+                alert(`Questions of type "${subtype}" are not allowed for this subject.`);
+                return false;
+            }
+
+            // Count how many existing questions are there of this subtype and subject
+            const sectionRule = subjectRule.rules.sections.find(s => s.type === subtype);
+            const sectionCount = subtypeRows.length;
+
+            if (sectionCount >= sectionRule.count) {
+                alert(`Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`);
+                return false;
+            }
+        }
+
+        return true;
     }
 </script>
 {{ end }}

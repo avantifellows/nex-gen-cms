@@ -54,57 +54,6 @@
         });
     }
 
-    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, subtypeRows, questionsTableBody) {
-        const subjects = testRule.config.subjects;
-
-        if (subjects.length === 1) {
-            // Case 1: Only one subject is allowed
-            const allowedIds = subjects[0].subject_ids;
-
-            if (!allowedIds.includes(subjectId)) {
-                alert(`Question from selected subject is not allowed for this test.`);
-                return false;
-            }
-
-            // Find subject already added
-            const firstRow = questionsTableBody.querySelector("tr[id^='subject-']");
-            const existingSubjectId = firstRow ? parseInt(firstRow.id.replace("subject-", ""), 10) : null;
-
-            if (existingSubjectId && existingSubjectId !== subjectId) {
-                alert(`Question from only one subject is allowed for this test.`);
-                return false;
-            }
-
-        } else {
-            // Case 2: Multiple subjects are allowed
-            const allowedIds = subjects.map(sub => sub.subject_ids[0]);
-            if (!allowedIds.includes(subjectId)) {
-                alert(`Question from this subject is not allowed for this test.`);
-                return false;
-            }
-        }
-
-        const subjectRule = subjects.find(s => s.subject_ids.includes(subjectId));
-        if (subjectRule) {
-            const allowedTypes = subjectRule.rules.sections.map(s => s.type);
-            if (!allowedTypes.includes(subtype)) {
-                alert(`Questions of type "${subtype}" are not allowed for this subject.`);
-                return false;
-            }
-
-            // Count how many existing questions are there of this subtype and subject
-            const sectionRule = subjectRule.rules.sections.find(s => s.type === subtype);
-            const sectionCount = subtypeRows.length;
-
-            if (sectionCount >= sectionRule.count) {
-                alert(`Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`);
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     function getInsertAfterId(subjectRows, subtypeRows) {
         if (subtypeRows.length > 0) {
             // Subtype exists — insert after last row of this subtype

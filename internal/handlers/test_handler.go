@@ -279,52 +279,10 @@ func (h *TestsHandler) fillProblemSubjects(responseWriter http.ResponseWriter, p
 }
 
 func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
-	if err := request.ParseForm(); err != nil {
-		http.Error(responseWriter, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	curriculums := request.Form["curriculum[]"]
-	grades := request.Form["grade[]"]
-	testType := request.FormValue("modal-testType")
-
-	var curriculumGrades []models.CurriculumGrade
-	for i := range curriculums {
-		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
-		if err != nil {
-			fmt.Printf("invalid curriculum id at index %d", i)
-			return
-		}
-
-		gradeId, err := utils.StringToIntType[int8](grades[i])
-		if err != nil {
-			fmt.Printf("invalid grade id at index %d", i)
-			return
-		}
-
-		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
-			CurriculumID: curriculumId,
-			GradeID:      gradeId,
-		})
-	}
-
-	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
+	data, err := h.buildTestData(request)
 	if err != nil {
-		fmt.Println("invalid exam id")
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
-	}
-
-	testRule, err := h.getTestRule(testType, examId)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	data := dto.HomeData{
-		TestPtr: &models.Test{
-			ExamIDs:          []int8{examId},
-			Subtype:          testType,
-			CurriculumGrades: curriculumGrades,
-		},
-		TestRule: testRule,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -340,6 +298,55 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"getParentId":       getParentSubjectId,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+}
+
+func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error) {
+	if err := request.ParseForm(); err != nil {
+		return dto.HomeData{}, fmt.Errorf("invalid form data: %w", err)
+	}
+
+	curriculums := request.Form["curriculum[]"]
+	grades := request.Form["grade[]"]
+	testType := request.FormValue("modal-testType")
+
+	var curriculumGrades []models.CurriculumGrade
+	for i := range curriculums {
+		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
+		if err != nil {
+			return dto.HomeData{}, fmt.Errorf("invalid curriculum id at index %d", i)
+		}
+
+		gradeId, err := utils.StringToIntType[int8](grades[i])
+		if err != nil {
+			return dto.HomeData{}, fmt.Errorf("invalid grade id at index %d", i)
+		}
+
+		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
+			CurriculumID: curriculumId,
+			GradeID:      gradeId,
+		})
+	}
+
+	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
+	if err != nil {
+		return dto.HomeData{}, fmt.Errorf("invalid exam id")
+	}
+
+	testRule, err := h.getTestRule(testType, examId)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	data := dto.HomeData{
+		TestPtr: &models.Test{
+			ExamIDs:          []int8{examId},
+			Subtype:          testType,
+			CurriculumGrades: curriculumGrades,
+		},
+		TestRule: testRule,
+	}
+
+	return data, nil
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -776,4 +783,15 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		"getParentId":       getParentSubjectId,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+}
+
+func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request *http.Request) {
+	data, err := h.buildTestData(request)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	responseWriter.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(responseWriter).Encode(data)
 }
