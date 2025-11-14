@@ -61,11 +61,11 @@
                     hx-on::before-request="if (!validateTestType()) event.preventDefault()"
                     class="bg-blue-500 text-white px-4 py-2 rounded {{ if .Subtype }}hidden{{ end }}">Continue</button>
 
-                <!-- Validate (copy mode initial) -->
+                <!-- Validate (copy mode) -->
                 <button type="button" hx-post="/tests/validate-test" hx-swap="none"
                     class="bg-blue-500 text-white px-4 py-2 rounded {{ if not .Subtype }}hidden{{ end }}"
                     hx-on::after-request="handleValidateTestResponse(event)">
-                    Validate
+                    Validate & Save
                 </button>
             </div>
 
@@ -131,7 +131,7 @@
             // setTimeout is used to ensure the modal is closed and backside screen is refreshed 
             // before validation starts
             setTimeout(() => {
-                validateTest(data);
+                validateAndCreateTest(data);
             }, 10);
 
         } catch (err) {

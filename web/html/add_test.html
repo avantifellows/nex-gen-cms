@@ -527,7 +527,7 @@
     }
 
     function createTest(event, testId, subtype, curriculumGrades, examId) {
-        event.preventDefault();  // Cancel the request
+        event?.preventDefault();  // Cancel the request
 
         if (!validateFields()) {
             return false;
@@ -571,6 +571,13 @@
 
               }).catch(err => {
                   console.error(mode === "edit" ? "Error during test updation:" : "Error during test creation:", err);
+                  // Re-enable the Continue button on error (copy flow disables it before calling createTest)
+                  const submitBtn = document.querySelector('#add-test-div button[type="submit"]');
+                  if (mode === "copy") {
+                      submitBtn.disabled = false;
+                      submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                      submitBtn.textContent = "Continue";
+                  }
               });
         }
 
@@ -725,17 +732,9 @@
         return marks;
     }
 
-    function validateTest(data) {
-        const testPtr = data.TestPtr || {};
-        // const curriculumGrades = testPtr.CurriculumGrades || [];
-        // const examIds = testPtr.ExamIDs || [];
-        // const subtype = testPtr.Subtype || "";
+    async function validateAndCreateTest(data) {
         const testRule = data.TestRule || {};
 
-        validateCopiedQuestions(testRule);
-    }
-
-    function validateCopiedQuestions(testRule) {
         const questionsTableBody = document.getElementById("questions-table-body");
         const questionRows = questionsTableBody.querySelectorAll("tr[id^='problem-']");
         const subjectRows = questionsTableBody.querySelectorAll("tr[id^='subject-']");
@@ -743,12 +742,12 @@
 
         let invalidCount = 0;
 
-        questionRows.forEach(row => {
+        for (const row of questionRows) {
             const subjectId = parseInt(row.dataset.subject.replace("subject-", ""), 10);
             const subtype = row.dataset.subtype.replace("subtype-", "");
 
             const isValid = validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, subtypeRows,
-                questionsTableBody);
+                questionsTableBody, false);
 
             // Visually mark valid/invalid questions
             if (!isValid) {
@@ -760,18 +759,40 @@
                 row.classList.remove("bg-red-100");
                 row.classList.add("bg-green-100");
             }
-        });
+
+            // Scroll each row into view to indicate progress
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Small delay to let the user see progress while scrolling
+            await new Promise(resolve => setTimeout(resolve, 120));
+        }
 
         // summary alert
         if (invalidCount > 0) {
             alert(`${invalidCount} question(s) failed validation.`);
         } else {
-            alert("All questions are valid.");
+            alert("All questions are valid. Creating test...");
+
+            const testPtr = data.TestPtr || {};
+            const curriculumGrades = testPtr.curriculum_grades;
+            const examIds = testPtr.exam_ids;
+            const subtype = testPtr.subtype;
+            if (!subtype || !curriculumGrades?.length || !examIds?.length) {
+                alert("Error: Missing required test details.\nPlease check subtype, exam, curriculum and grade selections.");
+            } else {
+                // Disable the Continue button before calling creatTest()
+                const submitBtn = document.querySelector('#add-test-div button[type=\"submit\"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    submitBtn.textContent = 'Creating...';
+                }
+                createTest(null, null, subtype, curriculumGrades, examIds[0]);
+            }
         }
-        return true;
     }
 
-    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, subtypeRows, questionsTableBody) {
+    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, 
+            subtypeRows, questionsTableBody, showAlert = true) {
         if (!testRule || !testRule.config) {
             // No test rule means no restrictions — treat as valid
             return true;
@@ -784,7 +805,9 @@
             const allowedIds = subjects[0].subject_ids;
 
             if (!allowedIds.includes(subjectId)) {
-                alert(`Question from selected subject is not allowed for this test.`);
+                if (showAlert) {
+                    alert(`Question from selected subject is not allowed for this test.`);
+                }
                 return false;
             }
 
@@ -793,7 +816,9 @@
             const existingSubjectId = firstRow ? parseInt(firstRow.id.replace("subject-", ""), 10) : null;
 
             if (existingSubjectId && existingSubjectId !== subjectId) {
-                alert(`Question from only one subject is allowed for this test.`);
+                if (showAlert) {
+                    alert(`Question from only one subject is allowed for this test.`);
+                }
                 return false;
             }
 
@@ -801,7 +826,9 @@
             // Case 2: Multiple subjects are allowed
             const allowedIds = subjects.map(sub => sub.subject_ids[0]);
             if (!allowedIds.includes(subjectId)) {
-                alert(`Question from this subject is not allowed for this test.`);
+                if (showAlert) {
+                    alert(`Question from this subject is not allowed for this test.`);
+                }
                 return false;
             }
         }
@@ -810,7 +837,9 @@
         if (subjectRule) {
             const allowedTypes = subjectRule.rules.sections.map(s => s.type);
             if (!allowedTypes.includes(subtype)) {
-                alert(`Questions of type "${subtype}" are not allowed for this subject.`);
+                if (showAlert) {
+                    alert(`Questions of type "${subtype}" are not allowed for this subject.`);
+                }
                 return false;
             }
 
@@ -819,7 +848,9 @@
             const sectionCount = subtypeRows.length;
 
             if (sectionCount >= sectionRule.count) {
-                alert(`Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`);
+                if (showAlert) {
+                    alert(`Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`);
+                }
                 return false;
             }
         }
