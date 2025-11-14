@@ -143,18 +143,30 @@
             {{end}}
             <select id="program-dropdown" class="p-2 border rounded flex-1"
                 onchange="sessionStorage.setItem('selectedProgram', this.value);">
+                {{ if ne $mode "edit" }}
+                <option value="" selected disabled hidden>Select Program</option>
+                {{ end }}
+            
                 {{range $opt := (slice "JN" "HP" "MH" "GJ" "TN" "PN" "UK" "OR" "DL" "X")}}
                 <option {{if eq $program $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
             <select id="test-type-code-dropdown" class="p-2 border rounded flex-1"
                 onchange="sessionStorage.setItem('selectedTestTypeCode', this.value);">
+                {{ if ne $mode "edit" }}
+                <option value="" selected disabled hidden>Select Type Code</option>
+                {{ end }}
+                
                 {{range $opt := (slice "P" "C" "M" "B" "CT" "CCT" "PT" "MT" "MoT" "FST")}}
                 <option {{if eq $type $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
             <select id="test-sequence-dropdown" class="p-2 border rounded flex-1"
                 onchange="sessionStorage.setItem('selectedSequence', this.value);">
+                {{ if ne $mode "edit" }}
+                <option value="" selected disabled hidden>Select Sequence</option>
+                {{ end }}
+
                 {{range $i := seq 1 199}}
                 <!-- "%d" is used to convert $i to string so that it can be compared with $seq -->
                 <option {{if eq $seq (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
@@ -162,6 +174,10 @@
             </select>
             <select id="year-dropdown" class="p-2 border rounded flex-1"
                 onchange="sessionStorage.setItem('selectedYear', this.value);">
+                {{ if ne $mode "edit" }}
+                <option value="" selected disabled hidden>Select Year</option>
+                {{ end }}
+
                 {{range $i := seq 16 25}}
                 <option {{if eq $year (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
                 {{end}}
@@ -170,7 +186,7 @@
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1"
-                value='{{if .TestPtr.Name}}{{.TestPtr.GetNameByLang "en"}}{{end}}' 
+                value='{{ if eq $mode "edit" }}{{.TestPtr.GetNameByLang "en"}}{{end}}' 
                 onchange="sessionStorage.setItem('selectedName', this.value);">
             {{ if eq $mode "edit" }}
             <select id="test-type-dropdown" class="p-2 border rounded flex-1">
@@ -585,6 +601,17 @@
     }
 
     function validateFields() {
+        const dropdownIds = ["program-dropdown", "test-type-code-dropdown", "test-sequence-dropdown", 
+                "year-dropdown"];
+
+        for (const id of dropdownIds) {
+            const el = document.getElementById(id);
+            if (!el.value || el.value.trim() === "") {
+                alert("Please select Test Code values before saving.");
+                return false;
+            }
+        }
+
         const testName = document.getElementById('test-name').value.trim();
         if (!testName) {
             alert("Please fill in the Test Name before saving.");
