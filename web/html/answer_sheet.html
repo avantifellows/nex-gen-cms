@@ -19,6 +19,7 @@
                 <th class="answer-pdf-table-row">Q No.</th>
                 <th class="answer-pdf-table-row">Answer</th>
                 <th class="answer-pdf-table-row">Difficulty Level</th>
+                <th class="answer-pdf-table-row">Chapter Name</th>
             </tr>
         </thead>
         <tbody>
@@ -43,6 +44,7 @@
                                 {{ end }}
                             </td>
                             <td class="answer-pdf-table-row">{{ capitalize $p.DifficultyLevel }}</td>
+                            <td class="answer-pdf-table-row">{{ getChapterName $p "en" }}</td>
                         </tr>
                     {{ end }}
                 {{ end }}
