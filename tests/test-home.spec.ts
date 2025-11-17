@@ -12,11 +12,9 @@ test.describe('Homepage Load', () => {
         await page.goto(HOME_PAGE_URL);
     });
 
-    test('should display all 4 tabs', async ({ page }) => {
+    test('should display all 2 tabs', async ({ page }) => {
         // Check if all four tabs are visible
         await expect(page.locator('#chapters-tab')).toBeVisible();
-        await expect(page.locator('#modules-tab')).toBeVisible();
-        await expect(page.locator('#books-tab')).toBeVisible();
         await expect(page.locator('#tests-tab')).toBeVisible();
     });
 
@@ -115,8 +113,6 @@ test.describe('Tabs', () => {
 
     const tabs = [
         { name: 'chapters', urlPattern: /\/chapters/, content: 'Chapters content loaded' },
-        { name: 'books', urlPattern: /\/books/, content: 'Books content loaded' },
-        { name: 'modules', urlPattern: /\/modules/, content: 'Modules content loaded' },
         { name: 'tests', urlPattern: /\/tests/, content: 'Tests content loaded' }
     ];
 

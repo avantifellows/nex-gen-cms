@@ -64,10 +64,6 @@
                 <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
-                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-push-url="true" hx-target="body"
-                    data-toggle="tab">Modules</button>
-                <button class="nav-link" id="books-tab" hx-get="/books" hx-push-url="true" hx-target="body"
-                    data-toggle="tab">Books</button>
                 <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false')">Tests</button>
@@ -130,8 +126,6 @@
             function getTabURLFromPath(path) {
                 // Define URL-to-tab mapping based on expected paths
                 if (path.startsWith("/chapter")) return "chapters-tab";
-                if (path === "/modules") return "modules-tab";
-                if (path === "/books") return "books-tab";
                 if (path.startsWith("/test")) return "tests-tab";
                 return null;
             }
