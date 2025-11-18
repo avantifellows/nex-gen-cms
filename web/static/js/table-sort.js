@@ -31,7 +31,7 @@
                         // of onclick for tests
                         
                         // update Sort State in session storage before modifying URL/params
-                        updateTableSortState(colParam, scope);
+                        updateSortState(colParam, scope);
 
                         // Remove 'col' from the URL
                         url.searchParams.delete("col");
