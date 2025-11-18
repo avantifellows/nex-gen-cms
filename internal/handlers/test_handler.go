@@ -593,6 +593,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		"problemDisplaySubtype": utils.DisplaySubtype,
 		"stringToInt":           utils.StringToInt,
 		"trim":                  strings.TrimSpace,
+		"getChapterName":        getProblemChapterName,
 	}).ParseFiles(tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
@@ -708,4 +709,8 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 func optionLabels() []string {
 	return []string{"A)", "B)", "C)", "D)", "E)", "F)", "G)", "H)", "I)", "J)"}
+}
+
+func getProblemChapterName(p models.Problem, lang string) string {
+	return p.GetChapterNameByLang(lang)
 }

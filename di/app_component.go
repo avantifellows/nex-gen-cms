@@ -13,6 +13,7 @@ import (
 
 type AppComponent struct {
 	CssPathHandler     http.Handler
+	LoginHandler       *handlers.LoginHandler
 	ChaptersHandler    *handlers.ChaptersHandler
 	TopicsHandler      *handlers.TopicsHandler
 	ConceptsHandler    *handlers.ConceptsHandler
@@ -24,8 +25,6 @@ type AppComponent struct {
 	ProblemsHandler    *handlers.ProblemsHandler
 	TagsHandler        *handlers.TagsHandler
 	ExamsHandler       *handlers.ExamsHandler
-	ModulesHandler     *handlers.ModulesHandler
-	BooksHandler       *handlers.BooksHandler
 }
 
 func NewAppComponent() (*AppComponent, error) {
@@ -49,6 +48,7 @@ func NewAppComponent() (*AppComponent, error) {
 
 	// Initialize handlers
 	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
+	loginHandler := handlers.NewLoginHandler()
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
 	topicsHandler := handlers.NewTopicsHandler(topicsService)
 	conceptsHandler := handlers.NewConceptsHandler(conceptsService)
@@ -62,11 +62,9 @@ func NewAppComponent() (*AppComponent, error) {
 	tagsHandler := handlers.NewTagsHandler(tagsService)
 	examsHandler := handlers.NewExamsHandler(examsService)
 
-	modulesHandler := handlers.NewModulesHandler()
-	booksHandler := handlers.NewBooksHandler()
-
 	return &AppComponent{
 		CssPathHandler:     cssPathHandler,
+		LoginHandler:       loginHandler,
 		ChaptersHandler:    chaptersHandler,
 		TopicsHandler:      topicsHandler,
 		ConceptsHandler:    conceptsHandler,
@@ -78,7 +76,5 @@ func NewAppComponent() (*AppComponent, error) {
 		ProblemsHandler:    problemsHandler,
 		TagsHandler:        tagsHandler,
 		ExamsHandler:       examsHandler,
-		ModulesHandler:     modulesHandler,
-		BooksHandler:       booksHandler,
 	}, nil
 }

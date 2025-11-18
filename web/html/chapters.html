@@ -1,34 +1,25 @@
 {{ define "content" }}
 <div>
-    <div class="shadow-md my-6 overflow-x-auto">
+    <div class="shadow-md my-6 overflow-x-auto" hx-ext="table-sort" data-sort-scope="chapters">
         <table class="min-w-full bg-white">
             <thead>
                 <tr class="bg-gray-200 text-gray-600 text-sm">
                     <th class="py-4 px-6 text-left">
-                        <a href="#" hx-get="/chapters?sortColumn=1" hx-target="body"
+                        <a href="#" hx-get="/chapters" hx-target="body" hx-on:click="updateTableSortState('1', 'chapters');"
                             hx-on::before-request="sessionStorage.removeItem(window.CHAPTERS_LOADED_KEY)">
-                            Code <i class="fas 
-                            {{ if eq .ChapterSortState.Column "1" }} {{ if eq .ChapterSortState.Order "asc" }}
-                                fa-sort-up {{ else if eq .ChapterSortState.Order "desc" }} fa-sort-down {{ else }}
-                                fa-sort {{ end }} {{ else }} fa-sort {{ end }}"></i>
+                            Code <i class="fas fa-sort"></i>
                         </a>
                     </th>
                     <th class="px-6 text-left">
-                        <a href="#" hx-get="/chapters?sortColumn=2" hx-target="body"
+                        <a href="#" hx-get="/chapters" hx-target="body" hx-on:click="updateTableSortState('2', 'chapters');"
                             hx-on::before-request="sessionStorage.removeItem(window.CHAPTERS_LOADED_KEY)">
-                            Name <i class="fas 
-                            {{ if eq .ChapterSortState.Column "2" }} {{ if eq .ChapterSortState.Order "asc" }}
-                                fa-sort-up {{ else if eq .ChapterSortState.Order "desc" }} fa-sort-down {{ else }}
-                                fa-sort {{ end }} {{ else }} fa-sort {{ end }}"></i>
+                            Name <i class="fas fa-sort"></i>
                         </a>
                     </th>
                     <th class="px-6 text-center">
-                        <a href="#" hx-get="/chapters?sortColumn=3" hx-target="body"
+                        <a href="#" hx-get="/chapters" hx-target="body" hx-on:click="updateTableSortState('3', 'chapters');"
                             hx-on::before-request="sessionStorage.removeItem(window.CHAPTERS_LOADED_KEY)">
-                            Topics <i class="fas
-                            {{ if eq .ChapterSortState.Column "3" }} {{ if eq .ChapterSortState.Order "asc" }}
-                                fa-sort-up {{ else if eq .ChapterSortState.Order "desc" }} fa-sort-down {{ else }}
-                                fa-sort {{ end }} {{ else }} fa-sort {{ end }}"></i>
+                            Topics <i class="fas fa-sort"></i>
                         </a>
                     </th>
                     <th class="px-6 text-center">Chapter Tests</th>
@@ -59,16 +50,6 @@
     </div>
 
     <script>
-
-        // reset flag to reload chapters on page refresh or direct url entry
-        window.addEventListener("pageshow", function (event) {
-            // when moving forward in history, it generates pageshow event with persisted=true. Don't reset flag in that case
-            if (!event.persisted) {
-                console.log("Fresh page load detected, resetting chaptersLoaded.");
-                sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, "false");
-            }
-        });
-
         /**
          * Directly added htmx:beforeRequest event listener on chapterTableBody is not called back in some cases like
          * 1. Chapters tab -> Edit chapter -> back

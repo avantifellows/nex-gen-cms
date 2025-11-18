@@ -75,6 +75,18 @@ variable "db_service_token" {
   sensitive   = true
 }
 
+variable "cms_username" {
+  description = "CMS username"
+  type        = string
+  sensitive   = true
+}
+
+variable "cms_password" {
+  description = "CMS password"
+  type        = string
+  sensitive   = true
+}
+
 # Instance configuration
 variable "instance_type" {
   description = "EC2 instance type"

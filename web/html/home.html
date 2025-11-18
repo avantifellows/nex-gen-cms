@@ -14,6 +14,7 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
     <script src="/web/static/js/constants.js"></script>
+    <script src="/web/static/js/table-sort.js"></script>
     <script>
         function afterDropdownReq(dropdown, selectedValue) {
             /* 
@@ -57,14 +58,10 @@
 <body hx-ext="mathJaxLoader">
     <div>
         <nav>
-            <div class="nav nav-tabs" id="nav-tab">
+            <div class="nav nav-tabs flex" id="nav-tab">
                 <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
-                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-push-url="true" hx-target="body"
-                    data-toggle="tab">Modules</button>
-                <button class="nav-link" id="books-tab" hx-get="/books" hx-push-url="true" hx-target="body"
-                    data-toggle="tab">Books</button>
                 <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false')">Tests</button>
@@ -92,6 +89,12 @@
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading subjects...</option>
                 </select>
+
+                <!-- Logout button at far right -->
+                <button hx-post="/logout"
+                    class="text-sm font-semibold px-3 py-1 ms-auto me-2 my-1 rounded bg-blue-500 text-white hover:bg-blue-600">
+                    Logout
+                </button>
             </div>
         </nav>
 
@@ -121,8 +124,6 @@
             function getTabURLFromPath(path) {
                 // Define URL-to-tab mapping based on expected paths
                 if (path.startsWith("/chapter")) return "chapters-tab";
-                if (path === "/modules") return "modules-tab";
-                if (path === "/books") return "books-tab";
                 if (path.startsWith("/test")) return "tests-tab";
                 return null;
             }
@@ -220,6 +221,23 @@
                 }
             }
         })
+    
+        window.addEventListener("pageshow", function(event) {
+            // Session check
+            if (!document.cookie.includes("cms_session")) {
+                window.location.href = "/login";
+                return;
+            }
+
+            // Reset chaptersLoaded **only if the chapters tab is active**
+            const chaptersTab = document.getElementById("chapters-tab");
+            // when moving forward in history, it generates pageshow event with persisted=true. Don't reset flag in that case
+            if (chaptersTab.classList.contains("active") && !event.persisted) {
+                // reset flag to reload chapters on page refresh or direct url entry
+                console.log("Fresh load with chapters tab active. Resetting chaptersLoaded.");
+                sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, "false");
+            }
+        });
     </script>
 </body>
 
