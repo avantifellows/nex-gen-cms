@@ -1,0 +1,158 @@
+<table class="min-w-full bg-white" hx-ext="table-sort,infinite-scroll" data-sort-scope="search-tests">
+    <thead hx-target="#test-table-body" hx-include="#test-search">
+        <tr class="bg-gray-200 text-gray-600 text-sm">
+            <th class="py-4 px-6 text-left">
+                <a href="#" hx-get="/api/search-tests?col=1&limit=10&offset=0">
+                    Code <i class="fas fa-sort"></i>
+                </a>
+            </th>
+            <th class="px-6 text-left">
+                <a href="#" hx-get="/api/search-tests?col=2&limit=10&offset=0">
+                    Name <i class="fas fa-sort"></i>
+                </a>
+            </th>
+            <th class="px-6 text-center">
+                Curriculum 
+            </th>
+            <th class="px-6 text-center">
+                Grade 
+            </th>
+            <th class="px-6 text-center">
+                <a href="#" hx-get="/api/search-tests?col=5&limit=10&offset=0">
+                    Test Type <i class="fas fa-sort"></i>
+                </a>
+            </th>
+            <th class="px-6 text-center">Actions</th>
+        </tr>
+    </thead>
+    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-get="/api/search-tests?limit=10&offset=0"
+        hx-trigger="load" data-limit="10" data-offset="0" hx-include="#test-search">
+        <!-- Rows will be dynamically inserted here -->
+    </tbody>
+</table>
+<div id="search-loader" class="hidden flex justify-center py-4">
+    <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+</div>
+<script>
+    htmx.defineExtension('infinite-scroll', {
+        onEvent: function (name, evt) {
+            const loader = document.getElementById("search-loader");
+            const requestPath = evt.detail?.elt?.getAttribute("hx-get");
+
+            // Show loader before any request (including first load)
+            if (name === 'htmx:beforeRequest') {                
+                if (requestPath.startsWith("/api/search-tests")) {
+                    if (requestPath.includes("col=")) {
+                        const tbody = document.getElementById("test-table-body");
+                        tbody.setAttribute("data-offset", "0");
+                        tbody.innerHTML = "";
+                    }
+                    loader.classList.remove("hidden");
+                }
+            }
+
+            // Hide loader if request fails
+            if (name === 'htmx:responseError') {
+                if (requestPath.startsWith("/api/search-tests")) {
+                    loader.classList.add("hidden");
+
+                    const el = evt.detail.elt;
+                    el.removeAttribute("data-loading");
+
+                    let status = evt.detail.xhr?.status || "Network";
+                    let message = evt.detail.xhr?.statusText || "Request failed";
+
+                    alert(`Error loading tests: ${status} ${message}`);
+                }
+            }
+
+            // when new content is swapped in
+            if (name === 'htmx:afterSwap') {
+                const target = evt.detail.target;
+                if (requestPath.startsWith("/api/search-tests")) {
+                    loader.classList.add("hidden");
+                }
+
+                const request = evt.detail.xhr.responseURL;
+                const queryString = request.split("?")[1] || "";
+                target.setAttribute("data-last-params", queryString);
+
+                const limit = parseInt(target.getAttribute("data-limit") || "10", 10);
+                const offset = parseInt(target.getAttribute("data-offset") || "0", 10);
+                target.setAttribute("data-offset", offset + limit);
+                target.removeAttribute("data-loading");
+
+                // Check server flag if present
+                const hasMore = evt.detail.xhr.getResponseHeader("hasMore");
+                if (hasMore === "false") {
+                    // Server indicates no more results, disabling sentinel.
+                    if (target.__sentinel) {
+                        target.__sentinel.remove();
+                        target.__sentinel = null;
+                    }
+                    return;
+                }
+
+                // Create sentinel once
+                if (!target.__sentinel) {
+                    const sentinel = document.createElement("tr");
+                    sentinel.className = "infinite-scroll-sentinel";
+                    sentinel.style.height = "1px";
+                    target.appendChild(sentinel);
+                    target.__sentinel = sentinel;
+
+                    const observer = new IntersectionObserver((entries) => {
+                        entries.forEach(entry => {
+                            if (entry.isIntersecting && target.getAttribute("data-loading") !== "true") {
+                                target.setAttribute("data-loading", "true");
+                                loader.classList.remove("hidden");
+
+                                let limit = target.getAttribute("data-limit") || "10";
+                                let offset = target.getAttribute("data-offset") || "0";
+                                let baseUrl = target.getAttribute("hx-get");
+                                let params = new URLSearchParams(target.getAttribute("data-last-params") || "");
+                                params.set("limit", limit);
+                                params.set("offset", offset);
+
+                                const [basePath] = baseUrl.split("?");
+                                const finalUrl = `${basePath}?${params.toString()}`;
+
+                                htmx.ajax("GET", finalUrl, {
+                                    target: target,
+                                    swap: "beforeend",
+                                    afterSwap: () => {
+                                        loader.classList.add("hidden");
+                                        target.removeAttribute("data-loading");
+                                    },
+                                    onError: () => {
+                                        loader.classList.add("hidden");
+                                        target.removeAttribute("data-loading");
+                                    }
+                                });
+                            }
+                        });
+                    }, {
+                        root: null,
+                        rootMargin: "100px",
+                        threshold: 0
+                    });
+
+                    observer.observe(sentinel);
+
+                    // MutationObserver to clean up when table is removed
+                    const cleanupObserver = new MutationObserver(() => {
+                        if (!document.contains(target)) {
+                            observer.disconnect();
+                            cleanupObserver.disconnect();
+                        }
+                    });
+                    cleanupObserver.observe(document.body, { childList: true, subtree: true });
+
+                } else {
+                    // Sentinel already exists — ensure it stays last after swap
+                    target.appendChild(target.__sentinel);
+                }
+            }
+        }
+    });
+</script>

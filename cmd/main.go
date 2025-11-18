@@ -103,6 +103,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	testsHandler := appComponentPtr.TestsHandler
 	muxHandler.HandleFunc("/tests", testsHandler.LoadTests)
 	muxHandler.HandleFunc("/api/tests", testsHandler.GetTests)
+	muxHandler.HandleFunc("/api/search-tests", testsHandler.GetSearchTests)
 	muxHandler.HandleFunc("/test", testsHandler.GetTest)
 	muxHandler.HandleFunc("/api/test/problems", testsHandler.GetTestProblems)
 	muxHandler.HandleFunc("/tests/add-test", testsHandler.AddTest)

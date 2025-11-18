@@ -1,0 +1,66 @@
+{{ $testTypes := (dict
+    "chapter_test"        "Chapter Test"
+    "part_test"           "Part Test"
+    "major_test"          "Major Test"
+    "full_syllabus_test"  "Full Syllabus Test"
+    "evaluation_test"     "Evaluation Test"
+    "mock_test"           "Mock Test"
+    "nta_test"            "NTA Test"
+    "homework_assignment" "Homework Assignment"
+) }}
+
+{{ range .Tests }}
+    {{ $test := . }}
+    {{ $total := len .CurriculumGrades }}
+
+    {{ range $i, $cg := .CurriculumGrades }}
+        {{ $curriculumId := $cg.CurriculumID }}
+        {{ $gradeId := $cg.GradeID }}
+
+        <tr class="border-b hover:bg-gray-100" hx-swap="outerHTML">
+            {{ if eq $i 0 }}
+                <!-- Show code and name only for first curriculum-grade -->
+                <td class="py-4 px-6" rowspan="{{ $total }}">{{ $test.Code }}</td>
+
+                <td class="px-6 text-blue-500 hover:underline" rowspan="{{ $total }}">
+                    <a href="/test?id={{ $test.ID }}&curriculum_id={{ $curriculumId }}&grade_id={{ $gradeId }}"
+                       hx-get="/test?id={{ $test.ID }}&curriculum_id={{ $curriculumId }}&grade_id={{ $gradeId }}"
+                       hx-target="body" hx-push-url="true">
+                       {{ (index $test.Name 0).Resource }}
+                    </a>
+                </td>
+            {{ end }}
+            <td class="py-4 text-center">{{ index $.Curriculums $curriculumId }}</td>
+            <td class="text-center">{{ index $.Grades $gradeId }}</td>
+            {{ if eq $i 0 }}
+                <td class="text-center" rowspan="{{ $total }}">
+                    {{ with index $testTypes $test.Subtype }}
+                        {{ . }}
+                    {{ else }}
+                        {{ $test.Subtype }}
+                    {{ end }}
+                </td>
+                <td class="text-center space-x-4" rowspan="{{ $total }}">
+                    <!-- target is kept body instead of #content, because using #content as target will not work when
+                    directly edit url is entered in browser -->
+                    <button class="action-button" hx-get="/tests/edit-test?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
+                        hx-target="body" hx-push-url="true">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <a href="/download-pdf?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions" 
+                        target="_blank" class="action-button" title="Download Questions PDF">
+                            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
+                    </a>
+                    <a href="/download-pdf?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=answers"  
+                        target="_blank"class="action-button" title="Download Answers PDF">
+                            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
+                    </a>
+                    <button class="action-button" hx-delete="/archive-test?id={{ $test.ID }}"
+                        hx-confirm="Are you sure you want to delete test {{(index $test.Name 0).Resource}}?" hx-target="closest tr">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            {{ end }}
+        </tr>
+    {{ end }}
+{{ end }}
