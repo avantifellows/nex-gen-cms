@@ -31,7 +31,7 @@ if (!window._htmxHistoryRestoreAttached) {
     const originalPushState = history.pushState;
     history.pushState = function (state, title, url) {
         // Extract screen identifier based on URL
-        if (url.includes("/add-test") || url.includes("/edit-test")) {
+        if (url.endsWith("/add-test") || url.includes("/copy-test") || url.includes("/edit-test")) {
             window.lastPushedScreen = PUSHED_SCREEN_ADD_TEST;
         } else if (url.includes("/topic?id=")) {
             window.lastPushedScreen = PUSHED_SCREEN_TOPIC;

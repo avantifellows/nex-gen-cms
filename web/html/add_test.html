@@ -1,5 +1,44 @@
 {{ define "content" }}
-<h1 class="text-lg font-semibold">{{if .Problems}}Edit{{else}}New{{end}} Test</h1>
+<script>
+    var dropdownDebounceTimers = {};
+
+    function onDropdownLoaded(dropdown, storageKey) {
+        // restore last selected value from sessionStorage
+        const lastSelectedValue = sessionStorage.getItem(storageKey);
+        // dropdown value is blank sometimes on coming back from problem screen
+        if (lastSelectedValue && dropdown.value !== "") {
+            dropdown.value = lastSelectedValue;
+
+            // Clear any previous pending trigger for this dropdown
+            if (dropdownDebounceTimers[dropdown.id]) {
+                clearTimeout(dropdownDebounceTimers[dropdown.id]);
+            }
+
+            /**
+             * Debounce trigger to avoid firing event multiple times rapidly
+             * This happens on refreshing this screen or on clicking any problem and then coming back to this screen,
+             * which in turn calls topic dropdown loading and problems loading apis mutiple times
+             */
+            dropdownDebounceTimers[dropdown.id] = setTimeout(() => {
+                htmx.trigger(dropdown, 'change');
+                delete dropdownDebounceTimers[dropdown.id];
+            }, 500);
+        }
+    }
+</script>
+{{ $mode := "" }}
+{{ if .TestPtr.ID }}
+  {{ $mode = "edit" }}
+{{ else if .TestPtr.Name }}
+  {{ $mode = "copy" }}
+{{ else }}
+  {{ $mode = "new" }}
+{{ end }}
+<h1 class="text-lg font-semibold">
+    {{ if eq $mode "edit" }}Edit
+    {{ else if eq $mode "copy" }}Copy
+    {{ else }}New{{ end }} Test
+</h1>
 <div class="flex h-screen">
     <!-- Left Panel -->
     <div class="w-1/3 p-5 bg-white shadow overflow-auto">
@@ -60,11 +99,10 @@
     {{ $subtype := "null" }}
     {{ $curriculumGrades := "null" }}
 
-    {{ if .TestPtr.ID }}
-        <!-- edit test -->
+    {{ if eq $mode "edit" }}
         {{ $id = printf "%d" .TestPtr.ID }}
     {{ else }}
-        <!-- add test -->
+        <!-- add/copy test -->
         {{ $subtype = printf "\"%s\"" .TestPtr.Subtype }}
         {{ $curriculumGrades = .TestPtr.CurriculumGrades | toJson }}
     {{ end }}
@@ -74,8 +112,19 @@
     So when any child element inside the form (like our <a> tag with hx-get on clicking problem code) triggers 
     an HTMX request, the before-request event is fired on the parent form, causing createTest(...) to be called 
     even for unrelated hx-get actions -->
-    <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50" hx-post="/create-test"
-        hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}}, {{index .TestPtr.ExamIDs 0}})'>
+    <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50"
+        {{ if eq $mode "copy" }}
+            hx-get="/tests/add-test-dialog" hx-target="body" hx-swap="beforeend" hx-push-url="true"
+            hx-vals='{
+                "subtype": {{$subtype}},
+                "curriculum_grades": {{ $curriculumGrades | toJson }},
+                "exam_id": {{index .TestPtr.ExamIDs 0}}
+            }'
+            hx-on::before-request="if (!validateFields()) event.preventDefault()"
+        {{ else }}
+            hx-post="/create-test"
+            hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}}, {{index .TestPtr.ExamIDs 0}})'
+        {{ end }}>
 
         <label class="font-semibold">Select Test Code</label>
         <div class="flex items-center gap-2 mt-2 mb-2">
@@ -85,7 +134,7 @@
             {{ $seq := "" }}
             {{ $year := "" }}
 
-            {{if .TestPtr.Code}}
+            {{ if eq $mode "edit" }}
             {{ $parts := split .TestPtr.Code "-" }}
             {{ $program = index $parts 0 }}
             {{ $type = index $parts 1 }}
@@ -94,18 +143,30 @@
             {{end}}
             <select id="program-dropdown" class="p-2 border rounded flex-1"
                 onchange="sessionStorage.setItem('selectedProgram', this.value);">
+                {{ if ne $mode "edit" }}
+                <option value="" selected disabled hidden>Select Program</option>
+                {{ end }}
+            
                 {{range $opt := (slice "JN" "HP" "MH" "GJ" "TN" "PN" "UK" "OR" "DL" "X")}}
                 <option {{if eq $program $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
             <select id="test-type-code-dropdown" class="p-2 border rounded flex-1"
                 onchange="sessionStorage.setItem('selectedTestTypeCode', this.value);">
+                {{ if ne $mode "edit" }}
+                <option value="" selected disabled hidden>Select Type Code</option>
+                {{ end }}
+                
                 {{range $opt := (slice "P" "C" "M" "B" "CT" "CCT" "PT" "MT" "MoT" "FST")}}
                 <option {{if eq $type $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
             <select id="test-sequence-dropdown" class="p-2 border rounded flex-1"
                 onchange="sessionStorage.setItem('selectedSequence', this.value);">
+                {{ if ne $mode "edit" }}
+                <option value="" selected disabled hidden>Select Sequence</option>
+                {{ end }}
+
                 {{range $i := seq 1 199}}
                 <!-- "%d" is used to convert $i to string so that it can be compared with $seq -->
                 <option {{if eq $seq (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
@@ -113,6 +174,10 @@
             </select>
             <select id="year-dropdown" class="p-2 border rounded flex-1"
                 onchange="sessionStorage.setItem('selectedYear', this.value);">
+                {{ if ne $mode "edit" }}
+                <option value="" selected disabled hidden>Select Year</option>
+                {{ end }}
+
                 {{range $i := seq 16 25}}
                 <option {{if eq $year (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
                 {{end}}
@@ -121,9 +186,9 @@
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1"
-                value='{{if .TestPtr.Name}}{{.TestPtr.GetNameByLang "en"}}{{end}}' 
+                value='{{ if eq $mode "edit" }}{{.TestPtr.GetNameByLang "en"}}{{end}}' 
                 onchange="sessionStorage.setItem('selectedName', this.value);">
-            {{if .TestPtr.ID}}
+            {{ if eq $mode "edit" }}
             <select id="test-type-dropdown" class="p-2 border rounded flex-1">
                 {{ template "test_type_options" .TestPtr }}
             </select>
@@ -236,13 +301,15 @@
             <label class="text-sm font-medium">Total Marks:</label>
             <label id="total-marks" class="p-2">{{if .Problems}}{{.TestPtr.TypeParams.Marks}}{{else}}0{{end}}</label>
         </div>
-        <button type="submit" class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save</button>
+        <button type="submit" class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">{{ if eq $mode "copy" }}Continue{{ else }}Save{{ end }}</button>
     </form>
 </div>
 <script type="application/json" id="test-rule-json">
   {{ .TestRule | toJson }}
 </script>
 <script>
+    var mode = "{{ $mode }}";  // "new", "edit", or "copy"
+
     var problemRowsSelectors = "#questions-table-body tr[id^='problem-']";
     var chipEditorPosId = "#chip-editor-pos";
     var chipEditorNegId = "#chip-editor-neg";
@@ -420,16 +487,16 @@
                     const subjectId = trIdComponents[1];
                     const subtype = trIdComponents[2];
 
-                    const subtypeRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
-                    cloneChips(subtypeRows, targetEditor.id, clonedContent);
+                    const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+                    cloneChips(subtypeProblemRows, targetEditor.id, clonedContent);
 
                 } else if (trId.startsWith('subject-')) {
                     // subject level marking scheme change - apply same marking scheme to all problems under this subject
                     const trIdComponents = trId.split('-');
                     const subjectId = trIdComponents[1];
 
-                    const subjectRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
-                    cloneChips(subjectRows, targetEditor.id, clonedContent);
+                    const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+                    cloneChips(subjectProblemRows, targetEditor.id, clonedContent);
                 }
 
             } else {
@@ -475,34 +542,8 @@
         document.getElementById("total-marks").textContent = totalMarks;
     }
 
-    var dropdownDebounceTimers = {};
-
-    function onDropdownLoaded(dropdown, storageKey) {
-        // restore last selected value from sessionStorage
-        const lastSelectedValue = sessionStorage.getItem(storageKey);
-        // dropdown value is blank sometimes on coming back from problem screen
-        if (lastSelectedValue && dropdown.value !== "") {
-            dropdown.value = lastSelectedValue;
-
-            // Clear any previous pending trigger for this dropdown
-            if (dropdownDebounceTimers[dropdown.id]) {
-                clearTimeout(dropdownDebounceTimers[dropdown.id]);
-            }
-
-            /**
-             * Debounce trigger to avoid firing event multiple times rapidly
-             * This happens on refreshing this screen or on clicking any problem and then coming back to this screen,
-             * which in turn calls topic dropdown loading and problems loading apis mutiple times
-             */
-            dropdownDebounceTimers[dropdown.id] = setTimeout(() => {
-                htmx.trigger(dropdown, 'change');
-                delete dropdownDebounceTimers[dropdown.id];
-            }, 500);
-        }
-    }
-
     function createTest(event, testId, subtype, curriculumGrades, examId) {
-        event.preventDefault();  // Cancel the request
+        event?.preventDefault();  // Cancel the request
 
         if (!validateFields()) {
             return false;
@@ -510,8 +551,16 @@
 
         const testJson = buildTestJson(subtype, curriculumGrades, examId);
         if (testJson) {
-            const url = curriculumGrades ? '/create-test' : `/update-test?id=${testId}`;
-            const method = curriculumGrades ? 'POST' : 'PATCH';
+            let url, method;
+
+            if (mode === "edit") {
+                url = `/update-test?id=${testId}`;
+                method = 'PATCH';
+                
+            } else {
+                url = '/create-test';
+                method = 'POST';
+            }
 
             fetch(url, {
                 method: method,
@@ -531,13 +580,20 @@
               }).then(html => {
                   // go back to remove add/edit test screen
                   goBackAfterDelay(0);
-                  if (curriculumGrades) {
+                  if (mode === "new") {
                       // remove add test dialog
                       goBackAfterDelay(0);
                   }
 
               }).catch(err => {
-                  console.error(curriculumGrades ? "Error during test creation:" : "Error during test updation:", err);
+                  console.error(mode === "edit" ? "Error during test updation:" : "Error during test creation:", err);
+                  // Re-enable the Continue button on error (copy flow disables it before calling createTest)
+                  const submitBtn = document.querySelector('#add-test-div button[type="submit"]');
+                  if (mode === "copy") {
+                      submitBtn.disabled = false;
+                      submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                      submitBtn.textContent = "Continue";
+                  }
               });
         }
 
@@ -545,6 +601,17 @@
     }
 
     function validateFields() {
+        const dropdownIds = ["program-dropdown", "test-type-code-dropdown", "test-sequence-dropdown", 
+                "year-dropdown"];
+
+        for (const id of dropdownIds) {
+            const el = document.getElementById(id);
+            if (!el.value || el.value.trim() === "") {
+                alert("Please select Test Code values before saving.");
+                return false;
+            }
+        }
+
         const testName = document.getElementById('test-name').value.trim();
         if (!testName) {
             alert("Please fill in the Test Name before saving.");
@@ -555,7 +622,7 @@
         if (!duration) {
             alert("Please fill in the Test Duration before saving.");
             return false;
-        }
+        }        
         return true;
     }
 
@@ -567,8 +634,9 @@
 
         const code = `${program}-${testTypeCode}-${testSequence}-${year}`;
 
-        if (subtype == null) {
-            subtype = document.getElementById('test-type-dropdown').value;
+        if (mode === "edit") {
+            // for edit test scenario, get subtype from dropdown
+            subtype = document.getElementById('test-type-dropdown')?.value;
         }
 
         const markingSchemeDiv = document.getElementById('marking-scheme-div');
@@ -659,9 +727,6 @@
             currentSection.marks = currentSectionMarks;
         }
 
-        const testRuleJson = document.getElementById("test-rule-json").textContent;
-        const testRule = JSON.parse(testRuleJson);
-
         return {
             code: code,
             name: [
@@ -681,8 +746,8 @@
                 neg_marks: getMarksArray(negChips),
                 subjects: subjects
             },
-            // Used spread operator to add curriculum_grades node only for add new test scenario; otherwise it won't add this node
-            ...(curriculumGrades ? { curriculum_grades: curriculumGrades } : {})
+            // Used spread operator to add curriculum_grades node only for add/copy test scenario; otherwise it won't add this node
+            ...(mode !== "edit" ? { curriculum_grades: curriculumGrades } : {})
         };
     }
 
@@ -692,6 +757,145 @@
             marks.push(parseInt(chip.textContent.trim()));
         });
         return marks;
+    }
+
+    async function validateAndCreateTest(data) {
+        const testRule = data.TestRule || {};
+
+        const questionsTableBody = document.getElementById("questions-table-body");
+        const questionRows = questionsTableBody.querySelectorAll("tr[id^='problem-']");
+
+        let invalidCount = 0;
+
+        for (let i = 0; i < questionRows.length; i++) {
+            const row = questionRows[i];
+            const subjectId = parseInt(row.dataset.subject.replace("subject-", ""), 10);
+            const subtype = row.dataset.subtype.replace("subtype-", "");
+
+            // Count previous rows of same subject + subtype
+            let existingSubtypeProblemCount = 0;
+
+            for (let j = i - 1; j >= 0; j--) {
+                const prev = questionRows[j];
+
+                // Stop scanning once subject OR subtype changes
+                if (prev.dataset.subject !== row.dataset.subject ||
+                    prev.dataset.subtype !== row.dataset.subtype) {
+                    break;
+                }
+
+                existingSubtypeProblemCount++;
+            }
+
+            const isValid = validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemCount,
+                questionsTableBody, false);
+
+            // Visually mark valid/invalid questions
+            if (!isValid) {
+                row.classList.add("bg-red-100");
+                row.classList.remove("bg-green-100");
+                invalidCount++;
+
+            } else {
+                row.classList.remove("bg-red-100");
+                row.classList.add("bg-green-100");
+            }
+
+            // Scroll each row into view to indicate progress
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Small delay to let the user see progress while scrolling
+            await new Promise(resolve => setTimeout(resolve, 120));
+        }
+
+        // summary alert
+        if (invalidCount > 0) {
+            alert(`${invalidCount} question(s) failed validation.`);
+        } else {
+            alert("All questions are valid. Creating test...");
+
+            const testPtr = data.TestPtr || {};
+            const curriculumGrades = testPtr.curriculum_grades;
+            const examIds = testPtr.exam_ids;
+            const subtype = testPtr.subtype;
+            if (!subtype || !curriculumGrades?.length || !examIds?.length) {
+                alert("Error: Missing required test details.\nPlease check subtype, exam, curriculum and grade selections.");
+            } else {
+                // Disable the Continue button before calling creatTest()
+                const submitBtn = document.querySelector('#add-test-div button[type=\"submit\"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    submitBtn.textContent = 'Creating...';
+                }
+                createTest(null, null, subtype, curriculumGrades, examIds[0]);
+            }
+        }
+    }
+
+    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemRows, questionsTableBody, 
+            showAlert = true) {
+        if (!testRule || !testRule.config) {
+            // No test rule means no restrictions — treat as valid
+            return true;
+        }
+
+        const subjects = testRule.config.subjects;
+
+        if (subjects.length === 1) {
+            // Case 1: Only one subject is allowed
+            const allowedIds = subjects[0].subject_ids;
+
+            if (!allowedIds.includes(subjectId)) {
+                if (showAlert) {
+                    alert(`Question from selected subject is not allowed for this test.`);
+                }
+                return false;
+            }
+
+            // Find subject already added
+            const firstRow = questionsTableBody.querySelector("tr[id^='subject-']");
+            const existingSubjectId = firstRow ? parseInt(firstRow.id.replace("subject-", ""), 10) : null;
+
+            if (existingSubjectId && existingSubjectId !== subjectId) {
+                if (showAlert) {
+                    alert(`Question from only one subject is allowed for this test.`);
+                }
+                return false;
+            }
+
+        } else {
+            // Case 2: Multiple subjects are allowed
+            const allowedIds = subjects.map(sub => sub.subject_ids[0]);
+            if (!allowedIds.includes(subjectId)) {
+                if (showAlert) {
+                    alert(`Question from this subject is not allowed for this test.`);
+                }
+                return false;
+            }
+        }
+
+        const subjectRule = subjects.find(s => s.subject_ids.includes(subjectId));
+        if (subjectRule) {
+            const allowedTypes = subjectRule.rules.sections.map(s => s.type);
+            if (!allowedTypes.includes(subtype)) {
+                if (showAlert) {
+                    alert(`Questions of type "${subtype}" are not allowed for this subject.`);
+                }
+                return false;
+            }
+
+            // Count how many existing questions are there of this subtype and subject
+            const sectionRule = subjectRule.rules.sections.find(s => s.type === subtype);
+
+            if (existingSubtypeProblemRows >= sectionRule.count) {
+                if (showAlert) {
+                    alert(`Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`);
+                }
+                return false;
+            }
+        }
+
+        return true;
     }
 </script>
 {{ end }}
