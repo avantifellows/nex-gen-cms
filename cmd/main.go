@@ -132,10 +132,4 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 
 	examsHandler := appComponentPtr.ExamsHandler
 	muxHandler.HandleFunc("/api/exams", examsHandler.GetExams)
-
-	modulesHandler := appComponentPtr.ModulesHandler
-	muxHandler.HandleFunc("/modules", modulesHandler.LoadModules)
-
-	booksHandler := appComponentPtr.BooksHandler
-	muxHandler.HandleFunc("/books", booksHandler.LoadBooks)
 }

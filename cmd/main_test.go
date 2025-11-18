@@ -66,8 +66,6 @@ func TestSetup(t *testing.T) {
 	}{
 		{"/web/", appComponentPtr.CssPathHandler},
 		{"/", http.HandlerFunc(handlers.GenericHandler)},
-		{"/modules", http.HandlerFunc(handlers.GenericHandler)},
-		{"/books", http.HandlerFunc(handlers.GenericHandler)},
 		{"/tests", http.HandlerFunc(handlers.GenericHandler)},
 		{"/add-chapter", http.HandlerFunc(handlers.GenericHandler)},
 		{"/chapters", http.HandlerFunc(chaptersHandler.LoadChapters)},

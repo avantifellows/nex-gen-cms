@@ -131,10 +131,6 @@ This document provides a comprehensive overview of the Next Generation CMS codeb
   - `GET /api/skills` → `SkillsHandler.GetSkills` → `skills.html` (multi-select matrix with selected IDs).
   - `GET /api/tags` → `TagsHandler.GetTags` → `tag_row.html` (filtered by `q`, excluding already selected tags).
 
-- Static pages
-  - `GET /modules` → `ModulesHandler.LoadModules` → base + `modules.html`.
-  - `GET /books` → `BooksHandler.LoadBooks` → base + `books.html`.
-
 
 ### Service and Repository Layer
 
@@ -192,7 +188,7 @@ DTOs:
 
 ### Templates and Frontend Behavior
 
-- Base template: `web/html/home.html` renders the nav (Chapters/Modules/Books/Tests) and the three dropdowns (Curriculum, Grade, Subject). It includes:
+- Base template: `web/html/home.html` renders the nav (Chapters/Tests) and the three dropdowns (Curriculum, Grade, Subject). It includes:
   - HTMX (`unpkg`), Tailwind CSS output (`/web/static/css/output.css`), Font Awesome, MathLive, MathJax.
   - Custom JS: `/web/static/js/constants.js`, `/web/static/js/nav-tracker.js`.
   - Custom HTMX extensions:

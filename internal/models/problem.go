@@ -15,11 +15,12 @@ type Problem struct {
 	GradeID         int8  `json:"grade_id"`      // used with only get call
 	SubjectID       int8  `json:"subject_id"`
 	Subject         Subject
-	TopicID         int16     `json:"topic_id"`
-	ChapterID       int16     `json:"chapter_id"`
-	Concepts        []Concept `json:"concepts"` // used with only get call
-	DifficultyLevel string    `json:"difficulty_level"`
-	TagIDs          []int     `json:"tag_ids"`
+	TopicID         int16         `json:"topic_id"`
+	ChapterID       int16         `json:"chapter_id"`
+	ChapterName     []ChapterLang `json:"chapter_name"` // used with only get call
+	Concepts        []Concept     `json:"concepts"`     // used with only get call
+	DifficultyLevel string        `json:"difficulty_level"`
+	TagIDs          []int         `json:"tag_ids"`
 	TagNames        []string
 	Status          string `json:"cms_status"`
 }
@@ -49,4 +50,13 @@ func (p Problem) DisplayDifficulty() int8 {
 	default:
 		return 1
 	}
+}
+
+func (p *Problem) GetChapterNameByLang(langCode string) string {
+	for _, chapterLang := range p.ChapterName {
+		if chapterLang.LangCode == langCode {
+			return chapterLang.ChapterName
+		}
+	}
+	return ""
 }
