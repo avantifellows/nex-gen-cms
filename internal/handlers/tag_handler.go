@@ -10,7 +10,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
-const tagsEndPoint = "/tag"
+const tagsEndPoint = "tag"
 
 const tagsKey = "tags"
 
