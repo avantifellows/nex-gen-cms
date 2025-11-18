@@ -172,6 +172,9 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		return
 	}
 
+	// Decide hasMore BEFORE filtering
+	hasMore := len(*tests) >= limit // true if more pages should exist
+
 	filterActiveTests(tests)
 
 	curriculums, err := h.curriculumsService.GetList(getCurriculumsEndPoint, curriculumsKey, false, false)
@@ -198,8 +201,7 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		gradeMap[g.ID] = g.Number
 	}
 
-	// Check if items < limit, then set hasMore to false
-	if len(*tests) < limit {
+	if !hasMore {
 		responseWriter.Header().Set("hasMore", "false")
 	}
 
