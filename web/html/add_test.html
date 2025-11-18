@@ -487,16 +487,16 @@
                     const subjectId = trIdComponents[1];
                     const subtype = trIdComponents[2];
 
-                    const subtypeRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
-                    cloneChips(subtypeRows, targetEditor.id, clonedContent);
+                    const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+                    cloneChips(subtypeProblemRows, targetEditor.id, clonedContent);
 
                 } else if (trId.startsWith('subject-')) {
                     // subject level marking scheme change - apply same marking scheme to all problems under this subject
                     const trIdComponents = trId.split('-');
                     const subjectId = trIdComponents[1];
 
-                    const subjectRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
-                    cloneChips(subjectRows, targetEditor.id, clonedContent);
+                    const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+                    cloneChips(subjectProblemRows, targetEditor.id, clonedContent);
                 }
 
             } else {
@@ -764,16 +764,30 @@
 
         const questionsTableBody = document.getElementById("questions-table-body");
         const questionRows = questionsTableBody.querySelectorAll("tr[id^='problem-']");
-        const subjectRows = questionsTableBody.querySelectorAll("tr[id^='subject-']");
-        const subtypeRows = questionsTableBody.querySelectorAll("tr[id^='subtype-']");
 
         let invalidCount = 0;
 
-        for (const row of questionRows) {
+        for (let i = 0; i < questionRows.length; i++) {
+            const row = questionRows[i];
             const subjectId = parseInt(row.dataset.subject.replace("subject-", ""), 10);
             const subtype = row.dataset.subtype.replace("subtype-", "");
 
-            const isValid = validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, subtypeRows,
+            // Count previous rows of same subject + subtype
+            let existingSubtypeProblemCount = 0;
+
+            for (let j = i - 1; j >= 0; j--) {
+                const prev = questionRows[j];
+
+                // Stop scanning once subject OR subtype changes
+                if (prev.dataset.subject !== row.dataset.subject ||
+                    prev.dataset.subtype !== row.dataset.subtype) {
+                    break;
+                }
+
+                existingSubtypeProblemCount++;
+            }
+
+            const isValid = validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemCount,
                 questionsTableBody, false);
 
             // Visually mark valid/invalid questions
@@ -818,8 +832,8 @@
         }
     }
 
-    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, 
-            subtypeRows, questionsTableBody, showAlert = true) {
+    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemRows, questionsTableBody, 
+            showAlert = true) {
         if (!testRule || !testRule.config) {
             // No test rule means no restrictions — treat as valid
             return true;
@@ -872,9 +886,8 @@
 
             // Count how many existing questions are there of this subtype and subject
             const sectionRule = subjectRule.rules.sections.find(s => s.type === subtype);
-            const sectionCount = subtypeRows.length;
 
-            if (sectionCount >= sectionRule.count) {
+            if (existingSubtypeProblemRows >= sectionRule.count) {
                 if (showAlert) {
                     alert(`Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`);
                 }

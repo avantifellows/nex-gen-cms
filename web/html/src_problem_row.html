@@ -27,14 +27,15 @@
 
         const questionsTableBody = document.querySelector("#questions-table-body");
 
-        const subjectRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
-        const subtypeRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+        const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
         
-        if (testRule && !validateQuestionAgainstTestRule(testRule, subjectId, subtype, subjectRows, subtypeRows, questionsTableBody)) {
+        if (testRule && !validateQuestionAgainstTestRule(testRule, subjectId, subtype, subtypeProblemRows.length, 
+                questionsTableBody)) {
             return; // validation failed
         }
 
-        const insertAfterId = getInsertAfterId(subjectRows, subtypeRows);
+        const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+        const insertAfterId = getInsertAfterId(subjectProblemRows, subtypeProblemRows);
 
         // Hook a one-time global listener that just closes over this specific button's data
         const handler = createAfterRequestHandler(difficulty, insertAfterId, questionsTableBody);
@@ -46,23 +47,23 @@
             values: {
                 "id": dataset.id,
                 "curriculum-id": dataset.curriculum,
-                "subject-exists": subjectRows.length > 0,
-                "subtype-exists": subtypeRows.length > 0,
+                "subject-exists": subjectProblemRows.length > 0,
+                "subtype-exists": subtypeProblemRows.length > 0,
                 "insert-after-id": insertAfterId,
                 "read-only-marks": !!testRule
             }
         });
     }
 
-    function getInsertAfterId(subjectRows, subtypeRows) {
-        if (subtypeRows.length > 0) {
+    function getInsertAfterId(subjectProblemRows, subtypeProblemRows) {
+        if (subtypeProblemRows.length > 0) {
             // Subtype exists — insert after last row of this subtype
-            return subtypeRows[subtypeRows.length - 1].id;
+            return subtypeProblemRows[subtypeProblemRows.length - 1].id;
         }
 
-        if (subjectRows.length > 0) {
+        if (subjectProblemRows.length > 0) {
             // Subtype doesn't exist but subject does — insert after last subject-related row
-            return subjectRows[subjectRows.length - 1].id;
+            return subjectProblemRows[subjectProblemRows.length - 1].id;
         }
 
         return "";
