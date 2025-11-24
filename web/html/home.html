@@ -239,6 +239,19 @@
                 sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, "false");
             }
         });
+    
+        // Enable/disable top-level curriculum/grade/subject filters
+        function setMainFiltersDisabled(disabled) {
+            const ids = ['curriculum-dropdown', 'grade-dropdown', 'subject-dropdown'];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.disabled = disabled;
+                    el.classList.toggle('opacity-50', disabled);
+                    el.classList.toggle('cursor-not-allowed', disabled);
+                }
+            });
+        }
     </script>
 </body>
 
