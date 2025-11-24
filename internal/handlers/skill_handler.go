@@ -13,7 +13,7 @@ import (
 
 const skillsKey = "skills"
 
-const skillsEndPoint = "/skill"
+const skillsEndPoint = "skill"
 
 const skillsTemplate = "skills.html"
 

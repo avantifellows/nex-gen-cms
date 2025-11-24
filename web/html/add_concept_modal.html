@@ -1,0 +1,361 @@
+<div id="addConceptModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-5xl">
+        <h2 class="text-lg font-semibold mb-4">Add Concept</h2>
+        
+        <form id="addConceptForm" class="space-y-6">
+
+            <!-- Search by word -->
+            <div>
+                <h3 class="text-md font-semibold mb-2">Search concept by word</h3>
+                <div id="chip-container" class="flex flex-wrap gap-2 border rounded p-2 min-h-[44px] cursor-text">
+                    <!-- Chips will be added here dynamically -->
+                    <input id="chip-input" type="text" class="flex-1 min-w-[100px] outline-none"
+                           placeholder="Type to search concepts..." onfocus="showConceptDropdown()" 
+                           oninput="filterConceptDropdown(this.value)" onkeydown="handleChipInputKey(event)"
+                           onblur="hideConceptDropdown()">
+                </div>
+                <div id="concept-suggestion-box" class="relative">
+                    <ul id="concept-suggestions"
+                        class="absolute bg-white border rounded mt-1 max-h-48 overflow-y-auto hidden w-full z-10">
+                        <!-- Options inserted dynamically -->
+                    </ul>
+                </div>
+                <!-- Separate Add button for word search -->
+                <div class="w-full flex justify-end mt-2">
+                    <button type="button" onclick="addWordSearchConcepts()"
+                            class="bg-blue-500 text-white px-4 py-2 rounded">Add</button>
+                </div>
+            </div>
+
+            <!-- Search by topic name -->
+            <div>
+                <h3 class="text-md font-semibold mb-2">Search concept by topic name</h3>
+                <div class="flex gap-2 mb-3">
+                    <!-- Curriculum -->
+                    <select id="curriculum-dropdown" name="curriculum-dropdown"
+                            class="border p-2 rounded w-40" hx-get="/api/curriculums"
+                            hx-trigger="load" hx-on::after-request="afterConceptModalDropdownReq(this)">
+                        <option disable selected>Loading curriculums...</option>
+                    </select>
+
+                    <!-- Grade -->
+                    <select id="grade-dropdown" name="grade-dropdown"
+                            class="border p-2 rounded w-40" hx-get="/api/grades"
+                            hx-trigger="load" hx-on::after-request="afterConceptModalDropdownReq(this)">
+                        <option disabled selected>Loading grades...</option>
+                    </select>
+
+                    <!-- Subject -->
+                    <select id="subject-dropdown" name="subject-dropdown"
+                            class="border p-2 rounded w-40" hx-get="/api/subjects"
+                            hx-trigger="load" hx-on::after-request="afterConceptModalDropdownReq(this)">
+                        <option disabled selected>Loading subjects...</option>
+                    </select>
+
+                    <!-- Chapter -->
+                    <select id="chapter-dropdown" name="chapter-dropdown"
+                            class="border p-2 rounded w-40" hx-get="/api/chapters"
+                            hx-trigger="loadChapters, change from:(#addConceptModal #curriculum-dropdown, #addConceptModal #grade-dropdown, #addConceptModal #subject-dropdown)"
+                            hx-include="#addConceptModal #curriculum-dropdown, #addConceptModal #grade-dropdown, #addConceptModal #subject-dropdown"
+                            hx-params="not chapter-dropdown" hx-on::before-request="beforeChaptersRequest();">
+                        <option disabled selected>Loading chapters...</option>
+                    </select>
+
+                    <!-- Topic -->
+                    <select id="topic-dropdown" name="topic_id"
+                            class="border p-2 rounded w-40" hx-get="/api/topics?view=dropdown" 
+                            hx-trigger="change from:#chapter-dropdown" hx-include="#chapter-dropdown"
+                            hx-on::before-request="beforeTopicsRequest();">
+                        <option disabled selected>Select a chapter first</option>
+                    </select>
+
+                </div>
+
+                <!-- Concept -->
+                <div class="flex flex-col w-full">
+                    <label for="concept-dropdown" class="text-sm font-medium mb-1">Concepts</label>
+                    <select id="concept-dropdown" name="concept-dropdown" multiple 
+                            class="border p-2 rounded w-full max-h-48 overflow-y-auto"
+                            hx-get="/api/concepts?view=dropdown" 
+                            hx-trigger="change from:#topic-dropdown" hx-include="#topic-dropdown"
+                            hx-on::before-request="this.innerHTML = '<option disabled>Loading concepts...</option>'">
+                        <option disabled>Select a topic first</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="w-full flex-row flex justify-end space-x-2">
+                <button type="button" onclick="closeAddConceptModal()"
+                        class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+                <button type="button" onclick="addConcepts()" 
+                        class="bg-blue-500 text-white px-4 py-2 rounded">Add</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    var allConcepts = [];
+
+    function showConceptDropdown() {
+        if (allConcepts.length === 0) {
+            // show loading placeholder
+            const box = document.getElementById("concept-suggestions");
+            box.classList.remove("hidden");
+            box.innerHTML = `<li class="px-3 py-2 text-gray-500">Loading concepts...</li>`;
+
+            fetch('/api/concepts?mode=data')
+                .then(res => res.json())
+                .then(data => {
+                    allConcepts = data;
+                    renderConceptSuggestions("");
+                })
+                .catch(err => {
+                    console.error("Failed to load concepts", err);
+                    box.innerHTML = `<li class="px-3 py-2 text-red-500">Failed to load concepts</li>`;
+                });
+        } else {
+            renderConceptSuggestions("");
+        }
+
+        // Attach listener on the modal, not document.body
+        const modal = document.getElementById("addConceptModal");
+        modal.onkeydown = function(e) {
+            if (e.key === "Escape") {
+                box.classList.add("hidden");
+                cleanup();
+            }
+        };
+
+        function cleanup() {
+            modal.onkeydown = null;
+            modal._conceptCleanup = null;
+        }
+
+        // save cleanup reference for reuse later
+        modal._conceptCleanup = cleanup;
+    }
+
+    function filterConceptDropdown(query) {
+        renderConceptSuggestions(query.toLowerCase());
+    }
+
+    function renderConceptSuggestions(query) {
+        const ul = document.getElementById("concept-suggestions");
+        ul.innerHTML = "";
+        highlightedIndex = -1; // reset highlight
+
+        const selectedIds = getSelectedChipIds();
+        allConcepts
+            .filter(c => !selectedIds.includes(c.id))
+            .filter(c => getConceptName(c).toLowerCase().includes(query.toLowerCase()))
+            .forEach(c => {
+                const li = document.createElement("li");
+                li.textContent = getConceptName(c);
+                li.className = "px-3 py-2 hover:bg-gray-100 cursor-pointer";
+                li.onmousedown = (e) => {
+                    // preventDefault() ensures the input doesn’t lose focus by preventing call to onblur. 
+                    // Without it suggestions box would hide as we are calling hideConceptDropdownWithDelay() onblur
+                    e.preventDefault();
+                    addChip(c);
+                };
+                ul.appendChild(li);
+            });
+            
+        ul.classList.toggle("hidden", ul.children.length === 0);
+    }
+
+    function getConceptName(concept, lang = "en") {
+        let match = concept.name.find(n => n.lang_code === lang);
+        return match ? match.concept : concept.name[0].concept;
+    }
+
+    function addChip(concept) {
+        const chipContainer = document.getElementById("chip-container");
+        const chip = document.createElement("div");
+        chip.className = "concept-chip";
+        chip.innerHTML = `${getConceptName(concept)} <span class="cursor-pointer text-red-500" onclick="removeChip(${concept.id}, this)">×</span>`;
+        chip.dataset.id = concept.id;
+        chipContainer.insertBefore(chip, document.getElementById("chip-input"));
+
+        document.getElementById("chip-input").value = "";
+        renderConceptSuggestions(""); // refresh to show all again
+    }
+
+    function getSelectedChipIds() {
+        const chipContainer = document.getElementById("chip-container");
+        return Array.from(chipContainer.querySelectorAll(".concept-chip"))
+                    .map(chip => parseInt(chip.dataset.id, 10));
+    }
+
+    function removeChip(id, el) {
+        el.parentElement.remove();
+    }
+
+    function addWordSearchConcepts() {
+        const selectedIds = getSelectedChipIds();
+        if (!validateConceptSelection(selectedIds)) return;
+
+        const backConceptsDropdown = document.querySelector("#concepts-dropdown");
+
+        selectedIds.forEach(id => {
+            const concept = allConcepts.find(c => c.id === id);
+            const existing = backConceptsDropdown.querySelector(`option[value="${id}"]`);
+            if (existing) {
+                existing.selected = true;
+            } else {
+                const newOpt = document.createElement("option");
+                newOpt.value = id;
+                newOpt.text = getConceptName(concept);
+                newOpt.selected = true;
+                backConceptsDropdown.appendChild(newOpt);
+            }
+        });
+
+        closeAddConceptModal();
+    }
+
+    function validateConceptSelection(selectedIds) {
+        if (!selectedIds || selectedIds.length === 0) {
+            alert("Please select at least one concept");
+            return false;
+        }
+        return true;
+    }
+
+    function afterConceptModalDropdownReq(dropdown) {
+        dropdown.dataset.loaded = "true";
+
+        const modal = document.getElementById("addConceptModal");
+        const allReady =
+            modal.querySelector("#curriculum-dropdown").dataset.loaded &&
+            modal.querySelector("#grade-dropdown").dataset.loaded &&
+            modal.querySelector("#subject-dropdown").dataset.loaded;
+
+        if (allReady) {
+            // Fire once when all 3 have completed
+            htmx.trigger("#chapter-dropdown", "loadChapters");
+        }
+    }
+    
+    function closeAddConceptModal() {
+        const modal = document.getElementById("addConceptModal");
+
+        // call cleanup if it exists
+        if (typeof modal._conceptCleanup === "function") {
+            modal._conceptCleanup();
+        }
+
+        modal.remove();
+    }
+
+    function beforeChaptersRequest() {
+        const chapterDropdown = document.getElementById("chapter-dropdown");
+        chapterDropdown.innerHTML = '<option disabled selected>Loading chapters...</option>';
+        const topicDropdown = document.getElementById("topic-dropdown");
+        topicDropdown.innerHTML = '<option disabled selected>Select a chapter first</option>';
+        const conceptDropdown = document.getElementById("concept-dropdown");
+        conceptDropdown.innerHTML = '<option disabled>Select a topic first</option>';
+    }
+
+    function beforeTopicsRequest() {
+        const topicDropdown = document.getElementById("topic-dropdown");
+        topicDropdown.innerHTML = '<option disabled selected>Loading topics...</option>';
+        const conceptDropdown = document.getElementById("concept-dropdown");
+        conceptDropdown.innerHTML = '<option disabled>Select a topic first</option>';        
+    }
+
+    function addConcepts() {
+        const conceptDropdown = document.getElementById("concept-dropdown");
+        const selected = Array.from(conceptDropdown.selectedOptions);
+
+        if (!validateConceptSelection(selected)) return;
+
+        // Target dropdown in back screen
+        const backConceptsDropdown = document.querySelector("#concepts-dropdown");
+
+        selected.forEach(opt => {
+            const existing = backConceptsDropdown.querySelector(`option[value="${opt.value}"]`);
+
+            if (existing) {
+                // If already exists, just mark it selected
+                existing.selected = true;
+            } else {
+                // If not, create a new option
+                const newOpt = document.createElement("option");
+                newOpt.value = opt.value;
+                newOpt.text = opt.text;
+                newOpt.selected = true;   // select it by default
+                backConceptsDropdown.appendChild(newOpt);
+            }
+        });
+
+        // Close the modal
+        closeAddConceptModal();
+    }
+
+    var highlightedIndex = -1; // no suggestion highlighted by default
+
+    function handleChipInputKey(e) {
+        const suggestions = document.querySelectorAll("#concept-suggestions li");
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            if (suggestions.length > 0) {
+                highlightedIndex = (highlightedIndex + 1) % suggestions.length;
+                updateHighlight(suggestions);
+            }
+
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            if (suggestions.length > 0) {
+                highlightedIndex = (highlightedIndex - 1 + suggestions.length) % suggestions.length;
+                updateHighlight(suggestions);
+            }
+
+        } else if (e.key === "Enter") {
+            // prevent default form submission on enter press
+            e.preventDefault();
+            
+            if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+                suggestions[highlightedIndex].dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+            } else {
+                // no suggestion selected → just clear typed text
+                e.target.value = "";
+                renderConceptSuggestions("");
+            }
+            highlightedIndex = -1; // reset
+        }
+    }
+
+    function updateHighlight(suggestions) {
+        suggestions.forEach((li, idx) => {
+            if (idx === highlightedIndex) {
+                li.classList.add("bg-blue-100");
+                ensureVisible(li);  // keep highlighted li in view
+            } else {
+                li.classList.remove("bg-blue-100");
+            }
+        });
+    }
+
+    function ensureVisible(el) {
+        const container = el.parentElement;
+        const containerRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+
+        if (elRect.top < containerRect.top) {
+            // item is above the visible area → scroll up
+            container.scrollTop -= (containerRect.top - elRect.top);
+        } else if (elRect.bottom > containerRect.bottom) {
+            // item is below the visible area → scroll down
+            container.scrollTop += (elRect.bottom - containerRect.bottom);
+        }
+    }
+
+    function hideConceptDropdown() {
+        const box = document.getElementById("concept-suggestions");
+        box.classList.add("hidden");
+    }
+</script>

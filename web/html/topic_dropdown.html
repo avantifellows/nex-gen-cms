@@ -1,4 +1,4 @@
-<option selected>Select Topic</option>
+<option value="" selected hidden>Select Topic</option>
 {{ range . }}
     <option value="{{.ID}}">{{ getName . "en" }}</option>
 {{ end }}

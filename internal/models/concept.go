@@ -1,7 +1,7 @@
 package models
 
 type Concept struct {
-	ID      int16         `json:"id"`
+	ID      int32         `json:"id"`
 	Name    []ConceptLang `json:"name"`
 	TopicID int16         `json:"topic_id"`
 }
