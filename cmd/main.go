@@ -115,6 +115,8 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/update-test", testsHandler.UpdateTest)
 	muxHandler.HandleFunc("/archive-test", testsHandler.ArchiveTest)
 	muxHandler.HandleFunc("/download-pdf", testsHandler.DownloadPdf)
+	muxHandler.HandleFunc("/tests/copy-test", testsHandler.CopyTest)
+	muxHandler.HandleFunc("/tests/validate-test", testsHandler.ValidateTest)
 
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problem", problemsHandler.GetProblem)

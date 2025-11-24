@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -306,14 +307,12 @@ func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http
 	}
 
 	curriculumId, err := utils.StringToIntType[int16](urlVals.Get(QUERY_PARAM_CURRICULUM_ID))
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid Curriculum ID: %v", err)
+	if err == nil {
+		gradeId, err := utils.StringToIntType[int8](urlVals.Get("grade_id"))
+		if err == nil {
+			selectedTestPtr.SetCurriculumGrade(curriculumId, gradeId)
+		}
 	}
-	gradeId, err := utils.StringToIntType[int8](urlVals.Get("grade_id"))
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid Grade ID: %v", err)
-	}
-	selectedTestPtr.SetCurriculumGrade(curriculumId, gradeId)
 
 	// Fill subject names in test
 	h.fillSubjectNames(responseWriter, selectedTestPtr)
@@ -408,52 +407,10 @@ func (h *TestsHandler) fillProblemSubjects(responseWriter http.ResponseWriter, p
 }
 
 func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http.Request) {
-	if err := request.ParseForm(); err != nil {
-		http.Error(responseWriter, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	curriculums := request.Form["curriculum[]"]
-	grades := request.Form["grade[]"]
-	testType := request.FormValue("modal-testType")
-
-	var curriculumGrades []models.CurriculumGrade
-	for i := range curriculums {
-		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
-		if err != nil {
-			fmt.Printf("invalid curriculum id at index %d", i)
-			return
-		}
-
-		gradeId, err := utils.StringToIntType[int8](grades[i])
-		if err != nil {
-			fmt.Printf("invalid grade id at index %d", i)
-			return
-		}
-
-		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
-			CurriculumID: curriculumId,
-			GradeID:      gradeId,
-		})
-	}
-
-	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
+	data, err := h.buildTestData(request)
 	if err != nil {
-		fmt.Println("invalid exam id")
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
-	}
-
-	testRule, err := h.getTestRule(testType, examId)
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	data := dto.HomeData{
-		TestPtr: &models.Test{
-			ExamIDs:          []int8{examId},
-			Subtype:          testType,
-			CurriculumGrades: curriculumGrades,
-		},
-		TestRule: testRule,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -469,6 +426,55 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"getParentId":       getParentSubjectId,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+}
+
+func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error) {
+	if err := request.ParseForm(); err != nil {
+		return dto.HomeData{}, fmt.Errorf("invalid form data: %w", err)
+	}
+
+	curriculums := request.Form["curriculum[]"]
+	grades := request.Form["grade[]"]
+	testType := request.FormValue("modal-testType")
+
+	var curriculumGrades []models.CurriculumGrade
+	for i := range curriculums {
+		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
+		if err != nil {
+			return dto.HomeData{}, fmt.Errorf("invalid curriculum id at index %d", i)
+		}
+
+		gradeId, err := utils.StringToIntType[int8](grades[i])
+		if err != nil {
+			return dto.HomeData{}, fmt.Errorf("invalid grade id at index %d", i)
+		}
+
+		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
+			CurriculumID: curriculumId,
+			GradeID:      gradeId,
+		})
+	}
+
+	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
+	if err != nil {
+		return dto.HomeData{}, fmt.Errorf("invalid exam id")
+	}
+
+	testRule, err := h.getTestRule(testType, examId)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	data := dto.HomeData{
+		TestPtr: &models.Test{
+			ExamIDs:          []int8{examId},
+			Subtype:          testType,
+			CurriculumGrades: curriculumGrades,
+		},
+		TestRule: testRule,
+	}
+
+	return data, nil
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -651,9 +657,38 @@ func getTestName(t models.Test, lang string) string {
 }
 
 func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request *http.Request) {
-	views.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+	var data dto.AddTestDialogData
+
+	query := request.URL.Query()
+
+	if len(query) > 0 {
+		subtype := query.Get("subtype")
+		examIdStr := query.Get("exam_id")
+		curriculumGradesStr := query.Get("curriculum_grades")
+
+		// Decode exam_id
+		examId, _ := utils.StringToIntType[int8](examIdStr)
+
+		// Decode curriculum_grades JSON string
+		var curriculumGrades []models.CurriculumGrade
+		if err := json.Unmarshal([]byte(curriculumGradesStr), &curriculumGrades); err != nil {
+			log.Println("Error decoding curriculum_grades:", err)
+		}
+
+		data = dto.AddTestDialogData{
+			Subtype:          subtype,
+			CurriculumGrades: curriculumGrades,
+			ExamID:           examId,
+		}
+
+	} else {
+		data = dto.AddTestDialogData{}
+	}
+
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"slice": utils.Slice,
 		"add":   utils.Add,
+		"dict":  utils.Dict,
 	}, addTestModalTemplate, testTypeOptionsTemplate, curriculumGradeSelectsTemplate)
 }
 
@@ -839,6 +874,57 @@ func optionLabels() []string {
 	return []string{"A)", "B)", "C)", "D)", "E)", "F)", "G)", "H)", "I)", "J)"}
 }
 
+func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedTestPtr, code, err := h.getTest(responseWriter, request)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	// Make a copy so the original is not mutated
+	copiedTest := *selectedTestPtr
+	copiedTest.ID = 0
+
+	problems := h.getTestProblems(responseWriter, request)
+	if problems == nil {
+		return
+	}
+	problemsMap := make(map[int]*models.Problem)
+	for _, p := range *problems {
+		problemsMap[p.ID] = p
+	}
+
+	data := dto.HomeData{
+		TestPtr:  &copiedTest,
+		Problems: problemsMap,
+	}
+
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"split":             strings.Split,
+		"slice":             utils.Slice,
+		"seq":               utils.Seq,
+		"getName":           getTestName,
+		"add":               utils.Add,
+		"joinInt16":         utils.JoinInt16,
+		"dict":              utils.Dict,
+		"getDisplaySubtype": utils.DisplaySubtype,
+		"toJson":            utils.ToJson,
+		"getParentId":       getParentSubjectId,
+	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+}
+
+func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request *http.Request) {
+	data, err := h.buildTestData(request)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	responseWriter.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(responseWriter).Encode(data)
+}
+  
 func getProblemChapterName(p models.Problem, lang string) string {
 	return p.GetChapterNameByLang(lang)
 }
