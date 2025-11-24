@@ -66,21 +66,21 @@
                     hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
                 <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
-                    hx-on::before-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false')">Tests</button>
+                    hx-on::before-request="sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false')">Tests</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
                 <select class="ms-8" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
                     hx-trigger="load" hx-on::after-request="afterDropdownReq(this, 
                     {{ if .CurriculumID }}{{ .CurriculumID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');">
+                    onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading curriculums...</option>
                 </select>
                 <select class="ms-4" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
                     hx-on::after-request="afterDropdownReq(this, 
                     {{ if .GradeID }}{{ .GradeID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');">
+                    onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading grades...</option>
                 </select>

@@ -49,7 +49,15 @@ func RequireLogin(next http.Handler, exceptions ...string) http.Handler {
 		}
 
 		if !IsLoggedIn(r) {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			if r.Header.Get("HX-Request") == "true" {
+				// For HTMX requests, set HX-Redirect header with StatusUnauthorized; otherwise it will add login
+				// screen inside the target element (eg - under tests tab for /api/tests call) instead of
+				// moving to separate login screen
+				w.Header().Set("HX-Redirect", "/login")
+				w.WriteHeader(http.StatusUnauthorized)
+			} else {
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+			}
 			return
 		}
 		next.ServeHTTP(w, r)
