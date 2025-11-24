@@ -31,7 +31,10 @@ import (
 const TESTTYPE_DROPDOWN_NAME = "testtype-dropdown"
 
 const testsTemplate = "tests.html"
+const testsFilterViewTemplate = "tests_filter_view.html"
+const testsSearchViewTemplate = "tests_search_view.html"
 const testRowTemplate = "test_row.html"
+const testSearchRowTemplate = "test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
 const addTestTemplate = "add_test.html"
@@ -59,85 +62,210 @@ const testsKey = "tests"
 const testRulesKey = "testRules"
 
 type TestsHandler struct {
-	testsService     *services.Service[models.Test]
-	subjectsService  *services.Service[models.Subject]
-	problemsService  *services.Service[models.Problem]
-	testRulesService *services.Service[models.TestRule]
+	testsService       *services.Service[models.Test]
+	subjectsService    *services.Service[models.Subject]
+	problemsService    *services.Service[models.Problem]
+	testRulesService   *services.Service[models.TestRule]
+	curriculumsService *services.Service[models.Curriculum]
+	gradesService      *services.Service[models.Grade]
 }
 
 func NewTestsHandler(testsService *services.Service[models.Test], subjectsService *services.Service[models.Subject],
-	problemsService *services.Service[models.Problem], testRulesService *services.Service[models.TestRule]) *TestsHandler {
+	problemsService *services.Service[models.Problem], testRulesService *services.Service[models.TestRule],
+	curriculumsService *services.Service[models.Curriculum], gradesService *services.Service[models.Grade]) *TestsHandler {
 	return &TestsHandler{
-		testsService:     testsService,
-		subjectsService:  subjectsService,
-		problemsService:  problemsService,
-		testRulesService: testRulesService,
+		testsService:       testsService,
+		subjectsService:    subjectsService,
+		problemsService:    problemsService,
+		testRulesService:   testRulesService,
+		curriculumsService: curriculumsService,
+		gradesService:      gradesService,
 	}
 }
 
 func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *http.Request) {
-	views.ExecuteTemplates(responseWriter, nil, template.FuncMap{
-		"slice": utils.Slice,
-		"add":   utils.Add,
-	}, baseTemplate, testsTemplate, testTypeOptionsTemplate)
+	urlVals := request.URL.Query()
+	mode := urlVals.Get("mode")
+
+	switch mode {
+	case "filter":
+		// return filter-view content
+		views.ExecuteTemplate(testsFilterViewTemplate, responseWriter, nil, nil)
+
+	case "search":
+		// return search-view content
+		views.ExecuteTemplate(testsSearchViewTemplate, responseWriter, nil, nil)
+
+	default:
+		// Initial tests page load
+		views.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+			"slice": utils.Slice,
+			"add":   utils.Add,
+		}, baseTemplate, testsTemplate, testTypeOptionsTemplate)
+	}
 }
 
 func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *http.Request) {
-	urlValues := request.URL.Query()
-	curriculumId, gradeId, _ := getCurriculumGradeSubjectIds(urlValues)
+	urlVals := request.URL.Query()
+
+	curriculumId, gradeId, _ := getCurriculumGradeSubjectIds(urlVals)
 	if curriculumId == 0 || gradeId == 0 {
 		return
 	}
-	testtype := urlValues.Get(TESTTYPE_DROPDOWN_NAME)
-	sortColumn := urlValues.Get("sortColumn")
-	sortOrder := urlValues.Get("sortOrder")
-
+	testtype := urlVals.Get(TESTTYPE_DROPDOWN_NAME)
 	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
-	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
 
+	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	filtered := (*tests)[:0] // zero-length slice, same backing array
-	// set curriculum & grade id on each test
-	for _, test := range *tests {
-		// skip archived tests
-		if test.Status == constants.ResourceStatusArchived {
-			continue
-		}
-		test.SetCurriculumGrade(curriculumId, gradeId)
-		filtered = append(filtered, test)
-	}
-	*tests = filtered // assign filtered slice back to original
+	filterActiveTests(tests)
 
-	sortTests(*tests, sortColumn, sortOrder)
+	sortColumn := urlVals.Get("sortColumn")
+	sortOrder := urlVals.Get("sortOrder")
+	sortTests(*tests, sortColumn, sortOrder, nil, nil)
+
 	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
 }
 
-func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string) {
+// removes archived tests from the slice
+func filterActiveTests(tests *[]*models.Test) {
+	filtered := (*tests)[:0] // zero-length slice, same backing array
+	for _, t := range *tests {
+		if t.Status != constants.ResourceStatusArchived {
+			filtered = append(filtered, t)
+		}
+	}
+	*tests = filtered // assign filtered slice back to original
+}
+
+func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	search := urlVals.Get("search")
+	limit := utils.StringToInt(urlVals.Get("limit"))
+	sortColumn := urlVals.Get("sortColumn")
+	sortOrder := urlVals.Get("sortOrder")
+	queryParams := "?search=" + url.QueryEscape(search) + "&type=test&limit=" + strconv.Itoa(limit) + "&offset=" + urlVals.Get("offset")
+
+	// Add sorting params if present
+	if sortColumn != "" {
+		var sortBy string
+		switch sortColumn {
+		case "1":
+			sortBy = "code"
+		case "2":
+			sortBy = "name"
+		case "5":
+			sortBy = "subtype"
+		default:
+			sortBy = "" // no valid mapping
+		}
+
+		if sortBy != "" {
+			queryParams += "&sort_by=" + url.QueryEscape(sortBy) + "&sort_order=" + url.QueryEscape(sortOrder)
+		}
+	}
+	tests, err := h.testsService.GetList(resourcesEndPoint+queryParams, testsKey, false, true)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Decide hasMore BEFORE filtering
+	hasMore := len(*tests) >= limit // true if more pages should exist
+
+	filterActiveTests(tests)
+
+	curriculums, err := h.curriculumsService.GetList(getCurriculumsEndPoint, curriculumsKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching curriculums: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Convert curriculums slice → map[id] = name
+	curriculumMap := make(map[int16]string)
+	for _, c := range *curriculums {
+		curriculumMap[c.ID] = c.Name
+	}
+
+	grades, err := h.gradesService.GetList(getGradesEndPoint, gradesKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching grades: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Convert grades slice → map[id] = number
+	gradeMap := make(map[int8]int8)
+	for _, g := range *grades {
+		gradeMap[g.ID] = g.Number
+	}
+
+	if !hasMore {
+		responseWriter.Header().Set("hasMore", "false")
+	}
+
+	// Pass both tests and curriculum map to template
+	data := struct {
+		Tests       *[]*models.Test
+		Curriculums map[int16]string
+		Grades      map[int8]int8
+	}{
+		Tests:       tests,
+		Curriculums: curriculumMap,
+		Grades:      gradeMap,
+	}
+	views.ExecuteTemplate(testSearchRowTemplate, responseWriter, data, template.FuncMap{
+		"dict": utils.Dict,
+	})
+}
+
+func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string, curriculumMap map[int16]string,
+	gradeMap map[int8]int8) {
 	slices.SortStableFunc(testPtrs, func(t1, t2 *models.Test) int {
 		var sortResult int
 		switch sortColumn {
 		case "1":
-			c1Suffix := utils.ExtractNumericSuffix(t1.Code)
-			c2Suffix := utils.ExtractNumericSuffix(t2.Code)
-			// if numeric suffix found for both tests then perform their integer comparison
-			if c1Suffix > 0 && c2Suffix > 0 {
-				sortResult = c1Suffix - c2Suffix
-			} else {
-				// perform string comparison of codes, because numeric suffixes could not be found
-				sortResult = strings.Compare(t1.Code, t2.Code)
-			}
+			sortResult = strings.Compare(t1.Code, t2.Code)
 		case "2":
 			sortResult = strings.Compare(t1.Name[0].Resource, t2.Name[0].Resource)
 		case "3":
-			sortResult = int(t1.ProblemCount() - t2.ProblemCount())
+			if curriculumMap != nil {
+				// Search case: sort by curriculum name
+				var c1, c2 string
+				if len(t1.CurriculumGrades) > 0 {
+					c1 = curriculumMap[t1.CurriculumGrades[0].CurriculumID]
+				}
+				if len(t2.CurriculumGrades) > 0 {
+					c2 = curriculumMap[t2.CurriculumGrades[0].CurriculumID]
+				}
+				sortResult = strings.Compare(c1, c2)
+			} else {
+				// Normal case: sort by problem count
+				sortResult = int(t1.ProblemCount() - t2.ProblemCount())
+			}
 		case "4":
-			sortResult = int(t1.TypeParams.Marks - t2.TypeParams.Marks)
+			if gradeMap != nil {
+				// Search case: sort by grade number
+				var g1, g2 int8
+				if len(t1.CurriculumGrades) > 0 {
+					g1 = gradeMap[t1.CurriculumGrades[0].GradeID]
+				}
+				if len(t2.CurriculumGrades) > 0 {
+					g2 = gradeMap[t2.CurriculumGrades[0].GradeID]
+				}
+				sortResult = int(g1 - g2)
+			} else {
+				// Normal case: sort by marks
+				sortResult = int(t1.TypeParams.Marks - t2.TypeParams.Marks)
+			}
 		case "5":
-			sortResult = int(utils.StringToInt(t1.TypeParams.Duration) - utils.StringToInt(t2.TypeParams.Duration))
+			if curriculumMap != nil {
+				sortResult = strings.Compare(t1.DisplaySubtype(), t2.DisplaySubtype())
+			} else {
+				sortResult = int(utils.StringToInt(t1.TypeParams.Duration) - utils.StringToInt(t2.TypeParams.Duration))
+			}
 		default:
 			sortResult = 0
 		}
