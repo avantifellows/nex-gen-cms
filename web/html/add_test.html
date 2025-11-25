@@ -5,8 +5,7 @@
     function onDropdownLoaded(dropdown, storageKey) {
         // restore last selected value from sessionStorage
         const lastSelectedValue = sessionStorage.getItem(storageKey);
-        // dropdown value is blank sometimes on coming back from problem screen
-        if (lastSelectedValue && dropdown.value !== "") {
+        if (lastSelectedValue) {
             dropdown.value = lastSelectedValue;
 
             // Clear any previous pending trigger for this dropdown
@@ -66,15 +65,15 @@
                         hx-trigger="load, onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
                         hx-get="/api/chapters?view=dropdown"
                         hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown"
-                        onchange="sessionStorage.setItem('selectedChapter', this.value);"
+                        onchange="if (this.value) sessionStorage.setItem('selectedChapter', this.value);"
                         hx-on::after-request="onDropdownLoaded(this, 'selectedChapter')">
                         <option>Select Chapter</option>
                     </select>
                     <select id="topic-dropdown" name="topic-dropdown" hx-ext="cascade-clear" class="p-2 border rounded w-full"
                         hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
-                        hx-include="#chapter-dropdown" onchange="sessionStorage.setItem('selectedTopic', this.value);"
+                        hx-include="#chapter-dropdown" onchange="if (this.value) sessionStorage.setItem('selectedTopic', this.value);"
                         hx-on::after-request="onDropdownLoaded(this, 'selectedTopic')">
-                        <option>Select Topic</option>
+                        <option value="">Select Topic</option>
                     </select>
                     <label class="font-semibold">Level</label>
                     <label class="font-semibold">Problem Type</label>
@@ -444,7 +443,6 @@
         setElementFromStorage('duration', SESSION_KEY_DURATION);
     });
 
-    // Expose a global tab switcher that can be called from onclick attributes
     function activateLeftTab(tab) {
         const bankTabBtn = document.getElementById('left-tab-bank');
         const searchTabBtn = document.getElementById('left-tab-search');
@@ -454,8 +452,6 @@
         const activeClasses = ['border-b-2', 'border-blue-600', 'text-blue-700'];
         const inactiveClasses = ['text-gray-600'];
 
-        if (!bankTabBtn || !searchTabBtn || !bankView || !searchView) return;
-
         if (tab === 'bank') {
             bankView.classList.remove('hidden');
             searchView.classList.add('hidden');
@@ -464,6 +460,15 @@
             searchTabBtn.classList.remove(...activeClasses);
             searchTabBtn.classList.add(...inactiveClasses);
             setMainFiltersDisabled(false);
+
+            const chapterDropdown = document.getElementById('chapter-dropdown');
+            const saved = sessionStorage.getItem('selectedChapter');
+
+            // If chapter dropdown exists AND values don't match → restore
+            if (chapterDropdown && saved && chapterDropdown.value !== saved) {
+                onDropdownLoaded(chapterDropdown, 'selectedChapter');
+            }
+
         } else {
             searchView.classList.remove('hidden');
             bankView.classList.add('hidden');
@@ -504,7 +509,7 @@
                 if (targetId === "chapter-dropdown") {
                     const topicDropdown = document.getElementById('topic-dropdown');
                     if (topicDropdown) {
-                        topicDropdown.innerHTML = '<option>Select Topic</option>';
+                        topicDropdown.innerHTML = '<option value="">Select Topic</option>';
                     }
                 }
 
@@ -512,6 +517,17 @@
                 const problemList = document.getElementById('question-bank');
                 if (problemList) {
                     problemList.innerHTML = '';
+                }
+
+            } else if (name === "htmx:configRequest") {
+                const targetId = event.detail.elt.id;
+                if (targetId === "chapter-dropdown") {
+                    const curriculum = document.getElementById("curriculum-dropdown");
+                    // if curriculum is disabled (when search tab is active) then prevent chapters request
+                    // because there is no point in fetching chapters if curriculum value is blank
+                    if (curriculum.disabled) {
+                        event.preventDefault();
+                    }
                 }
             }
         }
