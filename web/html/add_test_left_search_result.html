@@ -1,0 +1,33 @@
+{{ range .Tests }}
+    {{ $test := . }}
+    {{ $firstCg := (index .CurriculumGrades 0) }}
+    <div class="bg-gray-50 px-3 py-2 flex items-center justify-between">
+        <div class="font-semibold">{{ .Code }} — {{ (index .Name 0).Resource }}</div>
+    </div>
+    <div class="px-3 py-2">
+        {{ range .TypeParams.Subjects }}
+            {{ $subject := . }}
+            <div class="flex items-center justify-between font-medium">
+                <div>{{ index $.Subjects $subject.SubjectID }}</div>
+                <button class="text-blue-600"
+                        hx-get="/api/test/problems?id={{ $test.ID }}&curriculum_id={{ $firstCg.CurriculumID }}&subject_id={{ $subject.SubjectID }}&view=add-test-left"
+                        hx-target="#st-problems-{{ $test.ID }}-{{ $subject.SubjectID }}"
+                        hx-swap="innerHTML">
+                    Load Problems
+                </button>
+            </div>
+            <table class="w-full mt-2 text-left">
+                <thead>
+                <tr class="bg-gray-100">
+                    <th class="p-2 w-8"></th>
+                    <th class="p-2">Code</th>
+                    <th class="p-2">Question</th>
+                    <th class="p-2 text-right">Action</th>
+                </tr>
+                </thead>
+                <tbody id="st-problems-{{ $test.ID }}-{{ $subject.SubjectID }}"></tbody>
+            </table>
+        {{ end }}
+    </div>
+{{ end }}
+

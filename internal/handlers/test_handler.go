@@ -38,6 +38,7 @@ const testSearchRowTemplate = "test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
 const addTestTemplate = "add_test.html"
+const addTestLeftSearchRowTemplate = "add_test_left_search_result.html"
 const testTypeOptionsTemplate = "test_type_options.html"
 const testChipEditorTemplate = "test_chip_editor.html"
 const addTestDestProblemRowWithoutHeadersTemplate = "dest_problem_row_without_headers.html"
@@ -202,11 +203,39 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		gradeMap[g.ID] = g.Number
 	}
 
+	// If left panel search view is requested, render a compact list with subject loaders
+	if urlVals.Get("view") == "left-panel" {
+		subjectPtrs, err := h.subjectsService.GetList(handlerutils.SubjectsEndPoint, handlerutils.SubjectsKey, false, false)
+		if err != nil {
+			http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
+			return
+		}
+		subjectMap := make(map[int8]string)
+		for _, s := range *subjectPtrs {
+			subjectMap[s.ID] = s.GetNameByLang("en")
+		}
+		data := struct {
+			Tests       *[]*models.Test
+			Curriculums map[int16]string
+			Grades      map[int8]int8
+			Subjects    map[int8]string
+		}{
+			Tests:       tests,
+			Curriculums: curriculumMap,
+			Grades:      gradeMap,
+			Subjects:    subjectMap,
+		}
+		views.ExecuteTemplate(addTestLeftSearchRowTemplate, responseWriter, data, template.FuncMap{
+			"dict": utils.Dict,
+		})
+		return
+	}
+
 	if !hasMore {
 		responseWriter.Header().Set("hasMore", "false")
 	}
 
-	// Pass both tests and curriculum map to template
+	// Default: tests page search rows
 	data := struct {
 		Tests       *[]*models.Test
 		Curriculums map[int16]string
@@ -362,7 +391,12 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 	}).([]*models.Problem)
 
 	// Passing custom function add to use in template for serial number by adding 1 to index
-	views.ExecuteTemplate(testProblemRowTemplate, responseWriter, problems, template.FuncMap{
+	tmpl := testProblemRowTemplate
+	if urlVals.Get("view") == "add-test-left" {
+		// Reuse the source problem row template to provide [+] action for add/edit test screen
+		tmpl = srcProblemRowTemplate
+	}
+	views.ExecuteTemplate(tmpl, responseWriter, problems, template.FuncMap{
 		"add": utils.Add,
 	})
 }
