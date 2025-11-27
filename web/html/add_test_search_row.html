@@ -1,0 +1,6 @@
+{{range .Tests}}
+<div class="p-2 hover:bg-gray-100 cursor-pointer"
+     onclick="selectSuggestion('{{.Code}} — {{ (index .Name 0).Resource }}')">
+    {{.Code}} — {{ (index .Name 0).Resource }}
+</div>
+{{end}}

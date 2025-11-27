@@ -930,6 +930,18 @@ video {
   color: rgb(30 64 175 / var(--tw-text-opacity));
 }
 
+/* Loader is hidden by default */
+
+#search-loader {
+  display: none;
+}
+
+/* HTMX makes the loader visible during request */
+
+#search-loader.htmx-request {
+  display: flex;
+}
+
 .\!visible {
   visibility: visible !important;
 }
@@ -1198,6 +1210,10 @@ video {
   width: 4rem;
 }
 
+.w-28 {
+  width: 7rem;
+}
+
 .w-32 {
   width: 8rem;
 }
@@ -1299,12 +1315,6 @@ video {
 
 .cursor-text {
   cursor: text;
-}
-
-.select-all {
-  -webkit-user-select: all;
-     -moz-user-select: all;
-          user-select: all;
 }
 
 .list-decimal {
@@ -1430,12 +1440,6 @@ video {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
-}
-
-.divide-y > :not([hidden]) ~ :not([hidden]) {
-  --tw-divide-y-reverse: 0;
-  border-top-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
-  border-bottom-width: calc(1px * var(--tw-divide-y-reverse));
 }
 
 .self-end {

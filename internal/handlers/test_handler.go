@@ -35,6 +35,7 @@ const testsFilterViewTemplate = "tests_filter_view.html"
 const testsSearchViewTemplate = "tests_search_view.html"
 const testRowTemplate = "test_row.html"
 const testSearchRowTemplate = "test_search_row.html"
+const addTestSearchRowTemplate = "add_test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
 const addTestTemplate = "add_test.html"
@@ -147,6 +148,7 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 	limit := utils.StringToInt(urlVals.Get("limit"))
 	sortColumn := urlVals.Get("sortColumn")
 	sortOrder := urlVals.Get("sortOrder")
+	view := urlVals.Get("view")
 	queryParams := "?search=" + url.QueryEscape(search) + "&type=test&limit=" + strconv.Itoa(limit) + "&offset=" + urlVals.Get("offset")
 
 	// Add sorting params if present
@@ -202,8 +204,15 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		gradeMap[g.ID] = g.Number
 	}
 
-	if !hasMore {
-		responseWriter.Header().Set("hasMore", "false")
+	var tmpl string
+	if view == "add-test" {
+		tmpl = addTestSearchRowTemplate
+	} else {
+		tmpl = testSearchRowTemplate
+
+		if !hasMore {
+			responseWriter.Header().Set("hasMore", "false")
+		}
 	}
 
 	// Pass both tests and curriculum map to template
@@ -216,7 +225,7 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		Curriculums: curriculumMap,
 		Grades:      gradeMap,
 	}
-	views.ExecuteTemplate(testSearchRowTemplate, responseWriter, data, template.FuncMap{
+	views.ExecuteTemplate(tmpl, responseWriter, data, template.FuncMap{
 		"dict": utils.Dict,
 	})
 }
@@ -924,7 +933,7 @@ func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request 
 	responseWriter.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(responseWriter).Encode(data)
 }
-  
+
 func getProblemChapterName(p models.Problem, lang string) string {
 	return p.GetChapterNameByLang(lang)
 }

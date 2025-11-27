@@ -13,7 +13,8 @@ module.exports = {
     safelist: [
         'list-disc',
         'list-decimal',
-        'pl-6'
+        'pl-6',
+        'htmx-request'
     ],
     theme: {
         extend: {},

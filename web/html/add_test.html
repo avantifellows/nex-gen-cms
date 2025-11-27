@@ -38,7 +38,7 @@
     {{ else if eq $mode "copy" }}Copy
     {{ else }}New{{ end }} Test
 </h1>
-<div class="flex h-screen">
+<div id="add-test-div" class="flex h-screen">
     <!-- Left Panel -->
     <div class="w-1/3 p-5 bg-white shadow overflow-auto">
         <!-- Questions Sources: Tabs -->
@@ -110,80 +110,35 @@
             <!-- Tab: Search Tests -->
             <div id="search-view" class="mt-3 hidden">
                 <!-- Search by code or name -->
-                <div class="mt-3 flex items-center gap-2">
-                    <input id="query-input" name="q" type="text" class="p-2 border rounded w-full"
-                        placeholder="Search by Code or Name">
-                    <button id="load-btn" type="button"
-                        class="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-                        hx-get="/api/tests/search?view=left-panel"
-                        hx-include="#query-input"
-                        hx-target="#test-search-results" hx-indicator="#loading-indicator">
-                        Search
-                    </button>
-                    <span id="loading-indicator" class="htmx-indicator text-sm text-gray-500">Loading…</span>
-                </div>
-
-                <!-- Bulk actions -->
-                <div class="flex items-center justify-between mt-4">
+                <div id="search-block" class="mt-3 relative w-full">
                     <div class="flex items-center gap-2">
-                        <input id="select-all" type="checkbox" class="h-4 w-4">
-                        <label for="select-all" class="text-sm">Select all in current view</label>
-                    </div>
-                    <button type="button"
-                        class="px-3 py-1 border rounded bg-blue-500 hover:bg-blue-600 text-white"
-                        hx-post="/api/tests/add-from-search"
-                        hx-target="#questions-table-body" hx-swap="beforeend"
-                        hx-include="#test-search-results input[name='st-problem-id']:checked">
-                        Add Selected
-                    </button>
-                </div>
+                        <input id="query-input" name="search" type="text"
+                            class="p-2 border rounded w-full" placeholder="Search by Code or Name">
+                
+                        <!-- Button + Loader wrapper -->
+                        <div class="relative w-28 flex-shrink-0">
+                            <!-- Search button -->
+                            <button id="search-btn" type="button"
+                                class="w-full px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                hx-get="/api/search-tests?view=add-test&limit=20&offset=0"
+                                hx-include="#query-input" hx-target="#suggestions" hx-indicator="#search-loader" 
+                                hx-on::before-request="this.classList.add('hidden')"
+                                hx-on::after-request="onSearchResponse(event)">
+                                Search
+                            </button>
 
-                <!-- Results: expected tree rendered by server (Subject → Section → Problems) -->
-                <div id="test-search-results" class="mt-3 border rounded divide-y">
-                    <!-- Server should render something like:
-                    <div class="bg-gray-50 px-3 py-2 flex items-center justify-between">
-                        <div class="font-semibold">Maths</div>
-                        <button class="text-blue-600"
-                            hx-post="/api/tests/add-subject"
-                            hx-vals='{"subject_id": 1}'
-                            hx-target="#questions-table-body" hx-swap="beforeend">Add Subject</button>
-                    </div>
-                    <div class="px-3 py-2">
-                        <div class="flex items-center justify-between font-medium">
-                            <div>MCQ Single Answer</div>
-                            <button class="text-blue-600"
-                                hx-post="/api/tests/add-section"
-                                hx-vals='{"subject_id": 1, "section": "mcq_single"}'
-                                hx-target="#questions-table-body" hx-swap="beforeend">Add Section</button>
+                            <!-- loader -->
+                            <div id="search-loader" class="hidden absolute inset-0 flex items-center justify-center">
+                                <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                            </div>
                         </div>
-                        <table class="w-full mt-2 text-left">
-                            <thead>
-                                <tr class="bg-gray-100">
-                                    <th class="p-2 w-8"></th>
-                                    <th class="p-2">Code</th>
-                                    <th class="p-2">Question</th>
-                                    <th class="p-2">Level</th>
-                                    <th class="p-2 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="p-2"><input type="checkbox" name="st-problem-id" value="50001"></td>
-                                    <td class="p-2 text-blue-600 underline">P0005001</td>
-                                    <td class="p-2">q1 maths</td>
-                                    <td class="p-2">easy</td>
-                                    <td class="p-2 text-right">
-                                        <button class="text-blue-600"
-                                            hx-post="/api/tests/add-single-problem"
-                                            hx-vals='{"problem_id": 50001}'
-                                            hx-target="#questions-table-body" hx-swap="beforeend">Add</button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
                     </div>
-                    -->
-                </div>
+                
+                    <!-- Suggestions full width because parent is relative -->
+                    <div id="suggestions"
+                         class="hidden absolute left-0 mt-1 border rounded bg-white shadow z-10 w-full">
+                    </div>
+                </div>                                
             </div>
         </div>
     </div>
@@ -205,7 +160,7 @@
     So when any child element inside the form (like our <a> tag with hx-get on clicking problem code) triggers 
     an HTMX request, the before-request event is fired on the parent form, causing createTest(...) to be called 
     even for unrelated hx-get actions -->
-    <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50"
+    <form id="add-test-right-div" class="flex-1 p-5 overflow-auto bg-gray-50"
         {{ if eq $mode "copy" }}
             hx-get="/tests/add-test-dialog" hx-target="body" hx-swap="beforeend" hx-push-url="true"
             hx-vals='{
@@ -480,25 +435,41 @@
         }
     }
 
-    // Left panel: Select All in test search
-    // (function () {
-    //     const selectAllCheckbox = document.getElementById('select-all');
-    //     const searchResultsDiv = document.getElementById('test-search-results');
+    var addTestDiv = document.getElementById("add-test-div");
+    var queryInput = document.getElementById("query-input");
+    var suggestions = document.getElementById("suggestions");
+    var searchBtn = document.getElementById("search-btn");
 
-    //     if (selectAllCheckbox && searchResultsDiv) {
-    //         selectAllCheckbox.addEventListener('change', () => {
-    //             const checkboxes = searchResultsDiv.querySelectorAll('input[name="st-problem-id"]');
-    //             checkboxes.forEach(cb => { cb.checked = selectAllCheckbox.checked; });
-    //         });
+    function onSearchResponse(event) {
+        // If HTMX response contains child nodes, show
+        if (suggestions.children.length > 0) {
+            suggestions.classList.remove("hidden");
+        } else {
+            // No results
+            suggestions.classList.add("hidden");
+        }
+        searchBtn.classList.remove("hidden");
+    }
 
-    //         // When HTMX swaps new search results, reset the select-all checkbox
-    //         document.body.addEventListener('htmx:afterSwap', (e) => {
-    //             if (e.detail && e.detail.target && e.detail.target.id === 'test-search-results') {
-    //                 selectAllCheckbox.checked = false;
-    //             }
-    //         });
-    //     }
-    // })();
+    // Close with ESC
+    addTestDiv.onkeydown = function (e) {
+        if (e.key === "Escape") {
+            suggestions.classList.add("hidden");
+        }
+    };
+
+    // Hide when clicking inside block but not on suggestions/input/button
+    addTestDiv.addEventListener("click", (e) => {
+        if (!suggestions.contains(e.target) && e.target !== searchBtn && e.target !== queryInput) {
+            suggestions.classList.add("hidden");
+        }
+    });
+
+    // Handle clicking a suggestion
+    function selectSuggestion(value) {
+        queryInput.value = value;            // Display suggestion text in input
+        suggestions.classList.add("hidden"); // Close the box
+    }
 
     htmx.defineExtension('cascade-clear', {
         onEvent: function (name, event) {
@@ -523,9 +494,12 @@
                 const targetId = event.detail.elt.id;
                 if (targetId === "chapter-dropdown") {
                     const curriculum = document.getElementById("curriculum-dropdown");
-                    // if curriculum is disabled (when search tab is active) then prevent chapters request
-                    // because there is no point in fetching chapters if curriculum value is blank
-                    if (curriculum.disabled) {
+                    const grade = document.getElementById("grade-dropdown");
+                    const subject = document.getElementById("subject-dropdown");
+
+                    // if curriculum is disabled (when search tab is active) or any of the dropdown 
+                    // values are blank then prevent chapters request
+                    if (curriculum.disabled || !curriculum.value || !grade.value || !subject.value) {
                         event.preventDefault();
                     }
                 }
@@ -749,7 +723,7 @@
               }).catch(err => {
                   console.error(mode === "edit" ? "Error during test updation:" : "Error during test creation:", err);
                   // Re-enable the Continue button on error (copy flow disables it before calling createTest)
-                  const submitBtn = document.querySelector('#add-test-div button[type="submit"]');
+                  const submitBtn = document.querySelector('#add-test-right-div button[type="submit"]');
                   if (mode === "copy") {
                       submitBtn.disabled = false;
                       submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -982,7 +956,7 @@
                 alert("Error: Missing required test details.\nPlease check subtype, exam, curriculum and grade selections.");
             } else {
                 // Disable the Continue button before calling creatTest()
-                const submitBtn = document.querySelector('#add-test-div button[type=\"submit\"]');
+                const submitBtn = document.querySelector('#add-test-right-div button[type=\"submit\"]');
                 if (submitBtn) {
                     submitBtn.disabled = true;
                     submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
