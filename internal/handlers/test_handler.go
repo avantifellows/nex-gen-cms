@@ -793,15 +793,12 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	allocCtx, allocCancel := chromedp.NewRemoteAllocator(context.Background(), "ws://localhost:9222")
 	defer allocCancel()
-	
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancel()
-
-	ctx = chromedp.WithAllocator(ctx, allocCtx)
 
 	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
-
+	
+	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
 
 	var pdfData []byte
 
