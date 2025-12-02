@@ -792,13 +792,10 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		</div>`, headerTxt)
 
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.ExecPath("/usr/local/bin/chrome-headless-shell"),
-		chromedp.Flag("headless", true),
-		chromedp.Flag("no-sandbox", true),
-		chromedp.Flag("disable-dev-shm-usage", true),
+    	chromedp.Flag("remote-debugging-port", "9222"),
 	)
 
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	allocCtx, cancel := chromedp.NewRemoteAllocator(context.Background(), "ws://localhost:9222")
 	defer cancel()
 
 	ctx, cancel := chromedp.NewContext(allocCtx)
