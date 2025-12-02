@@ -791,10 +791,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
 
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-    	chromedp.Flag("remote-debugging-port", "9222"),
-	)
-
 	allocCtx, cancel := chromedp.NewRemoteAllocator(context.Background(), "ws://localhost:9222")
 	defer cancel()
 
