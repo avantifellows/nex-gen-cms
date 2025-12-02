@@ -791,8 +791,17 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
 
-	// Create Chrome context
-	ctx, cancel := chromedp.NewContext(context.Background())
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.ExecPath("/usr/local/bin/chrome-headless-shell"),
+		chromedp.Flag("headless", true),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+	)
+
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
 	// Set a global timeout (for safety)
@@ -924,7 +933,7 @@ func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request 
 	responseWriter.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(responseWriter).Encode(data)
 }
-  
+
 func getProblemChapterName(p models.Problem, lang string) string {
 	return p.GetChapterNameByLang(lang)
 }
