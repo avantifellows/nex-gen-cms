@@ -791,11 +791,12 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
 
-	// Create Chrome context
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
+	allocCtx, allocCancel := chromedp.NewRemoteAllocator(context.Background(), "ws://localhost:9222")
+	defer allocCancel()
 
-	// Set a global timeout (for safety)
+	ctx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+	
 	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
@@ -924,7 +925,7 @@ func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request 
 	responseWriter.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(responseWriter).Encode(data)
 }
-  
+
 func getProblemChapterName(p models.Problem, lang string) string {
 	return p.GetChapterNameByLang(lang)
 }
