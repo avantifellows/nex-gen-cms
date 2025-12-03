@@ -791,11 +791,12 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
 
-	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.ExecPath("/usr/local/bin/chrome-headless-shell"),
-		chromedp.Flag("headless", true),
+	opts := append(
+		chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.ExecPath("/home/ec2-user/.cache/ms-playwright/chromium-1200/chrome-linux/chrome"),
 		chromedp.Flag("no-sandbox", true),
-		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("headless", true),
 	)
 
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
