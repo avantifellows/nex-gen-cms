@@ -791,8 +791,8 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
 
-	execPath := "/opt/playwright-browsers/WRONG-PATH/chrome-linux/chrome"
-
+	execPath := "/opt/playwright-browsers/chromium-1200/chrome-linux/chrome"
+	log.Println("execPath:", execPath)
 	opts := append(
 		chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.ExecPath(execPath),
