@@ -46,7 +46,7 @@ func RequireLogin(next http.Handler, exceptions ...string) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("Incoming:", r.URL.Path)
+		log.Printf("Middleware: Incoming request: %s %s", r.Method, r.URL.Path)
 		if _, ok := exceptionSet[r.URL.Path]; ok {
 			next.ServeHTTP(w, r)
 			return

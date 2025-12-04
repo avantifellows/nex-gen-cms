@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -13,9 +15,17 @@ import (
 )
 
 func main() {
-	log.SetOutput(os.Stdout)
+	logFile, err := os.OpenFile("/opt/nex-gen-cms/logs/nexgencms.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot open log file: %v", err))
+	}
+	defer logFile.Close()
+
+	log.SetOutput(io.MultiWriter(os.Stdout, logFile)) // send to both stdout and log file
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.SetPrefix("cms: ")
+
+	log.Println("=== Nex Gen CMS STARTING ===")
 
 	// New mux object is created here instead of using Default via http, so that we can create its mock in testing
 	mux := http.NewServeMux()
