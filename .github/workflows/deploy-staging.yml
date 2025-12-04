@@ -64,8 +64,8 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
       
-      - name: Terraform Plan with Replacement
-        run: terraform plan -out=tfplan -replace="aws_instance.web"
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
 
       - name: Terraform Apply
         id: apply
