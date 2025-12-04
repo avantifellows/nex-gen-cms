@@ -135,6 +135,7 @@ resource "aws_instance" "web" {
   availability_zone      = data.aws_availability_zones.available.names[0]
 
   user_data = local.user_data
+  user_data_replace_on_change = true
 
   root_block_device {
     volume_type           = "gp3"
