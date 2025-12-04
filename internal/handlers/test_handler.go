@@ -794,7 +794,18 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	execPath := "/opt/playwright-browsers/chromium-1200/chrome-linux/chrome"
 	log.Println("execPath:", execPath)
 
-	ctx, cancel := chromedp.NewContext(context.Background())
+	opts := append(
+		chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.ExecPath(execPath),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("headless", true),
+	)
+
+	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer cancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
 	// Set a global timeout (for safety)
