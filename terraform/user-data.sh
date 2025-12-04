@@ -85,6 +85,10 @@ RestartSec=5
 StandardOutput=journal
 StandardError=journal
 
+# Playwright configuration
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+Environment=PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
 [Install]
 WantedBy=multi-user.target
 EOF
