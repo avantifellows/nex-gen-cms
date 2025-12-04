@@ -712,6 +712,8 @@ func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRu
 }
 
 func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *http.Request) {
+	log.Println("Reached downloadpdf")
+
 	selectedTestPtr, code, err := h.getTest(responseWriter, request)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
@@ -793,6 +795,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	execPath := "/opt/playwright-browsers/chromium-1200/chrome-linux/chrome"
 	fmt.Println("execPath:", execPath)
+	log.Printf("Generated PDF path: %s", execPath)
 	opts := append(
 		chromedp.DefaultExecAllocatorOptions[:],
 		chromedp.ExecPath(execPath),

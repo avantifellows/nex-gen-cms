@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/avantifellows/nex-gen-cms/config"
 	"github.com/avantifellows/nex-gen-cms/di"
@@ -11,6 +13,10 @@ import (
 )
 
 func main() {
+	log.SetOutput(os.Stdout)
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	log.SetPrefix("cms: ")
+
 	// New mux object is created here instead of using Default via http, so that we can create its mock in testing
 	mux := http.NewServeMux()
 	appComponentPtr, err := di.NewAppComponent()
