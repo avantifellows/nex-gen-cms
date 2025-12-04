@@ -791,21 +791,32 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
 
-	execPath := "/opt/playwright-browsers/chromium-1200/chrome-linux/chrome"
+	var ctx context.Context
+	var cancel context.CancelFunc
 
-	opts := append(
-		chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.ExecPath(execPath),
-		chromedp.Flag("no-sandbox", true),
-		chromedp.Flag("disable-gpu", true),
-		chromedp.Flag("headless", true),
-	)
+	if isEC2() {
+		ec2ChromiumPath := "/opt/playwright-browsers/chromium-1200/chrome-linux/chrome"
 
-	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	defer cancel()
+		// We are on EC2 → use custom execPath
+		opts := append(
+			chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.ExecPath(ec2ChromiumPath),
+			chromedp.Flag("no-sandbox", true),
+			chromedp.Flag("disable-gpu", true),
+			chromedp.Flag("headless", true),
+		)
 
-	ctx, cancel := chromedp.NewContext(allocCtx)
-	defer cancel()
+		allocCtx, c := chromedp.NewExecAllocator(context.Background(), opts...)
+		defer c()
+
+		ctx, cancel = chromedp.NewContext(allocCtx)
+		defer cancel()
+
+	} else {
+		// Local machine → normal Chromedp
+		ctx, cancel = chromedp.NewContext(context.Background())
+		defer cancel()
+	}
 
 	// Set a global timeout (for safety)
 	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
@@ -880,6 +891,11 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - %s.pdf"`,
 		selectedTestPtr.GetNameByLang("en"), pdfSuffix))
 	_, _ = responseWriter.Write(pdfData)
+}
+
+func isEC2() bool {
+	_, err := os.Stat("/opt/playwright-browsers/chromium-1200/chrome-linux/chrome")
+	return err == nil
 }
 
 func optionLabels() []string {
