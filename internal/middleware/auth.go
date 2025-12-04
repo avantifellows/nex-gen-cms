@@ -1,6 +1,9 @@
 package middleware
 
-import "net/http"
+import (
+	"log"
+	"net/http"
+)
 
 const sessionCookieName = "cms_session"
 
@@ -43,6 +46,7 @@ func RequireLogin(next http.Handler, exceptions ...string) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("Incoming:", r.URL.Path)
 		if _, ok := exceptionSet[r.URL.Path]; ok {
 			next.ServeHTTP(w, r)
 			return

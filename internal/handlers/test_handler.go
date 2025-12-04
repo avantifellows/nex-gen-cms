@@ -107,7 +107,7 @@ func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *ht
 
 func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
-
+	fmt.Println("gettests")
 	curriculumId, gradeId, _ := getCurriculumGradeSubjectIds(urlVals)
 	if curriculumId == 0 || gradeId == 0 {
 		return
@@ -713,6 +713,7 @@ func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRu
 
 func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *http.Request) {
 	log.Println("Reached downloadpdf")
+	fmt.Println("downloadpdf")
 
 	selectedTestPtr, code, err := h.getTest(responseWriter, request)
 	if err != nil {
