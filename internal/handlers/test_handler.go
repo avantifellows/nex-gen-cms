@@ -794,8 +794,12 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	var ctx context.Context
 	var cancel context.CancelFunc
 
-	if isEC2() {
-		ec2ChromiumPath := "/opt/playwright-browsers/chromium-1200/chrome-linux/chrome"
+	if utils.DoesPlaywrightDirectoryExist() {
+		ec2ChromiumPath, err := utils.FindChromiumPath()
+		if err != nil {
+			http.Error(responseWriter, "Playwright Chromium not found: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		// We are on EC2 → use custom execPath
 		opts := append(
@@ -891,11 +895,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - %s.pdf"`,
 		selectedTestPtr.GetNameByLang("en"), pdfSuffix))
 	_, _ = responseWriter.Write(pdfData)
-}
-
-func isEC2() bool {
-	_, err := os.Stat("/opt/playwright-browsers/chromium-1200/chrome-linux/chrome")
-	return err == nil
 }
 
 func optionLabels() []string {
