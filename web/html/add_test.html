@@ -139,6 +139,7 @@
                          class="hidden absolute left-0 mt-1 border rounded bg-white shadow z-10 w-full">
                     </div>
                 </div>                                
+                <div id="selected-test-results" class="mt-4"></div>
             </div>
         </div>
     </div>
@@ -470,6 +471,27 @@
         queryInput.value = value;            // Display suggestion text in input
         suggestions.classList.add("hidden"); // Close the box
     }
+
+    function selectSuggestionWithLoad(id, curriculumId, gradeId, displayText) {
+        selectSuggestion(displayText);
+        htmx.ajax("GET", `/api/test/subjectwise-problems?id=${id}&curriculum_id=${curriculumId}&grade_id=${gradeId}`, {
+            target: "#selected-test-results",
+            swap: "innerHTML"
+        });
+    }
+
+    // function addAllFromSubject(btn) {
+    //     const table = btn.parentElement?.nextElementSibling;
+    //     if (!table) return;
+    //     const addButtons = table.querySelectorAll('tbody button[data-id]');
+    //     addButtons.forEach(b => {
+    //         if (typeof addQuestionToTest === "function") {
+    //             addQuestionToTest(b);
+    //         } else {
+    //             b.click();
+    //         }
+    //     });
+    // }
 
     htmx.defineExtension('cascade-clear', {
         onEvent: function (name, event) {

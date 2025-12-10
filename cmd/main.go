@@ -106,6 +106,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/api/search-tests", testsHandler.GetSearchTests)
 	muxHandler.HandleFunc("/test", testsHandler.GetTest)
 	muxHandler.HandleFunc("/api/test/problems", testsHandler.GetTestProblems)
+	muxHandler.HandleFunc("/api/test/subjectwise-problems", testsHandler.GetSubjectwiseTestProblems)
 	muxHandler.HandleFunc("/tests/add-test", testsHandler.AddTest)
 	muxHandler.HandleFunc("/add-question-to-test", testsHandler.AddQuestionToTest)
 	muxHandler.HandleFunc("/create-test", testsHandler.CreateTest)

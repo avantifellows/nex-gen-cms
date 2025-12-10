@@ -47,6 +47,7 @@ const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.
 const addTestDestProblemRowTemplate = "dest_problem_row.html"
 const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
 const addTestDestSubjectRowTemplate = "dest_subject_row.html"
+const addTestSearchedTemplate = "add_test_searched.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
 const addTestModalTemplate = "add_test_modal.html"
 const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
@@ -300,6 +301,33 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 	}
 
 	views.ExecuteTemplates(responseWriter, data, nil, baseTemplate, testTemplate)
+}
+
+func (h *TestsHandler) GetSubjectwiseTestProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedTestPtr, code, err := h.getTest(responseWriter, request)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	problems := h.getTestProblems(responseWriter, request)
+	if problems == nil {
+		return
+	}
+	problemsMap := make(map[int]*models.Problem)
+	for _, p := range *problems {
+		problemsMap[p.ID] = p
+	}
+
+	data := dto.HomeData{
+		TestPtr:  selectedTestPtr,
+		Problems: problemsMap,
+	}
+
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"emptySlice": utils.EmptySlice[*models.Problem],
+		"append":     utils.Append[*models.Problem],
+	}, addTestSearchedTemplate, srcProblemRowTemplate)
 }
 
 func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http.Request) (*models.Test, int, error) {

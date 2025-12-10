@@ -87,6 +87,10 @@ func Slice(args ...any) []any {
 	return args
 }
 
+func EmptySlice[T any]() []T {
+	return []T{}
+}
+
 func Dict(values ...any) map[string]any {
 	dict := make(map[string]any)
 	for i := 0; i < len(values); i += 2 {
@@ -132,4 +136,8 @@ func Capitalize(s string) string {
 		return s
 	}
 	return strings.ToUpper(string(s[0])) + s[1:]
+}
+
+func Append[T any](slice []T, v T) []T {
+	return append(slice, v)
 }

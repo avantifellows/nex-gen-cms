@@ -23,6 +23,7 @@ const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
 
 const problemTemplate = "problem.html"
+const srcProblemRowParentTemplate = "src_problem_row_parent.html"
 const srcProblemRowTemplate = "src_problem_row.html"
 const problemsTemplate = "problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
@@ -148,15 +149,14 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 
 	filterProblems(problems, urlValues.Get("level-dropdown"), urlValues.Get("ptype-dropdown"), urlValues.Get("selected-ids"))
 
-	var tmpl string
 	if urlValues.Has("level-dropdown") {
 		// for add/edit test screen
-		tmpl = srcProblemRowTemplate
+		views.ExecuteTemplates(responseWriter, problems, nil, srcProblemRowParentTemplate, srcProblemRowTemplate)
+
 	} else {
 		// for topic screen's Problems tab
-		tmpl = topicProblemRowTemplate
+		views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
 	}
-	views.ExecuteTemplate(tmpl, responseWriter, problems, nil)
 }
 
 func filterProblems(problems *[]*models.Problem, difficulty string, ptype string, selectedIdsRaw string) {

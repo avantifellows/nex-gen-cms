@@ -1,3 +1,4 @@
+{{ define "src_problem_row" }}
 {{ range . }}
 <tr class="border-b">
     <td class="p-2 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
@@ -179,4 +180,5 @@
         return false;
     }
 </script>
+{{ end }}
 {{ end }}
