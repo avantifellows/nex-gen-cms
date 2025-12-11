@@ -474,24 +474,44 @@
 
     function selectSuggestionWithLoad(id, curriculumId, gradeId, displayText) {
         selectSuggestion(displayText);
-        htmx.ajax("GET", `/api/test/subjectwise-problems?id=${id}&curriculum_id=${curriculumId}&grade_id=${gradeId}`, {
+        const selectedIds = getSelectedProblemIds();
+        htmx.ajax("GET", `/api/test/subjectwise-problems?id=${id}&curriculum_id=${curriculumId}&grade_id=${gradeId}&selected-ids=${selectedIds}`, {
             target: "#selected-test-results",
             swap: "innerHTML"
         });
     }
 
-    // function addAllFromSubject(btn) {
-    //     const table = btn.parentElement?.nextElementSibling;
-    //     if (!table) return;
-    //     const addButtons = table.querySelectorAll('tbody button[data-id]');
-    //     addButtons.forEach(b => {
-    //         if (typeof addQuestionToTest === "function") {
-    //             addQuestionToTest(b);
-    //         } else {
-    //             b.click();
-    //         }
-    //     });
-    // }
+    function getSelectedProblemIds() {
+        return Array.from(document.querySelectorAll(problemRowsSelectors))
+            .map(row => row.id.replace("problem-", ""))
+            .join(",");
+    }
+
+    async function addAllFromSubject(btn) {
+        const headerRow = btn.closest('tr');
+        if (!headerRow) return;
+
+        const buttonsToAdd = [];
+
+        // Collect all add buttons first (before any DOM changes)
+        let row = headerRow.nextElementSibling;
+        // iterate rows until next subject header (row that contains another Add All button)
+        while (row) {
+            // next subject header encountered -> stop
+            if (row.querySelector('button[onclick*="addAllFromSubject"]')) break;
+
+            const addBtn = row.querySelector('button[data-id]');
+            // addBtn won't be found for extra rows added by HTMX for animation, which we can skip
+            if (addBtn) buttonsToAdd.push(addBtn);
+
+            row = row.nextElementSibling;
+        }
+
+        // Process sequentially
+        for (const addBtn of buttonsToAdd) {
+            await addQuestionToTest(addBtn);
+        }
+    }
 
     htmx.defineExtension('cascade-clear', {
         onEvent: function (name, event) {
@@ -533,9 +553,7 @@
         onEvent: function (name, evt) {
             if (name === "htmx:configRequest") {
                 // add already selected problem ids in parameters
-                const selectedIds = Array.from(document.querySelectorAll(problemRowsSelectors))
-                    .map(row => row.id.replace("problem-", ""));
-                evt.detail.parameters["selected-ids"] = selectedIds.join(",");
+                evt.detail.parameters["selected-ids"] = getSelectedProblemIds();
             }
         }
     });

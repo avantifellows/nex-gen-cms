@@ -319,6 +319,32 @@ func (h *TestsHandler) GetSubjectwiseTestProblems(responseWriter http.ResponseWr
 		problemsMap[p.ID] = p
 	}
 
+	selectedIdsParam := request.URL.Query().Get("selected-ids")
+	if selectedIdsParam != "" {
+		// Build a set of already-selected problem IDs
+		selectedIDs := make(map[int]bool)
+		for _, idStr := range strings.Split(selectedIdsParam, ",") {
+			selectedIDs[utils.StringToInt(idStr)] = true
+		}
+
+		// Filter out problems from the selected test's compulsory lists
+		for si := range selectedTestPtr.TypeParams.Subjects {
+			subject := &selectedTestPtr.TypeParams.Subjects[si]
+			for secIdx := range subject.Sections {
+				section := &subject.Sections[secIdx]
+				ps := section.Compulsory.Problems
+				n := 0
+				for _, p := range ps {
+					if !selectedIDs[p.ID] {
+						ps[n] = p
+						n++
+					}
+				}
+				section.Compulsory.Problems = ps[:n]
+			}
+		}
+	}
+
 	data := dto.HomeData{
 		TestPtr:  selectedTestPtr,
 		Problems: problemsMap,
