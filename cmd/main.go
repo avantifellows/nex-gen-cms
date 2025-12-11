@@ -103,6 +103,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	testsHandler := appComponentPtr.TestsHandler
 	muxHandler.HandleFunc("/tests", testsHandler.LoadTests)
 	muxHandler.HandleFunc("/api/tests", testsHandler.GetTests)
+	muxHandler.HandleFunc("/api/search-tests", testsHandler.GetSearchTests)
 	muxHandler.HandleFunc("/test", testsHandler.GetTest)
 	muxHandler.HandleFunc("/api/test/problems", testsHandler.GetTestProblems)
 	muxHandler.HandleFunc("/tests/add-test", testsHandler.AddTest)
@@ -114,12 +115,15 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/update-test", testsHandler.UpdateTest)
 	muxHandler.HandleFunc("/archive-test", testsHandler.ArchiveTest)
 	muxHandler.HandleFunc("/download-pdf", testsHandler.DownloadPdf)
+	muxHandler.HandleFunc("/tests/copy-test", testsHandler.CopyTest)
+	muxHandler.HandleFunc("/tests/validate-test", testsHandler.ValidateTest)
 
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problem", problemsHandler.GetProblem)
 	muxHandler.HandleFunc("/api/topic/problems", problemsHandler.GetTopicProblems)
 	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)
 	muxHandler.HandleFunc("/topic/add-problem", problemsHandler.AddProblem)
+	muxHandler.HandleFunc("/topic/add-problem/add-concept-dialog", problemsHandler.AddConceptModal)
 	muxHandler.HandleFunc("/create-problem", problemsHandler.CreateProblem)
 	muxHandler.HandleFunc("/problems/edit-problem", problemsHandler.EditProblem)
 	muxHandler.HandleFunc("/update-problem", problemsHandler.UpdateProblem)
@@ -130,10 +134,4 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 
 	examsHandler := appComponentPtr.ExamsHandler
 	muxHandler.HandleFunc("/api/exams", examsHandler.GetExams)
-
-	modulesHandler := appComponentPtr.ModulesHandler
-	muxHandler.HandleFunc("/modules", modulesHandler.LoadModules)
-
-	booksHandler := appComponentPtr.BooksHandler
-	muxHandler.HandleFunc("/books", booksHandler.LoadBooks)
 }

@@ -1,15 +1,25 @@
 <div id="addTestModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
     <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
-        <h2 class="text-lg font-semibold mb-4">Create New Test</h2>
+        <h2 class="text-lg font-semibold mb-4">
+            {{ if .Subtype }}Copy Test{{ else }}Create New Test{{ end }}
+        </h2>
         <form id="addTestForm">
             <div id="curriculum-grade-container" class="space-y-4 mb-6">
                 <div class="curriculum-grade-set">
-                    <div class="grid grid-cols-2 gap-4">
+                    <div class="grid grid-cols-[1fr_1fr_auto] gap-4 items-center">
                         <label class="font-medium">Curriculum</label>
                         <label class="font-medium">Grade</label>
+                        <div class="w-6"><!-- empty header space for ✕ button --></div>
                     </div>
-                    <div id="curriculum-grade-set" name="curriculum-grade-set" class="grid grid-cols-2 gap-4 mt-1">
-                        {{ template "curriculum_grade_selects" }}
+                    <div id="curriculum-grade-set" name="curriculum-grade-set" class="grid gap-4 mt-1">
+                        {{ if .CurriculumGrades }}
+                            {{ $count := len .CurriculumGrades }}
+                            {{ range .CurriculumGrades }}
+                                {{ template "curriculum_grade_selects" dict "Item" . "Count" $count }}
+                            {{ end }}
+                        {{ else }}
+                            {{ template "curriculum_grade_selects" }}
+                        {{ end }}
                     </div>
                 </div>
             </div>
@@ -17,14 +27,15 @@
             <!-- Link to add more Curriculum-Grade sets -->
             <div class="mb-6">
                 <a href="#" class="text-blue-500 text-sm hover:underline" hx-get="/add-curriculum-grade-selects"
-                    hx-target="#curriculum-grade-set" hx-swap="beforeend">+ Add one more set</a>
+                    hx-target="#curriculum-grade-set" hx-swap="beforeend" 
+                    hx-on::after-request="handleAddCurriculumGradeResponse(event)">+ Add one more set</a>
             </div>
 
             <!-- Test Type Dropdown -->
             <div class="mb-6 flex items-center gap-4">
                 <label for="modal-testType" class="font-medium whitespace-nowrap">Test Type</label>
                 <select id="modal-testType" name="modal-testType" class="flex-1 border p-2 rounded">
-                    {{ template "test_type_options" }}
+                    {{ template "test_type_options" . }}
                 </select>
             </div>
 
@@ -32,7 +43,10 @@
             <div class="mb-6 flex items-center gap-4">
                 <label for="modal-examType" class="font-medium whitespace-nowrap">Exam Type</label>
                 <select id="modal-examType" name="modal-examType" class="flex-1 border p-2 rounded"
-                    hx-get="/api/exams" hx-trigger="revealed once">
+                    hx-get="/api/exams" hx-trigger="revealed once"
+                    {{ if .ExamID }}
+                        hx-on::after-request="document.getElementById('modal-examType').value='{{ .ExamID }}'"
+                    {{ end }}>
                     <option disabled selected>Loading exams...</option>
                 </select>
             </div>
@@ -41,9 +55,18 @@
             <div class="w-full flex-row flex justify-end space-x-2">
                 <button type="button" onclick="closeAddTestModal()"
                     class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
+
+                <!-- Continue (normal new test flow) -->
                 <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="true"
                     hx-on::before-request="if (!validateTestType()) event.preventDefault()"
-                    class="bg-blue-500 text-white px-4 py-2 rounded">Continue</button>
+                    class="bg-blue-500 text-white px-4 py-2 rounded {{ if .Subtype }}hidden{{ end }}">Continue</button>
+
+                <!-- Validate (copy mode) -->
+                <button type="button" hx-post="/tests/validate-test" hx-swap="none"
+                    class="bg-blue-500 text-white px-4 py-2 rounded {{ if not .Subtype }}hidden{{ end }}"
+                    hx-on::after-request="handleValidateTestResponse(event)">
+                    Validate & Save
+                </button>
             </div>
 
         </form>
@@ -59,6 +82,62 @@
         }
         // allow form submission
         return true;
+    }
+
+    function handleAddCurriculumGradeResponse(evt) {
+        // Only run if the request succeeded
+        if (evt.detail.successful) {
+            // Make all delete buttons visible, because now there are at least two rows
+            makeAllDeleteButtonsVisible();
+        }
+    }
+
+    function selectPreloadedOption(selectEl) {
+        const selectedValue = selectEl.dataset.selected;
+        if (!selectedValue) return;
+        const option = selectEl.querySelector(`option[value='${selectedValue}']`);
+        if (option) {
+            option.selected = true;
+        }
+    }
+
+    function makeAllDeleteButtonsVisible() {
+        const buttons = document.querySelectorAll('.curriculum-grade-row button');
+        buttons.forEach(btn => btn.classList.remove('invisible'));
+    }
+
+    function removeCurriculumGradeRow(button) {
+        const row = button.closest('.curriculum-grade-row');
+        row.remove();
+
+        // After removal, check how many rows remain
+        const rows = document.querySelectorAll('.curriculum-grade-row');
+        if (rows.length === 1) {
+            // Hide the only remaining remove button
+            rows[0].querySelector('button').classList.add('invisible');
+        }
+    }
+
+    function handleValidateTestResponse(evt) {
+        if (!evt.detail.successful) {
+            alert("Failed to fetch test rules.");
+            return;
+        }
+
+        try {
+            const data = JSON.parse(evt.detail.xhr.responseText);
+            closeAddTestModal();
+            
+            // setTimeout is used to ensure the modal is closed and backside screen is refreshed 
+            // before validation starts
+            setTimeout(() => {
+                validateAndCreateTest(data);
+            }, 10);
+
+        } catch (err) {
+            console.error("Error parsing rule:", err);
+            alert("Invalid response format.");
+        }
     }
 
     function closeAddTestModal() {

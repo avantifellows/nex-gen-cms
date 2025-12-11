@@ -9,9 +9,7 @@
     <!-- For tailwind css library -->
     <link href="/web/static/css/output.css" rel="stylesheet">
     <!-- For Font Awesome library -->
-    <!-- data-fa-style="color" is added to tell Font Awesome to allow color CSS to apply to the SVGs, which is 
-    required for difficulty rating stars on problem screen -->
-    <script src="https://kit.fontawesome.com/76cfc651ea.js" crossorigin="anonymous" data-fa-style="color"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <script src="https://unpkg.com/mathlive"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
@@ -58,33 +56,30 @@
 </head>
 
 <body hx-ext="mathJaxLoader">
+    <script src="/web/static/js/nav-tracker.js"></script>
     <div>
         <nav>
             <div class="nav nav-tabs flex" id="nav-tab">
                 <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
-                <button class="nav-link" id="modules-tab" hx-get="/modules" hx-push-url="true" hx-target="body"
-                    data-toggle="tab">Modules</button>
-                <button class="nav-link" id="books-tab" hx-get="/books" hx-push-url="true" hx-target="body"
-                    data-toggle="tab">Books</button>
                 <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
-                    hx-on::before-request="sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false')">Tests</button>
+                    hx-on::before-request="sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false')">Tests</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
                 <select class="ms-8" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
                     hx-trigger="load" hx-on::after-request="afterDropdownReq(this, 
                     {{ if .CurriculumID }}{{ .CurriculumID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');">
+                    onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading curriculums...</option>
                 </select>
                 <select class="ms-4" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
                     hx-on::after-request="afterDropdownReq(this, 
                     {{ if .GradeID }}{{ .GradeID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_LOADED_KEY, 'false');">
+                    onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
                     <!-- HTMX will replace this with the new options -->
                     <option disabled selected>Loading grades...</option>
                 </select>
@@ -122,7 +117,6 @@
         // Attach to window to make it globally accessible
         window.isInt = isInt;
     </script>
-    <script src="/web/static/js/nav-tracker.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             let debounceTimeout;
@@ -130,8 +124,6 @@
             function getTabURLFromPath(path) {
                 // Define URL-to-tab mapping based on expected paths
                 if (path.startsWith("/chapter")) return "chapters-tab";
-                if (path === "/modules") return "modules-tab";
-                if (path === "/books") return "books-tab";
                 if (path.startsWith("/test")) return "tests-tab";
                 return null;
             }
@@ -158,7 +150,8 @@
                 
                 // Hide subject dropdown when "Tests" tab is active
                 const subjectDropdown = document.getElementById("subject-dropdown");
-                if (activeTabId === "tests-tab" && !(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test"))) {
+                if (activeTabId === "tests-tab" && !(currentPath.endsWith("/add-test") 
+                    || currentPath.endsWith("/edit-test") || currentPath.endsWith("/copy-test"))) {
                     subjectDropdown.style.display = "none";
                 } else {
                     subjectDropdown.style.display = "inline-block";

@@ -1,8 +1,8 @@
 (function() {
     htmx.defineExtension('table-sort', {
         onEvent: function(name, evt) {
-            if (name === "htmx:afterProcessNode") {
-                let scope = evt.target.getAttribute("data-sort-scope");
+            if (name === "htmx:afterProcessNode" && evt.target) {
+                let scope = evt.target?.getAttribute("data-sort-scope");
                 if (!scope) return;
 
                 const SORT_COLUMN = scope + "SortColumn";
@@ -20,8 +20,29 @@
 
                 const SORT_COLUMN = scope + "SortColumn";
                 const SORT_ORDER = scope + "SortOrder";
-
+                
                 if (evt.detail.path.startsWith("/api/" + scope)) {
+                    // Parse URL to inspect query parameters
+                    let url = new URL(evt.detail.path, window.location.origin);
+                    let colParam = url.searchParams.get("col");
+                    if (colParam) {
+                        // Without below code, Api call is going with previously stored values for sort column & order, because
+                        // Onclick updates correct sort state but it is called after config request. Hence we have used col param instead
+                        // of onclick for tests
+                        
+                        // update Sort State in session storage before modifying URL/params
+                        updateSortState(colParam, scope);
+
+                        // Remove 'col' from the URL
+                        url.searchParams.delete("col");
+
+                        // Rebuild the path without the 'col' parameter
+                        evt.detail.path = url.pathname + (url.searchParams.toString() ? "?" + url.searchParams.toString() : "");
+
+                        // update sort icon on UI
+                        restoreState(scope, SORT_COLUMN, SORT_ORDER);
+                    }
+
                     // Get sessionStorage values
                     let sortColumn = sessionStorage.getItem(SORT_COLUMN);
                     let sortOrder = sessionStorage.getItem(SORT_ORDER);
@@ -74,7 +95,9 @@
         // Highlight active column
         table.querySelectorAll("th").forEach(th => {
             let link = th.querySelector("a");
-            if (link && link.getAttribute("hx-on:click")?.includes(column)) {
+            // hx-get condition is for tests
+            if (link && (link.getAttribute("hx-on:click")?.includes(column) 
+                    || link.getAttribute("hx-get")?.includes(`col=${column}`))) {
                 let icon = th.querySelector("i.fas");
                 if (icon) {
                     icon.classList.remove("fa-sort");
