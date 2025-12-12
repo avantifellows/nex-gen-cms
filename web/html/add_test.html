@@ -139,11 +139,10 @@
                          class="hidden absolute left-0 mt-1 border rounded bg-white shadow z-10 w-full">
                     </div>
                 </div>         
-                <div id="search-results-loader" class="hidden flex justify-center py-4">
+                <div id="searched-test-loader" class="hidden flex justify-center py-4">
                     <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
                 </div>                                   
-                <div id="selected-test-results" class="mt-4"
-                    hx-on::after-request="htmx.removeClass('#search-results-loader', 'htmx-request')">
+                <div id="searched-test-results" class="mt-4">
                 </div>
             </div>
         </div>
@@ -477,31 +476,12 @@
     });
 
     // Handle clicking a suggestion
-    function selectSuggestion(value) {
-        queryInput.value = value;            // Display suggestion text in input
+    function selectSuggestion(divId, displayText) {
+        queryInput.value = displayText;            // Display suggestion text in input
         suggestions.classList.add("hidden"); // Close the box
-    }
 
-    function selectSuggestionWithLoad(id, curriculumId, gradeId, displayText) {
-        selectSuggestion(displayText);
-        loadProblemsForSearchedTest(id, curriculumId, gradeId);
-    }
-
-    function loadProblemsForSearchedTest(id, curriculumId, gradeId) {
         // Save for later refresh
-        sessionStorage.setItem(SESSION_KEY_LAST_SEARCHED_TEST, JSON.stringify({
-            id, curriculumId, gradeId
-        }));
-
-        document.getElementById("selected-test-results").innerHTML = "";
-        htmx.addClass("#search-results-loader", "htmx-request");
-
-        const selectedIds = getSelectedProblemIds();
-        htmx.ajax("GET", `/api/test/subjectwise-problems?id=${id}&curriculum_id=${curriculumId}&grade_id=${gradeId}&selected-ids=${selectedIds}`, {
-            target: "#selected-test-results",
-            swap: "innerHTML",
-            indicator: "#search-results-loader"
-        });
+        sessionStorage.setItem(SESSION_KEY_LAST_SEARCHED_TEST, divId);
     }
 
     function getSelectedProblemIds() {
@@ -632,12 +612,11 @@
     }
 
     function reloadSelectedSearchTest() {
-        const stored = sessionStorage.getItem(SESSION_KEY_LAST_SEARCHED_TEST);
-        if (!stored) return false;
+        const divId = sessionStorage.getItem(SESSION_KEY_LAST_SEARCHED_TEST);
+        if (!divId) return false;
 
-        const { id, curriculumId, gradeId } = JSON.parse(stored);
-
-        loadProblemsForSearchedTest(id, curriculumId, gradeId);
+        const el = document.getElementById(divId);
+        htmx.trigger(el, "click");
         return true;
     }
 

@@ -942,12 +942,22 @@ video {
   display: flex;
 }
 
-#search-results-loader {
+#searched-test-loader {
   display: none;
 }
 
-#search-results-loader.htmx-request {
+#searched-test-loader.htmx-request {
   display: flex;
+}
+
+#searched-test-results {
+  display: block;
+}
+
+/* Hide results during request */
+
+#searched-test-results.htmx-request {
+  display: none;
 }
 
 .\!visible {
