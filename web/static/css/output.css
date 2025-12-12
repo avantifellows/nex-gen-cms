@@ -932,13 +932,21 @@ video {
 
 /* Loader is hidden by default */
 
-#search-loader {
+#search-btn-loader {
   display: none;
 }
 
 /* HTMX makes the loader visible during request */
 
-#search-loader.htmx-request {
+#search-btn-loader.htmx-request {
+  display: flex;
+}
+
+#search-results-loader {
+  display: none;
+}
+
+#search-results-loader.htmx-request {
   display: flex;
 }
 

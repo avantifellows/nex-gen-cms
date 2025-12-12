@@ -31,7 +31,9 @@
 					{{ $list := emptySlice }}
 				
 					{{range .Compulsory.Problems}}
-						{{ $list = append $list (index $.Problems .ID) }}
+						{{ if not (isSelected .ID $.SelectedIDs) }}
+							{{ $list = append $list (index $.Problems .ID) }}
+						{{ end }}
 					{{end}}
 				
 					{{template "src_problem_row" $list}}
