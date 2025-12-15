@@ -149,4 +149,12 @@
     #searched-test-results.htmx-request {
         display: none;
     }
+
+    #question-bank-loader {
+        display: none;
+    }
+
+    #question-bank-loader.htmx-request {
+        display: flex;
+    }
 }

@@ -960,6 +960,14 @@ video {
   display: none;
 }
 
+#question-bank-loader {
+  display: none;
+}
+
+#question-bank-loader.htmx-request {
+  display: flex;
+}
+
 .\!visible {
   visibility: visible !important;
 }

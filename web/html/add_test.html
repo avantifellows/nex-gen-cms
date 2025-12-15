@@ -101,10 +101,14 @@
                     <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems"
                         hx-trigger="change from:(#topic-dropdown, #level-dropdown, #ptype-dropdown)"
                         hx-include="#topic-dropdown, #curriculum-dropdown, #subject-dropdown, #level-dropdown, #ptype-dropdown"
-                        data-mathjax="true">
+                        data-mathjax="true" hx-indicator="#question-bank-loader"
+                        hx-on::before-request="this.innerHTML=''">
                         <!-- Rows will be dynamically inserted here -->
                     </tbody>
                 </table>
+                <div id="question-bank-loader" class="hidden flex justify-center py-4">
+                    <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                </div>                
             </div>
 
             <!-- Tab: Search Tests -->
@@ -428,8 +432,12 @@
             const saved = sessionStorage.getItem('selectedChapter');
 
             // If chapter dropdown exists AND values don't match → restore
-            if (chapterDropdown && saved && chapterDropdown.value !== saved) {
-                onDropdownLoaded(chapterDropdown, 'selectedChapter');
+            if (chapterDropdown && saved) {
+                if (chapterDropdown.value !== saved) {
+                    onDropdownLoaded(chapterDropdown, 'selectedChapter');
+                } else {
+                    reloadSelectedTopicProblems();
+                }
             }
 
         } else {
@@ -600,15 +608,20 @@
 
         updateTotalMarks();
 
-        // Refresh left panel questions
-        const topicDropdown = document.getElementById("topic-dropdown");
-        htmx.trigger(topicDropdown, "change");
-
         // If Search Tests tab active → reload problems of last searched test
         const searchTabActive = !document.getElementById("search-view").classList.contains("hidden");
         if (searchTabActive) {
             reloadSelectedSearchTest();
+
+        } else {
+            // Question Bank tab active -> refresh problems of last selected topic
+            reloadSelectedTopicProblems();
         }
+    }
+
+    function reloadSelectedTopicProblems() {
+        const topicDropdown = document.getElementById("topic-dropdown");
+        htmx.trigger(topicDropdown, "change");
     }
 
     function reloadSelectedSearchTest() {
@@ -616,6 +629,7 @@
         if (!divId) return false;
 
         const el = document.getElementById(divId);
+        if (!el) return false;
         htmx.trigger(el, "click");
         return true;
     }
