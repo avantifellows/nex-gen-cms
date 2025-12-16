@@ -113,15 +113,7 @@
     an HTMX request, the before-request event is fired on the parent form, causing createTest(...) to be called 
     even for unrelated hx-get actions -->
     <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50"
-        {{ if eq $mode "copy" }}
-            hx-get="/tests/add-test-dialog" hx-target="body" hx-swap="beforeend" hx-push-url="true"
-            hx-vals='{
-                "subtype": {{$subtype}},
-                "curriculum_grades": {{ $curriculumGrades | toJson }},
-                "exam_id": {{index .TestPtr.ExamIDs 0}}
-            }'
-            hx-on::before-request="if (!validateFields()) event.preventDefault()"
-        {{ else }}
+        {{ if ne $mode "copy" }}
             hx-post="/create-test"
             hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}}, {{index .TestPtr.ExamIDs 0}})'
         {{ end }}>
@@ -301,7 +293,20 @@
             <label class="text-sm font-medium">Total Marks:</label>
             <label id="total-marks" class="p-2">{{if .Problems}}{{.TestPtr.TypeParams.Marks}}{{else}}0{{end}}</label>
         </div>
-        <button type="submit" class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">{{ if eq $mode "copy" }}Continue{{ else }}Save{{ end }}</button>
+        {{ if eq $mode "copy" }}
+            <button id="continue-btn" type="button"
+                class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                hx-get="/tests/add-test-dialog" hx-target="body" hx-swap="beforeend" hx-push-url="true"
+                hx-vals='{
+                    "subtype": {{$subtype}},
+                    "curriculum_grades": {{ $curriculumGrades | toJson }},
+                    "exam_id": {{index .TestPtr.ExamIDs 0}}
+                }'
+                hx-on::before-request="if (!validateFields()) event.preventDefault()">Continue</button>
+        {{ else }}
+            <button type="submit" class="mt-4 w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                Save</button>
+        {{ end }}
     </form>
 </div>
 <script type="application/json" id="test-rule-json">
@@ -821,11 +826,11 @@
                 alert("Error: Missing required test details.\nPlease check subtype, exam, curriculum and grade selections.");
             } else {
                 // Disable the Continue button before calling creatTest()
-                const submitBtn = document.querySelector('#add-test-div button[type=\"submit\"]');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                    submitBtn.textContent = 'Creating...';
+                const continueBtn = document.getElementById('continue-btn');
+                if (continueBtn) {
+                    continueBtn.disabled = true;
+                    continueBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    continueBtn.textContent = 'Creating...';
                 }
                 createTest(null, null, subtype, curriculumGrades, examIds[0]);
             }
