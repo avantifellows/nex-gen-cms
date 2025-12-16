@@ -838,20 +838,21 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			return chromedp.Evaluate(script, nil).Do(ctx)
 		}),
 
-		// Wait for MathJax to render fully
+		// 3. HARD wait for MathJax + fonts
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			js := `
-            new Promise(resolve => {
-                function check() {
-                    if (window.MathJax && MathJax.typesetPromise) {
-                        MathJax.typesetPromise().then(() => resolve(true));
-                    } else {
-                        setTimeout(check, 200);
-                    }
-                }
-                check();
-            });
-            `
+				(async () => {
+					while (!window.MathJax || !MathJax.startup) {
+						await new Promise(r => setTimeout(r, 50));
+					}
+					await MathJax.startup.promise;
+					await MathJax.typesetPromise();
+					if (document.fonts && document.fonts.ready) {
+						await document.fonts.ready;
+					}
+					return true;
+				})();
+			`
 			return chromedp.Evaluate(js, nil).Do(ctx)
 		}),
 
