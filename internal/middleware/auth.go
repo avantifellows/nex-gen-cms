@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 )
 
 const sessionCookieName = "cms_session"
@@ -45,6 +46,12 @@ func RequireLogin(next http.Handler, exceptions ...string) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// allow static assets
+		if strings.HasPrefix(r.URL.Path, "/web/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		if _, ok := exceptionSet[r.URL.Path]; ok {
 			next.ServeHTTP(w, r)
 			return

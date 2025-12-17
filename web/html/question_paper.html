@@ -3,6 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <title>{{ getName .TestPtr "en" }}</title>
+<style>
+  @font-face {
+    font-family: 'Segoe UI';
+    src: url('/web/static/fonts/segoeui.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Segoe UI';
+    src: url('/web/static/fonts/seguisb.ttf') format('truetype');
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Segoe UI';
+    src: url('/web/static/fonts/segoeuib.ttf') format('truetype');
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap;
+  }
+  body, .font-sans, mjx-container { font-family: 'Segoe UI', Arial, sans-serif !important; }
+</style>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body class="font-sans text-[14px] m-5 mt-0">

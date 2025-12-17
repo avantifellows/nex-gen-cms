@@ -785,6 +785,16 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	}
 	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style></head>", 1)
 
+	// Make font-face URLs absolute so they load from data: URL context
+	scheme := "http"
+	if request.Header.Get("X-Forwarded-Proto") == "https" || request.TLS != nil {
+		scheme = "https"
+	}
+	baseURL := scheme + "://" + request.Host
+	htmlContent = strings.ReplaceAll(htmlContent, "url('/web/static/fonts/", "url('"+baseURL+"/web/static/fonts/")
+	htmlContent = strings.ReplaceAll(htmlContent, "url(\"/web/static/fonts/", "url(\""+baseURL+"/web/static/fonts/")
+	htmlContent = strings.ReplaceAll(htmlContent, "url(/web/static/fonts/", "url("+baseURL+"/web/static/fonts/")
+
 	headerHTML := fmt.Sprintf(`
 		<div style="width:100%%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
 			<div style="margin-bottom:4px;">%s</div>

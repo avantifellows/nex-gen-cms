@@ -20,7 +20,7 @@ func main() {
 
 	setup(new(Config), mux, appComponentPtr)
 	// Paths that don't require login
-	exceptions := []string{"/login", "/favicon.ico", "/web/static/css/output.css"}
+	exceptions := []string{"/login", "/favicon.ico"}
 	http.ListenAndServe("0.0.0.0:8080", middleware.RequireLogin(mux, exceptions...))
 }
 
