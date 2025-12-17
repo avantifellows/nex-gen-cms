@@ -838,20 +838,42 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			return chromedp.Evaluate(script, nil).Do(ctx)
 		}),
 
-		// Wait for MathJax to render fully
+		// Load MathJax (from CDN) with config, then typeset and wait for fonts
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			js := `
-            new Promise(resolve => {
-                function check() {
-                    if (window.MathJax && MathJax.typesetPromise) {
-                        MathJax.typesetPromise().then(() => resolve(true));
-                    } else {
-                        setTimeout(check, 200);
-                    }
-                }
-                check();
-            });
-            `
+				(async () => {
+					// Provide config before loading script
+					window.MathJax = {
+						chtml: { mtextInheritFont: true },
+						startup: { typeset: false }
+					};
+
+					// Dynamically load MathJax if not already present
+					if (!window.MathJax || !MathJax.version) {
+						await new Promise((resolve, reject) => {
+							const s = document.createElement('script');
+							s.id = 'mjx-js';
+							s.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+							s.onload = resolve;
+							s.onerror = reject;
+							document.head.appendChild(s);
+						});
+					}
+
+					// Wait for startup and run typeset
+					while (!window.MathJax || !MathJax.startup) {
+						await new Promise(r => setTimeout(r, 50));
+					}
+					await MathJax.startup.promise;
+					await MathJax.typesetPromise();
+
+					// Ensure fonts are ready (for headless Chromium PDF fidelity)
+					if (document.fonts && document.fonts.ready) {
+						await document.fonts.ready;
+					}
+					return true;
+				})();
+			`
 			return chromedp.Evaluate(js, nil).Do(ctx)
 		}),
 
