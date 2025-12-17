@@ -2,6 +2,7 @@ package di
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/avantifellows/nex-gen-cms/internal/handlers"
@@ -47,7 +48,16 @@ func NewAppComponent() (*AppComponent, error) {
 	examsService := services.NewService[models.Exam](cacheRepo, apiRepo)
 
 	// Initialize handlers
-	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
+	fileServer := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
+	cssPathHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// CORS for fonts so they can be fetched from a data: URL origin
+		if strings.HasSuffix(r.URL.Path, ".ttf") {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Headers", "Origin, Range, Content-Type, Accept")
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 	loginHandler := handlers.NewLoginHandler()
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
 	topicsHandler := handlers.NewTopicsHandler(topicsService)
