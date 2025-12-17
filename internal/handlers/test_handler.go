@@ -796,7 +796,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	htmlContent = strings.ReplaceAll(htmlContent, "url(/web/static/fonts/", "url("+baseURL+"/web/static/fonts/")
 
 	headerHTML := fmt.Sprintf(`
-		<div style="width:100%%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
+		<div style="width:100%%; font-size:12px; font-family:'Segoe UI', Arial, sans-serif; text-align:center; padding:0 40px;">
 			<div style="margin-bottom:4px;">%s</div>
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
@@ -854,7 +854,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 				(async () => {
 					// Provide config before loading script
 					window.MathJax = {
-						chtml: { mtextInheritFont: true },
+						chtml: { mtextInheritFont: true, fontURL: 'about:blank' },
 						startup: { typeset: false }
 					};
 
@@ -901,7 +901,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 				WithDisplayHeaderFooter(true).
 				WithHeaderTemplate(headerHTML).
 				WithFooterTemplate(`
-				<div style="width:100%; font-size:12px; font-family:Arial; position:relative; height:30px; padding:0 40px;">
+				<div style="width:100%; font-size:12px; font-family:'Segoe UI', Arial, sans-serif; position:relative; height:30px; padding:0 40px;">
 					<div style="position:absolute; top:0; left:40px; right:40px;">
 						<hr style="border:0; border-top:1px solid #000; margin:0;">
 					</div>
