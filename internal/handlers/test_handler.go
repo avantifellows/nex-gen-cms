@@ -839,9 +839,36 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
 
-	// Create Chrome context
-	ctx, cancel := chromedp.NewContext(context.Background())
-	defer cancel()
+	var ctx context.Context
+	var cancel context.CancelFunc
+
+	if utils.DoesPlaywrightDirectoryExist() {
+		ec2ChromiumPath, err := utils.FindChromiumPath()
+		if err != nil {
+			http.Error(responseWriter, "Playwright Chromium not found: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// We are on EC2 → use custom execPath
+		opts := append(
+			chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.ExecPath(ec2ChromiumPath),
+			chromedp.Flag("no-sandbox", true),
+			chromedp.Flag("disable-gpu", true),
+			chromedp.Flag("headless", true),
+		)
+
+		allocCtx, c := chromedp.NewExecAllocator(context.Background(), opts...)
+		defer c()
+
+		ctx, cancel = chromedp.NewContext(allocCtx)
+		defer cancel()
+
+	} else {
+		// Local machine → normal Chromedp
+		ctx, cancel = chromedp.NewContext(context.Background())
+		defer cancel()
+	}
 
 	// Set a global timeout (for safety)
 	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)

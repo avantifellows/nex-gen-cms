@@ -22,6 +22,29 @@ log "Installing required packages"
 dnf update -y
 dnf install -y git nginx golang certbot python3-certbot-nginx firewalld
 
+log "Installing Node.js, Playwright and Chromium dependencies"
+
+# Install Node + NPM
+sudo dnf install -y nodejs npm
+
+# Install Playwright CLI globally
+sudo npm install -g playwright
+
+# Install Playwright Chromium to global shared location
+PLAYWRIGHT_DIR="/opt/playwright-browsers"
+
+log "Setting up Playwright browsers directory at $PLAYWRIGHT_DIR"
+
+sudo mkdir -p "$PLAYWRIGHT_DIR"
+sudo chmod 777 "$PLAYWRIGHT_DIR"   # allow installation
+
+log "Installing Chromium via Playwright"
+sudo env PLAYWRIGHT_BROWSERS_PATH="$PLAYWRIGHT_DIR" playwright install chromium
+
+# Install required Amazon Linux 2023 Chromium dependencies
+log "Installing Chromium system dependencies"
+sudo dnf install -y atk at-spi2-atk nss nspr libX11 libXcomposite libXrandr libXcursor libXi libxkbcommon pango cairo cups-libs mesa-libgbm alsa-lib libXdamage
+
 # Create app user if not exists
 if ! id "$APP_USER" &>/dev/null; then
     log "Creating app user: $APP_USER"
