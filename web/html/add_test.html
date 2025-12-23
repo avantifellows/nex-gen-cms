@@ -772,33 +772,14 @@
         // store reason
         row.dataset.validationError = reason || 'Validation failed.';
 
-        // add/update icon in action cell (last td)
+        // show existing exclamation icon in action cell's fixed slot
         const actionCell = row.querySelector('td:last-child');
         if (actionCell) {
-            // ensure inline container so icon sits next to delete button
-            let container = actionCell.querySelector('.action-cell-flex');
-            if (!container) {
-                container = document.createElement('span');
-                container.className = 'action-cell-flex flex items-center justify-center gap-2 whitespace-nowrap';
-                while (actionCell.firstChild) {
-                    container.appendChild(actionCell.firstChild);
-                }
-                actionCell.appendChild(container);
+            const icon = actionCell.querySelector('.validation-error-slot .validation-error-icon');
+            if (icon) {
+                icon.classList.remove('invisible');
+                icon.setAttribute('title', row.dataset.validationError);
             }
-
-            let icon = actionCell.querySelector('.validation-error-icon');
-            if (!icon) {
-                icon = document.createElement('i');
-                icon.className = 'validation-error-icon fa-solid fa-circle-exclamation text-red-500 shrink-0';
-            }
-            // place icon right after delete button
-            const deleteBtn = container.querySelector('button');
-            if (deleteBtn) {
-                deleteBtn.insertAdjacentElement('afterend', icon);
-            } else {
-                container.appendChild(icon);
-            }
-            icon.setAttribute('title', row.dataset.validationError);
         }
     }
 
@@ -809,8 +790,11 @@
 
         const actionCell = row.querySelector('td:last-child');
         if (actionCell) {
-            const icon = actionCell.querySelector('.validation-error-icon');
-            if (icon) icon.remove();
+            const icon = actionCell.querySelector('.validation-error-slot .validation-error-icon');
+            if (icon) {
+                icon.classList.add('invisible');
+                icon.removeAttribute('title');
+            }
         }
     }
 
