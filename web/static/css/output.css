@@ -1126,6 +1126,10 @@ video {
   display: flex;
 }
 
+.inline-flex {
+  display: inline-flex;
+}
+
 .\!table {
   display: table !important;
 }
@@ -1279,10 +1283,6 @@ video {
   border-collapse: collapse;
 }
 
-.cursor-not-allowed {
-  cursor: not-allowed;
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -1291,6 +1291,10 @@ video {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed;
 }
 
 .cursor-pointer {

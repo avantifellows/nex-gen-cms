@@ -22,6 +22,19 @@ log "Installing required packages"
 dnf update -y
 dnf install -y git nginx golang certbot python3-certbot-nginx firewalld
 
+log "Installing system fonts required for PDF generation (MathJax, Chromium)"
+sudo dnf install -y \
+  dejavu-sans-fonts \
+  dejavu-serif-fonts \
+  dejavu-sans-mono-fonts \
+  liberation-fonts \
+  google-noto-sans-fonts \
+  google-noto-serif-fonts \
+  google-noto-sans-math-fonts
+
+log "Rebuilding font cache"
+sudo fc-cache -fv
+
 log "Installing Node.js, Playwright and Chromium dependencies"
 
 # Install Node + NPM
