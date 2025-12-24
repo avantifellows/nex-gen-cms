@@ -764,6 +764,40 @@
         return marks;
     }
 
+    function addValidationErrorUI(row, reason) {
+        // mark colors
+        row.classList.add('bg-red-100');
+        row.classList.remove('bg-green-100');
+
+        // store reason
+        row.dataset.validationError = reason || 'Validation failed.';
+
+        // show existing exclamation icon in action cell's fixed slot
+        const actionCell = row.querySelector('td:last-child');
+        if (actionCell) {
+            const icon = actionCell.querySelector('.validation-error-slot .validation-error-icon');
+            if (icon) {
+                icon.classList.remove('invisible');
+                icon.setAttribute('title', row.dataset.validationError);
+            }
+        }
+    }
+
+    function clearValidationErrorUI(row) {
+        row.classList.remove('bg-red-100');
+        row.classList.add('bg-green-100');
+        delete row.dataset.validationError;
+
+        const actionCell = row.querySelector('td:last-child');
+        if (actionCell) {
+            const icon = actionCell.querySelector('.validation-error-slot .validation-error-icon');
+            if (icon) {
+                icon.classList.add('invisible');
+                icon.removeAttribute('title');
+            }
+        }
+    }
+
     async function validateAndCreateTest(data) {
         const testRule = data.TestRule || {};
 
@@ -792,18 +826,16 @@
                 existingSubtypeProblemCount++;
             }
 
-            const isValid = validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemCount,
+            const result = validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemCount, 
                 questionsTableBody, false);
 
             // Visually mark valid/invalid questions
-            if (!isValid) {
-                row.classList.add("bg-red-100");
-                row.classList.remove("bg-green-100");
+            if (!result.isValid) {
+                addValidationErrorUI(row, result.reason);
                 invalidCount++;
 
             } else {
-                row.classList.remove("bg-red-100");
-                row.classList.add("bg-green-100");
+                clearValidationErrorUI(row);
             }
 
             // Scroll each row into view to indicate progress
@@ -841,7 +873,7 @@
             showAlert = true) {
         if (!testRule || !testRule.config) {
             // No test rule means no restrictions — treat as valid
-            return true;
+            return { isValid: true, reason: null };
         }
 
         const subjects = testRule.config.subjects;
@@ -851,10 +883,11 @@
             const allowedIds = subjects[0].subject_ids;
 
             if (!allowedIds.includes(subjectId)) {
+                const errorMessage = 'Question from selected subject is not allowed for this test.';
                 if (showAlert) {
-                    alert(`Question from selected subject is not allowed for this test.`);
+                    alert(errorMessage);
                 }
-                return false;
+                return { isValid: false, reason: errorMessage };
             }
 
             // Find subject already added
@@ -862,20 +895,22 @@
             const existingSubjectId = firstRow ? parseInt(firstRow.id.replace("subject-", ""), 10) : null;
 
             if (existingSubjectId && existingSubjectId !== subjectId) {
+                const errorMessage = 'Question from only one subject is allowed for this test.';
                 if (showAlert) {
-                    alert(`Question from only one subject is allowed for this test.`);
+                    alert(errorMessage);
                 }
-                return false;
+                return { isValid: false, reason: errorMessage };
             }
 
         } else {
             // Case 2: Multiple subjects are allowed
             const allowedIds = subjects.map(sub => sub.subject_ids[0]);
             if (!allowedIds.includes(subjectId)) {
+                const errorMessage = 'Question from this subject is not allowed for this test.';
                 if (showAlert) {
-                    alert(`Question from this subject is not allowed for this test.`);
+                    alert(errorMessage);
                 }
-                return false;
+                return { isValid: false, reason: errorMessage };
             }
         }
 
@@ -883,24 +918,26 @@
         if (subjectRule) {
             const allowedTypes = subjectRule.rules.sections.map(s => s.type);
             if (!allowedTypes.includes(subtype)) {
+                const errorMessage = `Questions of type ${subtype} are not allowed for this subject.`;
                 if (showAlert) {
-                    alert(`Questions of type "${subtype}" are not allowed for this subject.`);
+                    alert(errorMessage);
                 }
-                return false;
+                return { isValid: false, reason: errorMessage };
             }
 
             // Count how many existing questions are there of this subtype and subject
             const sectionRule = subjectRule.rules.sections.find(s => s.type === subtype);
 
             if (existingSubtypeProblemRows >= sectionRule.count) {
+                const errorMessage = `Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`;
                 if (showAlert) {
-                    alert(`Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`);
+                    alert(errorMessage);
                 }
-                return false;
+                return { isValid: false, reason: errorMessage };
             }
         }
 
-        return true;
+        return { isValid: true, reason: null };
     }
 </script>
 {{ end }}

@@ -11,10 +11,15 @@
     <!-- if we pass . instead of empty dictionary, then it will throw error - "can't evaluate field PosMarks 
      in type *models.Problem" -->
     {{ template "chip_box_cells" (dict "PosMarks" $.PosMarks "NegMarks" $.NegMarks "ReadOnlyMarks" $.ReadOnlyMarks) }}
-    <td class="p-2 text-center">
-        <button class="px-2 py-1 bg-red-500 text-white rounded" data-difficulty="{{.DifficultyLevel}}"
-            hx-on:click="removeQuestionFromTest(this)">X</button>
-    </td>
+	<td class="p-2">
+		<div class="action-cell-flex flex items-center justify-between w-full whitespace-nowrap">
+			<button class="px-2 py-1 bg-red-500 text-white rounded" data-difficulty="{{.DifficultyLevel}}"
+				hx-on:click="removeQuestionFromTest(this)">X</button>
+			<span class="validation-error-slot inline-flex items-center justify-center w-4">
+				<i class="validation-error-icon fa-solid fa-circle-exclamation text-red-500 invisible"></i>
+			</span>
+		</div>
+	</td>
 </tr>
 {{end}}
 {{ end }}
