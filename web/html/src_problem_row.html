@@ -32,7 +32,7 @@
             const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
             
             if (testRule && !validateQuestionAgainstTestRule(testRule, subjectId, subtype, subtypeProblemRows.length, 
-                    questionsTableBody)) {
+                    questionsTableBody).isValid) {
                 resolve();
                 return; // validation failed
             }

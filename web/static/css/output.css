@@ -1164,6 +1164,10 @@ video {
   display: flex;
 }
 
+.inline-flex {
+  display: inline-flex;
+}
+
 .\!table {
   display: table !important;
 }
