@@ -123,3 +123,15 @@
         @apply flex items-center bg-blue-100 text-blue-800 rounded px-2 py-1 gap-1;
     }
 }
+
+/* --- MathJax font & layout fixes for PDF rendering --- */
+mjx-container {
+    font-family: MJX_Main, MJX_Math, serif !important;
+    line-height: normal !important;
+}
+  
+mjx-mtable,
+mjx-mrow {
+    line-height: normal !important;
+}
+  

@@ -11,7 +11,22 @@
     <!-- For Font Awesome library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <script src="https://unpkg.com/mathlive"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    <!-- MathJax CONFIG must come FIRST -->
+    <script>
+        window.MathJax = {
+            loader: { load: ['output/chtml'] },
+            chtml: {
+                fontURL: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2',
+                mtextInheritFont: false
+            },
+            startup: {
+                typeset: false
+            }
+        };
+    </script>
+  
+    <!-- MathJax script (NO async) -->
+    <script id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
     <script src="/web/static/js/constants.js"></script>
     <script src="/web/static/js/table-sort.js"></script>
@@ -52,7 +67,7 @@
                 dropdown.value = selectedValue;
             }
         }
-    </script>
+    </script>        
 </head>
 
 <body hx-ext="mathJaxLoader">
