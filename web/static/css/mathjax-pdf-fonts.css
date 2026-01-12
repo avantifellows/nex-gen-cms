@@ -1,0 +1,25 @@
+@font-face {
+    font-family: 'MJXTEX';
+    src: url(data:font/woff;base64,PASTE_MJXTEX_BASE64_HERE) format('woff');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'MJXZERO';
+    src: url(data:font/woff;base64,PASTE_MJXZERO_BASE64_HERE) format('woff');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  /* Force MathJax to use embedded fonts */
+  mjx-container {
+    font-family: MJXTEX, MJXZERO, serif !important;
+    line-height: normal !important;
+  }
+  
+  mjx-mtable,
+  mjx-mrow {
+    line-height: normal !important;
+  }
+  
