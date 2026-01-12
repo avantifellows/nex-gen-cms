@@ -794,7 +794,17 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			display: inline-block;
 			vertical-align: middle;
 		}
+		svg[data-mjx-svg] line {
+			stroke: currentColor !important;
+			stroke-width: 1px !important;
+		}
 	`
+	// Replace MathJax script with SVG-only version for better compatibility on Linux/EC2
+	// Use tex-svg.js instead of tex-mml-chtml.js to force SVG output
+	htmlContent = strings.Replace(htmlContent,
+		"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
+		"https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js",
+		1)
 	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+svgCSS+"</style></head>", 1)
 
 	headerHTML := fmt.Sprintf(`
@@ -842,13 +852,30 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	var pdfData []byte
 
 	tasks := chromedp.Tasks{
-		// Set page content
-		chromedp.Navigate("data:text/html," + url.PathEscape(htmlContent)),
+		// Navigate directly to HTML content (removed redundant innerHTML replacement)
+		chromedp.Navigate("data:text/html;charset=utf-8," + url.PathEscape(htmlContent)),
 
-		// Inject HTML into page
+		// Wait for page to be ready
+		chromedp.WaitReady("body"),
+
+		// Wait for MathJax script to load first
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			script := `document.documentElement.innerHTML = ` + strconv.Quote(htmlContent)
-			return chromedp.Evaluate(script, nil).Do(ctx)
+			js := `
+            new Promise(resolve => {
+                function waitForScript() {
+                    const script = document.querySelector('script[id="MathJax-script"]');
+                    if (script && (script.readyState === 'complete' || script.readyState === 'loaded')) {
+                        resolve(true);
+                    } else if (window.MathJax) {
+                        resolve(true);
+                    } else {
+                        setTimeout(waitForScript, 100);
+                    }
+                }
+                waitForScript();
+            });
+            `
+			return chromedp.Evaluate(js, nil).Do(ctx)
 		}),
 
 		// Wait for MathJax to render fully, including SVG elements like matrices
