@@ -785,18 +785,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	}
 	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style></head>", 1)
 
-	mathFontCSS, err := os.ReadFile("web/static/css/mathjax-pdf-fonts.css")
-	if err != nil {
-		http.Error(responseWriter, "MathJax font CSS missing", 500)
-		return
-	}
-	htmlContent = strings.Replace(
-		htmlContent,
-		"</head>",
-		"<style>"+string(mathFontCSS)+"</style></head>",
-		1,
-	)
-
 	headerHTML := fmt.Sprintf(`
 		<div style="width:100%%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
 			<div style="margin-bottom:4px;">%s</div>
@@ -850,12 +838,22 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			return chromedp.Evaluate(script, nil).Do(ctx)
 		}),
 
-		chromedp.Evaluate(`
-			Promise.all([
-				document.fonts.ready,
-				MathJax.typesetPromise()
-			])
-		`, nil),
+		// Wait for MathJax to render fully
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			js := `
+            new Promise(resolve => {
+                function check() {
+                    if (window.MathJax && MathJax.typesetPromise) {
+                        MathJax.typesetPromise().then(() => resolve(true));
+                    } else {
+                        setTimeout(check, 200);
+                    }
+                }
+                check();
+            });
+            `
+			return chromedp.Evaluate(js, nil).Do(ctx)
+		}),
 
 		// Generate PDF using CDP low-level API
 		chromedp.ActionFunc(func(ctx context.Context) error {
