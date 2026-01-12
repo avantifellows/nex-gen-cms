@@ -1856,18 +1856,6 @@ video {
 
 /* Custom styles using @apply */
 
-/* --- MathJax font & layout fixes for PDF rendering --- */
-
-mjx-container {
-  font-family: MJX_Main, MJX_Math, serif !important;
-  line-height: normal !important;
-}
-
-mjx-mtable,
-mjx-mrow {
-  line-height: normal !important;
-}
-
 .hover\:bg-blue-100:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(219 234 254 / var(--tw-bg-opacity));
@@ -1900,4 +1888,3 @@ mjx-mrow {
 .hover\:underline:hover {
   text-decoration-line: underline;
 }
-  
