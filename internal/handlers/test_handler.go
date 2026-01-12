@@ -838,44 +838,18 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			return chromedp.Evaluate(script, nil).Do(ctx)
 		}),
 
-		// Wait for MathJax to render fully, including SVG elements like matrices
+		// Wait for MathJax to render fully
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			js := `
             new Promise(resolve => {
-                function waitForMathJax() {
-                    if (window.MathJax) {
-                        let promiseChain = Promise.resolve();
-                        
-                        // First wait for MathJax to be fully initialized (MathJax 3)
-                        if (window.MathJax.startup && window.MathJax.startup.promise) {
-                            promiseChain = window.MathJax.startup.promise;
-                        }
-                        
-                        // Then wait for typesetting to complete
-                        promiseChain = promiseChain.then(() => {
-                            if (window.MathJax.typesetPromise) {
-                                return window.MathJax.typesetPromise();
-                            }
-                            return Promise.resolve();
-                        });
-                        
-                        // Add additional delay to ensure SVG rendering completes
-                        // Matrices are rendered as SVG and paths need time to render, especially on Linux/EC2
-                        promiseChain = promiseChain.then(() => {
-                            return new Promise(resolveDelay => {
-                                setTimeout(resolveDelay, 800);
-                            });
-                        });
-                        
-                        promiseChain.then(() => resolve(true)).catch(() => {
-                            // Fallback: resolve anyway after a delay
-                            setTimeout(() => resolve(true), 1000);
-                        });
+                function check() {
+                    if (window.MathJax && MathJax.typesetPromise) {
+                        MathJax.typesetPromise().then(() => resolve(true));
                     } else {
-                        setTimeout(waitForMathJax, 200);
+                        setTimeout(check, 200);
                     }
                 }
-                waitForMathJax();
+                check();
             });
             `
 			return chromedp.Evaluate(js, nil).Do(ctx)
