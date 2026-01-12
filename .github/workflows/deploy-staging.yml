@@ -2,7 +2,7 @@ name: Deploy to Staging
 
 on:
   push:
-    branches: [main]
+    branches: [bugfix/chromedp-pdf-issues]
   pull_request:
   workflow_dispatch:  # Allow manual triggering from any branch
 

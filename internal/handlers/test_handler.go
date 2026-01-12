@@ -783,7 +783,19 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		http.Error(responseWriter, "CSS read error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style></head>", 1)
+	// Add CSS to ensure SVG paths render correctly, especially for MathJax matrices
+	svgCSS := `
+		svg[data-mjx-svg] path {
+			stroke: currentColor !important;
+			fill: currentColor !important;
+			vector-effect: non-scaling-stroke;
+		}
+		svg[data-mjx-svg] {
+			display: inline-block;
+			vertical-align: middle;
+		}
+	`
+	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+svgCSS+"</style></head>", 1)
 
 	headerHTML := fmt.Sprintf(`
 		<div style="width:100%%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
@@ -808,6 +820,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			chromedp.Flag("no-sandbox", true),
 			chromedp.Flag("disable-gpu", true),
 			chromedp.Flag("headless", true),
+			chromedp.WindowSize(1920, 1080), // Set explicit window size for consistent rendering
 		)
 
 		allocCtx, c := chromedp.NewExecAllocator(context.Background(), opts...)
@@ -838,18 +851,50 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			return chromedp.Evaluate(script, nil).Do(ctx)
 		}),
 
-		// Wait for MathJax to render fully
+		// Wait for MathJax to render fully, including SVG elements like matrices
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			js := `
             new Promise(resolve => {
-                function check() {
-                    if (window.MathJax && MathJax.typesetPromise) {
-                        MathJax.typesetPromise().then(() => resolve(true));
+                function waitForMathJax() {
+                    if (window.MathJax) {
+                        let promiseChain = Promise.resolve();
+                        
+                        // Wait for MathJax to be fully initialized (MathJax 3)
+                        if (window.MathJax.startup && window.MathJax.startup.promise) {
+                            promiseChain = window.MathJax.startup.promise;
+                        }
+                        
+                        // Wait for typesetting to complete
+                        promiseChain = promiseChain.then(() => {
+                            if (window.MathJax.typesetPromise) {
+                                return window.MathJax.typesetPromise();
+                            }
+                            return Promise.resolve();
+                        });
+                        
+                        // Force a second typeset to ensure all SVG paths are rendered
+                        promiseChain = promiseChain.then(() => {
+                            if (window.MathJax.typesetPromise) {
+                                return window.MathJax.typesetPromise();
+                            }
+                            return Promise.resolve();
+                        });
+                        
+                        // Additional wait to ensure SVG rendering completes on Linux/EC2
+                        promiseChain = promiseChain.then(() => {
+                            return new Promise(resolveDelay => {
+                                setTimeout(resolveDelay, 2000);
+                            });
+                        });
+                        
+                        promiseChain.then(() => resolve(true)).catch(() => {
+                            setTimeout(() => resolve(true), 3000);
+                        });
                     } else {
-                        setTimeout(check, 200);
+                        setTimeout(waitForMathJax, 200);
                     }
                 }
-                check();
+                waitForMathJax();
             });
             `
 			return chromedp.Evaluate(js, nil).Do(ctx)
