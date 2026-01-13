@@ -856,8 +856,8 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	var pdfData []byte
 
 	tasks := chromedp.Tasks{
-		// Navigate directly to HTML content (removed redundant innerHTML replacement)
-		chromedp.Navigate("data:text/html;charset=utf-8," + url.PathEscape(htmlContent)),
+		// Set page content
+		chromedp.Navigate("data:text/html," + url.PathEscape(htmlContent)),
 
 		// Wait for page to be ready
 		chromedp.WaitReady("body"),
