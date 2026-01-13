@@ -832,9 +832,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		// Set page content
 		chromedp.Navigate("data:text/html," + url.PathEscape(htmlContent)),
 
-		// Wait for page to be ready
-		chromedp.WaitReady("body"),
-
 		// Wait for MathJax script to load first
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			js := `
