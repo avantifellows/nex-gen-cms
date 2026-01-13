@@ -835,7 +835,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			chromedp.Flag("no-sandbox", true),
 			chromedp.Flag("disable-gpu", true),
 			chromedp.Flag("headless", true),
-			chromedp.WindowSize(1920, 1080), // Set explicit window size for consistent rendering
 		)
 
 		allocCtx, c := chromedp.NewExecAllocator(context.Background(), opts...)
