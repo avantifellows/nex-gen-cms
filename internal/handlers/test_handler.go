@@ -785,32 +785,32 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	}
 	// Add CSS to ensure SVG paths render correctly for MathJax matrices
 	// Also fix inline math display to prevent line breaks
-	svgCSS := `
-		svg[data-mjx-svg] path {
-			stroke: currentColor !important;
-			fill: currentColor !important;
-			vector-effect: non-scaling-stroke;
-		}
-		svg[data-mjx-svg] line {
-			stroke: currentColor !important;
-			stroke-width: 1px !important;
-		}
-		/* Force inline display for inline math containers (not display math) */
-		mjx-container[jax="SVG"]:not([display="true"]) {
-			display: inline !important;
-			margin: 0 !important;
-			padding: 0 !important;
-		}
-		mjx-container[jax="SVG"]:not([display="true"]) svg[data-mjx-svg] {
-			display: inline !important;
-			vertical-align: -0.4ex !important;
-		}
-		/* Display math can remain block */
-		mjx-container[jax="SVG"][display="true"] svg[data-mjx-svg] {
-			display: block !important;
-		}
-	`
-	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+svgCSS+"</style></head>", 1)
+	// svgCSS := `
+	// 	svg[data-mjx-svg] path {
+	// 		stroke: currentColor !important;
+	// 		fill: currentColor !important;
+	// 		vector-effect: non-scaling-stroke;
+	// 	}
+	// 	svg[data-mjx-svg] line {
+	// 		stroke: currentColor !important;
+	// 		stroke-width: 1px !important;
+	// 	}
+	// 	/* Force inline display for inline math containers (not display math) */
+	// 	mjx-container[jax="SVG"]:not([display="true"]) {
+	// 		display: inline !important;
+	// 		margin: 0 !important;
+	// 		padding: 0 !important;
+	// 	}
+	// 	mjx-container[jax="SVG"]:not([display="true"]) svg[data-mjx-svg] {
+	// 		display: inline !important;
+	// 		vertical-align: -0.4ex !important;
+	// 	}
+	// 	/* Display math can remain block */
+	// 	mjx-container[jax="SVG"][display="true"] svg[data-mjx-svg] {
+	// 		display: block !important;
+	// 	}
+	// `
+	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style></head>", 1)
 
 	headerHTML := fmt.Sprintf(`
 		<div style="width:100%%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
