@@ -783,33 +783,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		http.Error(responseWriter, "CSS read error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Add CSS to ensure SVG paths render correctly for MathJax matrices
-	// Also fix inline math display to prevent line breaks
-	// svgCSS := `
-	// 	svg[data-mjx-svg] path {
-	// 		stroke: currentColor !important;
-	// 		fill: currentColor !important;
-	// 		vector-effect: non-scaling-stroke;
-	// 	}
-	// 	svg[data-mjx-svg] line {
-	// 		stroke: currentColor !important;
-	// 		stroke-width: 1px !important;
-	// 	}
-	// 	/* Force inline display for inline math containers (not display math) */
-	// 	mjx-container[jax="SVG"]:not([display="true"]) {
-	// 		display: inline !important;
-	// 		margin: 0 !important;
-	// 		padding: 0 !important;
-	// 	}
-	// 	mjx-container[jax="SVG"]:not([display="true"]) svg[data-mjx-svg] {
-	// 		display: inline !important;
-	// 		vertical-align: -0.4ex !important;
-	// 	}
-	// 	/* Display math can remain block */
-	// 	mjx-container[jax="SVG"][display="true"] svg[data-mjx-svg] {
-	// 		display: block !important;
-	// 	}
-	// `
 	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style></head>", 1)
 
 	headerHTML := fmt.Sprintf(`
@@ -882,71 +855,18 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			return chromedp.Evaluate(js, nil).Do(ctx)
 		}),
 
-		// Wait for MathJax to render fully, including SVG elements like matrices
+		// Wait for MathJax to render fully
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			js := `
             new Promise(resolve => {
-                function waitForMathJax() {
-                    if (window.MathJax) {
-                        let promiseChain = Promise.resolve();
-                        
-                        // Wait for MathJax to be fully initialized (MathJax 3)
-                        if (window.MathJax.startup && window.MathJax.startup.promise) {
-                            promiseChain = window.MathJax.startup.promise;
-                        }
-                        
-                        // Wait for typesetting to complete
-                        promiseChain = promiseChain.then(() => {
-                            if (window.MathJax.typesetPromise) {
-                                return window.MathJax.typesetPromise();
-                            }
-                            return Promise.resolve();
-                        });
-                        
-                        // Force a second typeset to ensure all SVG paths are rendered
-                        promiseChain = promiseChain.then(() => {
-                            if (window.MathJax.typesetPromise) {
-                                return window.MathJax.typesetPromise();
-                            }
-                            return Promise.resolve();
-                        });
-                        
-                        // Fix inline math display properties after rendering
-                        promiseChain = promiseChain.then(() => {
-                            // Find all MathJax containers and fix their display
-                            const containers = document.querySelectorAll('mjx-container[jax="SVG"]');
-                            containers.forEach(container => {
-                                // Check if it's inline math (not display math)
-                                const svg = container.querySelector('svg[data-mjx-svg]');
-                                if (svg && container.getAttribute('display') !== 'true') {
-                                    // Force inline display for inline math
-                                    container.style.display = 'inline';
-                                    container.style.margin = '0';
-                                    container.style.padding = '0';
-                                    if (svg) {
-                                        svg.style.display = 'inline';
-                                        svg.style.verticalAlign = '-0.4ex';
-                                    }
-                                }
-                            });
-                            return Promise.resolve();
-                        });
-                        
-                        // Additional wait to ensure SVG rendering completes on Linux/EC2
-                        promiseChain = promiseChain.then(() => {
-                            return new Promise(resolveDelay => {
-                                setTimeout(resolveDelay, 500);
-                            });
-                        });
-                        
-                        promiseChain.then(() => resolve(true)).catch(() => {
-                            setTimeout(() => resolve(true), 3000);
-                        });
+				function check() {
+                    if (window.MathJax && MathJax.typesetPromise) {
+                        MathJax.typesetPromise().then(() => resolve(true));
                     } else {
-                        setTimeout(waitForMathJax, 200);
+                        setTimeout(check, 200);
                     }
                 }
-                waitForMathJax();
+                check();
             });
             `
 			return chromedp.Evaluate(js, nil).Do(ctx)
