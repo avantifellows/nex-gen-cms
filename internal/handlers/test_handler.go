@@ -840,8 +840,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
                     const script = document.querySelector('script[id="MathJax-script"]');
                     if (script && (script.readyState === 'complete' || script.readyState === 'loaded')) {
                         resolve(true);
-                    } else if (window.MathJax) {
-                        resolve(true);
                     } else {
                         setTimeout(waitForScript, 100);
                     }
