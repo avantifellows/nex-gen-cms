@@ -855,7 +855,13 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
             new Promise(resolve => {
 				function check() {
                     if (window.MathJax && MathJax.typesetPromise) {
-                        MathJax.typesetPromise().then(() => resolve(true));
+                        MathJax.typesetPromise([document.body]).then(() => {
+                            // Wait a bit more to ensure fonts are loaded
+                            setTimeout(() => resolve(true), 500);
+                        }).catch(() => {
+                            // Even if there's an error, wait a bit and resolve
+                            setTimeout(() => resolve(true), 1000);
+                        });
                     } else {
                         setTimeout(check, 200);
                     }
