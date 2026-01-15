@@ -122,4 +122,21 @@
     .concept-chip {
         @apply flex items-center bg-blue-100 text-blue-800 rounded px-2 py-1 gap-1;
     }
+
+    .pdf-layout,
+    .pdf-layout p,
+    .pdf-layout div,
+    .pdf-layout span,
+    .pdf-layout table,
+    .pdf-layout td {
+        font-family:
+            Arial,
+            ui-sans-serif,
+            system-ui,
+            sans-serif,
+            "Apple Color Emoji",
+            "Segoe UI Emoji",
+            "Segoe UI Symbol",
+            "Noto Color Emoji" !important;
+    }
 }

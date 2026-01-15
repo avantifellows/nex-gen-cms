@@ -930,6 +930,23 @@ video {
   color: rgb(30 64 175 / var(--tw-text-opacity));
 }
 
+.pdf-layout,
+    .pdf-layout p,
+    .pdf-layout div,
+    .pdf-layout span,
+    .pdf-layout table,
+    .pdf-layout td {
+  font-family:
+            Arial,
+            ui-sans-serif,
+            system-ui,
+            sans-serif,
+            "Apple Color Emoji",
+            "Segoe UI Emoji",
+            "Segoe UI Symbol",
+            "Noto Color Emoji" !important;
+}
+
 .\!visible {
   visibility: visible !important;
 }
