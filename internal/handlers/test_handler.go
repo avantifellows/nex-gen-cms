@@ -832,39 +832,32 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		// Set page content
 		chromedp.Navigate("data:text/html," + url.PathEscape(htmlContent)),
 
-		// Wait for MathJax script to load first
+		// Wait for MathJax to finish rendering (check for actual rendered elements)
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			js := `
-            new Promise(resolve => {
-                function waitForScript() {
-                    if (window.MathJax) {
-                        resolve(true);
-                    } else {
-                        setTimeout(waitForScript, 100);
-                    }
-                }
-                waitForScript();
-            });
-            `
-			return chromedp.Evaluate(js, nil).Do(ctx)
+			for i := 0; i < 100; i++ {
+				var mjxCount int
+				chromedp.Evaluate(`document.querySelectorAll('mjx-container').length`, &mjxCount).Do(ctx)
+
+				var doneText string
+				chromedp.Evaluate(`document.getElementById('mathjax-done') ? document.getElementById('mathjax-done').textContent : ''`, &doneText).Do(ctx)
+
+				if i%10 == 0 {
+					log.Printf("Poll %d: mjx-container count=%d, mathjax-done='%s'", i, mjxCount, doneText)
+				}
+
+				// Wait for both: mathjax-done='true' AND actual rendered elements
+				if doneText == "true" && mjxCount > 0 {
+					log.Printf("MathJax rendered %d elements after %d polls", mjxCount, i)
+					return nil
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
+			log.Printf("MathJax timeout after 100 polls")
+			return nil // timeout, proceed anyway
 		}),
 
-		// Wait for MathJax to render fully
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			js := `
-            new Promise(resolve => {
-				function check() {
-                    if (window.MathJax && MathJax.typesetPromise) {
-                        MathJax.typesetPromise().then(() => resolve(true));
-                    } else {
-                        setTimeout(check, 200);
-                    }
-                }
-                check();
-            });
-            `
-			return chromedp.Evaluate(js, nil).Do(ctx)
-		}),
+		// Wait for fonts/rendering to complete (similar to puppeteer's networkidle0 which waits 500ms)
+		chromedp.Sleep(500 * time.Millisecond),
 
 		// Generate PDF using CDP low-level API
 		chromedp.ActionFunc(func(ctx context.Context) error {
