@@ -1,7 +1,7 @@
 var BACK_TO_ADD_TEST_EVT = "back-to-add-test";
 var BACK_TO_TOPIC_EVT = "back-to-topic";
 
-var ADD_TEST_DIV_SELECTOR = "#add-test-div";
+var ADD_TEST_DIV_SELECTOR = "#add-test-right-div";
 var TOPIC_DIV_SELECTOR = "#topic-div";
 
 var PUSHED_SCREEN_ADD_TEST = "add-test";
