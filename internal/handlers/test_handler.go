@@ -832,28 +832,24 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		// Set page content
 		chromedp.Navigate("data:text/html," + url.PathEscape(htmlContent)),
 
-		// Inject HTML into page
+		// Wait for MathJax to finish rendering
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			script := `document.documentElement.innerHTML = ` + strconv.Quote(htmlContent)
-			return chromedp.Evaluate(script, nil).Do(ctx)
+			for i := 0; i < 100; i++ {
+				var doneText string
+				chromedp.Evaluate(`document.getElementById('mathjax-done') ? document.getElementById('mathjax-done').textContent : ''`, &doneText).Do(ctx)
+
+				if doneText == "true" {
+					log.Printf("MathJax done after %d polls", i)
+					return nil
+				}
+				time.Sleep(100 * time.Millisecond)
+			}
+			log.Printf("MathJax timeout after 100 polls")
+			return nil // timeout, proceed anyway
 		}),
 
-		// Wait for MathJax to render fully
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			js := `
-            new Promise(resolve => {
-                function check() {
-                    if (window.MathJax && MathJax.typesetPromise) {
-                        MathJax.typesetPromise().then(() => resolve(true));
-                    } else {
-                        setTimeout(check, 200);
-                    }
-                }
-                check();
-            });
-            `
-			return chromedp.Evaluate(js, nil).Do(ctx)
-		}),
+		// Wait for fonts/rendering to complete
+		chromedp.Sleep(500 * time.Millisecond),
 
 		// Generate PDF using CDP low-level API
 		chromedp.ActionFunc(func(ctx context.Context) error {

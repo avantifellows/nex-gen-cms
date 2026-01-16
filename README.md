@@ -19,6 +19,8 @@ To run the CMS locally, follow these steps:
    ```
    DB_SERVICE_ENDPOINT = http://localhost:4000/api/
    DB_SERVICE_TOKEN = <BEARER_TOKEN used in .env file of your local db-service project>
+   CMS_USERNAME = 
+   CMS_PASSWORD = 
    ```
 4. Navigate to the project directory.
  
@@ -53,4 +55,3 @@ If you make changes to `input.css` or `tailwind.config.js`, follow these steps:
 ```bash
 npm install        # Install Tailwind and dependencies
 npm run build:css  # Rebuild CSS
-

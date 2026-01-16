@@ -3,9 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <title>{{ getName .TestPtr "en" }}</title>
-<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>
+window.MathJax = {
+  startup: {
+    ready: () => {
+      MathJax.startup.defaultReady();
+      document.getElementById('mathjax-done').textContent = 'true';
+    }
+  },
+  chtml: {
+    scale: 0.9,
+    minScale: 0.5
+  },
+  tex: {
+    inlineMath: [["$", "$"], ["\\(", "\\)"]],
+    displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+    processEscapes: true,
+    packages: {'[+]': ['noerrors']}
+  },
+  loader: {
+    load: ['[tex]/noerrors']
+  }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" defer></script>
 </head>
 <body class="font-sans text-[14px] m-5 mt-0">
+<div id="mathjax-done" style="display:none"></div>
 
 <div class="flex justify-between mb-3 w-full">
     <h2 class="text-lg font-bold">{{ getName .TestPtr "en" }}</h2>
