@@ -1,7 +1,7 @@
 {{ define "dest_problem_row" }}
 {{with .Problem}}
 <tr id="problem-{{.ID}}" data-subject="subject-{{(getParentId .Subject)}}" data-subtype="subtype-{{.Subtype}}"
-    data-skill-ids="{{joinInt16 .SkillIDs ","}}" data-mathjax="true">
+    data-skill-ids="{{joinInt16 .SkillIDs ","}}" data-mathjax="true" class="cursor-move">
     <td class="p-2">{{if $.SrNo}}{{$.SrNo}}{{end}}</td>
     <td class="p-2 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
         hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">

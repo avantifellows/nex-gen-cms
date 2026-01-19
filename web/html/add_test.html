@@ -336,6 +336,8 @@
             sessionStorage.removeItem(SESSION_KEY_NAME);
             sessionStorage.removeItem(SESSION_KEY_DURATION);
         }
+
+        initSortableForSections();
     })();
 
     function setElementFromStorage(elementId, storageKey) {
@@ -938,6 +940,50 @@
         }
 
         return { isValid: true, reason: null };
+    }
+
+    function initSortableForSections() {
+        const tableBody = document.getElementById("questions-table-body");
+
+        if (tableBody._sortableInitialized) return;
+
+        Sortable.create(tableBody, {
+            animation: 150,
+            multiDrag: true,
+            selectedClass: "bg-blue-100",
+            draggable: "tr[id^='problem-']",
+            
+            onMove(evt) {
+                const dragged = evt.dragged;
+                const related = evt.related;
+
+                if (!related || !related.id.startsWith("problem-")) {
+                    return false; // block moving over subject/subtype rows
+                }
+
+                // Allow move only within same subject + subtype
+                return (
+                    dragged.dataset.subject === related.dataset.subject &&
+                    dragged.dataset.subtype === related.dataset.subtype
+                );
+            },
+
+            onEnd() {
+                renumberSerials();
+            }
+        });
+
+        tableBody._sortableInitialized = true;
+    }
+
+    function renumberSerials() {
+        let sr = 0;
+        document.querySelectorAll("#questions-table-body tr").forEach(row => {
+            const firstTd = row.querySelector("td");
+            if (!firstTd || firstTd.hasAttribute("colspan")) return;
+            sr++;
+            firstTd.textContent = sr;
+        });
     }
 </script>
 {{ end }}
