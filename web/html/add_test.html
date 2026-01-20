@@ -985,5 +985,56 @@
             firstTd.textContent = sr;
         });
     }
+
+    function shuffleSubtype(btn) {
+        const subtypeRow = btn.closest("tr");
+        const subject = subtypeRow.dataset.subject;
+        const subtype = subtypeRow.dataset.subtype;
+
+        const tableBody = document.getElementById("questions-table-body");
+
+        // Collect all problem rows under this subject + subtype
+        const rows = Array.from(
+            tableBody.querySelectorAll(
+                `tr[id^="problem-"][data-subject="${subject}"][data-subtype="${subtype}"]`
+            )
+        );
+
+        if (rows.length <= 1) return; // nothing to shuffle
+
+        // Save original order (by problem id)
+        const originalOrder = rows.map(r => r.id);
+
+        // Special-case: exactly 2 → just swap
+        if (rows.length === 2) {
+            [rows[0], rows[1]] = [rows[1], rows[0]];
+
+        } else {
+            let attempts = 0;
+            const MAX_ATTEMPTS = 5;
+
+            do {
+                // Fisher–Yates shuffle
+                for (let i = rows.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [rows[i], rows[j]] = [rows[j], rows[i]];
+                }
+                attempts++;
+
+            } while (
+                attempts < MAX_ATTEMPTS &&
+                rows.every((row, idx) => row.id === originalOrder[idx])
+            );
+        }
+
+        // Reinsert rows immediately after the subtype row
+        let insertAfter = subtypeRow;
+        rows.forEach(row => {
+            tableBody.insertBefore(row, insertAfter.nextSibling);
+            insertAfter = row;
+        });
+
+        renumberSerials();
+    }
 </script>
 {{ end }}
