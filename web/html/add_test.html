@@ -655,7 +655,7 @@
         const skillIdSet = new Set();
 
         const tableBody = document.getElementById('questions-table-body');
-        const rows = tableBody.querySelectorAll('tr');
+        const rows = tableBody.querySelectorAll(':scope > tr');
         for (const row of rows) {
             const posChips = row.querySelectorAll(`${chipEditorPosId} .chip`);
             const negChips = row.querySelectorAll(`${chipEditorNegId} .chip`);
