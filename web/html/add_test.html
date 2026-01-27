@@ -338,6 +338,7 @@
         }
 
         initSortableForSections();
+        updateSubjectArrowStates();
     })();
 
     function setElementFromStorage(elementId, storageKey) {
@@ -1035,6 +1036,105 @@
         });
 
         renumberSerials();
+    }
+
+    function findPreviousSubjectRow(subjectRow) {
+        let prev = subjectRow.previousElementSibling;
+
+        while (prev) {
+            if (prev.id && prev.id.startsWith("subject-")) {
+                return prev;
+            }
+            prev = prev.previousElementSibling;
+        }
+        return null;
+    }
+
+    function findNextSubjectRow(subjectRow) {
+        let next = subjectRow.nextElementSibling;
+
+        while (next) {
+            if (next.id && next.id.startsWith("subject-")) {
+                return next;
+            }
+            next = next.nextElementSibling;
+        }
+        return null;
+    }
+
+    function moveSubjectUp(button) {
+        const subjectRow = button.closest("tr[id^='subject-']");
+
+        const prevSubject = findPreviousSubjectRow(subjectRow);
+        if (!prevSubject) return;
+
+        const tableBody = subjectRow.parentNode;
+        const currentBlock = getSubjectBlock(subjectRow);
+
+        currentBlock.forEach(row => {
+            tableBody.insertBefore(row, prevSubject);
+        });
+
+        renumberSerials();
+        updateSubjectArrowStates();
+    }
+
+    function moveSubjectDown(button) {
+        const subjectRow = button.closest("tr[id^='subject-']");
+        if (!subjectRow) return;
+
+        const nextSubject = findNextSubjectRow(subjectRow);
+        if (!nextSubject) return;
+
+        const nextToNextSubject = findNextSubjectRow(nextSubject);
+
+        const tableBody = subjectRow.parentNode;
+        const currentBlock = getSubjectBlock(subjectRow);
+
+        currentBlock.forEach(row => {
+            tableBody.insertBefore(row, nextToNextSubject);
+        });
+
+        renumberSerials();
+        updateSubjectArrowStates();
+    }
+
+    function getSubjectBlock(subjectRow) {
+        const rows = [subjectRow];
+        let next = subjectRow.nextElementSibling;
+
+        while (next && !next.id.startsWith("subject-")) {
+            rows.push(next);
+            next = next.nextElementSibling;
+        }
+        return rows;
+    }
+
+    function getAllSubjectRows() {
+        return Array.from(
+            document.querySelectorAll("tr[id^='subject-']")
+        );
+    }
+
+    function updateSubjectArrowStates() {
+        const subjects = getAllSubjectRows();
+
+        subjects.forEach((subjectRow, index) => {
+            const upBtn = subjectRow.querySelector(".move-up");
+            const downBtn = subjectRow.querySelector(".move-down");
+
+            if (upBtn) {
+                upBtn.disabled = index === 0;
+                upBtn.classList.toggle("opacity-50", index === 0);
+                upBtn.classList.toggle("cursor-not-allowed", index === 0);
+            }
+
+            if (downBtn) {
+                downBtn.disabled = index === subjects.length - 1;
+                downBtn.classList.toggle("opacity-50", index === subjects.length - 1);
+                downBtn.classList.toggle("cursor-not-allowed", index === subjects.length - 1);
+            }
+        });
     }
 </script>
 {{ end }}
