@@ -13,7 +13,7 @@ const (
 	SortOrderAsc  SortOrder = "asc"
 	SortOrderDesc SortOrder = "desc"
 
-	ResourceStatusArchived = "Archived"
+	StatusArchived = 1
 )
 
 // runtime constant

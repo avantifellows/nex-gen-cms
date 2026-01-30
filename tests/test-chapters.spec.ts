@@ -146,9 +146,9 @@ test.describe('Chapter list Row', () => {
             // press ok
             await dialog.accept();
         });
-        mock.mockDeleteChapterApi(page);
+        mock.mockArchiveChapterApi(page);
         const apiReqPromise = page.waitForRequest((request) =>
-            request.url().includes('/delete-chapter') && request.method() === 'DELETE'
+            request.url().includes('/archive-chapter') && request.method() === 'DELETE'
         );
 
         await deleteBtn.click();

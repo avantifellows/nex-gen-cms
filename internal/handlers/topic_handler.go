@@ -73,16 +73,22 @@ func getTopicName(t models.Topic, lang string) string {
 	return t.GetNameByLang(lang)
 }
 
-func (h *TopicsHandler) DeleteTopic(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *TopicsHandler) ArchiveTopic(responseWriter http.ResponseWriter, request *http.Request) {
 	topicIdStr := request.URL.Query().Get("id")
 	topicId, err := utils.StringToIntType[int16](topicIdStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 		return
 	}
-	err = h.service.DeleteObject(topicIdStr, func(t *models.Topic) bool {
-		return t.ID != topicId
-	}, handlerutils.TopicsKey, handlerutils.TopicsEndPoint)
+
+	topicMap := map[string]any{
+		"cms_status_id": constants.StatusArchived,
+	}
+
+	err = h.service.ArchiveObject(topicIdStr, handlerutils.TopicsEndPoint, topicMap, handlerutils.TopicsKey,
+		func(topic *models.Topic) bool {
+			return (*topic).ID != topicId
+		})
 
 	// If http error is thrown from here then target row won't be removed by htmx code
 	if err != nil {

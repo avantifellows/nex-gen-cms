@@ -14,6 +14,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
+	"github.com/thoas/go-funk"
 )
 
 const chaptersEndPoint = "chapter"
@@ -58,6 +59,9 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		http.Error(responseWriter, fmt.Sprintf("Error fetching chapters: %v", err), http.StatusInternalServerError)
 		return
 	}
+	*chapters = funk.Filter(*chapters, func(c *models.Chapter) bool {
+		return c.StatusID != constants.StatusArchived
+	}).([]*models.Chapter)
 
 	h.getTopics(responseWriter, *chapters)
 
@@ -86,6 +90,10 @@ func (h *ChaptersHandler) getTopics(responseWriter http.ResponseWriter, chapterP
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
 	} else {
+		*topics = funk.Filter(*topics, func(t *models.Topic) bool {
+			return t.StatusID != constants.StatusArchived
+		}).([]*models.Topic)
+
 		associateTopicsWithChapters(chapterPtrs, *topics)
 	}
 }
@@ -188,16 +196,22 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 	})
 }
 
-func (h *ChaptersHandler) DeleteChapter(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ChaptersHandler) ArchiveChapter(responseWriter http.ResponseWriter, request *http.Request) {
 	chapterIdStr := request.URL.Query().Get("id")
 	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 		return
 	}
-	err = h.chaptersService.DeleteObject(chapterIdStr, func(c *models.Chapter) bool {
-		return c.ID != chapterId
-	}, chaptersKey, chaptersEndPoint)
+
+	chapterMap := map[string]any{
+		"cms_status_id": constants.StatusArchived,
+	}
+
+	err = h.chaptersService.ArchiveObject(chapterIdStr, chaptersEndPoint, chapterMap, chaptersKey,
+		func(chapter *models.Chapter) bool {
+			return (*chapter).ID != chapterId
+		})
 
 	// If http error is thrown from here then target row won't be removed by htmx code
 	if err != nil {
