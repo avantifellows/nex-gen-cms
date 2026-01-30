@@ -70,8 +70,8 @@ export async function mockCreateChapterApi(page: Page, chptrCode: string, chptrN
     });
 }
 
-export async function mockDeleteChapterApi(page: Page) {
-    await page.route(/\/delete-chapter/, async route => {
+export async function mockArchiveChapterApi(page: Page) {
+    await page.route(/\/archive-chapter/, async route => {
         await route.fulfill({
             status: 200
         });
