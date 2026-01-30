@@ -170,7 +170,7 @@ func filterProblems(problems *[]*models.Problem, difficulty string, ptype string
 	n := 0
 	for _, p := range ps {
 		// "" means All is selected in dropdown
-		if p.Status != constants.ResourceStatusArchived && (difficulty == "" || p.DifficultyLevel == difficulty) && (ptype == "" || p.Subtype == ptype) && !selectedIds[p.ID] {
+		if p.StatusID != constants.StatusArchived && (difficulty == "" || p.DifficultyLevel == difficulty) && (ptype == "" || p.Subtype == ptype) && !selectedIds[p.ID] {
 			ps[n] = p
 			n++
 		}
@@ -265,9 +265,9 @@ func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, requ
 func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, request *http.Request) {
 	problemIdStr := request.URL.Query().Get("id")
 	problemId := utils.StringToInt(problemIdStr)
-	body := map[string]string{
-		"cms_status": constants.ResourceStatusArchived,
-		"lang_code":  "en",
+	body := map[string]any{
+		"cms_status_id": constants.StatusArchived,
+		"lang_code":     "en",
 	}
 
 	err := h.problemsService.ArchiveObject(problemIdStr, resourcesEndPoint, body, problemsKey,
