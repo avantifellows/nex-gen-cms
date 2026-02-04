@@ -1,5 +1,5 @@
 {{ define "chip_box_cells" }}
-<td class="p-2 text-center w-[5rem]">
+<td class="p-2 text-center w-[4rem]">
     <div id="chip-box" class="chip-box" onclick="focusEditable(this)">
         <div id="chip-editor-pos" contenteditable="{{if .ReadOnlyMarks}}false{{else}}true{{end}}" 
             class="chip-editor" onkeydown="handleEditableChips(event)">
@@ -7,7 +7,7 @@
         </div>
     </div>
 </td>
-<td class="p-2 text-center w-[5rem]">
+<td class="p-2 text-center w-[4rem]">
     <div id="chip-box" class="chip-box" onclick="focusEditable(this)">
         <div id="chip-editor-neg" contenteditable="{{if .ReadOnlyMarks}}false{{else}}true{{end}}" 
             class="chip-editor" onkeydown="handleEditableChips(event)">

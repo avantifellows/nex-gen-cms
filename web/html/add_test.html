@@ -260,6 +260,7 @@
                     <th class="p-2">Question</th>
                     <th class="p-2 text-center">+ve Marks</th>
                     <th class="p-2 text-center">-ve Marks</th>
+                    <th class="p-2 text-center">Options Layout</th>
                     <th class="p-2">Action</th>
                 </tr>
             </thead>
@@ -278,7 +279,8 @@
                             {{range .Compulsory.Problems}}
                                 {{ $sr = add $sr 1 }}
                                 {{template "dest_problem_row" (dict "Problem" (index $.Problems .ID) "SrNo" $sr
-                                "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule)}}
+                                "PosMarks" .PosMarks "NegMarks" .NegMarks "OptionLayout" .OptionLayout 
+                                "ReadOnlyMarks" $hasTestRule)}}
                             {{end}}
                         {{end}}
                     {{end}}
@@ -736,10 +738,14 @@
                     return;
                 }
 
+                const layoutSelect = row.querySelector('select[name="options-layout"]');
+                const [rows, cols] = layoutSelect.value.split('x').map(Number);
+
                 const problem = {
                     id: parseInt(id.split("-")[1]),
                     pos_marks: posMarksArr,
                     neg_marks: getMarksArray(negChips),
+                    option_layout: { rows, cols }
                 };
                 currentSection.compulsory.problems.push(problem);
 
