@@ -405,14 +405,15 @@
         const tableBody = document.getElementById("questions-table-body");
 
         // Remove subtype header if no more problems of that subtype under same subject remain
-        const remainingSubtypeProblems = tableBody.querySelectorAll(`tr[data-subject="${subject}"][data-subtype="${subtype}"]`);
+        const remainingSubtypeProblems = tableBody.querySelectorAll(`tr[id^="problem-"][data-subject="${subject}"][data-subtype="${subtype}"]`);
         if (remainingSubtypeProblems.length === 0) {
             prevRow.remove();
 
             // Remove subject header if no more problems of that subject remain
-            const remainingSubjectProblems = tableBody.querySelectorAll(`tr[data-subject="${subject}"]`);
+            const remainingSubjectProblems = tableBody.querySelectorAll(`tr[id^="problem-"][data-subject="${subject}"]`);
             if (remainingSubjectProblems.length === 0) {
                 prevPrevRow.remove();
+                updateSubjectArrowStates();
             }
         }
 
@@ -491,11 +492,7 @@
 
                 if (trId.startsWith('subtype-')) {
                     // section level marking scheme change - apply same marking scheme to all problems under this section
-                    const trIdComponents = trId.split('-');
-                    const subjectId = trIdComponents[1];
-                    const subtype = trIdComponents[2];
-
-                    const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+                    const subtypeProblemRows = getSubtypeProblemRows(trId, questionsTableBody)
                     cloneChips(subtypeProblemRows, targetEditor.id, clonedContent);
 
                 } else if (trId.startsWith('subject-')) {
@@ -503,7 +500,7 @@
                     const trIdComponents = trId.split('-');
                     const subjectId = trIdComponents[1];
 
-                    const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+                    const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[id^="problem-"][data-subject="subject-${subjectId}"]`);
                     cloneChips(subjectProblemRows, targetEditor.id, clonedContent);
                 }
 
@@ -517,6 +514,14 @@
                 updateTotalMarks();
             }
         }
+    }
+
+    function getSubtypeProblemRows(subtypeRowId, questionsTableBody) {
+        const trIdComponents = subtypeRowId.split('-');
+        const subjectId = trIdComponents[1];
+        const subtype = trIdComponents[2];
+
+        return questionsTableBody.querySelectorAll(`tr[id^="problem-"][data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
     }
 
     function cloneChips(rows, targetEditorId, clonedContent) {
@@ -948,6 +953,11 @@
 
         if (tableBody._sortableInitialized) return;
 
+        if (!window.Sortable) {
+            console.warn("SortableJS not loaded. Drag-and-drop disabled.");
+            return; // graceful degradation
+        }
+
         Sortable.create(tableBody, {
             animation: 150,
             multiDrag: true,
@@ -989,17 +999,10 @@
 
     function shuffleSubtype(btn) {
         const subtypeRow = btn.closest("tr");
-        const subject = subtypeRow.dataset.subject;
-        const subtype = subtypeRow.dataset.subtype;
-
         const tableBody = document.getElementById("questions-table-body");
 
         // Collect all problem rows under this subject + subtype
-        const rows = Array.from(
-            tableBody.querySelectorAll(
-                `tr[id^="problem-"][data-subject="${subject}"][data-subtype="${subtype}"]`
-            )
-        );
+        const rows = Array.from(getSubtypeProblemRows(subtypeRow.id, tableBody));
 
         if (rows.length <= 1) return; // nothing to shuffle
 
