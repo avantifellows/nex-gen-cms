@@ -62,6 +62,14 @@ type ResProblem struct {
 	ID       int    `json:"id"`
 	PosMarks []int8 `json:"pos_marks"`
 	NegMarks []int8 `json:"neg_marks,omitempty"`
+	// struct is never empty and omitempty is ignored without pointer,
+	// so we need to use a pointer to make it optional
+	OptionLayout *OptionLayout `json:"option_layout,omitempty"`
+}
+
+type OptionLayout struct {
+	Rows int8 `json:"rows"`
+	Cols int8 `json:"cols"`
 }
 
 // Method to count total problems

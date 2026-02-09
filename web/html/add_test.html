@@ -63,13 +63,25 @@
             </select>
             <label class="font-semibold">Level</label>
             <label class="font-semibold">Problem Type</label>
-            <select id="level-dropdown" name="level-dropdown" class="p-2 border rounded w-full">
-                <option value="">All</option>
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-            </select>
-            <select id="ptype-dropdown" name="ptype-dropdown" class="p-2 border rounded w-full">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2" id="level-checkboxes">
+                <label class="flex items-center">
+                    <input type="checkbox" name="level" value="" checked class="mr-2 level-checkbox" id="level-all">
+                    All
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" name="level" value="easy" checked class="mr-2 level-checkbox">
+                    Easy
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" name="level" value="medium" checked class="mr-2 level-checkbox">
+                    Medium
+                </label>
+                <label class="flex items-center">
+                    <input type="checkbox" name="level" value="hard" checked class="mr-2 level-checkbox">
+                    Hard
+                </label>            
+            </div>
+            <select id="ptype-dropdown" name="ptype-dropdown" class="p-2 border rounded w-full h-10">
                 <option value="">All</option>
                 {{ template "problem_type_options" }}
             </select>
@@ -86,8 +98,8 @@
                     </tr>
                 </thead>
                 <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems"
-                    hx-trigger="change from:(#topic-dropdown, #level-dropdown, #ptype-dropdown)"
-                    hx-include="#topic-dropdown, #curriculum-dropdown, #subject-dropdown, #level-dropdown, #ptype-dropdown"
+                    hx-trigger="change from:(#topic-dropdown, .level-checkbox, #ptype-dropdown)"
+                    hx-include="#topic-dropdown, #curriculum-dropdown, #subject-dropdown, .level-checkbox, #ptype-dropdown"
                     data-mathjax="true">
                     <!-- Rows will be dynamically inserted here -->
                 </tbody>
@@ -248,6 +260,7 @@
                     <th class="p-2">Question</th>
                     <th class="p-2 text-center">+ve Marks</th>
                     <th class="p-2 text-center">-ve Marks</th>
+                    <th class="p-2 text-center">Options Layout</th>
                     <th class="p-2">Action</th>
                 </tr>
             </thead>
@@ -266,7 +279,8 @@
                             {{range .Compulsory.Problems}}
                                 {{ $sr = add $sr 1 }}
                                 {{template "dest_problem_row" (dict "Problem" (index $.Problems .ID) "SrNo" $sr
-                                "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule)}}
+                                "PosMarks" .PosMarks "NegMarks" .NegMarks "OptionLayout" .OptionLayout 
+                                "ReadOnlyMarks" $hasTestRule)}}
                             {{end}}
                         {{end}}
                     {{end}}
@@ -348,6 +362,28 @@
         }
     }
 
+    var allCheckbox = document.getElementById('level-all');
+    var levelCheckboxes = document.querySelectorAll('#level-checkboxes input[name="level"]');
+
+    // When "All" is changed
+    allCheckbox.addEventListener('change', () => {
+        levelCheckboxes.forEach(cb => {
+            cb.checked = allCheckbox.checked;
+        });
+    });
+
+    // When any individual checkbox is changed
+    levelCheckboxes.forEach(cb => {
+        if(cb !== allCheckbox) {
+            cb.addEventListener('change', () => {
+                const allChecked = Array.from(levelCheckboxes)
+                    .filter(c => c !== allCheckbox)
+                    .every(c => c.checked);
+                allCheckbox.checked = allChecked;
+            });
+        }
+    });
+
     document.querySelector(ADD_TEST_DIV_SELECTOR).addEventListener(BACK_TO_ADD_TEST_EVT, () => {
         setElementFromStorage('program-dropdown', SESSION_KEY_PROGRAM);
         setElementFromStorage('test-type-code-dropdown', SESSION_KEY_TEST_TYPE_CODE);
@@ -356,7 +392,7 @@
         setElementFromStorage('test-name', SESSION_KEY_NAME);
         setElementFromStorage('duration', SESSION_KEY_DURATION);
     });
-
+    
     htmx.defineExtension('cascade-clear', {
         onEvent: function (name, event) {
             if (name === "htmx:afterSwap") {
@@ -657,7 +693,7 @@
         const skillIdSet = new Set();
 
         const tableBody = document.getElementById('questions-table-body');
-        const rows = tableBody.querySelectorAll('tr');
+        const rows = tableBody.querySelectorAll(':scope > tr');
         for (const row of rows) {
             const posChips = row.querySelectorAll(`${chipEditorPosId} .chip`);
             const negChips = row.querySelectorAll(`${chipEditorNegId} .chip`);
@@ -704,10 +740,14 @@
                     return;
                 }
 
+                const layoutSelect = row.querySelector('select[name="options-layout"]');
+                const [rows, cols] = layoutSelect.value.split('x').map(Number);
+
                 const problem = {
                     id: parseInt(id.split("-")[1]),
                     pos_marks: posMarksArr,
                     neg_marks: getMarksArray(negChips),
+                    option_layout: { rows, cols }
                 };
                 currentSection.compulsory.problems.push(problem);
 
