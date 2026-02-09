@@ -58,12 +58,13 @@
 
                 <!-- Continue (normal new test flow) -->
                 <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="true"
-                    hx-on::before-request="if (!validateTestType()) event.preventDefault()"
+                    hx-on::before-request="if (!validateSelectedOptions()) event.preventDefault()"
                     class="bg-blue-500 text-white px-4 py-2 rounded {{ if .Subtype }}hidden{{ end }}">Continue</button>
 
                 <!-- Validate (copy mode) -->
                 <button type="button" hx-post="/tests/validate-test" hx-swap="none"
                     class="bg-blue-500 text-white px-4 py-2 rounded {{ if not .Subtype }}hidden{{ end }}"
+                    hx-on::before-request="if (!validateSelectedOptions()) event.preventDefault()"
                     hx-on::after-request="handleValidateTestResponse(event)">
                     Validate & Save
                 </button>
@@ -73,15 +74,31 @@
     </div>
 </div>
 <script>
-    function validateTestType() {
+    function validateSelectedOptions() {
+        // 1. Test type validation
         const testType = document.getElementById('modal-testType').value;
         if (!testType) {
             alert("Please select a test type.");
-            // block form submission
             return false;
         }
-        // allow form submission
-        return true;
+
+        // 2. Duplicate curriculum–grade validation
+        const rows = document.querySelectorAll('.curriculum-grade-row');
+        const seen = new Set();
+
+        for (const row of rows) {
+            const curriculum = row.querySelector("select[name='curriculum[]']").value;
+            const grade = row.querySelector("select[name='grade[]']").value;
+
+            const key = `${curriculum}__${grade}`;
+            if (seen.has(key)) {
+                alert("Duplicate Curriculum–Grade combination selected. Please remove duplicates.");
+                return false;
+            }
+            seen.add(key);
+        }
+
+        return true; // allow request
     }
 
     function handleAddCurriculumGradeResponse(evt) {
