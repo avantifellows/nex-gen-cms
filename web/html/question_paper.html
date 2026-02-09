@@ -3,9 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <title>{{ getName .TestPtr "en" }}</title>
-<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>
+window.MathJax = {
+  startup: {
+    ready: () => {
+      MathJax.startup.defaultReady();
+      document.getElementById('mathjax-done').textContent = 'true';
+    }
+  },
+  chtml: {
+    scale: 0.9,
+    minScale: 0.5
+  },
+  tex: {
+    inlineMath: [["$", "$"], ["\\(", "\\)"]],
+    displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+    processEscapes: true,
+    packages: {'[+]': ['noerrors']}
+  },
+  loader: {
+    load: ['[tex]/noerrors']
+  }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" defer></script>
 </head>
 <body class="font-sans text-[14px] m-5 mt-0">
+<div id="mathjax-done" style="display:none"></div>
 
 <div class="flex justify-between mb-3 w-full">
     <h2 class="text-lg font-bold">{{ getName .TestPtr "en" }}</h2>
@@ -52,13 +76,21 @@
                 <!-- Show Options only if MCQ -->
                 {{if or (eq $p.Subtype "mcq_single_answer") (eq $p.Subtype "mcq_multiple_answer")}}
                 <div class="pl-11">
-                    {{ $long := false }}
-                    {{ range $p.MetaData.Options }}
-                        {{ if gt (len .) 50 }}{{ $long = true }}{{ end }}
+
+                    {{/* Determine option layout */}}
+                    {{ $cols := 2 }}
+                    {{ if $prob.OptionLayout }}
+                        {{ $cols = $prob.OptionLayout.Cols }}
                     {{ end }}
 
-                    <!-- Grid: 1 column if long, else 2 columns -->
-                    <div class="grid gap-x-4 gap-y-1 {{ if $long }}grid-cols-1{{ else }}grid-cols-2{{ end }}">
+                    {{ $gridClass := "grid-cols-2" }}
+                    {{ if eq $cols 1 }}
+                        {{ $gridClass = "grid-cols-1" }}
+                    {{ else if eq $cols 4 }}
+                        {{ $gridClass = "grid-cols-4" }}
+                    {{ end }}
+
+                    <div class="grid gap-x-4 gap-y-1 {{ $gridClass }}">
                         {{range $index, $option := $p.MetaData.Options}}
                         <div class="flex items-start">
                             <div class="font-semibold mr-2">{{ index labels $index }}</div>
