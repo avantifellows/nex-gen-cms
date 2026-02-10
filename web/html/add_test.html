@@ -350,6 +350,9 @@
             sessionStorage.removeItem(SESSION_KEY_NAME);
             sessionStorage.removeItem(SESSION_KEY_DURATION);
         }
+
+        initSortableForSections();
+        updateSubjectArrowStates();
     })();
 
     function setElementFromStorage(elementId, storageKey) {
@@ -438,14 +441,15 @@
         const tableBody = document.getElementById("questions-table-body");
 
         // Remove subtype header if no more problems of that subtype under same subject remain
-        const remainingSubtypeProblems = tableBody.querySelectorAll(`tr[data-subject="${subject}"][data-subtype="${subtype}"]`);
+        const remainingSubtypeProblems = tableBody.querySelectorAll(`tr[id^="problem-"][data-subject="${subject}"][data-subtype="${subtype}"]`);
         if (remainingSubtypeProblems.length === 0) {
             prevRow.remove();
 
             // Remove subject header if no more problems of that subject remain
-            const remainingSubjectProblems = tableBody.querySelectorAll(`tr[data-subject="${subject}"]`);
+            const remainingSubjectProblems = tableBody.querySelectorAll(`tr[id^="problem-"][data-subject="${subject}"]`);
             if (remainingSubjectProblems.length === 0) {
                 prevPrevRow.remove();
+                updateSubjectArrowStates();
             }
         }
 
@@ -524,11 +528,7 @@
 
                 if (trId.startsWith('subtype-')) {
                     // section level marking scheme change - apply same marking scheme to all problems under this section
-                    const trIdComponents = trId.split('-');
-                    const subjectId = trIdComponents[1];
-                    const subtype = trIdComponents[2];
-
-                    const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+                    const subtypeProblemRows = getSubtypeProblemRows(trId, questionsTableBody)
                     cloneChips(subtypeProblemRows, targetEditor.id, clonedContent);
 
                 } else if (trId.startsWith('subject-')) {
@@ -536,7 +536,7 @@
                     const trIdComponents = trId.split('-');
                     const subjectId = trIdComponents[1];
 
-                    const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+                    const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[id^="problem-"][data-subject="subject-${subjectId}"]`);
                     cloneChips(subjectProblemRows, targetEditor.id, clonedContent);
                 }
 
@@ -550,6 +550,14 @@
                 updateTotalMarks();
             }
         }
+    }
+
+    function getSubtypeProblemRows(subtypeRowId, questionsTableBody) {
+        const trIdComponents = subtypeRowId.split('-');
+        const subjectId = trIdComponents[1];
+        const subtype = trIdComponents[2];
+
+        return questionsTableBody.querySelectorAll(`tr[id^="problem-"][data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
     }
 
     function cloneChips(rows, targetEditorId, clonedContent) {
@@ -978,6 +986,198 @@
         }
 
         return { isValid: true, reason: null };
+    }
+
+    function initSortableForSections() {
+        const tableBody = document.getElementById("questions-table-body");
+
+        if (tableBody._sortableInitialized) return;
+
+        if (!window.Sortable) {
+            console.warn("SortableJS not loaded. Drag-and-drop disabled.");
+            return; // graceful degradation
+        }
+
+        Sortable.create(tableBody, {
+            animation: 150,
+            multiDrag: true,
+            selectedClass: "bg-blue-100",
+            draggable: "tr[id^='problem-']",
+            
+            onMove(evt) {
+                const dragged = evt.dragged;
+                const related = evt.related;
+
+                if (!related || !related.id.startsWith("problem-")) {
+                    return false; // block moving over subject/subtype rows
+                }
+
+                // Allow move only within same subject + subtype
+                return (
+                    dragged.dataset.subject === related.dataset.subject &&
+                    dragged.dataset.subtype === related.dataset.subtype
+                );
+            },
+
+            onEnd() {
+                renumberSerials();
+            }
+        });
+
+        tableBody._sortableInitialized = true;
+    }
+
+    function renumberSerials() {
+        let sr = 0;
+        document.querySelectorAll("#questions-table-body tr").forEach(row => {
+            const firstTd = row.querySelector("td");
+            if (!firstTd || firstTd.hasAttribute("colspan")) return;
+            sr++;
+            firstTd.textContent = sr;
+        });
+    }
+
+    function shuffleSubtype(btn) {
+        const subtypeRow = btn.closest("tr");
+        const tableBody = document.getElementById("questions-table-body");
+
+        // Collect all problem rows under this subject + subtype
+        const rows = Array.from(getSubtypeProblemRows(subtypeRow.id, tableBody));
+
+        if (rows.length <= 1) return; // nothing to shuffle
+
+        // Save original order (by problem id)
+        const originalOrder = rows.map(r => r.id);
+
+        // Special-case: exactly 2 → just swap
+        if (rows.length === 2) {
+            [rows[0], rows[1]] = [rows[1], rows[0]];
+
+        } else {
+            let attempts = 0;
+            const MAX_ATTEMPTS = 5;
+
+            do {
+                // Fisher–Yates shuffle
+                for (let i = rows.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [rows[i], rows[j]] = [rows[j], rows[i]];
+                }
+                attempts++;
+
+            } while (
+                attempts < MAX_ATTEMPTS &&
+                rows.every((row, idx) => row.id === originalOrder[idx])
+            );
+        }
+
+        // Reinsert rows immediately after the subtype row
+        let insertAfter = subtypeRow;
+        rows.forEach(row => {
+            tableBody.insertBefore(row, insertAfter.nextSibling);
+            insertAfter = row;
+        });
+
+        renumberSerials();
+    }
+
+    function findPreviousSubjectRow(subjectRow) {
+        let prev = subjectRow.previousElementSibling;
+
+        while (prev) {
+            if (prev.id && prev.id.startsWith("subject-")) {
+                return prev;
+            }
+            prev = prev.previousElementSibling;
+        }
+        return null;
+    }
+
+    function findNextSubjectRow(subjectRow) {
+        let next = subjectRow.nextElementSibling;
+
+        while (next) {
+            if (next.id && next.id.startsWith("subject-")) {
+                return next;
+            }
+            next = next.nextElementSibling;
+        }
+        return null;
+    }
+
+    function moveSubjectUp(button) {
+        const subjectRow = button.closest("tr[id^='subject-']");
+
+        const prevSubject = findPreviousSubjectRow(subjectRow);
+        if (!prevSubject) return;
+
+        const tableBody = subjectRow.parentNode;
+        const currentBlock = getSubjectBlock(subjectRow);
+
+        currentBlock.forEach(row => {
+            tableBody.insertBefore(row, prevSubject);
+        });
+
+        renumberSerials();
+        updateSubjectArrowStates();
+    }
+
+    function moveSubjectDown(button) {
+        const subjectRow = button.closest("tr[id^='subject-']");
+        if (!subjectRow) return;
+
+        const nextSubject = findNextSubjectRow(subjectRow);
+        if (!nextSubject) return;
+
+        const nextToNextSubject = findNextSubjectRow(nextSubject);
+
+        const tableBody = subjectRow.parentNode;
+        const currentBlock = getSubjectBlock(subjectRow);
+
+        currentBlock.forEach(row => {
+            tableBody.insertBefore(row, nextToNextSubject);
+        });
+
+        renumberSerials();
+        updateSubjectArrowStates();
+    }
+
+    function getSubjectBlock(subjectRow) {
+        const rows = [subjectRow];
+        let next = subjectRow.nextElementSibling;
+
+        while (next && !next.id.startsWith("subject-")) {
+            rows.push(next);
+            next = next.nextElementSibling;
+        }
+        return rows;
+    }
+
+    function getAllSubjectRows() {
+        return Array.from(
+            document.querySelectorAll("tr[id^='subject-']")
+        );
+    }
+
+    function updateSubjectArrowStates() {
+        const subjects = getAllSubjectRows();
+
+        subjects.forEach((subjectRow, index) => {
+            const upBtn = subjectRow.querySelector(".move-up");
+            const downBtn = subjectRow.querySelector(".move-down");
+
+            if (upBtn) {
+                upBtn.disabled = index === 0;
+                upBtn.classList.toggle("opacity-50", index === 0);
+                upBtn.classList.toggle("cursor-not-allowed", index === 0);
+            }
+
+            if (downBtn) {
+                downBtn.disabled = index === subjects.length - 1;
+                downBtn.classList.toggle("opacity-50", index === subjects.length - 1);
+                downBtn.classList.toggle("cursor-not-allowed", index === subjects.length - 1);
+            }
+        });
     }
 </script>
 {{ end }}
