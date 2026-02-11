@@ -80,6 +80,9 @@
                 const newlyInsertedRow = updateSerialNumbers(insertAfterId, tableBody);
                 inheritMarkingScheme(tableBody, newlyInsertedRow);
                 updateTotalMarks();
+
+                initSortableForSections();
+                updateSubjectArrowStates();
             }
             document.body.removeEventListener("htmx:afterRequest", handler);
         }
