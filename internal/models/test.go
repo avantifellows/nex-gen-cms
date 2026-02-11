@@ -147,3 +147,13 @@ func (t *Test) DisplaySubtype() string {
 		return "Unknown"
 	}
 }
+
+func (t *Test) RecalculateTotalMarksFromSubjects() {
+	var total int16 = 0
+
+	for _, subject := range t.TypeParams.Subjects {
+		total += int16(subject.Marks)
+	}
+
+	t.TypeParams.Marks = total
+}
