@@ -667,8 +667,8 @@ func (h *TestsHandler) UpdateTestSubject(responseWriter http.ResponseWriter, req
 	}
 
 	if !updated {
-		http.Error(responseWriter, "Subject not found in test", http.StatusNotFound)
-		return
+		// If subject not found, append it
+		test.TypeParams.Subjects = append(test.TypeParams.Subjects, incomingSubject)
 	}
 
 	// Recalculate total marks from subject marks

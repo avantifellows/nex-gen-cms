@@ -7,10 +7,10 @@
         {{ if .CanSaveSingleSubject }}
         <button type="button" title="Save subject" class="action-button" 
             onclick="saveSubject(this, '{{.TestId}}')">
-            <i class="fa-solid fa-floppy-disk text-2xl"></i>
+            <i class="fa-solid fa-floppy-disk fa-lg"></i>
         </button>
         {{ end }}
-        <button class="action-button move-up" type="button" title="Move up" onclick="moveSubjectUp(this)">
+        <button class="action-button ml-2 move-up" type="button" title="Move up" onclick="moveSubjectUp(this)">
             <i class="fa-solid fa-arrow-up"></i>
         </button>
         <button class="action-button ml-2 move-down" type="button" title="Move down" onclick="moveSubjectDown(this)">

@@ -261,7 +261,7 @@
                     <th class="p-2 text-center">+ve Marks</th>
                     <th class="p-2 text-center">-ve Marks</th>
                     <th class="p-2 text-center">Options Layout</th>
-                    <th class="p-2">Action</th>
+                    <th class="p-2 text-center">Action</th>
                 </tr>
             </thead>
             <tbody id="questions-table-body" name="questions-table-body">
@@ -1068,39 +1068,39 @@
         button.classList.add('opacity-50', 'cursor-not-allowed');
 
         button.innerHTML = `
-            <i class="fa-solid fa-spinner fa-spin text-2xl"></i>
+            <i class="fa-solid fa-spinner fa-spin fa-lg"></i>
         `;
     }
 
     function setSubjSuccessState(button) {
         button.title = "Saved";
         button.innerHTML = `
-            <i class="fa-solid fa-check text-2xl text-green-600"></i>
+            <i class="fa-solid fa-check fa-lg text-green-600"></i>
         `;
 
         setTimeout(() => {
-            resetButton(button);
+            resetSubjSaveButton(button);
         }, 3000);
     }
 
     function setSubjErrorState(button) {
         button.title = "Save failed";
         button.innerHTML = `
-            <i class="fa-solid fa-triangle-exclamation text-2xl text-red-600"></i>
+            <i class="fa-solid fa-triangle-exclamation fa-lg text-red-600"></i>
         `;
 
         setTimeout(() => {
-            resetButton(button);
+            resetSubjSaveButton(button);
         }, 3000);
     }
 
-    function resetButton(button) {
+    function resetSubjSaveButton(button) {
         button.title = "Save subject";
         button.disabled = false;
         button.classList.remove('opacity-50', 'cursor-not-allowed');
 
         button.innerHTML = `
-            <i class="fa-solid fa-floppy-disk text-2xl"></i>
+            <i class="fa-solid fa-floppy-disk fa-lg"></i>
         `;
     }
 

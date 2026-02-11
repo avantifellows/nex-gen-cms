@@ -1,7 +1,7 @@
 <tbody hx-swap-oob="beforeend:#questions-table-body">
     {{ with .Problem }}
         {{ template "dest_subject_row" (dict "SubjectId" (getParentId .Subject) "SubjectName" (getParentName .Subject "en") 
-            "ReadOnlyMarks" $.ReadOnlyMarks "CanSaveSingleSubject" $.CanSaveSingleSubject) }}
+            "ReadOnlyMarks" $.ReadOnlyMarks "CanSaveSingleSubject" $.CanSaveSingleSubject "TestId" $.TestId) }}
         {{ template "dest_subtype_row" (dict "SubjectId" (getParentId .Subject) "Subtype" .Subtype 
             "DisplaySubtype" (getDisplaySubtype .Subtype) "ReadOnlyMarks" $.ReadOnlyMarks) }}
         {{ template "dest_problem_row" (dict "Problem" . "ReadOnlyMarks" $.ReadOnlyMarks) }}
