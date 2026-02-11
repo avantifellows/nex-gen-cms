@@ -113,6 +113,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.Handle("/tests/add-test-dialog", middleware.RequireHTMX(http.HandlerFunc(testsHandler.AddTestModal)))
 	muxHandler.HandleFunc("/add-curriculum-grade-selects", testsHandler.AddCurriculumGradeDropdowns)
 	muxHandler.HandleFunc("/update-test", testsHandler.UpdateTest)
+	muxHandler.HandleFunc("/update-test-subject", testsHandler.UpdateTestSubject)
 	muxHandler.HandleFunc("/archive-test", testsHandler.ArchiveTest)
 	muxHandler.HandleFunc("/download-pdf", testsHandler.DownloadPdf)
 	muxHandler.HandleFunc("/tests/copy-test", testsHandler.CopyTest)

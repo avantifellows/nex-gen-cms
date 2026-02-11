@@ -3,6 +3,13 @@
     <td class="p-2 font-medium capitalize" colspan="4">{{.SubjectName}}</td>
     {{ template "chip_box_cells" . }}
     <td></td>
-    <td></td>
+    <td class="text-center">
+        {{ if .CanSaveSingleSubject }}
+        <button type="button" title="Save subject" class="action-button" 
+            onclick="saveSubject(this, '{{.TestId}}')">
+            <i class="fa-solid fa-floppy-disk text-2xl"></i>
+        </button>
+        {{ end }}
+    </td>
 </tr>
 {{ end }}

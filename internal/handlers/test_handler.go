@@ -505,6 +505,8 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	subjectExists := request.FormValue("subject-exists") == "true"
 	subtypeExists := request.FormValue("subtype-exists") == "true"
 	readOnlyMarks := request.FormValue("read-only-marks") == "true"
+	canSaveSingleSubject := request.FormValue("can-save-single-subject") == "true" // for edit test scenario
+	testId := request.FormValue("test-id")
 
 	var filename string
 	var data any
@@ -514,8 +516,10 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		// Need subject + subtype header
 		filename = addTestDestProblemRowWithHeadersTemplate
 		data = map[string]any{
-			"Problem":       problemPtr,
-			"ReadOnlyMarks": readOnlyMarks,
+			"Problem":              problemPtr,
+			"ReadOnlyMarks":        readOnlyMarks,
+			"CanSaveSingleSubject": canSaveSingleSubject,
+			"TestId":               testId,
 		}
 
 	case subjectExists && !subtypeExists:
@@ -633,6 +637,53 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 		http.Error(responseWriter, fmt.Sprintf("Error updating test: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *TestsHandler) UpdateTestSubject(responseWriter http.ResponseWriter, request *http.Request) {
+	// Declare a variable to hold the parsed JSON
+	var incomingSubject models.ResSubject
+
+	// Decode the JSON body into the subject object
+	if err := json.NewDecoder(request.Body).Decode(&incomingSubject); err != nil {
+		http.Error(responseWriter, "Error parsing JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch existing test
+	test, _, err := h.getTest(responseWriter, request)
+	if err != nil {
+		http.Error(responseWriter, "Test not found", http.StatusNotFound)
+		return
+	}
+
+	// Find & update ONLY the matching subject
+	updated := false
+	for i, subj := range test.TypeParams.Subjects {
+		if subj.SubjectID == incomingSubject.SubjectID {
+			test.TypeParams.Subjects[i] = incomingSubject
+			updated = true
+			break
+		}
+	}
+
+	if !updated {
+		http.Error(responseWriter, "Subject not found in test", http.StatusNotFound)
+		return
+	}
+
+	// Recalculate total marks from subject marks
+	test.RecalculateTotalMarksFromSubjects()
+
+	// Persist updated test
+	if _, err = h.testsService.UpdateObject(strconv.Itoa(test.ID), resourcesEndPoint, test, testsKey,
+		func(t *models.Test) bool {
+			return (*t).ID == test.ID
+		}); err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error updating subject: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	responseWriter.WriteHeader(http.StatusOK)
 }
 
 func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *http.Request) {

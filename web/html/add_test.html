@@ -265,13 +265,14 @@
                 </tr>
             </thead>
             <tbody id="questions-table-body" name="questions-table-body">
-                <!-- if this is for edit test -->
+                <!-- if this is for edit/copy test -->
                 {{if .Problems}}
                     {{ $sr := 0 }}
                     {{range .TestPtr.TypeParams.Subjects}}
                         {{ $subjectId := .SubjectID }}
                         {{ template "dest_subject_row" (dict "SubjectId" $subjectId "SubjectName" .Name 
-                        "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule) }}
+                        "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule 
+                        "CanSaveSingleSubject" (eq $mode "edit") "TestId" $id)}}
                         {{range .Sections}}
                             {{template "dest_subtype_row" (dict "SubjectId" $subjectId "Subtype" .Name 
                             "DisplaySubtype" (getDisplaySubtype .Name) "PosMarks" .PosMarks "NegMarks" .NegMarks
@@ -323,8 +324,8 @@
         {{ end }}
     </form>
 </div>
-<script type="application/json" id="test-rule-json">
-  {{ .TestRule | toJson }}
+<script type="application/json" id="test-context-json">
+  {{ dict "testId" $id "testRule" .TestRule | toJson }}
 </script>
 <script>
     var mode = "{{ $mode }}";  // "new", "edit", or "copy"
@@ -684,93 +685,26 @@
         const posChips = markingSchemeDiv.querySelectorAll(`${chipEditorPosId} .chip`);
         const negChips = markingSchemeDiv.querySelectorAll(`${chipEditorNegId} .chip`);
 
-        const subjects = [];
-        let currentSubject = null, currentSection = null;
-        let currentSubjectMarks = 0, currentSectionMarks = 0;
+        let subjects;
+        try {
+            subjects = buildAllSubjectsJson();
+        } catch (e) {
+            return null;
+        }
+
         // set is used to have unique skill ids only
         const skillIdSet = new Set();
-
-        const tableBody = document.getElementById('questions-table-body');
-        const rows = tableBody.querySelectorAll(':scope > tr');
-        for (const row of rows) {
-            const posChips = row.querySelectorAll(`${chipEditorPosId} .chip`);
-            const negChips = row.querySelectorAll(`${chipEditorNegId} .chip`);
-
-            const id = row.id;
-            // if it is subject row
-            if (id.startsWith("subject-")) {
-                if (currentSubject) {
-                    // set total marks on previous subject and reset marks variable
-                    currentSubject.marks = currentSubjectMarks;
-                    currentSubjectMarks = 0;
-                }
-                currentSubject = {
-                    subject_id: parseInt(id.split("-")[1]),
-                    pos_marks: getMarksArray(posChips),
-                    neg_marks: getMarksArray(negChips),
-                    sections: []
-                };
-                subjects.push(currentSubject);
-
-            } else if (id.startsWith("subtype-")) {
-                // it is section row
-                if (currentSection) {
-                    // set total marks on previous section and reset marks variable
-                    currentSection.marks = currentSectionMarks;
-                    currentSectionMarks = 0;
-                }
-                currentSection = {
-                    name: id.split("-")[2],
-                    pos_marks: getMarksArray(posChips),
-                    neg_marks: getMarksArray(negChips),
-                    compulsory: {
-                        problems: []
-                    },
-                    // right now optional section is not needed
-                };
-                currentSubject.sections.push(currentSection);
-
-            } else {
-                // it's problem row
-                const posMarksArr = getMarksArray(posChips);
-                if (posMarksArr.length === 0) {
-                    alert("Please fill in all the Problem Marks before saving.");
-                    return;
-                }
-
-                const layoutSelect = row.querySelector('select[name="options-layout"]');
-                const [rows, cols] = layoutSelect.value.split('x').map(Number);
-
-                const problem = {
-                    id: parseInt(id.split("-")[1]),
-                    pos_marks: posMarksArr,
-                    neg_marks: getMarksArray(negChips),
-                    option_layout: { rows, cols }
-                };
-                currentSection.compulsory.problems.push(problem);
-
-                // find maximum marks for this problem and add it into both current section and subject marks' total
-                const maxMarks = Math.max(...posMarksArr);
-                currentSubjectMarks += maxMarks;
-                currentSectionMarks += maxMarks;
-
-                const skillIds = row.dataset.skillIds;
-                if (skillIds) {
-                    for (const skillId of skillIds.split(',')) {
-                        skillIdSet.add(parseInt(skillId.trim()));
-                    }
-                }
-            }
-        }
-
-        if (currentSubject) {
-            // set total marks on last subject
-            currentSubject.marks = currentSubjectMarks;
-        }
-        if (currentSection) {
-            // set total marks on last section
-            currentSection.marks = currentSectionMarks;
-        }
+        document.querySelectorAll('#questions-table-body tr[data-skill-ids]')
+            .forEach(row => {
+                row.dataset.skillIds
+                    .split(',')
+                    .forEach(id => {
+                        const parsed = parseInt(id.trim(), 10);
+                        if (!Number.isNaN(parsed)) {
+                            skillIdSet.add(parsed);
+                        }
+                    });
+            });
 
         return {
             code: code,
@@ -794,6 +728,108 @@
             // Used spread operator to add curriculum_grades node only for add/copy test scenario; otherwise it won't add this node
             ...(mode !== "edit" ? { curriculum_grades: curriculumGrades } : {})
         };
+    }
+
+    function buildAllSubjectsJson() {
+        const subjects = [];
+        const subjectRows = document.querySelectorAll(
+            '#questions-table-body tr[id^="subject-"]'
+        );
+
+        for (const subjectRow of subjectRows) {
+            try {
+                subjects.push(buildSubjectJson(subjectRow));
+            } catch (e) {
+                throw e;
+            }
+        }
+
+        return subjects;
+    }
+
+    function buildSubjectJson(subjectRow) {
+        const subjectId = parseInt(subjectRow.id.split("-")[1], 10);
+        const rowsUnderSubject = getRowsUnderSubject(subjectRow);
+
+        const subject = {
+            subject_id: subjectId,
+            pos_marks: getMarksArray(subjectRow.querySelectorAll(`${chipEditorPosId} .chip`)),
+            neg_marks: getMarksArray(subjectRow.querySelectorAll(`${chipEditorNegId} .chip`)),
+            sections: []
+        };
+
+        let currentSection = null;
+        let subjectMarks = 0;
+        let currentSectionMarks = 0;
+
+        for (const row of rowsUnderSubject) {
+            const posChips = row.querySelectorAll(`${chipEditorPosId} .chip`);
+            const negChips = row.querySelectorAll(`${chipEditorNegId} .chip`);
+            const id = row.id;
+        
+            if (id.startsWith("subtype-")) {
+                // it is section row
+                if (currentSection) {
+                    // set total marks on previous section & add same in subject marks
+                    currentSection.marks = currentSectionMarks;
+                    subjectMarks += currentSectionMarks;
+                    // reset current section marks variable
+                    currentSectionMarks = 0;
+                }
+
+                currentSection = {
+                    name: id.split("-")[2],
+                    pos_marks: getMarksArray(posChips),
+                    neg_marks: getMarksArray(negChips),
+                    compulsory: { problems: [] }
+                    // right now optional section is not needed
+                };
+                subject.sections.push(currentSection);
+
+            } else {
+                // it's problem row having id starting with "problem-"
+                const posMarks = getMarksArray(posChips);
+                if (posMarks.length === 0) {
+                    alert("Please fill in all the Problem Marks before saving.");
+                    throw new Error("Missing problem marks");
+                }
+
+                const layoutSelect = row.querySelector('select[name="options-layout"]');
+                const [rows, cols] = layoutSelect.value.split('x').map(Number);
+
+                const problem = {
+                    id: parseInt(id.split("-")[1], 10),
+                    pos_marks: posMarks,
+                    neg_marks: getMarksArray(negChips),
+                    option_layout: { rows, cols }
+                };
+                currentSection.compulsory.problems.push(problem);
+
+                // find maximum marks for this problem and add it into current section marks' total
+                const maxMarks = Math.max(...posMarks);
+                currentSectionMarks += maxMarks;
+            }
+        }
+
+        if (currentSection) {
+            // set total marks on last section and add same in subject marks also
+            currentSection.marks = currentSectionMarks;
+            subjectMarks += currentSectionMarks;
+        }
+        subject.marks = subjectMarks;
+
+        return subject;
+    }
+
+    function getRowsUnderSubject(subjectRow) {
+        const rows = [];
+        let row = subjectRow.nextElementSibling;
+
+        while (row && !row.id.startsWith("subject-")) {
+            rows.push(row);
+            row = row.nextElementSibling;
+        }
+        return rows;
     }
 
     function getMarksArray(chips) {
@@ -978,6 +1014,86 @@
         }
 
         return { isValid: true, reason: null };
+    }
+
+    function saveSubject(button, testId) {
+        const subjectRow = button.closest('tr');
+
+        let subject;
+        try {
+            subject = buildSubjectJson(subjectRow);
+        } catch(e) {
+            console.error(e);
+            setSubjErrorState(button);
+            return;
+        }
+
+        const url = `/update-test-subject?id=${testId}`;
+        setSubjSavingState(button);
+
+        fetch(url, {
+            method: 'PATCH',
+            body: JSON.stringify(subject),
+            headers: {
+                'Content-Type': 'application/json',
+                'HX-Request': 'true'
+            }
+        })
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.text();
+        })
+        .then(() => {
+            setSubjSuccessState(button);
+        })
+        .catch(error => {
+            console.error('Error saving subject:', error);
+            setSubjErrorState(button);
+        });
+    }
+
+    function setSubjSavingState(button) {
+        button.disabled = true;
+        button.title = "Saving...";
+        button.classList.add('opacity-50', 'cursor-not-allowed');
+
+        button.innerHTML = `
+            <i class="fa-solid fa-spinner fa-spin text-2xl"></i>
+        `;
+    }
+
+    function setSubjSuccessState(button) {
+        button.title = "Saved";
+        button.innerHTML = `
+            <i class="fa-solid fa-check text-2xl text-green-600"></i>
+        `;
+
+        setTimeout(() => {
+            resetButton(button);
+        }, 3000);
+    }
+
+    function setSubjErrorState(button) {
+        button.title = "Save failed";
+        button.innerHTML = `
+            <i class="fa-solid fa-triangle-exclamation text-2xl text-red-600"></i>
+        `;
+
+        setTimeout(() => {
+            resetButton(button);
+        }, 3000);
+    }
+
+    function resetButton(button) {
+        button.title = "Save subject";
+        button.disabled = false;
+        button.classList.remove('opacity-50', 'cursor-not-allowed');
+
+        button.innerHTML = `
+            <i class="fa-solid fa-floppy-disk text-2xl"></i>
+        `;
     }
 </script>
 {{ end }}
