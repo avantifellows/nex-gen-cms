@@ -1,3 +1,4 @@
+{{ define "src_problem_row" }}
 {{ range . }}
 <tr class="border-b">
     <td class="p-2 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
@@ -15,43 +16,46 @@
     var chipClass = ".chip";
 
     function addQuestionToTest(btn) {
-        const dataset = btn.dataset;
-        // unary operator + is used to convert string to number
-        // Use parent subject id, because we want to show biology as section for zoology & botany
-        const subjectId = +(dataset.subjectParent || dataset.subject);
-        const subtype = dataset.subtype;
-        const difficulty = dataset.difficulty;
+        return new Promise((resolve) => {
+            const dataset = btn.dataset;
+            // unary operator + is used to convert string to number
+            // Use parent subject id, because we want to show biology as section for zoology & botany
+            const subjectId = +(dataset.subjectParent || dataset.subject);
+            const subtype = dataset.subtype;
+            const difficulty = dataset.difficulty;
 
-        const testRuleJson = document.getElementById("test-rule-json").textContent;
-        const testRule = JSON.parse(testRuleJson);
+            const testRuleJson = document.getElementById("test-rule-json").textContent;
+            const testRule = JSON.parse(testRuleJson);
 
-        const questionsTableBody = document.querySelector("#questions-table-body");
+            const questionsTableBody = document.querySelector("#questions-table-body");
 
-        const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
-        
-        if (testRule && !validateQuestionAgainstTestRule(testRule, subjectId, subtype, subtypeProblemRows.length, 
-                questionsTableBody).isValid) {
-            return; // validation failed
-        }
-
-        const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
-        const insertAfterId = getInsertAfterId(subjectProblemRows, subtypeProblemRows);
-
-        // Hook a one-time global listener that just closes over this specific button's data
-        const handler = createAfterRequestHandler(difficulty, insertAfterId, questionsTableBody);
-        document.body.addEventListener("htmx:afterRequest", handler);
-
-        htmx.ajax("POST", "/add-question-to-test", {
-            target: btn.closest("tr"),
-            swap: "delete",
-            values: {
-                "id": dataset.id,
-                "curriculum-id": dataset.curriculum,
-                "subject-exists": subjectProblemRows.length > 0,
-                "subtype-exists": subtypeProblemRows.length > 0,
-                "insert-after-id": insertAfterId,
-                "read-only-marks": !!testRule
+            const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+            
+            if (testRule && !validateQuestionAgainstTestRule(testRule, subjectId, subtype, subtypeProblemRows.length, 
+                    questionsTableBody).isValid) {
+                resolve();
+                return; // validation failed
             }
+
+            const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
+            const insertAfterId = getInsertAfterId(subjectProblemRows, subtypeProblemRows);
+
+            // Hook a one-time global listener that just closes over this specific button's data
+            const handler = createAfterRequestHandler(difficulty, insertAfterId, questionsTableBody, resolve);
+            document.body.addEventListener("htmx:afterRequest", handler);
+
+            htmx.ajax("POST", "/add-question-to-test", {
+                target: btn.closest("tr"),
+                swap: "delete",
+                values: {
+                    "id": dataset.id,
+                    "curriculum-id": dataset.curriculum,
+                    "subject-exists": subjectProblemRows.length > 0,
+                    "subtype-exists": subtypeProblemRows.length > 0,
+                    "insert-after-id": insertAfterId,
+                    "read-only-marks": !!testRule
+                }
+            });
         });
     }
 
@@ -69,7 +73,7 @@
         return "";
     }
 
-    function createAfterRequestHandler(difficulty, insertAfterId, tableBody) {
+    function createAfterRequestHandler(difficulty, insertAfterId, tableBody, resolve) {
         return function handler(event) {
             if (event.detail.successful) {
                 incrementLevelCount(difficulty);
@@ -81,6 +85,7 @@
                 updateSubjectArrowStates();
             }
             document.body.removeEventListener("htmx:afterRequest", handler);
+            resolve();
         }
     }
 
@@ -182,4 +187,5 @@
         return false;
     }
 </script>
+{{ end }}
 {{ end }}

@@ -1,0 +1,8 @@
+{{range .Tests}}
+<div id="search-row-{{.ID}}" class="p-2 hover:bg-gray-100 cursor-pointer" hx-target="#searched-test-results"
+    hx-get="/api/test/subjectwise-problems?id={{.ID}}&curriculum_id={{(index .CurriculumGrades 0).CurriculumID}}&grade_id={{(index .CurriculumGrades 0).GradeID}}"
+    hx-indicator="#searched-test-loader, #searched-test-results" hx-trigger="click" hx-ext="addSelectedIds"
+    hx-on::before-request="selectSuggestion(this.id, '{{.Code}} — {{ (index .Name 0).Resource }}')">
+    {{.Code}} — {{ (index .Name 0).Resource }}
+</div>
+{{end}}

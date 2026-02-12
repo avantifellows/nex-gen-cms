@@ -1,0 +1,45 @@
+<div>
+	<div class="flex items-center justify-between mb-2">
+		<h3 class="text-base font-semibold">Selected Test</h3>
+		<div class="text-sm text-gray-600">{{.TestPtr.Code}} — {{ (index .TestPtr.Name 0).Resource }}</div>
+	</div>
+	<table class="mt-2 w-full border text-left">
+		<thead>
+			<tr class="bg-gray-200">
+				<th class="p-2">Code</th>
+				<th class="p-2">Question</th>
+				<th class="p-2">Action</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{ range $index, $subject := .TestPtr.TypeParams.Subjects }}
+				<tr>
+					<td colspan="3" class="p-0">
+						<div class="flex items-center justify-between p-1 bg-gray-100">
+							<h2 class="text-sm font-semibold bg-gray-100 p-2 capitalize">
+								{{$subject.Name}}
+							</h2>	
+							<button type="button"
+								class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+								onclick="addAllFromSubject(this)">
+								Add All
+							</button>
+						</div>
+					</td>	
+				</tr>
+				{{range .Sections}}
+					{{ $list := emptySlice }}
+				
+					{{range .Compulsory.Problems}}
+						{{ if not (isSelected .ID $.SelectedIDs) }}
+							{{ $list = append $list (index $.Problems .ID) }}
+						{{ end }}
+					{{end}}
+				
+					{{template "src_problem_row" $list}}
+				{{end}}
+			{{end}}
+		</tbody>
+	</table>
+</div>
+
