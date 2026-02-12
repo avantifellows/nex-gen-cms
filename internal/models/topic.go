@@ -6,6 +6,7 @@ type Topic struct {
 	Code         string      `json:"code"`
 	ChapterID    int16       `json:"chapter_id"`
 	CurriculumID int16       `json:"curriculum_id"`
+	StatusID     int8        `json:"cms_status_id"`
 }
 
 type TopicLang struct {
