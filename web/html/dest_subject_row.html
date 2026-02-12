@@ -2,5 +2,14 @@
 <tr id="subject-{{.SubjectId}}" class="bg-white">
     <td class="p-2 font-medium capitalize" colspan="4">{{.SubjectName}}</td>
     {{ template "chip_box_cells" . }}
+    <td></td>
+    <td class="p-2 align-middle whitespace-nowrap">
+        <button class="action-button move-up" type="button" title="Move up" onclick="moveSubjectUp(this)">
+            <i class="fa-solid fa-arrow-up"></i>
+        </button>
+        <button class="action-button ml-2 move-down" type="button" title="Move down" onclick="moveSubjectDown(this)">
+            <i class="fa-solid fa-arrow-down"></i>
+        </button>
+    </td>
 </tr>
 {{ end }}

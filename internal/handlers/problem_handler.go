@@ -146,10 +146,13 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		}
 	}
 
-	filterProblems(problems, urlValues.Get("level-dropdown"), urlValues.Get("ptype-dropdown"), urlValues.Get("selected-ids"))
+	levels := urlValues["level"]
+	ptype := urlValues.Get("ptype-dropdown")
+	selectedIds := urlValues.Get("selected-ids")
+	filterProblems(problems, levels, ptype, selectedIds)
 
 	var tmpl string
-	if urlValues.Has("level-dropdown") {
+	if urlValues.Has("ptype-dropdown") {
 		// for add/edit test screen
 		tmpl = srcProblemRowTemplate
 	} else {
@@ -159,22 +162,51 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	views.ExecuteTemplate(tmpl, responseWriter, problems, nil)
 }
 
-func filterProblems(problems *[]*models.Problem, difficulty string, ptype string, selectedIdsRaw string) {
+func filterProblems(problems *[]*models.Problem, levels []string, ptype string, selectedIdsRaw string) {
 	// Build map of already selected problem ids. map is used instead of slice for better performance
 	selectedIds := map[int]bool{}
 	for _, id := range strings.Split(selectedIdsRaw, ",") {
 		selectedIds[utils.StringToInt(id)] = true
 	}
 
+	// Build a map of allowed difficulty levels for fast lookup
+	allowedLevels := map[string]bool{}
+	for _, lvl := range levels {
+		if lvl != "" { // skip the empty value (All)
+			allowedLevels[lvl] = true
+		}
+	}
+
+	// If no specific levels selected → treat as ALL selected
+	allLevelsAllowed := len(allowedLevels) == 0
+
 	ps := *problems
 	n := 0
 	for _, p := range ps {
-		// "" means All is selected in dropdown
-		if p.StatusID != constants.StatusArchived && (difficulty == "" || p.DifficultyLevel == difficulty) && (ptype == "" || p.Subtype == ptype) && !selectedIds[p.ID] {
-			ps[n] = p
-			n++
+		if p.StatusID == constants.StatusArchived {
+			continue
 		}
+
+		// difficulty check
+		if !allLevelsAllowed && !allowedLevels[p.DifficultyLevel] {
+			continue
+		}
+
+		// problem type check
+		// "" means All is selected in dropdown
+		if ptype != "" && p.Subtype != ptype {
+			continue
+		}
+
+		// skip already selected ones
+		if selectedIds[p.ID] {
+			continue
+		}
+
+		ps[n] = p
+		n++
 	}
+
 	*problems = ps[:n]
 }
 

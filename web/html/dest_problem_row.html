@@ -1,7 +1,7 @@
 {{ define "dest_problem_row" }}
 {{with .Problem}}
 <tr id="problem-{{.ID}}" data-subject="subject-{{(getParentId .Subject)}}" data-subtype="subtype-{{.Subtype}}"
-    data-skill-ids="{{joinInt16 .SkillIDs ","}}" data-mathjax="true">
+    data-skill-ids="{{joinInt16 .SkillIDs ","}}" data-mathjax="true" class="cursor-move">
     <td class="p-2">{{if $.SrNo}}{{$.SrNo}}{{end}}</td>
     <td class="p-2 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
         hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">
@@ -12,6 +12,27 @@
      in type *models.Problem" -->
     {{ template "chip_box_cells" (dict "PosMarks" $.PosMarks "NegMarks" $.NegMarks "ReadOnlyMarks" $.ReadOnlyMarks) }}
 	<td class="p-2">
+        <select class="border border-gray-300 rounded px-2 py-1 text-sm bg-white" name="options-layout">
+            <option value="2x2"
+                {{if or
+                    (and $.OptionLayout (eq $.OptionLayout.Rows 2) (eq $.OptionLayout.Cols 2))
+                    (not $.OptionLayout)
+                }}selected{{end}}>
+                2x2
+            </option>
+
+            <option value="1x4"
+                {{if and $.OptionLayout (eq $.OptionLayout.Rows 1) (eq $.OptionLayout.Cols 4)}}selected{{end}}>
+                1x4
+            </option>
+
+            <option value="4x1"
+                {{if and $.OptionLayout (eq $.OptionLayout.Rows 4) (eq $.OptionLayout.Cols 1)}}selected{{end}}>
+                4x1
+            </option>
+        </select>
+    </td>    
+    <td class="p-2">
 		<div class="action-cell-flex flex items-center justify-between w-full whitespace-nowrap">
 			<button class="px-2 py-1 bg-red-500 text-white rounded" data-difficulty="{{.DifficultyLevel}}"
 				hx-on:click="removeQuestionFromTest(this)">X</button>
