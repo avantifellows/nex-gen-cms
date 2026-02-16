@@ -55,7 +55,10 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	}
 
 	data := dto.HomeData{
-		ProblemPtr: selectedProblemPtr,
+		ProblemPtr:   selectedProblemPtr,
+		CurriculumID: selectedProblemPtr.CurriculumID,
+		GradeID:      selectedProblemPtr.GradeID,
+		SubjectID:    selectedProblemPtr.SubjectID,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -261,7 +264,10 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 	}
 
 	data := dto.HomeData{
-		ProblemPtr: selectedProblemPtr,
+		ProblemPtr:   selectedProblemPtr,
+		CurriculumID: selectedProblemPtr.CurriculumID,
+		GradeID:      selectedProblemPtr.GradeID,
+		SubjectID:    selectedProblemPtr.SubjectID,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{

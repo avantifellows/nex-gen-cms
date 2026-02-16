@@ -264,10 +264,15 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 		return
 	}
 
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
+	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+		return
+	}
+
 	data := dto.HomeData{
-		CurriculumID: selectedChapterPtr.CurriculumID,
-		GradeID:      selectedChapterPtr.GradeID,
-		SubjectID:    selectedChapterPtr.SubjectID,
+		CurriculumID: curriculumId,
+		GradeID:      gradeId,
+		SubjectID:    subjectId,
 		ChapterPtr:   selectedChapterPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
