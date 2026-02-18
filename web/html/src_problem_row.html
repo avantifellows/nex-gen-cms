@@ -76,6 +76,9 @@
                 const newlyInsertedRow = updateSerialNumbers(insertAfterId, tableBody);
                 inheritMarkingScheme(tableBody, newlyInsertedRow);
                 updateTotalMarks();
+
+                initSortableForSections();
+                updateSubjectArrowStates();
             }
             document.body.removeEventListener("htmx:afterRequest", handler);
         }
@@ -111,7 +114,7 @@
 
         } else {
             // Inserted without known insertAfterId — find previous valid row with serial number
-            const allRows = Array.from(tableBody.querySelectorAll("tr"));
+            const allRows = Array.from(tableBody.querySelectorAll(":scope > tr"));
             // loop in reverse order
             for (let i = allRows.length - 1; i >= 0; i--) {
                 const row = allRows[i];
