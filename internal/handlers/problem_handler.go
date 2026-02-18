@@ -22,9 +22,10 @@ const problemsKey = "problems"
 const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
 
+const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
 const srcProblemRowTemplate = "src_problem_row.html"
-const problemsTemplate = "problems.html"
+const topicProblemsTemplate = "topic_problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
 const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
@@ -179,8 +180,12 @@ func filterProblems(problems *[]*models.Problem, difficulty string, ptype string
 }
 
 func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, problemsTemplate)
+}
+
+func (h *ProblemsHandler) LoadTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	views.ExecuteTemplate(problemsTemplate, responseWriter, topicIdStr, nil)
+	views.ExecuteTemplate(topicProblemsTemplate, responseWriter, topicIdStr, nil)
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {

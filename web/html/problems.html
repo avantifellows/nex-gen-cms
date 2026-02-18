@@ -1,24 +1,43 @@
+{{ define "content" }}
 <div>
-    <!-- Add New Problem Link -->
-    <h4 class="text-sm font-semibold text-blue-500 hover:underline mb-4">
-        <a href="/topic/add-problem?topic_id={{.}}" hx-get="/topic/add-problem?topic_id={{.}}" hx-target="body" hx-push-url="true">Add New
-            Problem</a>
-    </h4>
+    <!-- Search field -->
+    <input type="text" id="problem-search" name="problem-search" placeholder="Search problems by question..."
+        class="border border-gray-400 p-2 rounded w-64 mb-4" hx-get="/problems?mode=search"
+        hx-trigger="keyup[this.value.length>=3] delay:500ms" hx-target="#problems-table-body">
 
-    <div class="shadow-md overflow-x-auto">
-        <table class="min-w-full bg-white">
-            <thead>
-                <tr class="bg-gray-200 text-gray-600 text-sm">
-                    <th class="py-4 text-center">Code</th>
-                    <th class="text-center">Text</th>
-                    <th class="pr-4 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load"
-                hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
-                data-mathjax="true">
-                <!-- Rows will be dynamically inserted here -->
-            </tbody>
-        </table>
-    </div>
+    <table class="w-full bg-white shadow-md table-fixed">
+        <colgroup>
+            <col class="w-[6rem]">   <!-- Code -->
+            <col>                   <!-- Text (flexes) -->
+            <col class="w-[6rem]">   <!-- Actions -->
+        </colgroup>
+        <thead>
+            <tr class="bg-gray-200 text-gray-600 text-sm">
+                <th class="py-4">Code</th>
+                <th>Text</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <!-- Loader tbody -->
+        <tbody id="loader" class="hidden">
+            <tr>
+                <td colspan="3" class="py-6">
+                    <div class="flex justify-center">
+                        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+
+        <tbody id="problems-table-body" class="text-gray-600 text-sm" hx-trigger="load delay:2000ms"
+            hx-get="/api/topic/problems?topic-dropdown=619" hx-include="#curriculum-dropdown, #subject-dropdown"
+            data-mathjax="true" hx-indicator="#loader">
+        <!-- <tbody id="problems-table-body" class="text-gray-600 text-sm"
+            hx-get="/api/problems" hx-include="#curriculum-dropdown, #subject-dropdown"
+            data-mathjax="true"> -->
+            <!-- Rows will be dynamically inserted here -->
+        </tbody>
+    </table>
 </div>
+{{ end }}

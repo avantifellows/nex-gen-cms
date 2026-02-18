@@ -1234,6 +1234,10 @@ video {
   width: 5rem;
 }
 
+.w-\[6rem\] {
+  width: 6rem;
+}
+
 .w-auto {
   width: auto;
 }
@@ -1277,6 +1281,10 @@ video {
 
 .table-auto {
   table-layout: auto;
+}
+
+.table-fixed {
+  table-layout: fixed;
 }
 
 .border-collapse {
@@ -1448,6 +1456,10 @@ video {
 
 .overflow-y-auto {
   overflow-y: auto;
+}
+
+.text-ellipsis {
+  text-overflow: ellipsis;
 }
 
 .whitespace-nowrap {
@@ -1665,6 +1677,11 @@ video {
   padding-bottom: 1rem;
 }
 
+.py-6 {
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
 .pl-11 {
   padding-left: 2.75rem;
 }
@@ -1855,6 +1872,10 @@ video {
 }
 
 /* Custom styles using @apply */
+
+#loader.htmx-request {
+  display: table-row-group;
+}
 
 .hover\:bg-blue-100:hover {
   --tw-bg-opacity: 1;

@@ -119,9 +119,10 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/tests/validate-test", testsHandler.ValidateTest)
 
 	problemsHandler := appComponentPtr.ProblemsHandler
+	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)
 	muxHandler.HandleFunc("/problem", problemsHandler.GetProblem)
 	muxHandler.HandleFunc("/api/topic/problems", problemsHandler.GetTopicProblems)
-	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)
+	muxHandler.HandleFunc("/topic/problems", problemsHandler.LoadTopicProblems)
 	muxHandler.HandleFunc("/topic/add-problem", problemsHandler.AddProblem)
 	muxHandler.HandleFunc("/topic/add-problem/add-concept-dialog", problemsHandler.AddConceptModal)
 	muxHandler.HandleFunc("/create-problem", problemsHandler.CreateProblem)

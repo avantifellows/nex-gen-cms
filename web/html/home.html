@@ -66,6 +66,9 @@
                 <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false')">Tests</button>
+                <button class="nav-link" id="problems-tab" hx-get="/problems" hx-push-url="true" hx-target="body"
+                    data-toggle="tab"
+                    hx-on::before-request="sessionStorage.setItem(window.PROBLEMS_LOADED_KEY, 'false')">Problems</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
@@ -125,6 +128,7 @@
                 // Define URL-to-tab mapping based on expected paths
                 if (path.startsWith("/chapter")) return "chapters-tab";
                 if (path.startsWith("/test")) return "tests-tab";
+                if (path.startsWith("/problem")) return "problems-tab";
                 return null;
             }
 
@@ -155,6 +159,13 @@
                     subjectDropdown.style.display = "none";
                 } else {
                     subjectDropdown.style.display = "inline-block";
+                }
+
+                if (activeTabId === "problems-tab") {
+                    const curriculumDropdown = document.getElementById("curriculum-dropdown");
+                    curriculumDropdown.style.display = "none";
+                    const gradeDropdown = document.getElementById("grade-dropdown");
+                    gradeDropdown.style.display = "none";
                 }
             }
 
