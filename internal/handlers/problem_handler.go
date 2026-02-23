@@ -183,7 +183,7 @@ func filterProblems(problems *[]*models.Problem, levels []string, ptype string, 
 	ps := *problems
 	n := 0
 	for _, p := range ps {
-		if p.Status == constants.ResourceStatusArchived {
+		if p.StatusID == constants.StatusArchived {
 			continue
 		}
 
@@ -193,6 +193,7 @@ func filterProblems(problems *[]*models.Problem, levels []string, ptype string, 
 		}
 
 		// problem type check
+		// "" means All is selected in dropdown
 		if ptype != "" && p.Subtype != ptype {
 			continue
 		}
@@ -296,9 +297,9 @@ func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, requ
 func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, request *http.Request) {
 	problemIdStr := request.URL.Query().Get("id")
 	problemId := utils.StringToInt(problemIdStr)
-	body := map[string]string{
-		"cms_status": constants.ResourceStatusArchived,
-		"lang_code":  "en",
+	body := map[string]any{
+		"cms_status_id": constants.StatusArchived,
+		"lang_code":     "en",
 	}
 
 	err := h.problemsService.ArchiveObject(problemIdStr, resourcesEndPoint, body, problemsKey,

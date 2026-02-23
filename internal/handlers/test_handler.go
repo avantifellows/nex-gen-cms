@@ -134,7 +134,7 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 func filterActiveTests(tests *[]*models.Test) {
 	filtered := (*tests)[:0] // zero-length slice, same backing array
 	for _, t := range *tests {
-		if t.Status != constants.ResourceStatusArchived {
+		if t.StatusID != constants.StatusArchived {
 			filtered = append(filtered, t)
 		}
 	}
@@ -378,9 +378,6 @@ func (h *TestsHandler) getTestProblems(responseWriter http.ResponseWriter, reque
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
 	}
-	*problems = funk.Filter(*problems, func(p *models.Problem) bool {
-		return p.Status != constants.ResourceStatusArchived
-	}).([]*models.Problem)
 
 	h.fillProblemSubjects(responseWriter, problems)
 
@@ -638,8 +635,8 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *http.Request) {
 	testIdStr := request.URL.Query().Get("id")
 	testId := utils.StringToInt(testIdStr)
-	body := map[string]string{
-		"cms_status": constants.ResourceStatusArchived,
+	body := map[string]any{
+		"cms_status_id": constants.StatusArchived,
 	}
 
 	err := h.testsService.ArchiveObject(testIdStr, resourcesEndPoint, body, testsKey,
