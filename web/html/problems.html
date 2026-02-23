@@ -1,9 +1,25 @@
 {{ define "content" }}
 <div>
-    <!-- Search field -->
-    <input type="text" id="problem-search" name="problem-search" placeholder="Search problems by question..."
-        class="border border-gray-400 p-2 rounded w-64 mb-4" hx-get="/problems?mode=search"
-        hx-trigger="keyup[this.value.length>=3] delay:500ms" hx-target="#problems-table-body">
+    <!-- Search + Subject Filter Row -->
+    <div class="flex items-center gap-4 mb-4"
+        hx-on::before-request="document.getElementById('problems-restore-flag').value = 'restore';">
+
+        <input type="hidden" id="problems-restore-flag" value="fresh">
+        
+        <!-- Search field -->
+        <input type="text" id="problem-search" name="problem-search" placeholder="Search problems by question or code..."
+            class="border border-gray-400 p-2 rounded w-[19rem]" hx-get="/api/search-problems?limit=10&offset=0"
+            hx-trigger="keyup[this.value.length>=3] delay:500ms" hx-target="#problems-table-body"
+            hx-include="#problems-subject-dropdown" data-limit="10" data-offset="0" hx-indicator="#loader"
+            hx-on::before-request="document.getElementById('problems-table-body').innerHTML = '';">
+
+        <!-- Subject Dropdown -->
+        <select class="border border-gray-400 p-2 rounded w-fit" id="problems-subject-dropdown" 
+            name="problems-subject-dropdown" hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend">
+            <option value="">All Subjects</option>
+        </select>
+
+    </div>
 
     <table class="w-full bg-white shadow-md table-fixed">
         <colgroup>
@@ -19,25 +35,57 @@
             </tr>
         </thead>
 
-        <!-- Loader tbody -->
-        <tbody id="loader" class="hidden">
-            <tr>
-                <td colspan="3" class="py-6">
-                    <div class="flex justify-center">
-                        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
-                    </div>
-                </td>
-            </tr>
+        <!-- Loader tbody --> 
+        <tbody id="loader" class="hidden"> 
+            <tr> 
+                <td colspan="3" class="py-6"> 
+                    <div class="flex justify-center"> 
+                        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                    </div> 
+                </td> 
+            </tr> 
         </tbody>
 
-        <tbody id="problems-table-body" class="text-gray-600 text-sm" hx-trigger="load delay:2000ms"
-            hx-get="/api/topic/problems?topic-dropdown=619" hx-include="#curriculum-dropdown, #subject-dropdown"
-            data-mathjax="true" hx-indicator="#loader">
-        <!-- <tbody id="problems-table-body" class="text-gray-600 text-sm"
-            hx-get="/api/problems" hx-include="#curriculum-dropdown, #subject-dropdown"
-            data-mathjax="true"> -->
+        <tbody id="problems-table-body" class="text-gray-600 text-sm" data-mathjax="true">
             <!-- Rows will be dynamically inserted here -->
         </tbody>
     </table>
 </div>
+<script>
+    (function () {
+        const searchInput = document.getElementById("problem-search");
+        const subjectDropdown = document.getElementById("problems-subject-dropdown");
+        const restoreFlag = document.getElementById("problems-restore-flag");
+        
+        const STORAGE_KEY = "problemsTabState";
+    
+        if (restoreFlag.value === "restore") {
+            // Back navigation
+            const saved = sessionStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const state = JSON.parse(saved);
+
+                if (state.search) searchInput.value = state.search;
+                if (state.subject) subjectDropdown.value = state.subject;
+            }
+        } else {
+            // Fresh visit
+            sessionStorage.removeItem(STORAGE_KEY);
+        }
+    
+        // Save state whenever search changes
+        function saveState() {
+            sessionStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({
+                    search: searchInput.value,
+                    subject: subjectDropdown?.value || ""
+                })
+            );
+        }
+    
+        searchInput.addEventListener("input", saveState);
+        subjectDropdown.addEventListener("change", saveState);
+    })();
+</script>
 {{ end }}

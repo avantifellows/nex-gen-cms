@@ -1234,6 +1234,10 @@ video {
   width: 24rem;
 }
 
+.w-\[19rem\] {
+  width: 19rem;
+}
+
 .w-\[4rem\] {
   width: 4rem;
 }
@@ -1244,6 +1248,11 @@ video {
 
 .w-auto {
   width: auto;
+}
+
+.w-fit {
+  width: -moz-fit-content;
+  width: fit-content;
 }
 
 .w-full {

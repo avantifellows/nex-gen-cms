@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -21,6 +22,7 @@ const problemsKey = "problems"
 
 const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
+const searchProblemsEndPoint = "problems/search"
 
 const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
@@ -124,17 +126,10 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	// true is passed for onlyRemote, so that new tags inserted via create problem api can also be fetched
-	tags, err := h.tagsService.GetList(tagsEndPoint, tagsKey, false, true)
+	tagsMap, err := h.getTagsMap()
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching tags: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
-	}
-	// Create a map to quickly lookup tag names by their ID
-	tagsMap := make(map[int]string)
-	// Fill the map with the string name of each tag
-	for _, tagPtr := range *tags {
-		tagsMap[tagPtr.ID] = tagPtr.Name
 	}
 
 	// set subject & tag names on each problem
@@ -161,6 +156,23 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		tmpl = topicProblemRowTemplate
 	}
 	views.ExecuteTemplate(tmpl, responseWriter, problems, nil)
+}
+
+func (h *ProblemsHandler) getTagsMap() (map[int]string, error) {
+	// true is passed for onlyRemote, so that new tags inserted via create problem api can also be fetched
+	tags, err := h.tagsService.GetList(tagsEndPoint, tagsKey, false, true)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching tags: %v", err)
+	}
+
+	// Create a map to quickly lookup tag names by their ID
+	tagsMap := make(map[int]string)
+	// Fill the map with the string name of each tag
+	for _, tagPtr := range *tags {
+		tagsMap[tagPtr.ID] = tagPtr.Name
+	}
+
+	return tagsMap, nil
 }
 
 func filterProblems(problems *[]*models.Problem, levels []string, ptype string, selectedIdsRaw string) {
@@ -315,4 +327,43 @@ func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, req
 		http.Error(responseWriter, fmt.Sprintf("Error archiving problem: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	search := urlVals.Get("problem-search")
+	limit := utils.StringToInt(urlVals.Get("limit"))
+	queryParams := "?search=" + url.QueryEscape(search) + "&limit=" + strconv.Itoa(limit) + "&offset=" + urlVals.Get("offset")
+
+	problems, err := h.problemsService.GetList(searchProblemsEndPoint+queryParams, "", false, true)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	tagsMap, err := h.getTagsMap()
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// set subject & tag names on each problem
+	for _, problemPtr := range *problems {
+		subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(utils.IntToString[int8](problemPtr.SubjectID),
+			h.subjectsService)
+		if err != nil {
+			http.Error(responseWriter, err.Error(), statusCode)
+			return
+		}
+
+		problemPtr.Subject = *subjectPtr
+
+		// Loop through tag ids and add corresponding tag names
+		for _, tagId := range problemPtr.TagIDs {
+			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagId])
+		}
+	}
+
+	filterProblems(problems, nil, "", "")
+	views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
 }
