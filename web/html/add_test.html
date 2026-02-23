@@ -1067,16 +1067,15 @@
         button.title = "Saving...";
         button.classList.add('opacity-50', 'cursor-not-allowed');
 
-        button.innerHTML = `
-            <i class="fa-solid fa-spinner fa-spin fa-lg"></i>
-        `;
+        const icon = button.querySelector("i");
+        icon.className = "fa-solid fa-spinner fa-spin fa-lg";
     }
 
     function setSubjSuccessState(button) {
         button.title = "Saved";
-        button.innerHTML = `
-            <i class="fa-solid fa-check fa-lg text-green-600"></i>
-        `;
+
+        const icon = button.querySelector("i");
+        icon.className = "fa-solid fa-check fa-lg text-green-600";
 
         setTimeout(() => {
             resetSubjSaveButton(button);
@@ -1085,9 +1084,9 @@
 
     function setSubjErrorState(button) {
         button.title = "Save failed";
-        button.innerHTML = `
-            <i class="fa-solid fa-triangle-exclamation fa-lg text-red-600"></i>
-        `;
+
+        const icon = button.querySelector("i");
+        icon.className = "fa-solid fa-triangle-exclamation fa-lg text-red-600";
 
         setTimeout(() => {
             resetSubjSaveButton(button);
@@ -1099,9 +1098,8 @@
         button.disabled = false;
         button.classList.remove('opacity-50', 'cursor-not-allowed');
 
-        button.innerHTML = `
-            <i class="fa-solid fa-floppy-disk fa-lg"></i>
-        `;
+        const icon = button.querySelector("i");
+        icon.className = "fa-solid fa-floppy-disk fa-lg";
     }
 
     function initSortableForSections() {
