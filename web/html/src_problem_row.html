@@ -84,14 +84,6 @@
         }
     }
 
-    function incrementLevelCount(difficulty) {
-        // Increase the count in the levels table
-        const levelCell = document.getElementById(`level-${difficulty}`);
-        if (levelCell) {
-            levelCell.textContent = parseInt(levelCell.textContent) + 1;
-        }
-    }
-
     function updateSerialNumbers(insertAfterId, tableBody) {
         // Assign serial number to newly added row and Update serial numbers of all affected rows
         let serial = 0;

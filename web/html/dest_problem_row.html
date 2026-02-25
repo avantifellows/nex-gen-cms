@@ -1,12 +1,21 @@
 {{ define "dest_problem_row" }}
 {{with .Problem}}
+{{ $difficulty := or $.DifficultyLevel .DifficultyLevel }}
 <tr id="problem-{{.ID}}" data-subject="subject-{{(getParentId .Subject)}}" data-subtype="subtype-{{.Subtype}}"
-    data-skill-ids="{{joinInt16 .SkillIDs ","}}" data-mathjax="true" class="cursor-move">
+    data-skill-ids="{{joinInt16 .SkillIDs ","}}" data-difficulty="{{$difficulty}}" data-mathjax="true" 
+    class="cursor-move">
     <td class="p-2">{{if $.SrNo}}{{$.SrNo}}{{end}}</td>
     <td class="p-2 text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
         hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">
         {{ .Code }}</a></td>
-    <td class="p-2 text-center">{{.DisplayDifficulty}}</td>
+    <td class="p-2 text-center">
+        <select class="border border-gray-300 rounded px-2 py-1 text-sm bg-white"
+            name="difficulty-level" data-problem-id="{{.ID}}" onchange="handleDifficultyChange(this)">
+            <option value="easy"   {{if eq $difficulty "easy"}}selected{{end}}>1</option>
+            <option value="medium" {{if eq $difficulty "medium"}}selected{{end}}>2</option>
+            <option value="hard"   {{if eq $difficulty "hard"}}selected{{end}}>3</option>        
+        </select>        
+    </td>
     <td class="p-2">{{ .MetaData.Question }}</td>
     <!-- if we pass . instead of empty dictionary, then it will throw error - "can't evaluate field PosMarks 
      in type *models.Problem" -->
@@ -34,7 +43,7 @@
     </td>    
     <td class="p-2">
 		<div class="action-cell-flex flex items-center justify-between w-full whitespace-nowrap">
-			<button class="px-2 py-1 bg-red-500 text-white rounded" data-difficulty="{{.DifficultyLevel}}"
+			<button class="px-2 py-1 bg-red-500 text-white rounded" 
 				hx-on:click="removeQuestionFromTest(this)">X</button>
 			<span class="validation-error-slot inline-flex items-center justify-center w-4">
 				<i class="validation-error-icon fa-solid fa-circle-exclamation text-red-500 invisible"></i>

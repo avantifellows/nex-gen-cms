@@ -221,15 +221,33 @@
         {{ $medium := 0 }}
         {{ $hard := 0 }}
         {{if .Problems}}
-            {{range .Problems}}
-                {{ if eq .DifficultyLevel "easy" }}
-                    {{ $easy = add $easy 1 }}
-                {{ else if eq .DifficultyLevel "medium" }}
-                    {{ $medium = add $medium 1 }}
-                {{ else if eq .DifficultyLevel "hard" }}
-                    {{ $hard = add $hard 1 }}
+            {{ range .TestPtr.TypeParams.Subjects }}
+                {{ range .Sections }}
+                    {{ range .Compulsory.Problems }}
+                        
+                        {{/* 
+                        Determine effective difficulty:
+                        1. Use section problem difficulty if present
+                        2. Else fallback to master problem difficulty
+                        */}}
+                        {{ $problem := index $.Problems .ID }}
+                        {{ $difficulty := .DifficultyLevel }}
+
+                        {{ if not $difficulty }}
+                            {{ $difficulty = $problem.DifficultyLevel }}
+                        {{ end }}
+
+                        {{ if eq $difficulty "easy" }}
+                            {{ $easy = add $easy 1 }}
+                        {{ else if eq $difficulty "medium" }}
+                            {{ $medium = add $medium 1 }}
+                        {{ else if eq $difficulty "hard" }}
+                            {{ $hard = add $hard 1 }}
+                        {{ end }}
+
+                    {{ end }}
                 {{ end }}
-            {{end}}
+            {{ end }}
         {{end}}
 
         <!-- Levels Table -->
@@ -279,7 +297,7 @@
                             {{range .Compulsory.Problems}}
                                 {{ $sr = add $sr 1 }}
                                 {{template "dest_problem_row" (dict "Problem" (index $.Problems .ID) "SrNo" $sr
-                                "PosMarks" .PosMarks "NegMarks" .NegMarks "OptionLayout" .OptionLayout 
+                                "PosMarks" .PosMarks "NegMarks" .NegMarks "DifficultyLevel" .DifficultyLevel "OptionLayout" .OptionLayout 
                                 "ReadOnlyMarks" $hasTestRule)}}
                             {{end}}
                         {{end}}
@@ -435,7 +453,6 @@
         let nextRow = problemRow.nextElementSibling;
         problemRow.remove();
 
-        const dataset = btn.dataset;
         const subject = problemRow.dataset.subject;
         const subtype = problemRow.dataset.subtype;
         const tableBody = document.getElementById("questions-table-body");
@@ -463,13 +480,21 @@
         }
 
         // Decrement count in levels table
-        decrementLevelCount(dataset.difficulty);
+        decrementLevelCount(problemRow.dataset.difficulty);
 
         updateTotalMarks();
 
         // Refresh left panel questions
         const topicDropdown = document.getElementById("topic-dropdown");
         htmx.trigger(topicDropdown, "change");
+    }
+
+    function incrementLevelCount(difficulty) {
+        // Increase the count in the levels table
+        const levelCell = document.getElementById(`level-${difficulty}`);
+        if (levelCell) {
+            levelCell.textContent = parseInt(levelCell.textContent) + 1;
+        }
     }
 
     function decrementLevelCount(difficulty) {
@@ -746,6 +771,9 @@
                     return;
                 }
 
+                const difficultySelect = row.querySelector('select[name="difficulty-level"]');
+                const difficultyLevel = difficultySelect.value;
+
                 const layoutSelect = row.querySelector('select[name="options-layout"]');
                 const [rows, cols] = layoutSelect.value.split('x').map(Number);
 
@@ -753,6 +781,7 @@
                     id: parseInt(id.split("-")[1]),
                     pos_marks: posMarksArr,
                     neg_marks: getMarksArray(negChips),
+                    difficulty_level: difficultyLevel,
                     option_layout: { rows, cols }
                 };
                 currentSection.compulsory.problems.push(problem);
@@ -1178,6 +1207,22 @@
                 downBtn.classList.toggle("cursor-not-allowed", index === subjects.length - 1);
             }
         });
+    }
+
+    function handleDifficultyChange(selectEl) {
+        const row = selectEl.closest("tr");
+
+        const oldDifficulty = row.dataset.difficulty;
+        const newDifficulty = selectEl.value;
+
+        if (oldDifficulty === newDifficulty) return;
+
+        // Update counts
+        decrementLevelCount(oldDifficulty);
+        incrementLevelCount(newDifficulty);
+
+        // Update dataset
+        row.dataset.difficulty = newDifficulty;
     }
 </script>
 {{ end }}
