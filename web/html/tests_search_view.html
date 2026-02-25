@@ -30,6 +30,7 @@
         <!-- Rows will be dynamically inserted here -->
     </tbody>
 </table>
+<div id="table-sentinel"></div>
 <div id="search-loader" class="hidden flex justify-center py-4">
     <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
 </div>
@@ -87,18 +88,14 @@
                 if (hasMore === "false") {
                     // Server indicates no more results, disabling sentinel.
                     if (target.__sentinel) {
-                        target.__sentinel.remove();
-                        target.__sentinel = null;
+                        target.__observer.unobserve(target.__sentinel);
                     }
                     return;
                 }
 
                 // Create sentinel once
                 if (!target.__sentinel) {
-                    const sentinel = document.createElement("tr");
-                    sentinel.className = "infinite-scroll-sentinel";
-                    sentinel.style.height = "1px";
-                    target.appendChild(sentinel);
+                    const sentinel = document.getElementById("table-sentinel");
                     target.__sentinel = sentinel;
 
                     const observer = new IntersectionObserver((entries) => {
@@ -119,15 +116,7 @@
 
                                 htmx.ajax("GET", finalUrl, {
                                     target: target,
-                                    swap: "beforeend",
-                                    afterSwap: () => {
-                                        loader.classList.add("hidden");
-                                        target.removeAttribute("data-loading");
-                                    },
-                                    onError: () => {
-                                        loader.classList.add("hidden");
-                                        target.removeAttribute("data-loading");
-                                    }
+                                    swap: "beforeend"
                                 });
                             }
                         });
@@ -138,6 +127,7 @@
                     });
 
                     observer.observe(sentinel);
+                    target.__observer = observer;
 
                     // MutationObserver to clean up when table is removed
                     const cleanupObserver = new MutationObserver(() => {
@@ -149,8 +139,8 @@
                     cleanupObserver.observe(document.body, { childList: true, subtree: true });
 
                 } else {
-                    // Sentinel already exists — ensure it stays last after swap
-                    target.appendChild(target.__sentinel);
+                    target.__observer.unobserve(target.__sentinel);
+                    target.__observer.observe(target.__sentinel);
                 }
             }
         }
