@@ -7,6 +7,7 @@ type Chapter struct {
 	CurriculumID int16         `json:"curriculum_id"`
 	GradeID      int8          `json:"grade_id"`
 	SubjectID    int8          `json:"subject_id"`
+	StatusID     int8          `json:"cms_status_id"`
 	/**
 	 * []*Topic is used instead of []Topic so that updates applied in centrally cached Topic objects
 	 * are also visible inside these Topic objects
