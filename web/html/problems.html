@@ -8,10 +8,7 @@
         
         <!-- Search field -->
         <input type="text" id="problem-search" name="problem-search" placeholder="Search problems by question or code..."
-            class="border border-gray-400 p-2 rounded w-[19rem]" hx-get="/api/search-problems?limit=10&offset=0"
-            hx-trigger="keyup[this.value.length>=3] delay:500ms" hx-target="#problems-table-body"
-            hx-include="#problems-subject-dropdown" data-limit="10" data-offset="0" hx-indicator="#loader"
-            hx-on::before-request="document.getElementById('problems-table-body').innerHTML = '';">
+            class="border border-gray-400 p-2 rounded w-[19rem]">
 
         <!-- Subject Dropdown -->
         <select class="border border-gray-400 p-2 rounded w-fit" id="problems-subject-dropdown" 
@@ -35,21 +32,19 @@
             </tr>
         </thead>
 
-        <!-- Loader tbody --> 
-        <tbody id="loader" class="hidden"> 
-            <tr> 
-                <td colspan="3" class="py-6"> 
-                    <div class="flex justify-center"> 
-                        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
-                    </div> 
-                </td> 
-            </tr> 
-        </tbody>
-
-        <tbody id="problems-table-body" class="text-gray-600 text-sm" data-mathjax="true">
+        <tbody id="problems-table-body" class="text-gray-600 text-sm" data-mathjax="true"
+            hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=2&offset=0"
+            data-limit="2" data-offset="0" hx-sync="this:replace"
+            hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search"
+            hx-include="#problem-search,#problems-subject-dropdown"
+            data-loader="#problems-search-loader" data-sentinel="#table-sentinel">
             <!-- Rows will be dynamically inserted here -->
         </tbody>
     </table>
+    <div id="table-sentinel"></div>
+    <div id="problems-search-loader" class="hidden flex justify-center py-4">
+        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+    </div>
 </div>
 <script>
     (function () {

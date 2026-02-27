@@ -2,12 +2,12 @@
     <thead hx-target="#test-table-body" hx-include="#test-search">
         <tr class="bg-gray-200 text-gray-600 text-sm">
             <th class="py-4 px-6 text-left">
-                <a href="#" hx-get="/api/search-tests?col=1&limit=10&offset=0">
+                <a href="#" hx-get="/api/search-tests?col=1&limit=2&offset=0">
                     Code <i class="fas fa-sort"></i>
                 </a>
             </th>
             <th class="px-6 text-left">
-                <a href="#" hx-get="/api/search-tests?col=2&limit=10&offset=0">
+                <a href="#" hx-get="/api/search-tests?col=2&limit=2&offset=0">
                     Name <i class="fas fa-sort"></i>
                 </a>
             </th>
@@ -25,9 +25,9 @@
             <th class="px-6 text-center">Actions</th>
         </tr>
     </thead>
-    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-get="/api/search-tests?limit=10&offset=0"
-        hx-trigger="load" data-limit="10" data-offset="0" hx-include="#test-search" 
-        data-loader="#search-loader" data-sentinel="#table-sentinel" data-reset-param="col">
+    <tbody id="test-table-body" class="text-gray-600 text-sm" hx-get="/api/search-tests?limit=2&offset=0"
+        hx-trigger="load" data-limit="2" data-offset="0" hx-include="#test-search" 
+        data-loader="#search-loader" data-sentinel="#table-sentinel">
         <!-- Rows will be dynamically inserted here -->
     </tbody>
 </table>

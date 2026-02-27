@@ -364,6 +364,12 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 		}
 	}
 
+	// Decide hasMore BEFORE filtering
+	hasMore := len(*problems) >= limit // true if more pages should exist
+	if !hasMore {
+		responseWriter.Header().Set("hasMore", "false")
+	}
+
 	filterProblems(problems, nil, "", "")
 	views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
 }

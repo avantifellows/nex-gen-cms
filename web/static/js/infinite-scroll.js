@@ -4,6 +4,7 @@
 
             const allowedEvents = [
                 "htmx:beforeRequest",
+                "htmx:beforeSwap", 
                 "htmx:afterSwap",
                 "htmx:responseError"
             ];
@@ -18,17 +19,36 @@
             // Configurable attributes (with defaults)
             const loaderSelector = target.getAttribute("data-loader");
             const sentinelSelector = target.getAttribute("data-sentinel");
-            const resetOnParam = target.getAttribute("data-reset-param"); 
             
             const loader = document.querySelector(loaderSelector);
 
             if (name === 'htmx:beforeRequest') {
-                if (requestPath.includes(resetOnParam + "=")) {
-                    target.setAttribute("data-offset", "0");
-                    target.innerHTML = "";
-                }
+                const requestUrl = evt.detail.pathInfo?.finalRequestPath;
+                console.log("before req ", requestUrl);
+                const queryString = requestUrl.split("?")[1] || "";
+                target.setAttribute("data-active-params", queryString);
+
+                // this event is fired only from hx-get calls and not from manual js htmx.ajax() calls,
+                // hence only initially / on changing search term / on chenging sort order, so reset offset and data
+                target.setAttribute("data-offset", "0");
+                target.innerHTML = "";
 
                 if (loader) loader.classList.remove("hidden");
+
+            } else if (name === 'htmx:beforeSwap') {
+                const xhr = evt.detail.xhr;
+                const responseUrl = xhr.responseURL;
+                const responseParams = responseUrl.split("?")[1] || "";
+                const responseSearch = getSearchValue(responseParams);
+
+                const activeParams = target.getAttribute("data-active-params");
+                const activeSearch = getSearchValue(activeParams);
+            
+                if (responseSearch !== activeSearch) {
+                    console.log("Ignoring stale response:", responseSearch, activeSearch);
+                    evt.detail.shouldSwap = false;   // cancel swap
+                    return;
+                }
 
             } else if (name === 'htmx:responseError') {
                 if (loader) loader.classList.add("hidden");
@@ -42,20 +62,13 @@
 
             } else if (name === 'htmx:afterSwap') {
                 if (loader) loader.classList.add("hidden");
-
-                const xhr = evt.detail.xhr;
-                const request = xhr.responseURL;
-                const queryString = request.split("?")[1] || "";
-                target.setAttribute("data-last-params", queryString);
-
+                console.log("afterswap");
                 const limit = parseInt(target.getAttribute("data-limit") || "2", 10);
                 const offset = parseInt(target.getAttribute("data-offset") || "0", 10);
                 target.setAttribute("data-offset", offset + limit);
-
                 target.removeAttribute("data-loading");
 
-                const hasMore = xhr.getResponseHeader("hasMore");
-
+                const hasMore = evt.detail.xhr.getResponseHeader("hasMore");
                 // Check server flag if present
                 if (hasMore === "false") {
                     // Server indicates no more results, unobserving sentinel.
@@ -82,7 +95,8 @@
                                 let offset = target.getAttribute("data-offset") || "0";
 
                                 let baseUrl = target.getAttribute("hx-get");
-                                let params = new URLSearchParams(target.getAttribute("data-last-params") || "");
+                                let params = new URLSearchParams(target.getAttribute("data-active-params") || "");
+                                console.log("params = ", target.getAttribute("data-active-params"), limit, offset);
                                 params.set("limit", limit);
                                 params.set("offset", offset);
 
@@ -127,5 +141,17 @@
 
     function isSearchEndpoint(path) {
         return path?.startsWith("/api/search");
+    }
+
+    function getSearchValue(query) {
+        const params = new URLSearchParams(query);
+    
+        // Find the param that contains search text
+        for (const [key, value] of params.entries()) {
+            if (key.includes("search")) {
+                return value || "";
+            }
+        }
+        return "";
     }
 })();
