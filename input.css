@@ -122,4 +122,39 @@
     .concept-chip {
         @apply flex items-center bg-blue-100 text-blue-800 rounded px-2 py-1 gap-1;
     }
+    
+    /* Loader is hidden by default */
+    #search-btn-loader {
+        display: none;
+    }
+
+    /* HTMX makes the loader visible during request */
+    #search-btn-loader.htmx-request {
+        display: flex;
+    }  
+    
+    #searched-test-loader {
+        display: none;
+    }
+
+    #searched-test-loader.htmx-request {
+        display: flex;
+    }
+
+    #searched-test-results {
+        display: block;
+    }
+
+    /* Hide results during request */
+    #searched-test-results.htmx-request {
+        display: none;
+    }
+
+    #question-bank-loader {
+        display: none;
+    }
+
+    #question-bank-loader.htmx-request {
+        display: flex;
+    }
 }
