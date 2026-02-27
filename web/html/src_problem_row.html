@@ -4,7 +4,7 @@
         hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">{{.Code}}
     </a></td>
     <td class="p-2">{{.MetaData.Question}}</td>
-    <td class="p-2 text-center"><button class="px-2 py-1 bg-green-500 text-white rounded" data-id="{{.ID}}"
+    <td class="p-2 text-center"><button class="px-2 bg-green-500 text-white rounded" data-id="{{.ID}}"
             data-subject="{{.Subject.ID}}" data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
             data-curriculum="{{.CurriculumID}}" data-subject-parent="{{if .Subject.ParentID}}{{.Subject.ParentID}}{{end}}" 
             hx-on:click="addQuestionToTest(this)">+</button>
@@ -22,8 +22,9 @@
         const subtype = dataset.subtype;
         const difficulty = dataset.difficulty;
 
-        const testRuleJson = document.getElementById("test-rule-json").textContent;
-        const testRule = JSON.parse(testRuleJson);
+        const ctx = JSON.parse(document.getElementById("test-context-json").textContent);
+        const testId = ctx.testId;
+        const testRule = ctx.testRule;
 
         const questionsTableBody = document.querySelector("#questions-table-body");
 
@@ -50,7 +51,10 @@
                 "subject-exists": subjectProblemRows.length > 0,
                 "subtype-exists": subtypeProblemRows.length > 0,
                 "insert-after-id": insertAfterId,
-                "read-only-marks": !!testRule
+                "read-only-marks": !!testRule,
+                // single subject can be saved only in edit test scenario
+                "can-save-single-subject": mode === "edit",
+                "test-id": testId
             }
         });
     }
