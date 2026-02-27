@@ -1,8 +1,7 @@
 {{ define "content" }}
 <div>
     <!-- Search + Subject Filter Row -->
-    <div class="flex items-center gap-4 mb-4"
-        hx-on::before-request="document.getElementById('problems-restore-flag').value = 'restore';">
+    <div class="flex items-center gap-4 mb-4">
 
         <input type="hidden" id="problems-restore-flag" value="fresh">
         
@@ -53,7 +52,7 @@
         const restoreFlag = document.getElementById("problems-restore-flag");
         
         const STORAGE_KEY = "problemsTabState";
-    
+        
         if (restoreFlag.value === "restore") {
             // Back navigation
             const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -70,6 +69,8 @@
     
         // Save state whenever search changes
         function saveState() {
+            // update restore flag state to retain it back on navigating to next screens and then coming back
+            restoreFlag.value = "restore";
             sessionStorage.setItem(
                 STORAGE_KEY,
                 JSON.stringify({
