@@ -33,8 +33,8 @@
         </thead>
 
         <tbody id="problems-table-body" class="text-gray-600 text-sm" data-mathjax="true"
-            hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=2&offset=0"
-            data-limit="2" data-offset="0" hx-sync="this:replace"
+            hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=10&offset=0"
+            data-limit="10" data-offset="0" hx-sync="this:replace"
             hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search"
             hx-include="#problem-search,#problems-subject-dropdown"
             data-loader="#problems-search-loader" data-sentinel="#table-sentinel">

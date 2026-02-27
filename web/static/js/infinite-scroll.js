@@ -24,7 +24,6 @@
 
             if (name === 'htmx:beforeRequest') {
                 const requestUrl = evt.detail.pathInfo?.finalRequestPath;
-                console.log("before req ", requestUrl);
                 const queryString = requestUrl.split("?")[1] || "";
                 target.setAttribute("data-active-params", queryString);
 
@@ -45,6 +44,7 @@
                 const activeSearch = getSearchValue(activeParams);
             
                 if (responseSearch !== activeSearch) {
+                    // search term has changed so ignore response
                     console.log("Ignoring stale response:", responseSearch, activeSearch);
                     evt.detail.shouldSwap = false;   // cancel swap
                     return;
@@ -62,8 +62,7 @@
 
             } else if (name === 'htmx:afterSwap') {
                 if (loader) loader.classList.add("hidden");
-                console.log("afterswap");
-                const limit = parseInt(target.getAttribute("data-limit") || "2", 10);
+                const limit = parseInt(target.getAttribute("data-limit") || "10", 10);
                 const offset = parseInt(target.getAttribute("data-offset") || "0", 10);
                 target.setAttribute("data-offset", offset + limit);
                 target.removeAttribute("data-loading");
@@ -91,12 +90,11 @@
                                 target.setAttribute("data-loading", "true");
                                 if (loader) loader.classList.remove("hidden");
 
-                                let limit = target.getAttribute("data-limit") || "2";
+                                let limit = target.getAttribute("data-limit") || "10";
                                 let offset = target.getAttribute("data-offset") || "0";
 
                                 let baseUrl = target.getAttribute("hx-get");
                                 let params = new URLSearchParams(target.getAttribute("data-active-params") || "");
-                                console.log("params = ", target.getAttribute("data-active-params"), limit, offset);
                                 params.set("limit", limit);
                                 params.set("offset", offset);
 
