@@ -10,7 +10,7 @@ type Test struct {
 	SkillIDs         []int16           `json:"skill_ids,omitempty"`
 	CurriculumGrades []CurriculumGrade `json:"curriculum_grades"`
 	TypeParams       ResTypeParams     `json:"type_params"`
-	Status           string            `json:"cms_status"`
+	StatusID         int8              `json:"cms_status_id"`
 }
 
 type CurriculumGrade struct {
@@ -59,9 +59,10 @@ type ResOptional struct {
 }
 
 type ResProblem struct {
-	ID       int    `json:"id"`
-	PosMarks []int8 `json:"pos_marks"`
-	NegMarks []int8 `json:"neg_marks,omitempty"`
+	ID              int    `json:"id"`
+	PosMarks        []int8 `json:"pos_marks"`
+	NegMarks        []int8 `json:"neg_marks,omitempty"`
+	DifficultyLevel string `json:"difficulty_level"`
 	// struct is never empty and omitempty is ignored without pointer,
 	// so we need to use a pointer to make it optional
 	OptionLayout *OptionLayout `json:"option_layout,omitempty"`
