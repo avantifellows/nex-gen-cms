@@ -35,6 +35,7 @@ const testsFilterViewTemplate = "tests_filter_view.html"
 const testsSearchViewTemplate = "tests_search_view.html"
 const testRowTemplate = "test_row.html"
 const testSearchRowTemplate = "test_search_row.html"
+const addTestSearchRowTemplate = "add_test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
 const addTestTemplate = "add_test.html"
@@ -46,6 +47,7 @@ const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.
 const addTestDestProblemRowTemplate = "dest_problem_row.html"
 const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
 const addTestDestSubjectRowTemplate = "dest_subject_row.html"
+const addTestSearchedTemplate = "add_test_searched.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
 const addTestModalTemplate = "add_test_modal.html"
 const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
@@ -147,6 +149,7 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 	limit := utils.StringToInt(urlVals.Get("limit"))
 	sortColumn := urlVals.Get("sortColumn")
 	sortOrder := urlVals.Get("sortOrder")
+	view := urlVals.Get("view")
 	queryParams := "?search=" + url.QueryEscape(search) + "&type=test&limit=" + strconv.Itoa(limit) + "&offset=" + urlVals.Get("offset")
 
 	// Add sorting params if present
@@ -202,8 +205,15 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		gradeMap[g.ID] = g.Number
 	}
 
-	if !hasMore {
-		responseWriter.Header().Set("hasMore", "false")
+	var tmpl string
+	if view == "add-test" {
+		tmpl = addTestSearchRowTemplate
+	} else {
+		tmpl = testSearchRowTemplate
+
+		if !hasMore {
+			responseWriter.Header().Set("hasMore", "false")
+		}
 	}
 
 	// Pass both tests and curriculum map to template
@@ -216,7 +226,7 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		Curriculums: curriculumMap,
 		Grades:      gradeMap,
 	}
-	views.ExecuteTemplate(testSearchRowTemplate, responseWriter, data, template.FuncMap{
+	views.ExecuteTemplate(tmpl, responseWriter, data, template.FuncMap{
 		"dict": utils.Dict,
 	})
 }
@@ -291,6 +301,44 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 	}
 
 	views.ExecuteTemplates(responseWriter, data, nil, baseTemplate, testTemplate)
+}
+
+func (h *TestsHandler) GetSubjectwiseTestProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	selectedTestPtr, code, err := h.getTest(responseWriter, request)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	problems := h.getTestProblems(responseWriter, request)
+	if problems == nil {
+		return
+	}
+	problemsMap := make(map[int]*models.Problem)
+	for _, p := range *problems {
+		problemsMap[p.ID] = p
+	}
+
+	selectedIDs := map[int]bool{}
+	selectedIdsParam := request.URL.Query().Get("selected-ids")
+	if selectedIdsParam != "" {
+		// Build a set of already-selected problem IDs
+		for _, idStr := range strings.Split(selectedIdsParam, ",") {
+			selectedIDs[utils.StringToInt(idStr)] = true
+		}
+	}
+
+	data := dto.AddTestSearchData{
+		TestPtr:     selectedTestPtr,
+		Problems:    problemsMap,
+		SelectedIDs: selectedIDs,
+	}
+
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"emptySlice": utils.EmptySlice[*models.Problem],
+		"append":     utils.Append[*models.Problem],
+		"isSelected": func(id int, m map[int]bool) bool { return m[id] },
+	}, addTestSearchedTemplate, srcProblemRowTemplate)
 }
 
 func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http.Request) (*models.Test, int, error) {
@@ -502,6 +550,8 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	subjectExists := request.FormValue("subject-exists") == "true"
 	subtypeExists := request.FormValue("subtype-exists") == "true"
 	readOnlyMarks := request.FormValue("read-only-marks") == "true"
+	canSaveSingleSubject := request.FormValue("can-save-single-subject") == "true" // for edit test scenario
+	testId := request.FormValue("test-id")
 
 	var filename string
 	var data any
@@ -511,8 +561,10 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		// Need subject + subtype header
 		filename = addTestDestProblemRowWithHeadersTemplate
 		data = map[string]any{
-			"Problem":       problemPtr,
-			"ReadOnlyMarks": readOnlyMarks,
+			"Problem":              problemPtr,
+			"ReadOnlyMarks":        readOnlyMarks,
+			"CanSaveSingleSubject": canSaveSingleSubject,
+			"TestId":               testId,
 		}
 
 	case subjectExists && !subtypeExists:
@@ -630,6 +682,53 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 		http.Error(responseWriter, fmt.Sprintf("Error updating test: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *TestsHandler) UpdateTestSubject(responseWriter http.ResponseWriter, request *http.Request) {
+	// Declare a variable to hold the parsed JSON
+	var incomingSubject models.ResSubject
+
+	// Decode the JSON body into the subject object
+	if err := json.NewDecoder(request.Body).Decode(&incomingSubject); err != nil {
+		http.Error(responseWriter, "Error parsing JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch existing test
+	test, _, err := h.getTest(responseWriter, request)
+	if err != nil {
+		http.Error(responseWriter, "Test not found", http.StatusNotFound)
+		return
+	}
+
+	// Find & update ONLY the matching subject
+	updated := false
+	for i, subj := range test.TypeParams.Subjects {
+		if subj.SubjectID == incomingSubject.SubjectID {
+			test.TypeParams.Subjects[i] = incomingSubject
+			updated = true
+			break
+		}
+	}
+
+	if !updated {
+		// If subject not found, append it
+		test.TypeParams.Subjects = append(test.TypeParams.Subjects, incomingSubject)
+	}
+
+	// Recalculate total marks from subject marks
+	test.RecalculateTotalMarksFromSubjects()
+
+	// Persist updated test
+	if _, err = h.testsService.UpdateObject(strconv.Itoa(test.ID), resourcesEndPoint, test, testsKey,
+		func(t *models.Test) bool {
+			return (*t).ID == test.ID
+		}); err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error updating subject: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	responseWriter.WriteHeader(http.StatusOK)
 }
 
 func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *http.Request) {

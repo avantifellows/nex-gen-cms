@@ -5,8 +5,7 @@
     function onDropdownLoaded(dropdown, storageKey) {
         // restore last selected value from sessionStorage
         const lastSelectedValue = sessionStorage.getItem(storageKey);
-        // dropdown value is blank sometimes on coming back from problem screen
-        if (lastSelectedValue && dropdown.value !== "") {
+        if (lastSelectedValue) {
             dropdown.value = lastSelectedValue;
 
             // Clear any previous pending trigger for this dropdown
@@ -39,71 +38,133 @@
     {{ else if eq $mode "copy" }}Copy
     {{ else }}New{{ end }} Test
 </h1>
-<div class="flex h-screen">
+<div id="add-test-div" class="flex h-screen">
     <!-- Left Panel -->
     <div class="w-1/3 p-5 bg-white shadow overflow-auto">
-        <!-- Filters -->
-        <div class="grid grid-cols-2 gap-4">
-            <!-- name attribute is used, because query parameters passed via http request can be 
-                 identified by element names only. It is used in chapter_handler.go -->
-            <select id="chapter-dropdown" name="chapter-dropdown" hx-ext="cascade-clear"
-                class="p-2 border rounded w-full"
-                hx-trigger="load, onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
-                hx-get="/api/chapters?view=dropdown"
-                hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown"
-                onchange="sessionStorage.setItem('selectedChapter', this.value);"
-                hx-on::after-request="onDropdownLoaded(this, 'selectedChapter')">
-                <option>Select Chapter</option>
-            </select>
-            <select id="topic-dropdown" name="topic-dropdown" hx-ext="cascade-clear" class="p-2 border rounded w-full"
-                hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
-                hx-include="#chapter-dropdown" onchange="sessionStorage.setItem('selectedTopic', this.value);"
-                hx-on::after-request="onDropdownLoaded(this, 'selectedTopic')">
-                <option>Select Topic</option>
-            </select>
-            <label class="font-semibold">Level</label>
-            <label class="font-semibold">Problem Type</label>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2" id="level-checkboxes">
-                <label class="flex items-center">
-                    <input type="checkbox" name="level" value="" checked class="mr-2 level-checkbox" id="level-all">
-                    All
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" name="level" value="easy" checked class="mr-2 level-checkbox">
-                    Easy
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" name="level" value="medium" checked class="mr-2 level-checkbox">
-                    Medium
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" name="level" value="hard" checked class="mr-2 level-checkbox">
-                    Hard
-                </label>            
+        <!-- Questions Sources: Tabs -->
+        <div>
+            <div class="flex gap-2 border-b">
+                <button id="left-tab-bank" type="button" hx-on:click="activateLeftTab('bank')"
+                    class="px-3 py-2 font-semibold border-b-2 border-blue-600 text-blue-700">
+                    Question Bank
+                </button>
+                <button id="left-tab-search" type="button" hx-on:click="activateLeftTab('search')"
+                    class="px-3 py-2 font-semibold text-gray-600 hover:text-gray-800">
+                    Search Tests
+                </button>
             </div>
-            <select id="ptype-dropdown" name="ptype-dropdown" class="p-2 border rounded w-full h-10">
-                <option value="">All</option>
-                {{ template "problem_type_options" }}
-            </select>
-        </div>
-        <!-- Questions List -->
-        <div class="mt-6">
-            <h2 class="text-lg font-semibold">Question Bank</h2>
-            <table class="mt-3 w-full border text-left">
-                <thead>
-                    <tr class="bg-gray-200">
-                        <th class="p-2">Code</th>
-                        <th class="p-2">Question</th>
-                        <th class="p-2">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems"
-                    hx-trigger="change from:(#topic-dropdown, .level-checkbox, #ptype-dropdown)"
-                    hx-include="#topic-dropdown, #curriculum-dropdown, #subject-dropdown, .level-checkbox, #ptype-dropdown"
-                    data-mathjax="true">
-                    <!-- Rows will be dynamically inserted here -->
-                </tbody>
-            </table>
+
+            <!-- Tab: Question Bank -->
+            <div id="bank-view" class="mt-3">
+                <!-- Filters -->
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- 1. name attribute is used, because query parameters passed via http request can be 
+                         identified by element names only. It is used in chapter_handler.go
+                         2. Reason of if (this.value) condition in onchange: Update session storage only if 
+                         chapter &/or topic dropdown values are not blank; otherwise Question bank tab -> switch to 
+                         Search Test tab -> click problem -> back -> switch to question bank tab -> shows blank for 
+                         chapter & topic dropdowns clearing session storage values -->
+                    <select id="chapter-dropdown" name="chapter-dropdown" hx-ext="cascade-clear"
+                        class="p-2 border rounded w-full"
+                        hx-trigger="load, onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
+                        hx-get="/api/chapters?view=dropdown"
+                        hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown"
+                        onchange="if (this.value) sessionStorage.setItem('selectedChapter', this.value);"
+                        hx-on::after-request="onDropdownLoaded(this, 'selectedChapter')">
+                        <option>Select Chapter</option>
+                    </select>
+                    <select id="topic-dropdown" name="topic-dropdown" hx-ext="cascade-clear" class="p-2 border rounded w-full"
+                        hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
+                        hx-include="#chapter-dropdown" onchange="if (this.value) sessionStorage.setItem('selectedTopic', this.value);"
+                        hx-on::after-request="onDropdownLoaded(this, 'selectedTopic')">
+                        <option value="">Select Topic</option>
+                    </select>
+                    <label class="font-semibold">Level</label>
+                    <label class="font-semibold">Problem Type</label>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-2" id="level-checkboxes">
+                        <label class="flex items-center">
+                            <input type="checkbox" name="level" value="" checked class="mr-2 level-checkbox" id="level-all">
+                            All
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="level" value="easy" checked class="mr-2 level-checkbox">
+                            Easy
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="level" value="medium" checked class="mr-2 level-checkbox">
+                            Medium
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" name="level" value="hard" checked class="mr-2 level-checkbox">
+                            Hard
+                        </label>            
+                    </div>
+                    <select id="ptype-dropdown" name="ptype-dropdown" class="p-2 border rounded w-full h-10">
+                        <option value="">All</option>
+                        {{ template "problem_type_options" }}
+                    </select>
+                </div>
+
+                <h2 class="text-lg font-semibold mt-6">Question Bank</h2>
+                <table class="mt-3 w-full border text-left">
+                    <thead>
+                        <tr class="bg-gray-200">
+                            <th class="p-2">Code</th>
+                            <th class="p-2">Question</th>
+                            <th class="p-2">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems"
+                        hx-trigger="change from:(#topic-dropdown, .level-checkbox, #ptype-dropdown)"
+                        hx-include="#topic-dropdown, #curriculum-dropdown, #subject-dropdown, .level-checkbox, #ptype-dropdown"
+                        data-mathjax="true" hx-indicator="#question-bank-loader"
+                        hx-on::before-request="this.innerHTML=''">
+                        <!-- Rows will be dynamically inserted here -->
+                    </tbody>
+                </table>
+                <div id="question-bank-loader" class="hidden flex justify-center py-4">
+                    <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                </div>                
+            </div>
+
+            <!-- Tab: Search Tests -->
+            <div id="search-view" class="mt-3 hidden">
+                <!-- Search by code or name -->
+                <div id="search-block" class="mt-3 relative w-full">
+                    <div class="flex items-center gap-2">
+                        <input id="query-input" name="search" type="text"
+                            class="p-2 border rounded w-full" placeholder="Search by Code or Name">
+                
+                        <!-- Button + Loader wrapper -->
+                        <div class="relative w-28 flex-shrink-0">
+                            <!-- Search button -->
+                            <button id="search-btn" type="button"
+                                class="w-full px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                hx-get="/api/search-tests?view=add-test&limit=20&offset=0"
+                                hx-include="#query-input" hx-target="#suggestions" hx-indicator="#search-btn-loader" 
+                                hx-on::before-request="this.classList.add('hidden')"
+                                hx-on::after-request="onSearchResponse(event)">
+                                Search
+                            </button>
+
+                            <!-- loader -->
+                            <div id="search-btn-loader" class="hidden absolute inset-0 flex items-center justify-center">
+                                <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <!-- Suggestions full width because parent is relative -->
+                    <div id="suggestions"
+                         class="hidden absolute left-0 mt-1 border rounded bg-white shadow z-10 w-full">
+                    </div>
+                </div>         
+                <div id="searched-test-loader" class="hidden flex justify-center py-4">
+                    <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+                </div>                                   
+                <div id="searched-test-results" class="mt-4">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -124,7 +185,7 @@
     So when any child element inside the form (like our <a> tag with hx-get on clicking problem code) triggers 
     an HTMX request, the before-request event is fired on the parent form, causing createTest(...) to be called 
     even for unrelated hx-get actions -->
-    <form id="add-test-div" class="flex-1 p-5 overflow-auto bg-gray-50"
+    <form id="add-test-right-div" class="flex-1 p-5 overflow-auto bg-gray-50"
         {{ if ne $mode "copy" }}
             hx-post="/create-test"
             hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}}, {{index .TestPtr.ExamIDs 0}})'
@@ -221,15 +282,33 @@
         {{ $medium := 0 }}
         {{ $hard := 0 }}
         {{if .Problems}}
-            {{range .Problems}}
-                {{ if eq .DifficultyLevel "easy" }}
-                    {{ $easy = add $easy 1 }}
-                {{ else if eq .DifficultyLevel "medium" }}
-                    {{ $medium = add $medium 1 }}
-                {{ else if eq .DifficultyLevel "hard" }}
-                    {{ $hard = add $hard 1 }}
+            {{ range .TestPtr.TypeParams.Subjects }}
+                {{ range .Sections }}
+                    {{ range .Compulsory.Problems }}
+                        
+                        {{/* 
+                        Determine effective difficulty:
+                        1. Use section problem difficulty if present
+                        2. Else fallback to master problem difficulty
+                        */}}
+                        {{ $problem := index $.Problems .ID }}
+                        {{ $difficulty := .DifficultyLevel }}
+
+                        {{ if not $difficulty }}
+                            {{ $difficulty = $problem.DifficultyLevel }}
+                        {{ end }}
+
+                        {{ if eq $difficulty "easy" }}
+                            {{ $easy = add $easy 1 }}
+                        {{ else if eq $difficulty "medium" }}
+                            {{ $medium = add $medium 1 }}
+                        {{ else if eq $difficulty "hard" }}
+                            {{ $hard = add $hard 1 }}
+                        {{ end }}
+
+                    {{ end }}
                 {{ end }}
-            {{end}}
+            {{ end }}
         {{end}}
 
         <!-- Levels Table -->
@@ -261,17 +340,18 @@
                     <th class="p-2 text-center">+ve Marks</th>
                     <th class="p-2 text-center">-ve Marks</th>
                     <th class="p-2 text-center">Options Layout</th>
-                    <th class="p-2">Action</th>
+                    <th class="p-2 text-center">Action</th>
                 </tr>
             </thead>
             <tbody id="questions-table-body" name="questions-table-body">
-                <!-- if this is for edit test -->
+                <!-- if this is for edit/copy test -->
                 {{if .Problems}}
                     {{ $sr := 0 }}
                     {{range .TestPtr.TypeParams.Subjects}}
                         {{ $subjectId := .SubjectID }}
                         {{ template "dest_subject_row" (dict "SubjectId" $subjectId "SubjectName" .Name 
-                        "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule) }}
+                        "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule 
+                        "CanSaveSingleSubject" (eq $mode "edit") "TestId" $id)}}
                         {{range .Sections}}
                             {{template "dest_subtype_row" (dict "SubjectId" $subjectId "Subtype" .Name 
                             "DisplaySubtype" (getDisplaySubtype .Name) "PosMarks" .PosMarks "NegMarks" .NegMarks
@@ -279,7 +359,7 @@
                             {{range .Compulsory.Problems}}
                                 {{ $sr = add $sr 1 }}
                                 {{template "dest_problem_row" (dict "Problem" (index $.Problems .ID) "SrNo" $sr
-                                "PosMarks" .PosMarks "NegMarks" .NegMarks "OptionLayout" .OptionLayout 
+                                "PosMarks" .PosMarks "NegMarks" .NegMarks "DifficultyLevel" .DifficultyLevel "OptionLayout" .OptionLayout 
                                 "ReadOnlyMarks" $hasTestRule)}}
                             {{end}}
                         {{end}}
@@ -323,8 +403,8 @@
         {{ end }}
     </form>
 </div>
-<script type="application/json" id="test-rule-json">
-  {{ .TestRule | toJson }}
+<script type="application/json" id="test-context-json">
+  {{ dict "testId" $id "testRule" .TestRule | toJson }}
 </script>
 <script>
     var mode = "{{ $mode }}";  // "new", "edit", or "copy"
@@ -340,6 +420,8 @@
     var SESSION_KEY_NAME = "selectedName";
     var SESSION_KEY_DURATION = "selectedDuration";
 
+    var SESSION_KEY_LAST_SEARCHED_TEST = "lastSearchedTest";
+
     (function () {        
         if (window.lastPushedScreen === PUSHED_SCREEN_ADD_TEST) {
             // clear session storage values stored earlier as this is new screen opened
@@ -349,6 +431,7 @@
             sessionStorage.removeItem(SESSION_KEY_YEAR);
             sessionStorage.removeItem(SESSION_KEY_NAME);
             sessionStorage.removeItem(SESSION_KEY_DURATION);
+            sessionStorage.removeItem(SESSION_KEY_LAST_SEARCHED_TEST);
         }
 
         initSortableForSections();
@@ -393,7 +476,121 @@
         setElementFromStorage('test-name', SESSION_KEY_NAME);
         setElementFromStorage('duration', SESSION_KEY_DURATION);
     });
-    
+
+    function activateLeftTab(tab) {
+        const bankTabBtn = document.getElementById('left-tab-bank');
+        const searchTabBtn = document.getElementById('left-tab-search');
+        const bankView = document.getElementById('bank-view');
+        const searchView = document.getElementById('search-view');
+
+        const activeClasses = ['border-b-2', 'border-blue-600', 'text-blue-700'];
+        const inactiveClasses = ['text-gray-600'];
+
+        if (tab === 'bank') {
+            bankView.classList.remove('hidden');
+            searchView.classList.add('hidden');
+            bankTabBtn.classList.add(...activeClasses);
+            bankTabBtn.classList.remove(...inactiveClasses);
+            searchTabBtn.classList.remove(...activeClasses);
+            searchTabBtn.classList.add(...inactiveClasses);
+            setMainFiltersDisabled(false);
+
+            const chapterDropdown = document.getElementById('chapter-dropdown');
+            const saved = sessionStorage.getItem('selectedChapter');
+
+            // If chapter dropdown exists AND values don't match → restore
+            if (chapterDropdown && saved) {
+                if (chapterDropdown.value !== saved) {
+                    onDropdownLoaded(chapterDropdown, 'selectedChapter');
+                } else {
+                    reloadSelectedTopicProblems();
+                }
+            }
+
+        } else {
+            searchView.classList.remove('hidden');
+            bankView.classList.add('hidden');
+            searchTabBtn.classList.add(...activeClasses);
+            searchTabBtn.classList.remove(...inactiveClasses);
+            bankTabBtn.classList.remove(...activeClasses);
+            bankTabBtn.classList.add(...inactiveClasses);
+            setMainFiltersDisabled(true);
+
+            reloadSelectedSearchTest();
+        }
+    }
+
+    var addTestDiv = document.getElementById("add-test-div");
+    var queryInput = document.getElementById("query-input");
+    var suggestions = document.getElementById("suggestions");
+    var searchBtn = document.getElementById("search-btn");
+
+    function onSearchResponse(event) {
+        // If HTMX response contains child nodes, show
+        if (suggestions.children.length > 0) {
+            suggestions.classList.remove("hidden");
+        } else {
+            // No results
+            suggestions.classList.add("hidden");
+        }
+        searchBtn.classList.remove("hidden");
+    }
+
+    // Close with ESC
+    addTestDiv.onkeydown = function (e) {
+        if (e.key === "Escape") {
+            suggestions.classList.add("hidden");
+        }
+    };
+
+    // Hide when clicking inside block but not on suggestions/input/button
+    addTestDiv.addEventListener("click", (e) => {
+        if (!suggestions.contains(e.target) && e.target !== searchBtn && e.target !== queryInput) {
+            suggestions.classList.add("hidden");
+        }
+    });
+
+    // Handle clicking a suggestion
+    function selectSuggestion(divId, displayText) {
+        queryInput.value = displayText;            // Display suggestion text in input
+        suggestions.classList.add("hidden"); // Close the box
+
+        // Save for later refresh
+        sessionStorage.setItem(SESSION_KEY_LAST_SEARCHED_TEST, divId);
+    }
+
+    function getSelectedProblemIds() {
+        return Array.from(document.querySelectorAll(problemRowsSelectors))
+            .map(row => row.id.replace("problem-", ""))
+            .join(",");
+    }
+
+    async function addAllFromSubject(btn) {
+        const headerRow = btn.closest('tr');
+        if (!headerRow) return;
+
+        const buttonsToAdd = [];
+
+        // Collect all add buttons first (before any DOM changes)
+        let row = headerRow.nextElementSibling;
+        // iterate rows until next subject header (row that contains another Add All button)
+        while (row) {
+            // next subject header encountered -> stop
+            if (row.querySelector('button[onclick*="addAllFromSubject"]')) break;
+
+            const addBtn = row.querySelector('button[data-id]');
+            // addBtn won't be found for extra rows added by HTMX for animation, which we can skip
+            if (addBtn) buttonsToAdd.push(addBtn);
+
+            row = row.nextElementSibling;
+        }
+
+        // Process sequentially
+        for (const addBtn of buttonsToAdd) {
+            await addQuestionToTest(addBtn);
+        }
+    }
+
     htmx.defineExtension('cascade-clear', {
         onEvent: function (name, event) {
             if (name === "htmx:afterSwap") {
@@ -403,7 +600,7 @@
                 if (targetId === "chapter-dropdown") {
                     const topicDropdown = document.getElementById('topic-dropdown');
                     if (topicDropdown) {
-                        topicDropdown.innerHTML = '<option>Select Topic</option>';
+                        topicDropdown.innerHTML = '<option value="">Select Topic</option>';
                     }
                 }
 
@@ -411,6 +608,20 @@
                 const problemList = document.getElementById('question-bank');
                 if (problemList) {
                     problemList.innerHTML = '';
+                }
+
+            } else if (name === "htmx:configRequest") {
+                const targetId = event.detail.elt.id;
+                if (targetId === "chapter-dropdown") {
+                    const curriculum = document.getElementById("curriculum-dropdown");
+                    const grade = document.getElementById("grade-dropdown");
+                    const subject = document.getElementById("subject-dropdown");
+
+                    // if curriculum is disabled (when search tab is active) or any of the dropdown 
+                    // values are blank then prevent chapters request
+                    if (curriculum.disabled || !curriculum.value || !grade.value || !subject.value) {
+                        event.preventDefault();
+                    }
                 }
             }
         }
@@ -420,9 +631,7 @@
         onEvent: function (name, evt) {
             if (name === "htmx:configRequest") {
                 // add already selected problem ids in parameters
-                const selectedIds = Array.from(document.querySelectorAll(problemRowsSelectors))
-                    .map(row => row.id.replace("problem-", ""));
-                evt.detail.parameters["selected-ids"] = selectedIds.join(",");
+                evt.detail.parameters["selected-ids"] = getSelectedProblemIds();
             }
         }
     });
@@ -435,7 +644,6 @@
         let nextRow = problemRow.nextElementSibling;
         problemRow.remove();
 
-        const dataset = btn.dataset;
         const subject = problemRow.dataset.subject;
         const subtype = problemRow.dataset.subtype;
         const tableBody = document.getElementById("questions-table-body");
@@ -463,13 +671,42 @@
         }
 
         // Decrement count in levels table
-        decrementLevelCount(dataset.difficulty);
+        decrementLevelCount(problemRow.dataset.difficulty);
 
         updateTotalMarks();
 
-        // Refresh left panel questions
+        // If Search Tests tab active → reload problems of last searched test
+        const searchTabActive = !document.getElementById("search-view").classList.contains("hidden");
+        if (searchTabActive) {
+            reloadSelectedSearchTest();
+
+        } else {
+            // Question Bank tab active -> refresh problems of last selected topic
+            reloadSelectedTopicProblems();
+        }
+    }
+
+    function reloadSelectedTopicProblems() {
         const topicDropdown = document.getElementById("topic-dropdown");
         htmx.trigger(topicDropdown, "change");
+    }
+
+    function reloadSelectedSearchTest() {
+        const divId = sessionStorage.getItem(SESSION_KEY_LAST_SEARCHED_TEST);
+        if (!divId) return false;
+
+        const el = document.getElementById(divId);
+        if (!el) return false;
+        htmx.trigger(el, "click");
+        return true;
+    }
+    
+    function incrementLevelCount(difficulty) {
+        // Increase the count in the levels table
+        const levelCell = document.getElementById(`level-${difficulty}`);
+        if (levelCell) {
+            levelCell.textContent = parseInt(levelCell.textContent) + 1;
+        }
     }
 
     function decrementLevelCount(difficulty) {
@@ -637,7 +874,7 @@
               }).catch(err => {
                   console.error(mode === "edit" ? "Error during test updation:" : "Error during test creation:", err);
                   // Re-enable the Continue button on error (copy flow disables it before calling createTest)
-                  const submitBtn = document.querySelector('#add-test-div button[type="submit"]');
+                  const submitBtn = document.querySelector('#add-test-right-div button[type="submit"]');
                   if (mode === "copy") {
                       submitBtn.disabled = false;
                       submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
@@ -692,93 +929,26 @@
         const posChips = markingSchemeDiv.querySelectorAll(`${chipEditorPosId} .chip`);
         const negChips = markingSchemeDiv.querySelectorAll(`${chipEditorNegId} .chip`);
 
-        const subjects = [];
-        let currentSubject = null, currentSection = null;
-        let currentSubjectMarks = 0, currentSectionMarks = 0;
+        let subjects;
+        try {
+            subjects = buildAllSubjectsJson();
+        } catch (e) {
+            return null;
+        }
+
         // set is used to have unique skill ids only
         const skillIdSet = new Set();
-
-        const tableBody = document.getElementById('questions-table-body');
-        const rows = tableBody.querySelectorAll(':scope > tr');
-        for (const row of rows) {
-            const posChips = row.querySelectorAll(`${chipEditorPosId} .chip`);
-            const negChips = row.querySelectorAll(`${chipEditorNegId} .chip`);
-
-            const id = row.id;
-            // if it is subject row
-            if (id.startsWith("subject-")) {
-                if (currentSubject) {
-                    // set total marks on previous subject and reset marks variable
-                    currentSubject.marks = currentSubjectMarks;
-                    currentSubjectMarks = 0;
-                }
-                currentSubject = {
-                    subject_id: parseInt(id.split("-")[1]),
-                    pos_marks: getMarksArray(posChips),
-                    neg_marks: getMarksArray(negChips),
-                    sections: []
-                };
-                subjects.push(currentSubject);
-
-            } else if (id.startsWith("subtype-")) {
-                // it is section row
-                if (currentSection) {
-                    // set total marks on previous section and reset marks variable
-                    currentSection.marks = currentSectionMarks;
-                    currentSectionMarks = 0;
-                }
-                currentSection = {
-                    name: id.split("-")[2],
-                    pos_marks: getMarksArray(posChips),
-                    neg_marks: getMarksArray(negChips),
-                    compulsory: {
-                        problems: []
-                    },
-                    // right now optional section is not needed
-                };
-                currentSubject.sections.push(currentSection);
-
-            } else {
-                // it's problem row
-                const posMarksArr = getMarksArray(posChips);
-                if (posMarksArr.length === 0) {
-                    alert("Please fill in all the Problem Marks before saving.");
-                    return;
-                }
-
-                const layoutSelect = row.querySelector('select[name="options-layout"]');
-                const [rows, cols] = layoutSelect.value.split('x').map(Number);
-
-                const problem = {
-                    id: parseInt(id.split("-")[1]),
-                    pos_marks: posMarksArr,
-                    neg_marks: getMarksArray(negChips),
-                    option_layout: { rows, cols }
-                };
-                currentSection.compulsory.problems.push(problem);
-
-                // find maximum marks for this problem and add it into both current section and subject marks' total
-                const maxMarks = Math.max(...posMarksArr);
-                currentSubjectMarks += maxMarks;
-                currentSectionMarks += maxMarks;
-
-                const skillIds = row.dataset.skillIds;
-                if (skillIds) {
-                    for (const skillId of skillIds.split(',')) {
-                        skillIdSet.add(parseInt(skillId.trim()));
-                    }
-                }
-            }
-        }
-
-        if (currentSubject) {
-            // set total marks on last subject
-            currentSubject.marks = currentSubjectMarks;
-        }
-        if (currentSection) {
-            // set total marks on last section
-            currentSection.marks = currentSectionMarks;
-        }
+        document.querySelectorAll('#questions-table-body tr[data-skill-ids]')
+            .forEach(row => {
+                row.dataset.skillIds
+                    .split(',')
+                    .forEach(id => {
+                        const parsed = parseInt(id.trim(), 10);
+                        if (!Number.isNaN(parsed)) {
+                            skillIdSet.add(parsed);
+                        }
+                    });
+            });
 
         return {
             code: code,
@@ -802,6 +972,112 @@
             // Used spread operator to add curriculum_grades node only for add/copy test scenario; otherwise it won't add this node
             ...(mode !== "edit" ? { curriculum_grades: curriculumGrades } : {})
         };
+    }
+
+    function buildAllSubjectsJson() {
+        const subjects = [];
+        const subjectRows = document.querySelectorAll(
+            '#questions-table-body tr[id^="subject-"]'
+        );
+
+        for (const subjectRow of subjectRows) {
+            try {
+                subjects.push(buildSubjectJson(subjectRow));
+            } catch (e) {
+                throw e;
+            }
+        }
+
+        return subjects;
+    }
+
+    function buildSubjectJson(subjectRow) {
+        const subjectId = parseInt(subjectRow.id.split("-")[1], 10);
+        const rowsUnderSubject = getRowsUnderSubject(subjectRow);
+
+        const subject = {
+            subject_id: subjectId,
+            pos_marks: getMarksArray(subjectRow.querySelectorAll(`${chipEditorPosId} .chip`)),
+            neg_marks: getMarksArray(subjectRow.querySelectorAll(`${chipEditorNegId} .chip`)),
+            sections: []
+        };
+
+        let currentSection = null;
+        let subjectMarks = 0;
+        let currentSectionMarks = 0;
+
+        for (const row of rowsUnderSubject) {
+            const posChips = row.querySelectorAll(`${chipEditorPosId} .chip`);
+            const negChips = row.querySelectorAll(`${chipEditorNegId} .chip`);
+            const id = row.id;
+        
+            if (id.startsWith("subtype-")) {
+                // it is section row
+                if (currentSection) {
+                    // set total marks on previous section & add same in subject marks
+                    currentSection.marks = currentSectionMarks;
+                    subjectMarks += currentSectionMarks;
+                    // reset current section marks variable
+                    currentSectionMarks = 0;
+                }
+
+                currentSection = {
+                    name: id.split("-")[2],
+                    pos_marks: getMarksArray(posChips),
+                    neg_marks: getMarksArray(negChips),
+                    compulsory: { problems: [] }
+                    // right now optional section is not needed
+                };
+                subject.sections.push(currentSection);
+
+            } else {
+                // it's problem row having id starting with "problem-"
+                const posMarks = getMarksArray(posChips);
+                if (posMarks.length === 0) {
+                    alert("Please fill in all the Problem Marks before saving.");
+                    throw new Error("Missing problem marks");
+                }
+
+                const difficultySelect = row.querySelector('select[name="difficulty-level"]');
+                const difficultyLevel = difficultySelect.value;
+
+                const layoutSelect = row.querySelector('select[name="options-layout"]');
+                const [rows, cols] = layoutSelect.value.split('x').map(Number);
+
+                const problem = {
+                    id: parseInt(id.split("-")[1], 10),
+                    pos_marks: posMarks,
+                    neg_marks: getMarksArray(negChips),
+                    difficulty_level: difficultyLevel,
+                    option_layout: { rows, cols }
+                };
+                currentSection.compulsory.problems.push(problem);
+
+                // find maximum marks for this problem and add it into current section marks' total
+                const maxMarks = Math.max(...posMarks);
+                currentSectionMarks += maxMarks;
+            }
+        }
+
+        if (currentSection) {
+            // set total marks on last section and add same in subject marks also
+            currentSection.marks = currentSectionMarks;
+            subjectMarks += currentSectionMarks;
+        }
+        subject.marks = subjectMarks;
+
+        return subject;
+    }
+
+    function getRowsUnderSubject(subjectRow) {
+        const rows = [];
+        let row = subjectRow.nextElementSibling;
+
+        while (row && !row.id.startsWith("subject-")) {
+            rows.push(row);
+            row = row.nextElementSibling;
+        }
+        return rows;
     }
 
     function getMarksArray(chips) {
@@ -986,6 +1262,84 @@
         }
 
         return { isValid: true, reason: null };
+    }
+
+    function saveSubject(button, testId) {
+        const subjectRow = button.closest('tr');
+
+        let subject;
+        try {
+            subject = buildSubjectJson(subjectRow);
+        } catch(e) {
+            console.error(e);
+            setSubjErrorState(button);
+            return;
+        }
+
+        const url = `/update-test-subject?id=${testId}`;
+        setSubjSavingState(button);
+
+        fetch(url, {
+            method: 'PATCH',
+            body: JSON.stringify(subject),
+            headers: {
+                'Content-Type': 'application/json',
+                'HX-Request': 'true'
+            }
+        })
+        .then(res => {
+            if (!res.ok) {
+                throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return res.text();
+        })
+        .then(() => {
+            setSubjSuccessState(button);
+        })
+        .catch(error => {
+            console.error('Error saving subject:', error);
+            setSubjErrorState(button);
+        });
+    }
+
+    function setSubjSavingState(button) {
+        button.disabled = true;
+        button.title = "Saving...";
+        button.classList.add('opacity-50', 'cursor-not-allowed');
+
+        const icon = button.querySelector("i");
+        icon.className = "fa-solid fa-spinner fa-spin fa-lg";
+    }
+
+    function setSubjSuccessState(button) {
+        button.title = "Saved";
+
+        const icon = button.querySelector("i");
+        icon.className = "fa-solid fa-check fa-lg text-green-600";
+
+        setTimeout(() => {
+            resetSubjSaveButton(button);
+        }, 3000);
+    }
+
+    function setSubjErrorState(button) {
+        button.title = "Save failed";
+
+        const icon = button.querySelector("i");
+        icon.className = "fa-solid fa-triangle-exclamation fa-lg text-red-600";
+
+        setTimeout(() => {
+            resetSubjSaveButton(button);
+        }, 3000);
+    }
+
+    function resetSubjSaveButton(button) {
+        button.title = "Save subject";
+        button.disabled = false;
+        button.classList.remove('opacity-50', 'cursor-not-allowed');
+
+        const icon = button.querySelector("i");
+        icon.className = "fa-solid fa-floppy-disk fa-lg";
     }
 
     function initSortableForSections() {
@@ -1178,6 +1532,22 @@
                 downBtn.classList.toggle("cursor-not-allowed", index === subjects.length - 1);
             }
         });
+    }
+
+    function handleDifficultyChange(selectEl) {
+        const row = selectEl.closest("tr");
+
+        const oldDifficulty = row.dataset.difficulty;
+        const newDifficulty = selectEl.value;
+
+        if (oldDifficulty === newDifficulty) return;
+
+        // Update counts
+        decrementLevelCount(oldDifficulty);
+        incrementLevelCount(newDifficulty);
+
+        // Update dataset
+        row.dataset.difficulty = newDifficulty;
     }
 </script>
 {{ end }}
