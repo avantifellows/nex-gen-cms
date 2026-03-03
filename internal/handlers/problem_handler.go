@@ -23,6 +23,7 @@ const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
 
 const problemTemplate = "problem.html"
+const srcProblemRowParentTemplate = "src_problem_row_parent.html"
 const srcProblemRowTemplate = "src_problem_row.html"
 const problemsTemplate = "problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
@@ -55,7 +56,10 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	}
 
 	data := dto.HomeData{
-		ProblemPtr: selectedProblemPtr,
+		ProblemPtr:   selectedProblemPtr,
+		CurriculumID: selectedProblemPtr.CurriculumID,
+		GradeID:      selectedProblemPtr.GradeID,
+		SubjectID:    selectedProblemPtr.SubjectID,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -151,15 +155,14 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	selectedIds := urlValues.Get("selected-ids")
 	filterProblems(problems, levels, ptype, selectedIds)
 
-	var tmpl string
 	if urlValues.Has("ptype-dropdown") {
 		// for add/edit test screen
-		tmpl = srcProblemRowTemplate
+		views.ExecuteTemplates(responseWriter, problems, nil, srcProblemRowParentTemplate, srcProblemRowTemplate)
+
 	} else {
 		// for topic screen's Problems tab
-		tmpl = topicProblemRowTemplate
+		views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
 	}
-	views.ExecuteTemplate(tmpl, responseWriter, problems, nil)
 }
 
 func filterProblems(problems *[]*models.Problem, levels []string, ptype string, selectedIdsRaw string) {
@@ -262,7 +265,10 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 	}
 
 	data := dto.HomeData{
-		ProblemPtr: selectedProblemPtr,
+		ProblemPtr:   selectedProblemPtr,
+		CurriculumID: selectedProblemPtr.CurriculumID,
+		GradeID:      selectedProblemPtr.GradeID,
+		SubjectID:    selectedProblemPtr.SubjectID,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
