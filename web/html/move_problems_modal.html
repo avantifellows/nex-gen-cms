@@ -1,0 +1,98 @@
+<div id="move-problems-modal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-3xl">
+
+        <h2 class="text-lg font-semibold mb-2">Move Problems</h2>
+        <p class="text-sm text-gray-600 mb-6">
+            Select Curriculum, Grade & Subject in any order. Then select Chapter, and finally Topic.
+        </p>
+
+        <form id="move-problems-form" class="space-y-6">
+
+            <div class="flex gap-3 flex-wrap">
+
+                <!-- Curriculum -->
+                <select id="curriculum-dropdown" name="curriculum-dropdown" 
+                        class="border p-2 rounded w-40" hx-get="/api/curriculums"
+                        hx-trigger="load" hx-on::after-request="afterMoveProblemsDropdownReq(this)">
+                    <option disabled selected>Loading curriculums...</option>
+                </select>
+
+                <!-- Grade -->
+                <select id="grade-dropdown" name="grade-dropdown" 
+                        class="border p-2 rounded w-40" hx-get="/api/grades"
+                        hx-trigger="load" hx-on::after-request="afterMoveProblemsDropdownReq(this)">
+                    <option disabled selected>Loading grades...</option>
+                </select>
+
+                <!-- Subject -->
+                <select id="subject-dropdown" name="subject-dropdown" 
+                        class="border p-2 rounded w-40" hx-get="/api/subjects"
+                        hx-trigger="load" hx-on::after-request="afterMoveProblemsDropdownReq(this)">
+                    <option disabled selected>Loading subjects...</option>
+                </select>
+
+                <!-- Chapter -->
+                <select id="chapter-dropdown" name="chapter-dropdown" 
+                        class="border p-2 rounded w-40" hx-get="/api/chapters"
+                        hx-trigger="loadChapters, change from:(#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown)"
+                        hx-include="#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown"
+                        hx-params="not chapter-dropdown" hx-on::before-request="beforeMoveProblemsChaptersRequest()">
+                    <option disabled selected>Loading chapters...</option>
+                </select>
+
+                <!-- Topic -->
+                <select id="topic-dropdown" name="topic_id" class="border p-2 rounded w-40"
+                        hx-get="/api/topics?view=dropdown" hx-trigger="change from:#move-problems-modal #chapter-dropdown"
+                        hx-include="#move-problems-modal #chapter-dropdown" hx-on::before-request="beforeMoveProblemsTopicsRequest()">
+                    <option disabled selected>Select a chapter first</option>
+                </select>
+
+            </div>
+
+            <!-- Buttons -->
+            <div class="w-full flex justify-end space-x-2 pt-4">
+                <button type="button" onclick="closeMoveProblemsModal()" class="bg-gray-300 px-4 py-2 rounded">
+                    Cancel
+                </button>
+
+                <button type="button" onclick="moveProblems()" class="bg-blue-500 text-white px-4 py-2 rounded">
+                    Move
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+<script>
+function afterMoveProblemsDropdownReq(dropdown) {
+    dropdown.dataset.loaded = "true";
+
+    const modal = document.getElementById("move-problems-modal");
+
+    const allReady =
+        modal.querySelector("#curriculum-dropdown").dataset.loaded &&
+        modal.querySelector("#grade-dropdown").dataset.loaded &&
+        modal.querySelector("#subject-dropdown").dataset.loaded;
+
+    if (allReady) {
+        htmx.trigger("#chapter-dropdown", "loadChapters");
+    }
+}
+
+function beforeMoveProblemsChaptersRequest() {
+    const chapter = document.getElementById("chapter-dropdown");
+    chapter.innerHTML = '<option disabled selected>Loading chapters...</option>';
+
+    const topic = document.getElementById("topic-dropdown");
+    topic.innerHTML = '<option disabled selected>Select a chapter first</option>';
+}
+
+function beforeMoveProblemsTopicsRequest() {
+    const topic = document.getElementById("topic-dropdown");
+    topic.innerHTML = '<option disabled selected>Loading topics...</option>';
+}
+
+function closeMoveProblemsModal() {
+    goBackAfterDelay(0);
+}
+</script>

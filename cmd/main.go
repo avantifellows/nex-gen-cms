@@ -130,6 +130,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/problems/edit-problem", problemsHandler.EditProblem)
 	muxHandler.HandleFunc("/update-problem", problemsHandler.UpdateProblem)
 	muxHandler.HandleFunc("/archive-problem", problemsHandler.ArchiveProblem)
+	muxHandler.Handle("/topic/move-problems", middleware.RequireHTMX(http.HandlerFunc(problemsHandler.MoveProblems)))
 
 	tagsHandler := appComponentPtr.TagsHandler
 	muxHandler.HandleFunc("/api/tags", tagsHandler.GetTags)

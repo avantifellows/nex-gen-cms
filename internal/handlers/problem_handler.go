@@ -32,6 +32,8 @@ const problemTypeOptionsTemplate = "problem_type_options.html"
 const addConceptModalTemplate = "add_concept_modal.html"
 const editorTemplate = "editor.html"
 const inputTagsTemplate = "input_tags.html"
+const problemTestAssociationTemplate = "problem_test_association_modal.html"
+const moveProblemsTemplate = "move_problems_modal.html"
 
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
@@ -316,4 +318,119 @@ func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, req
 		http.Error(responseWriter, fmt.Sprintf("Error archiving problem: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	// associations := []dto.ProblemTestAssociation{
+	// 	{
+	// 		ProblemID:   101,
+	// 		ProblemCode: "PHY-101",
+	// 		Tests: []dto.ProblemTestRef{
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 		},
+	// 	},
+	// 	{
+	// 		ProblemID:   102,
+	// 		ProblemCode: "CHE-204",
+	// 		Tests: []dto.ProblemTestRef{
+	// 			{TestID: 7, TestCode: "TEST-7"},
+	// 		},
+	// 	},
+	// 	{
+	// 		ProblemID:   101,
+	// 		ProblemCode: "PHY-101",
+	// 		Tests: []dto.ProblemTestRef{
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 		},
+	// 	},
+	// 	{
+	// 		ProblemID:   102,
+	// 		ProblemCode: "CHE-204",
+	// 		Tests: []dto.ProblemTestRef{
+	// 			{TestID: 7, TestCode: "TEST-7"},
+	// 		},
+	// 	},
+	// 	{
+	// 		ProblemID:   101,
+	// 		ProblemCode: "PHY-101",
+	// 		Tests: []dto.ProblemTestRef{
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 		},
+	// 	},
+	// 	{
+	// 		ProblemID:   102,
+	// 		ProblemCode: "CHE-204",
+	// 		Tests: []dto.ProblemTestRef{
+	// 			{TestID: 7, TestCode: "TEST-7"},
+	// 		},
+	// 	},
+	// 	{
+	// 		ProblemID:   101,
+	// 		ProblemCode: "PHY-101",
+	// 		Tests: []dto.ProblemTestRef{
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 			{TestID: 5, TestCode: "TEST-5"},
+	// 			{TestID: 9, TestCode: "TEST-9"},
+	// 		},
+	// 	},
+	// 	{
+	// 		ProblemID:   102,
+	// 		ProblemCode: "CHE-204",
+	// 		Tests: []dto.ProblemTestRef{
+	// 			{TestID: 7, TestCode: "TEST-7"},
+	// 		},
+	// 	},
+	// }
+	// views.ExecuteTemplate(problemTestAssociationTemplate, responseWriter, associations, nil)
+	views.ExecuteTemplate(moveProblemsTemplate, responseWriter, nil, nil)
 }
