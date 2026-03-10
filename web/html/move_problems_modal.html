@@ -8,32 +8,32 @@
 
         <form id="move-problems-form" class="space-y-6">
 
-            <div class="flex gap-3 flex-wrap">
+            <div class="grid grid-cols-3 gap-4">
 
                 <!-- Curriculum -->
                 <select id="curriculum-dropdown" name="curriculum-dropdown" 
-                        class="border p-2 rounded w-40" hx-get="/api/curriculums"
+                        class="border p-2 rounded w-full" hx-get="/api/curriculums"
                         hx-trigger="load" hx-on::after-request="afterMoveProblemsDropdownReq(this)">
                     <option disabled selected>Loading curriculums...</option>
                 </select>
 
                 <!-- Grade -->
                 <select id="grade-dropdown" name="grade-dropdown" 
-                        class="border p-2 rounded w-40" hx-get="/api/grades"
+                        class="border p-2 rounded w-full" hx-get="/api/grades"
                         hx-trigger="load" hx-on::after-request="afterMoveProblemsDropdownReq(this)">
                     <option disabled selected>Loading grades...</option>
                 </select>
 
                 <!-- Subject -->
                 <select id="subject-dropdown" name="subject-dropdown" 
-                        class="border p-2 rounded w-40" hx-get="/api/subjects"
+                        class="border p-2 rounded w-full" hx-get="/api/subjects"
                         hx-trigger="load" hx-on::after-request="afterMoveProblemsDropdownReq(this)">
                     <option disabled selected>Loading subjects...</option>
                 </select>
 
                 <!-- Chapter -->
                 <select id="chapter-dropdown" name="chapter-dropdown" 
-                        class="border p-2 rounded w-40" hx-get="/api/chapters"
+                        class="border p-2 rounded w-full" hx-get="/api/chapters"
                         hx-trigger="loadChapters, change from:(#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown)"
                         hx-include="#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown"
                         hx-params="not chapter-dropdown" hx-on::before-request="beforeMoveProblemsChaptersRequest()">
@@ -41,9 +41,9 @@
                 </select>
 
                 <!-- Topic -->
-                <select id="topic-dropdown" name="topic_id" class="border p-2 rounded w-40"
-                        hx-get="/api/topics?view=dropdown" hx-trigger="change from:#move-problems-modal #chapter-dropdown"
-                        hx-include="#move-problems-modal #chapter-dropdown" hx-on::before-request="beforeMoveProblemsTopicsRequest()">
+                <select id="topic-dropdown" name="topic_id" class="border p-2 rounded w-full"
+                        hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
+                        hx-include="#chapter-dropdown" hx-on::before-request="beforeMoveProblemsTopicsRequest()">
                     <option disabled selected>Select a chapter first</option>
                 </select>
 
@@ -51,11 +51,11 @@
 
             <!-- Buttons -->
             <div class="w-full flex justify-end space-x-2 pt-4">
-                <button type="button" onclick="closeMoveProblemsModal()" class="bg-gray-300 px-4 py-2 rounded">
+                <button type="button" onclick="closeMoveProblemsModal()" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 transition">
                     Cancel
                 </button>
 
-                <button type="button" onclick="moveProblems()" class="bg-blue-500 text-white px-4 py-2 rounded">
+                <button type="button" onclick="moveProblems()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition">
                     Move
                 </button>
             </div>
