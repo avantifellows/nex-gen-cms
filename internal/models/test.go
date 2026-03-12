@@ -8,9 +8,9 @@ type Test struct {
 	Subtype          string            `json:"subtype"`
 	ExamIDs          []int8            `json:"exam_ids"`
 	SkillIDs         []int16           `json:"skill_ids,omitempty"`
-	CurriculumGrades []CurriculumGrade `json:"curriculum_grades"`
+	CurriculumGrades []CurriculumGrade `json:"curriculum_grades,omitempty"`
 	TypeParams       ResTypeParams     `json:"type_params"`
-	StatusID         int8              `json:"cms_status_id"`
+	StatusID         int8              `json:"cms_status_id,omitempty"`
 }
 
 type CurriculumGrade struct {
