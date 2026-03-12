@@ -1933,6 +1933,18 @@ video {
 
 /* Custom styles using @apply */
 
+/* Wrap MathJax formulae to next line */
+
+mjx-container[jax="CHTML"] mjx-math {
+  white-space: normal !important;
+}
+
+/* If a matrix exists, disable wrapping for that formula */
+
+mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
+  white-space: nowrap !important;
+}
+
 .hover\:bg-blue-100:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(219 234 254 / var(--tw-bg-opacity));
