@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -21,6 +22,7 @@ const problemsKey = "problems"
 
 const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
+const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
 
 const problemTemplate = "problem.html"
 const srcProblemRowParentTemplate = "src_problem_row_parent.html"
@@ -320,117 +322,29 @@ func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, req
 	}
 }
 
-func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	// associations := []dto.ProblemTestAssociation{
-	// 	{
-	// 		ProblemID:   101,
-	// 		ProblemCode: "PHY-101",
-	// 		Tests: []dto.ProblemTestRef{
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 		},
-	// 	},
-	// 	{
-	// 		ProblemID:   102,
-	// 		ProblemCode: "CHE-204",
-	// 		Tests: []dto.ProblemTestRef{
-	// 			{TestID: 7, TestCode: "TEST-7"},
-	// 		},
-	// 	},
-	// 	{
-	// 		ProblemID:   101,
-	// 		ProblemCode: "PHY-101",
-	// 		Tests: []dto.ProblemTestRef{
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 		},
-	// 	},
-	// 	{
-	// 		ProblemID:   102,
-	// 		ProblemCode: "CHE-204",
-	// 		Tests: []dto.ProblemTestRef{
-	// 			{TestID: 7, TestCode: "TEST-7"},
-	// 		},
-	// 	},
-	// 	{
-	// 		ProblemID:   101,
-	// 		ProblemCode: "PHY-101",
-	// 		Tests: []dto.ProblemTestRef{
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 		},
-	// 	},
-	// 	{
-	// 		ProblemID:   102,
-	// 		ProblemCode: "CHE-204",
-	// 		Tests: []dto.ProblemTestRef{
-	// 			{TestID: 7, TestCode: "TEST-7"},
-	// 		},
-	// 	},
-	// 	{
-	// 		ProblemID:   101,
-	// 		ProblemCode: "PHY-101",
-	// 		Tests: []dto.ProblemTestRef{
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 			{TestID: 5, TestCode: "TEST-5"},
-	// 			{TestID: 9, TestCode: "TEST-9"},
-	// 		},
-	// 	},
-	// 	{
-	// 		ProblemID:   102,
-	// 		ProblemCode: "CHE-204",
-	// 		Tests: []dto.ProblemTestRef{
-	// 			{TestID: 7, TestCode: "TEST-7"},
-	// 		},
-	// 	},
-	// }
-	// views.ExecuteTemplate(problemTestAssociationTemplate, responseWriter, associations, nil)
+func (h *ProblemsHandler) LoadTestAssociations(responseWriter http.ResponseWriter, request *http.Request) {
+	request.ParseForm()
+	problemIDsStr := request.Form["select-problem"]
+	problemIDs := utils.StringSliceToIntSlice(problemIDsStr)
+
+	req := dto.TestsContainingProblemsRequest{
+		ProblemIDs: problemIDs,
+	}
+	var resp dto.TestsContainingProblemsResponse
+
+	err := h.problemsService.Post(testsContainingProblemsEndPoint, req, &resp)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching linked tests: %v", err), http.StatusInternalServerError)
+		return
+	}
+	views.ExecuteTemplate(problemTestAssociationTemplate, responseWriter, resp.ProblemTests, nil)
+}
+
+func (h *ProblemsHandler) LoadMoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	views.ExecuteTemplate(moveProblemsTemplate, responseWriter, nil, nil)
+}
+
+func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	log.Println("move problems")
+	//views.ExecuteTemplate(moveProblemsTemplate, responseWriter, nil, nil)
 }

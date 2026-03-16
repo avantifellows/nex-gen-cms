@@ -5,12 +5,12 @@
 
         <!-- Title -->
         <h2 class="text-lg font-semibold mb-2">
-            Remove Associations
+            Problem Test Associations
         </h2>
 
         <!-- Description -->
         <p class="text-sm text-gray-600 mb-4">
-            Please remove the association of following problems with their respective tests before move
+            Please note that selected problems are associated with the following tests.
         </p>
         
         <!-- Table -->
@@ -27,9 +27,10 @@
                     <tr class="border-t">
                         <td class="px-4 py-2">{{.ProblemCode}}</td>
                         <td class="px-4 py-2">
-                            {{range $i, $t := .Tests}}
-                                {{if $i}}, {{end}}
-                                {{$t.TestCode}}
+                            {{if .Tests}}
+                                {{range $i, $t := .Tests}}{{if $i}}, {{end}}{{$t.TestCode}}{{end}}
+                            {{else}}
+                                <span class="text-gray-500 italic">No tests found</span>
                             {{end}}
                         </td>
                     </tr>
@@ -40,8 +41,14 @@
 
         <!-- Buttons -->
         <div class="w-full flex justify-end space-x-2">
-            <button type="button" class="bg-gray-300 px-4 py-2 rounded" onclick="closeProblemTestAssociationModal()">
+            <button type="button" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 transition" onclick="closeProblemTestAssociationModal()">
                 Close
+            </button>
+
+            <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+                hx-post="/problems/move-problems" hx-target="#problem-test-association-modal"
+                hx-swap="outerHTML" hx-push-url="true">
+                Move
             </button>
         </div>
 

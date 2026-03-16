@@ -6,8 +6,8 @@
 
         <button id="move-problems-btn" hx-include='input[name="select-problem"]:checked'
             class="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
-            hx-get="/topic/move-problems"
-            hx-target="body" hx-push-url="true" hx-swap="beforeend" disabled>Move Problems
+            hx-post="/problems/test-associations" hx-target="body" hx-push-url="true" 
+            hx-swap="beforeend" disabled>Move Problems
         </button>
     </div>
 
