@@ -1,4 +1,5 @@
-<div id="move-problems-modal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+<div id="move-problems-modal" data-problem-ids='{{.}}'
+    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
     <div class="bg-white p-6 rounded shadow-md w-full max-w-3xl">
 
         <h2 class="text-lg font-semibold mb-2">Move Problems</h2>
@@ -6,8 +7,10 @@
             Select Curriculum, Grade & Subject in any order. Then select Chapter, and finally Topic.
         </p>
 
-        <form id="move-problems-form" class="space-y-6" hx-post="/move-problems" 
-            hx-target="body" hx-swap="beforeend">
+        <form id="move-problems-form" class="space-y-6" hx-post="/move-problems" hx-swap="none"
+            hx-vals='js:{problem_ids: document.getElementById("move-problems-modal").dataset.problemIds}'
+            hx-on::after-request="handleMoveProblemsResponse(event)"
+            hx-disabled-elt="#move-problems-modal button">
 
             <div class="grid grid-cols-3 gap-4">
 
@@ -41,7 +44,8 @@
                         hx-target="this" hx-swap="innerHTML"
                         hx-trigger="loadChapters, change from:(#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown)"
                         hx-include="#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown"
-                        hx-params="not chapter-dropdown" hx-on::before-request="beforeMoveProblemsChaptersRequest()">
+                        hx-params="not chapter-dropdown" hx-on::before-request="beforeMoveProblemsChaptersRequest()"
+                        hx-on::after-request="toggleMoveButton()">
                     <option disabled selected>Loading chapters...</option>
                 </select>
 
@@ -50,8 +54,9 @@
                         hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
                         hx-target="this" hx-swap="innerHTML" onchange="toggleMoveButton()" 
                         hx-include="#chapter-dropdown" hx-on::after-swap="toggleMoveButton()"
-                        hx-on::before-request="beforeMoveProblemsTopicsRequest()">
-                    <option disabled selected>Select a chapter first</option>
+                        hx-on::before-request="beforeMoveProblemsTopicsRequest()"
+                        hx-on::after-request="toggleMoveButton()">
+                    <option value="" disabled selected>Select a chapter first</option>
                 </select>
 
             </div>
@@ -65,7 +70,13 @@
 
                 <button id="move-problems-btn" type="submit" disabled
                     class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:bg-gray-300 disabled:cursor-not-allowed">
-                    Move
+                    
+                    <!-- Normal text -->
+                    <span class="btn-text">Move</span>
+
+                    <!-- Loader -->
+                    <span class="btn-loader hidden">Moving...</span>
+
                 </button>
             </div>
 
@@ -93,7 +104,7 @@ function beforeMoveProblemsChaptersRequest() {
     chapter.innerHTML = '<option disabled selected>Loading chapters...</option>';
 
     const topic = document.getElementById("topic-dropdown");
-    topic.innerHTML = '<option disabled selected>Select a chapter first</option>';
+    topic.innerHTML = '<option value="" disabled selected>Select a chapter first</option>';
 
     const modal = document.getElementById("move-problems-modal");
     modal.querySelector("#move-problems-btn").disabled = true;
@@ -109,6 +120,21 @@ function toggleMoveButton() {
     const topic = modal.querySelector("#topic-dropdown");
     const moveBtn = modal.querySelector("#move-problems-btn");
     moveBtn.disabled = !topic.value;
+}
+
+function handleMoveProblemsResponse(event) {
+    const { xhr, requestConfig } = event.detail;
+
+    // path comparison is required here, because otherwise it is called for all calls 
+    // from form's children as well
+    if (requestConfig.path !== "/move-problems") return;
+
+    if (xhr.status === 200) {
+        closeMoveProblemsModal();
+        closeProblemTestAssociationModal();
+    } else {
+        showToast(xhr.responseText || "Failed to move problems");
+    }
 }
 
 function closeMoveProblemsModal() {

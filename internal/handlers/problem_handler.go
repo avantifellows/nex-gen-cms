@@ -23,6 +23,7 @@ const problemsKey = "problems"
 const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
 const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
+const moveProblemEndPoint = "resources/move"
 
 const problemTemplate = "problem.html"
 const srcProblemRowParentTemplate = "src_problem_row_parent.html"
@@ -341,10 +342,59 @@ func (h *ProblemsHandler) LoadTestAssociations(responseWriter http.ResponseWrite
 }
 
 func (h *ProblemsHandler) LoadMoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	views.ExecuteTemplate(moveProblemsTemplate, responseWriter, nil, nil)
+	idsStr := request.FormValue("problem_ids")
+	views.ExecuteTemplate(moveProblemsTemplate, responseWriter, idsStr, nil)
 }
 
 func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	log.Println("move problems")
-	//views.ExecuteTemplate(moveProblemsTemplate, responseWriter, nil, nil)
+	err := request.ParseForm()
+	if err != nil {
+		http.Error(responseWriter, "Invalid form", http.StatusBadRequest)
+		return
+	}
+
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.Form)
+	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+		return
+	}
+
+	chapterIdStr := request.Form.Get("chapter-dropdown")
+	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Invalid Chapter ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	topicIdStr := request.Form.Get("topic_id")
+	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	problemIdsStr := request.Form.Get("problem_ids")
+	problemIds := utils.StringSliceToIntSlice(strings.Split(problemIdsStr, ","))
+
+	reqBody := dto.MoveProblemsRequest{
+		ProblemIDs: problemIds,
+		CurriculumGrades: []models.CurriculumGrade{
+			{
+				CurriculumID: curriculumId,
+				GradeID:      gradeId,
+			},
+		},
+		SubjectID: subjectId,
+		ChapterID: chapterId,
+		TopicID:   topicId,
+		LangCode:  "en",
+	}
+
+	var result any
+
+	err = h.problemsService.Post(moveProblemEndPoint, reqBody, &result)
+	if err != nil {
+		log.Println("move problems error:", err)
+		http.Error(responseWriter, "Failed to move problems", http.StatusInternalServerError)
+		return
+	}
 }

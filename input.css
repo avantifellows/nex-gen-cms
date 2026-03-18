@@ -157,4 +157,13 @@
     #question-bank-loader.htmx-request {
         display: flex;
     }
+
+    /* When form is making request */
+    #move-problems-form.htmx-request .btn-text {
+        display: none;
+    }
+
+    #move-problems-form.htmx-request .btn-loader {
+        display: inline;
+    }
 }

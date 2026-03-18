@@ -1,5 +1,6 @@
 <div id="problem-test-association-modal"
-    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50"
+    data-problem-ids="{{range $i, $p := .}}{{if $i}},{{end}}{{$p.ProblemID}}{{end}}">
 
     <div class="bg-white p-6 rounded shadow-md w-full max-w-lg">
 
@@ -47,7 +48,8 @@
 
             <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
                 hx-post="/problems/move-problems" hx-target="#problem-test-association-modal"
-                hx-swap="outerHTML" hx-push-url="true">
+                hx-swap="outerHTML" hx-push-url="true"
+                hx-vals='js:{problem_ids: event.target.closest("#problem-test-association-modal").dataset.problemIds}'>
                 Move
             </button>
         </div>
