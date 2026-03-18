@@ -167,3 +167,13 @@
         display: inline;
     }
 }
+
+/* Wrap MathJax formulae to next line */
+mjx-container[jax="CHTML"] mjx-math {
+    white-space: normal !important;
+}
+
+/* If a matrix exists, disable wrapping for that formula */
+mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
+    white-space: nowrap !important;
+}
