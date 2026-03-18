@@ -1,14 +1,24 @@
 <div>
-    <div class="flex items-center gap-4 mb-4">
+    <div class="flex gap-4 mb-4">
         <button class="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded" hx-target="body"
             hx-get="/topic/add-problem?topic_id={{.}}" hx-push-url="true">Add New Problem
         </button>
 
         <button id="move-problems-btn" hx-include='input[name="select-problem"]:checked'
-            class="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+            class="group flex items-center justify-center min-w-[120px] px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
             hx-post="/problems/test-associations" hx-target="body" hx-push-url="true" 
-            hx-swap="beforeend" disabled>Move Problems
+            hx-swap="beforeend" disabled>
+            
+            <span class="group-[.htmx-request]:hidden">
+                Move Problems
+            </span>
+        
+            <span class="hidden group-[.htmx-request]:inline-flex">
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </span>
+        
         </button>
+
     </div>
 
     <div class="shadow-md">

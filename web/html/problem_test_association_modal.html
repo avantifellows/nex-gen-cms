@@ -46,11 +46,21 @@
                 Close
             </button>
 
-            <button type="button" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+            <button type="button" hx-swap="outerHTML" hx-push-url="true"
+                class="group flex items-center justify-center min-w-[90px] bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
                 hx-post="/problems/move-problems" hx-target="#problem-test-association-modal"
-                hx-swap="outerHTML" hx-push-url="true"
                 hx-vals='js:{problem_ids: event.target.closest("#problem-test-association-modal").dataset.problemIds}'>
-                Move
+                
+                <!-- Text -->
+                <span class="group-[.htmx-request]:hidden">
+                    Move
+                </span>
+
+                <!-- Spinner -->
+                <span class="hidden group-[.htmx-request]:inline-flex">
+                    <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                </span>
+
             </button>
         </div>
 
