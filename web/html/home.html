@@ -18,15 +18,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script>
         function afterDropdownReq(dropdown, selectedValue) {
-            /* 
-             * execute code inside setTimeout(); otherwise playwright test related to onLoaded event trigger 
-             * fails on firefox & webkit sometimes, because 'onLoaded' gets triggered even before setting 
-             * listener for this event to verify
-             */
-            setTimeout(function () {
-                htmx.trigger('#' + dropdown.id, 'onLoaded');
-            }, 0);
-
             // update dropdown value to last selected value from session storage
             var sessionStorageKey;
             switch (dropdown.id) {
@@ -52,6 +43,15 @@
             if (selectedValue) {
                 dropdown.value = selectedValue;
             }
+
+            /* 
+             * execute code inside setTimeout(); otherwise playwright test related to onLoaded event trigger 
+             * fails on firefox & webkit sometimes, because 'onLoaded' gets triggered even before setting 
+             * listener for this event to verify
+             */
+             setTimeout(function () {
+                htmx.trigger('#' + dropdown.id, 'onLoaded');
+            }, 100);
         }
     </script>
 </head>
@@ -261,9 +261,11 @@
             }
 
             // Reset chaptersLoaded **only if the chapters tab is active**
-            const chaptersTab = document.getElementById("chapters-tab");
+            const path = window.location.pathname;
+            const isChaptersTabSelected = path === "/chapters";
+
             // when moving forward in history, it generates pageshow event with persisted=true. Don't reset flag in that case
-            if (chaptersTab.classList.contains("active") && !event.persisted) {
+            if (isChaptersTabSelected && !event.persisted) {
                 // reset flag to reload chapters on page refresh or direct url entry
                 console.log("Fresh load with chapters tab active. Resetting chaptersLoaded.");
                 sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, "false");
