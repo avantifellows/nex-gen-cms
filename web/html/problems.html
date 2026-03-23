@@ -6,7 +6,7 @@
 
         <button id="move-problems-btn" hx-include='input[name="select-problem"]:checked'
             class="group flex items-center justify-center min-w-[120px] px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
-            hx-post="/problems/test-associations" hx-target="body" hx-push-url="true" 
+            hx-post="/problems/test-associations" hx-target="body" 
             hx-swap="beforeend" disabled>
             
             <span class="group-[.htmx-request]:hidden">
@@ -39,7 +39,7 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load"
+            <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load, refreshProblems"
                 hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
                 data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->

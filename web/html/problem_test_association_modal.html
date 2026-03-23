@@ -46,7 +46,7 @@
                 Close
             </button>
 
-            <button type="button" hx-swap="outerHTML" hx-push-url="true"
+            <button type="button" hx-swap="outerHTML"
                 class="group flex items-center justify-center min-w-[90px] bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
                 hx-post="/problems/move-problems" hx-target="#problem-test-association-modal"
                 hx-vals='js:{problem_ids: event.target.closest("#problem-test-association-modal").dataset.problemIds}'>
@@ -69,6 +69,6 @@
 
 <script>
 function closeProblemTestAssociationModal(){
-    goBackAfterDelay(0);
+    document.getElementById("problem-test-association-modal").remove();
 }
 </script>

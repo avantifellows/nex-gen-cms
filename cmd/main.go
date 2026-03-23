@@ -130,8 +130,8 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/problems/edit-problem", problemsHandler.EditProblem)
 	muxHandler.HandleFunc("/update-problem", problemsHandler.UpdateProblem)
 	muxHandler.HandleFunc("/archive-problem", problemsHandler.ArchiveProblem)
-	muxHandler.Handle("/problems/test-associations", middleware.RequireHTMX(http.HandlerFunc(problemsHandler.LoadTestAssociations)))
-	muxHandler.Handle("/problems/move-problems", middleware.RequireHTMX(http.HandlerFunc(problemsHandler.LoadMoveProblems)))
+	muxHandler.HandleFunc("/problems/test-associations", problemsHandler.LoadTestAssociations)
+	muxHandler.HandleFunc("/problems/move-problems", problemsHandler.LoadMoveProblems)
 	muxHandler.HandleFunc("/move-problems", problemsHandler.MoveProblems)
 
 	tagsHandler := appComponentPtr.TagsHandler

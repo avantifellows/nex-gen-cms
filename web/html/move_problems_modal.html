@@ -131,13 +131,15 @@ function handleMoveProblemsResponse(event) {
 
     if (xhr.status === 200) {
         closeMoveProblemsModal();
-        closeProblemTestAssociationModal();
+        // refresh only problems table
+        htmx.trigger("#problemTableBody", "refreshProblems");
+
     } else {
         showToast(xhr.responseText || "Failed to move problems");
     }
 }
 
 function closeMoveProblemsModal() {
-    goBackAfterDelay(0);
+    document.getElementById("move-problems-modal").remove();
 }
 </script>
