@@ -355,6 +355,7 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 
 	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.Form)
 	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+		http.Error(responseWriter, fmt.Sprint("Invalid curriculum, grade or subject ID"), http.StatusBadRequest)
 		return
 	}
 

@@ -41,7 +41,7 @@
             </thead>
             <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load, refreshProblems"
                 hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
-                data-mathjax="true">
+                hx-on::after-swap="updateHeaderState()" data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
