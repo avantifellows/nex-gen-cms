@@ -130,6 +130,9 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/problems/edit-problem", problemsHandler.EditProblem)
 	muxHandler.HandleFunc("/update-problem", problemsHandler.UpdateProblem)
 	muxHandler.HandleFunc("/archive-problem", problemsHandler.ArchiveProblem)
+	muxHandler.HandleFunc("/problems/test-associations", problemsHandler.LoadTestAssociations)
+	muxHandler.HandleFunc("/problems/move-problems", problemsHandler.LoadMoveProblems)
+	muxHandler.HandleFunc("/move-problems", problemsHandler.MoveProblems)
 
 	tagsHandler := appComponentPtr.TagsHandler
 	muxHandler.HandleFunc("/api/tags", tagsHandler.GetTags)

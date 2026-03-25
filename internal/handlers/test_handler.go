@@ -758,6 +758,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 	query := request.URL.Query()
 
 	if len(query) > 0 {
+		// copy test scenario
 		subtype := query.Get("subtype")
 		examIdStr := query.Get("exam_id")
 		curriculumGradesStr := query.Get("curriculum_grades")
@@ -778,6 +779,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 		}
 
 	} else {
+		// new test creation scenario
 		data = dto.AddTestDialogData{}
 	}
 

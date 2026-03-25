@@ -141,3 +141,13 @@ func Capitalize(s string) string {
 func Append[T any](slice []T, v T) []T {
 	return append(slice, v)
 }
+
+func StringSliceToIntSlice(values []string) []int {
+	var result []int
+	for _, v := range values {
+		if id, err := strconv.Atoi(v); err == nil {
+			result = append(result, id)
+		}
+	}
+	return result
+}

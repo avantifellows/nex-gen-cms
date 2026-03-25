@@ -162,3 +162,17 @@ func (s *Service[T]) ArchiveObject(objIdStr string, urlEndPoint string, body any
 	}
 	return nil
 }
+
+func (s *Service[T]) Post(urlEndPoint string, body any, result any) error {
+
+	respBytes, err := s.apiRepository.CallAPI(urlEndPoint, http.MethodPost, body)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(respBytes, result); err != nil {
+		return fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return nil
+}
