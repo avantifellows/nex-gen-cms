@@ -1,5 +1,9 @@
 {{ range . }}
 <tr class="border-b">
+    <td class="p-2 text-center">
+        <input type="checkbox" name="select-problem" value="{{.ID}}">
+    </td>
+
     <!-- hx-params="none" is added to prevent extra query parameters (curriculum-dropdown
          and subject-dropdown) going from its parent topic_problems.html file's problemTableBody -->
     <td class="p-2 text-center whitespace-nowrap text-blue-500 hover:underline"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}"
@@ -12,7 +16,7 @@
             hx-get="/problems/edit-problem?id={{.ID}}&curriculum_id={{.CurriculumID}}&topic_id={{.TopicID}}"
             hx-params="none" hx-target="body" hx-push-url="true">
             <i class="fa-solid fa-pen"></i>
-        </button>
+        </button>    
         <button class="action-button" hx-delete="/archive-problem?id={{.ID}}" hx-params="none"
             hx-confirm="Are you sure you want to delete problem?" hx-target="closest tr">
             <i class="fa-solid fa-trash"></i>

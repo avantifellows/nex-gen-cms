@@ -1,0 +1,145 @@
+<div id="move-problems-modal" data-problem-ids='{{.}}'
+    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-3xl">
+
+        <h2 class="text-lg font-semibold mb-2">Move Problems</h2>
+        <p class="text-sm text-gray-600 mb-6">
+            Select Curriculum, Grade & Subject in any order. Then select Chapter, and finally Topic.
+        </p>
+
+        <form id="move-problems-form" class="space-y-6" hx-post="/move-problems" hx-swap="none"
+            hx-vals='js:{problem_ids: document.getElementById("move-problems-modal").dataset.problemIds}'
+            hx-on::after-request="handleMoveProblemsResponse(event)"
+            hx-disabled-elt="#move-problems-modal button">
+
+            <div class="grid grid-cols-3 gap-4">
+
+                <!-- Curriculum -->
+                <select id="curriculum-dropdown" name="curriculum-dropdown" 
+                        class="border p-2 rounded w-full" hx-get="/api/curriculums"
+                        hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                        hx-on::after-request="afterMoveProblemsDropdownReq(this)">
+                    <option disabled selected>Loading curriculums...</option>
+                </select>
+
+                <!-- Grade -->
+                <select id="grade-dropdown" name="grade-dropdown" 
+                        class="border p-2 rounded w-full" hx-get="/api/grades"
+                        hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                        hx-on::after-request="afterMoveProblemsDropdownReq(this)">
+                    <option disabled selected>Loading grades...</option>
+                </select>
+
+                <!-- Subject -->
+                <select id="subject-dropdown" name="subject-dropdown" 
+                        class="border p-2 rounded w-full" hx-get="/api/subjects"
+                        hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                        hx-on::after-request="afterMoveProblemsDropdownReq(this)">
+                    <option disabled selected>Loading subjects...</option>
+                </select>
+
+                <!-- Chapter -->
+                <select id="chapter-dropdown" name="chapter-dropdown" 
+                        class="border p-2 rounded w-full" hx-get="/api/chapters"
+                        hx-target="this" hx-swap="innerHTML"
+                        hx-trigger="loadChapters, change from:(#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown)"
+                        hx-include="#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown"
+                        hx-params="not chapter-dropdown" hx-on::before-request="beforeMoveProblemsChaptersRequest()"
+                        hx-on::after-request="toggleMoveButton()">
+                    <option disabled selected>Loading chapters...</option>
+                </select>
+
+                <!-- Topic -->
+                <select id="topic-dropdown" name="topic_id" class="border p-2 rounded w-full"
+                        hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
+                        hx-target="this" hx-swap="innerHTML" onchange="toggleMoveButton()" 
+                        hx-include="#chapter-dropdown" hx-on::after-swap="toggleMoveButton()"
+                        hx-on::before-request="beforeMoveProblemsTopicsRequest()"
+                        hx-on::after-request="toggleMoveButton()">
+                    <option value="" disabled selected>Select a chapter first</option>
+                </select>
+
+            </div>
+
+            <!-- Buttons -->
+            <div class="w-full flex justify-end space-x-2 pt-4">
+                <button type="button" onclick="closeMoveProblemsModal()" 
+                    class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 transition">
+                    Cancel
+                </button>
+
+                <button id="move-problems-btn" type="submit" disabled
+                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:bg-gray-300 disabled:cursor-not-allowed">
+                    
+                    <!-- Normal text -->
+                    <span class="btn-text">Move</span>
+
+                    <!-- Loader -->
+                    <span class="btn-loader hidden">Moving...</span>
+
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+<script>
+function afterMoveProblemsDropdownReq(dropdown) {
+    dropdown.dataset.loaded = "true";
+
+    const modal = document.getElementById("move-problems-modal");
+
+    const allReady =
+        modal.querySelector("#curriculum-dropdown").dataset.loaded &&
+        modal.querySelector("#grade-dropdown").dataset.loaded &&
+        modal.querySelector("#subject-dropdown").dataset.loaded;
+
+    if (allReady) {
+        htmx.trigger("#chapter-dropdown", "loadChapters");
+    }
+}
+
+function beforeMoveProblemsChaptersRequest() {
+    const chapter = document.getElementById("chapter-dropdown");
+    chapter.innerHTML = '<option disabled selected>Loading chapters...</option>';
+
+    const topic = document.getElementById("topic-dropdown");
+    topic.innerHTML = '<option value="" disabled selected>Select a chapter first</option>';
+
+    const modal = document.getElementById("move-problems-modal");
+    modal.querySelector("#move-problems-btn").disabled = true;
+}
+
+function beforeMoveProblemsTopicsRequest() {
+    const topic = document.getElementById("topic-dropdown");
+    topic.innerHTML = '<option disabled selected>Loading topics...</option>';
+}
+
+function toggleMoveButton() {
+    const modal = document.getElementById("move-problems-modal");
+    const topic = modal.querySelector("#topic-dropdown");
+    const moveBtn = modal.querySelector("#move-problems-btn");
+    moveBtn.disabled = !topic.value;
+}
+
+function handleMoveProblemsResponse(event) {
+    const { xhr, requestConfig } = event.detail;
+
+    // path comparison is required here, because otherwise it is called for all calls 
+    // from form's children as well
+    if (requestConfig.path !== "/move-problems") return;
+
+    if (xhr.status === 200) {
+        closeMoveProblemsModal();
+        // refresh only problems table
+        htmx.trigger("#problemTableBody", "refreshProblems");
+
+    } else {
+        showToast(xhr.responseText || "Failed to move problems");
+    }
+}
+
+function closeMoveProblemsModal() {
+    document.getElementById("move-problems-modal").remove();
+}
+</script>

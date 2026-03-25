@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -23,6 +24,8 @@ const problemsKey = "problems"
 const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
 const searchProblemsEndPoint = "problems/search"
+const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
+const moveProblemEndPoint = "resources/move"
 
 const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
@@ -35,6 +38,8 @@ const problemTypeOptionsTemplate = "problem_type_options.html"
 const addConceptModalTemplate = "add_concept_modal.html"
 const editorTemplate = "editor.html"
 const inputTagsTemplate = "input_tags.html"
+const problemTestAssociationTemplate = "problem_test_association_modal.html"
+const moveProblemsTemplate = "move_problems_modal.html"
 
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
@@ -378,4 +383,81 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 
 	filterProblems(problems, nil, "", "")
 	views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
+}
+
+func (h *ProblemsHandler) LoadTestAssociations(responseWriter http.ResponseWriter, request *http.Request) {
+	request.ParseForm()
+	problemIDsStr := request.Form["select-problem"]
+	problemIDs := utils.StringSliceToIntSlice(problemIDsStr)
+
+	req := dto.TestsContainingProblemsRequest{
+		ProblemIDs: problemIDs,
+	}
+	var resp dto.TestsContainingProblemsResponse
+
+	err := h.problemsService.Post(testsContainingProblemsEndPoint, req, &resp)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching linked tests: %v", err), http.StatusInternalServerError)
+		return
+	}
+	views.ExecuteTemplate(problemTestAssociationTemplate, responseWriter, resp.ProblemTests, nil)
+}
+
+func (h *ProblemsHandler) LoadMoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	idsStr := request.FormValue("problem_ids")
+	views.ExecuteTemplate(moveProblemsTemplate, responseWriter, idsStr, nil)
+}
+
+func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	err := request.ParseForm()
+	if err != nil {
+		http.Error(responseWriter, "Invalid form", http.StatusBadRequest)
+		return
+	}
+
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.Form)
+	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+		http.Error(responseWriter, fmt.Sprint("Invalid curriculum, grade or subject ID"), http.StatusBadRequest)
+		return
+	}
+
+	chapterIdStr := request.Form.Get("chapter-dropdown")
+	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Invalid Chapter ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	topicIdStr := request.Form.Get("topic_id")
+	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	problemIdsStr := request.Form.Get("problem_ids")
+	problemIds := utils.StringSliceToIntSlice(strings.Split(problemIdsStr, ","))
+
+	reqBody := dto.MoveProblemsRequest{
+		ProblemIDs: problemIds,
+		CurriculumGrades: []models.CurriculumGrade{
+			{
+				CurriculumID: curriculumId,
+				GradeID:      gradeId,
+			},
+		},
+		SubjectID: subjectId,
+		ChapterID: chapterId,
+		TopicID:   topicId,
+		LangCode:  "en",
+	}
+
+	var result any
+
+	err = h.problemsService.Post(moveProblemEndPoint, reqBody, &result)
+	if err != nil {
+		log.Println("move problems error:", err)
+		http.Error(responseWriter, "Failed to move problems", http.StatusInternalServerError)
+		return
+	}
 }
