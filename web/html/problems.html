@@ -1,24 +1,84 @@
 <div>
-    <!-- Add New Problem Link -->
-    <h4 class="text-sm font-semibold text-blue-500 hover:underline mb-4">
-        <a href="/topic/add-problem?topic_id={{.}}" hx-get="/topic/add-problem?topic_id={{.}}" hx-target="body" hx-push-url="true">Add New
-            Problem</a>
-    </h4>
+    <div class="flex gap-4 mb-4">
+        <button class="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded" hx-target="body"
+            hx-get="/topic/add-problem?topic_id={{.}}" hx-push-url="true">Add New Problem
+        </button>
 
-    <div class="shadow-md overflow-x-auto">
-        <table class="min-w-full bg-white">
+        <button id="move-problems-btn" hx-include='input[name="select-problem"]:checked'
+            class="group flex items-center justify-center min-w-[120px] px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+            hx-post="/problems/test-associations" hx-target="body" 
+            hx-swap="beforeend" disabled>
+            
+            <span class="group-[.htmx-request]:hidden">
+                Move Problems
+            </span>
+        
+            <span class="hidden group-[.htmx-request]:inline-flex">
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </span>
+        
+        </button>
+
+    </div>
+
+    <div class="shadow-md">
+        <table class="min-w-full bg-white" hx-ext="checkbox-select">
+            <colgroup>
+                <col class="w-[2rem]">   <!-- Checkbox -->
+                <col class="w-[6rem]">   <!-- Code -->
+                <col>                    <!-- Text (flexes) -->
+                <col class="w-[6rem]">   <!-- Actions -->
+            </colgroup>
             <thead>
                 <tr class="bg-gray-200 text-gray-600 text-sm">
-                    <th class="py-4 text-center">Code</th>
-                    <th class="text-center">Text</th>
-                    <th class="pr-4 text-center">Actions</th>
+                    <th class="py-4 text-center">
+                        <input type="checkbox" id="select-all">
+                    </th>
+                    <th class="py-4">Code</th>
+                    <th>Text</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
-            <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load"
+            <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load, refreshProblems"
                 hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
-                data-mathjax="true">
+                hx-on::after-swap="updateHeaderState()" data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
     </div>
 </div>
+<script>
+    var selectAll = document.getElementById("select-all");
+    var tbody = document.getElementById("problemTableBody");
+    var moveBtn = document.getElementById("move-problems-btn");
+
+    var getCheckboxes = () =>
+        tbody.querySelectorAll('input[name="select-problem"]');
+
+    var updateHeaderState = () => {
+        const all = getCheckboxes();
+        const checked = tbody.querySelectorAll('input[name="select-problem"]:checked');
+
+        selectAll.checked = all.length > 0 && all.length === checked.length;
+        selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+
+        // Enable / disable Move Problems button
+        moveBtn.disabled = checked.length === 0;
+    };
+
+    // Select All
+    selectAll.addEventListener("change", function () {
+        const checked = this.checked;
+        getCheckboxes().forEach(cb => {
+            cb.checked = checked;
+        });
+        selectAll.indeterminate = false;
+        moveBtn.disabled = !checked;
+    });
+
+    // Individual checkbox
+    tbody.addEventListener("change", function (e) {
+        if (e.target.name !== "select-problem") return;
+        updateHeaderState();
+    });
+</script>
