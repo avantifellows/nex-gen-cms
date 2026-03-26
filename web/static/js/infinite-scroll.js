@@ -39,13 +39,15 @@
                 const responseUrl = xhr.responseURL;
                 const responseParams = responseUrl.split("?")[1] || "";
                 const responseSearch = getSearchValue(responseParams);
+                const responseSubject = getSubjectValue(responseParams);
 
                 const activeParams = target.getAttribute("data-active-params");
                 const activeSearch = getSearchValue(activeParams);
-            
-                if (responseSearch !== activeSearch) {
+                const activeSubject = getSubjectValue(activeParams);
+
+                if (responseSearch !== activeSearch || responseSubject !== activeSubject) {
                     // search term has changed so ignore response
-                    console.log("Ignoring stale response:", responseSearch, activeSearch);
+                    console.log("Ignoring stale response:", responseSearch, activeSearch, responseSubject, activeSubject);
                     evt.detail.shouldSwap = false;   // cancel swap
                     return;
                 }
@@ -142,11 +144,19 @@
     }
 
     function getSearchValue(query) {
+        return getKeyValue(query, "search");
+    }
+
+    function getSubjectValue(query) {
+        return getKeyValue(query, "subject");
+    }
+
+    function getKeyValue(query, keyPart) {
         const params = new URLSearchParams(query);
     
         // Find the param that contains search text
         for (const [key, value] of params.entries()) {
-            if (key.includes("search")) {
+            if (key.includes(keyPart)) {
                 return value || "";
             }
         }

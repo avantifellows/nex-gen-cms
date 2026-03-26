@@ -33,6 +33,7 @@ const srcProblemRowParentTemplate = "src_problem_row_parent.html"
 const srcProblemRowTemplate = "src_problem_row.html"
 const topicProblemsTemplate = "topic_problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
+const searchProblemRowTemplate = "search_problem_row.html"
 const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
 const addConceptModalTemplate = "add_concept_modal.html"
@@ -344,7 +345,12 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 	urlVals := request.URL.Query()
 	search := urlVals.Get("problem-search")
 	limit := utils.StringToInt(urlVals.Get("limit"))
-	queryParams := "?search=" + url.QueryEscape(search) + "&limit=" + strconv.Itoa(limit) + "&offset=" + urlVals.Get("offset")
+	queryParams := "?lang_code=en&search=" + url.QueryEscape(search) + "&limit=" + strconv.Itoa(limit) + "&offset=" + urlVals.Get("offset")
+
+	subjectId := utils.StringToInt(urlVals.Get("problems-subject-dropdown"))
+	if subjectId != 0 {
+		queryParams += "&subject_id=" + strconv.Itoa(subjectId)
+	}
 
 	problems, err := h.problemsService.GetList(searchProblemsEndPoint+queryParams, "", false, true)
 	if err != nil {
@@ -382,7 +388,7 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 	}
 
 	filterProblems(problems, nil, "", "")
-	views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
+	views.ExecuteTemplate(searchProblemRowTemplate, responseWriter, problems, nil)
 }
 
 func (h *ProblemsHandler) LoadTestAssociations(responseWriter http.ResponseWriter, request *http.Request) {

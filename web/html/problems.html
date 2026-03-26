@@ -11,7 +11,13 @@
 
         <!-- Subject Dropdown -->
         <select class="border border-gray-400 p-2 rounded w-fit" id="problems-subject-dropdown" 
-            name="problems-subject-dropdown" hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend">
+            name="problems-subject-dropdown" hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend"
+            onchange="
+                const input = document.getElementById('problem-search');
+                if (input.value.length >= 3) {
+                    htmx.trigger('#problems-table-body', 'searchTriggered');
+                }
+            ">
             <option value="">All Subjects</option>
         </select>
 
@@ -34,7 +40,7 @@
         <tbody id="problems-table-body" class="text-gray-600 text-sm" data-mathjax="true"
             hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=10&offset=0"
             data-limit="10" data-offset="0" hx-sync="this:replace"
-            hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search"
+            hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search, searchTriggered"
             hx-include="#problem-search,#problems-subject-dropdown"
             data-loader="#problems-search-loader" data-sentinel="#table-sentinel">
             <!-- Rows will be dynamically inserted here -->
