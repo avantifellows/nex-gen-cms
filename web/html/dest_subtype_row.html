@@ -1,7 +1,10 @@
 {{ define "dest_subtype_row" }}
 <tr id="subtype-{{.SubjectId}}-{{.Subtype}}" class="bg-gray-100">
     <td class="p-2 whitespace-nowrap" colspan="4">
-        <span>{{.DisplaySubtype}}</span>
+        <!-- Editable field -->
+        <input type="text" name="section-name" value="{{.DisplaySubtype}}"
+            class="border rounded px-2 py-1 w-full bg-white"
+            onchange="saveSectionName('{{.SubjectId}}','{{.Subtype}}', this.value)"/>
     </td>
     {{ template "chip_box_cells" . }}
     <td></td>
