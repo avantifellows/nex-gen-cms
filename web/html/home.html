@@ -48,6 +48,9 @@
              * execute code inside setTimeout(); otherwise playwright test related to onLoaded event trigger 
              * fails on firefox & webkit sometimes, because 'onLoaded' gets triggered even before setting 
              * listener for this event to verify
+             * 
+             * Reason of adding 100ms delay: Without this delay Earlier trigger sometimes fired before dropdown values were ready, 
+             * sending blank dropdown values in API calls
              */
              setTimeout(function () {
                 htmx.trigger('#' + dropdown.id, 'onLoaded');
@@ -262,10 +265,10 @@
 
             // Reset chaptersLoaded **only if the chapters tab is active**
             const path = window.location.pathname;
-            const isChaptersTabSelected = path === "/chapters";
+            const isChaptersScreen = path === "/chapters";
 
             // when moving forward in history, it generates pageshow event with persisted=true. Don't reset flag in that case
-            if (isChaptersTabSelected && !event.persisted) {
+            if (isChaptersScreen && !event.persisted) {
                 // reset flag to reload chapters on page refresh or direct url entry
                 console.log("Fresh load with chapters tab active. Resetting chaptersLoaded.");
                 sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, "false");
