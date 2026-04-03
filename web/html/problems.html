@@ -42,11 +42,11 @@
             data-limit="10" data-offset="0" hx-sync="this:replace"
             hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search, searchTriggered"
             hx-include="#problem-search,#problems-subject-dropdown"
-            data-loader="#problems-search-loader" data-sentinel="#table-sentinel">
+            data-loader="#problems-search-loader" data-sentinel="#problems-table-sentinel">
             <!-- Rows will be dynamically inserted here -->
         </tbody>
     </table>
-    <div id="table-sentinel"></div>
+    <div id="problems-table-sentinel"></div>
     <div id="problems-search-loader" class="hidden flex justify-center py-4">
         <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
     </div>

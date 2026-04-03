@@ -28,7 +28,7 @@
                 target.setAttribute("data-active-params", queryString);
 
                 // this event is fired only from hx-get calls and not from manual js htmx.ajax() calls,
-                // hence only initially / on changing search term / on chenging sort order, so reset offset and data
+                // hence only initially / on changing search term / on changing sort order, so reset offset and data
                 target.setAttribute("data-offset", "0");
                 target.innerHTML = "";
 
@@ -47,7 +47,6 @@
 
                 if (responseSearch !== activeSearch || responseSubject !== activeSubject) {
                     // search term has changed so ignore response
-                    console.log("Ignoring stale response:", responseSearch, activeSearch, responseSubject, activeSubject);
                     evt.detail.shouldSwap = false;   // cancel swap
                     return;
                 }

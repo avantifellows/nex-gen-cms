@@ -27,11 +27,11 @@
     </thead>
     <tbody id="test-table-body" class="text-gray-600 text-sm" hx-get="/api/search-tests?limit=10&offset=0"
         hx-trigger="load" data-limit="10" data-offset="0" hx-include="#test-search" 
-        data-loader="#search-loader" data-sentinel="#table-sentinel">
+        data-loader="#search-loader" data-sentinel="#tests-table-sentinel">
         <!-- Rows will be dynamically inserted here -->
     </tbody>
 </table>
-<div id="table-sentinel"></div>
+<div id="tests-table-sentinel"></div>
 <div id="search-loader" class="hidden flex justify-center py-4">
     <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
 </div>

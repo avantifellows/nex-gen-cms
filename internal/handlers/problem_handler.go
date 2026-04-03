@@ -344,8 +344,10 @@ func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, req
 func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
 	search := urlVals.Get("problem-search")
-	limit := utils.StringToInt(urlVals.Get("limit"))
-	queryParams := "?lang_code=en&search=" + url.QueryEscape(search) + "&limit=" + strconv.Itoa(limit) + "&offset=" + urlVals.Get("offset")
+
+	limit := utils.StringToIntOrDefault(urlVals.Get("limit"), 10, 1)  // min = 1
+	offset := utils.StringToIntOrDefault(urlVals.Get("offset"), 0, 0) // min = 0
+	queryParams := "?lang_code=en&search=" + url.QueryEscape(search) + "&limit=" + strconv.Itoa(limit) + "&offset=" + strconv.Itoa(offset)
 
 	subjectId := utils.StringToInt(urlVals.Get("problems-subject-dropdown"))
 	if subjectId != 0 {
@@ -358,6 +360,26 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 		return
 	}
 
+	subjects, err := h.subjectsService.GetList(handlerutils.SubjectsEndPoint, handlerutils.SubjectsKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, "error fetching subjects", http.StatusInternalServerError)
+		return
+	}
+
+	subjectMap := make(map[int8]*models.Subject)
+	for i := range *subjects {
+		sub := (*subjects)[i]
+		subjectMap[sub.ID] = sub
+	}
+
+	for _, sub := range subjectMap {
+		if sub.ParentID != 0 {
+			if parent, ok := subjectMap[sub.ParentID]; ok {
+				sub.ParentName = parent.Name
+			}
+		}
+	}
+
 	tagsMap, err := h.getTagsMap()
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
@@ -366,10 +388,9 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 
 	// set subject & tag names on each problem
 	for _, problemPtr := range *problems {
-		subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(utils.IntToString[int8](problemPtr.SubjectID),
-			h.subjectsService)
-		if err != nil {
-			http.Error(responseWriter, err.Error(), statusCode)
+		subjectPtr, ok := subjectMap[problemPtr.SubjectID]
+		if !ok {
+			http.Error(responseWriter, "subject not found", http.StatusInternalServerError)
 			return
 		}
 

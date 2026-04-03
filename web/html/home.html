@@ -69,8 +69,7 @@
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false')">Tests</button>
                 <button class="nav-link" id="problems-tab" hx-get="/problems" hx-push-url="true" hx-target="body"
-                    data-toggle="tab"
-                    hx-on::before-request="sessionStorage.setItem(window.PROBLEMS_LOADED_KEY, 'false')">Problems</button>
+                    data-toggle="tab">Problems</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
