@@ -469,6 +469,7 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"getDisplaySubtype": utils.DisplaySubtype,
 		"toJson":            utils.ToJson,
 		"getParentId":       getParentSubjectId,
+		"currentYear":       utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
@@ -656,6 +657,7 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"getDisplaySubtype": utils.DisplaySubtype,
 		"toJson":            utils.ToJson,
 		"getParentId":       getParentSubjectId,
+		"currentYear":       utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
@@ -1031,6 +1033,7 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		"getDisplaySubtype": utils.DisplaySubtype,
 		"toJson":            utils.ToJson,
 		"getParentId":       getParentSubjectId,
+		"currentYear":       utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
