@@ -201,32 +201,53 @@
                 // Add checkboxes
                 renderTabs();
             } else {
-                // Add integer-only input
-                const answer = 
+                // Add integer/floating only input
+                let answer = 
                     {{ if .ProblemPtr }}
                         '{{ index .ProblemPtr.MetaData.Answers 0 }}'
                     {{ else }}
                         ''
                     {{ end }}; 
 
+                // if problem type is changed from numerical to integer for edit problem case, 
+                // where answer already contains decimal point
+                if (problemType === 'integer_type' && answer.includes('.')) {
+                    alert("Decimal answers are not allowed for Integer type. Value cleared.");
+                    answer = '';
+                }
+
                 answerContent.innerHTML = `
-                    <input type="text" name="answer" id="intAnswerInput" class="w-full border border-gray-300 rounded p-2" 
-                    inputmode="numeric" value="${answer}">
+                    <input type="text" name="answer" id="answerInput" class="w-full border border-gray-300 rounded p-2" 
+                        inputmode="${problemType === 'numerical_answer' ? 'decimal' : 'numeric'}"
+                        value="${answer}">
                 `;
 
-                ensureIntAnswer();
+                ensureNumericAnswer(problemType);            
             }
         }
 
-        function ensureIntAnswer() {
-            const input = document.getElementById("intAnswerInput");
+        function ensureNumericAnswer(problemType) {
+            const input = document.getElementById("answerInput");
+
             input.addEventListener("input", function () {
                 let value = this.value;
 
-                // Remove all non-digit characters except '-'
-                value = value.replace(/[^0-9-]/g, '');
+                if (problemType === 'integer_type') {
+                    // Only digits + '-'
+                    value = value.replace(/[^0-9-]/g, '');
 
-                // Only allow '-' at the beginning
+                } else if (problemType === 'numerical_answer') {
+                    // Allow digits, '-', '.'
+                    value = value.replace(/[^0-9\-.]/g, '');
+
+                    // Only one '.'
+                    const parts = value.split('.');
+                    if (parts.length > 2) {
+                        value = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                }
+
+                // Common logic → handle '-'
                 const hasLeadingMinus = value.startsWith('-');
                 value = (hasLeadingMinus ? '-' : '') + value.replace(/-/g, '');
 
@@ -487,8 +508,8 @@
                     return false;
                 }
                 
-            } else if (subtype === 'integer_type') {
-                const answerInput = document.getElementById("intAnswerInput");
+            } else if (subtype === 'integer_type' || subtype === 'numerical_answer') {
+                const answerInput = document.getElementById("answerInput");
                 if (!answerInput.value) {
                     alert('Please enter the answer.');
                     return false;
@@ -522,7 +543,7 @@
                     .sort((a, b) => a - b)
                     .map(num => num.toString());
             } else {
-                answers = [document.getElementById("intAnswerInput").value];
+                answers = [document.getElementById("answerInput").value];
             }
             const solution = document.getElementById('solutionDiv').querySelector('.editor').innerHTML.trim();
 
