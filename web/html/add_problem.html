@@ -263,6 +263,10 @@
             // Remove old checkboxes
             const answerContent = document.getElementById('answerContent');
             answerContent.querySelectorAll('label').forEach(label => label.remove());
+
+            const problemType = document.getElementById('problem-type-dropdown').value;
+            const isSingle = problemType === 'mcq_single_answer';
+
             tabs.forEach((_, index) => {
                 const label = getLabel(index);
 
@@ -289,7 +293,13 @@
                 // Create answer checkbox
                 const checkboxLabel = document.createElement('label');
                 checkboxLabel.className = 'mr-4';
-                checkboxLabel.innerHTML = `<input type="checkbox" name="answer" value="${label}"> ${label}`;
+                checkboxLabel.innerHTML = `
+                    <input 
+                        type="${isSingle ? 'radio' : 'checkbox'}" 
+                        name="answer" 
+                        value="${label}"
+                    > ${label}
+                `;
 
                 const checkbox = checkboxLabel.querySelector('input');
                 // restore checked state if present
@@ -297,10 +307,19 @@
 
                 // update answerLabels set on change
                 checkbox.addEventListener('change', (e) => {
-                    if (e.target.checked) {
-                        answerLabels.add(label);
+                    if (problemType === 'mcq_single_answer') {
+                        // Only one allowed → clear all first
+                        answerLabels.clear();
+                        if (e.target.checked) {
+                            answerLabels.add(label);
+                        }
                     } else {
-                        answerLabels.delete(label);
+                        // Multiple allowed
+                        if (e.target.checked) {
+                            answerLabels.add(label);
+                        } else {
+                            answerLabels.delete(label);
+                        }
                     }
                 });
 
@@ -497,11 +516,11 @@
             let answers = [];
             if (subtype === 'mcq_single_answer' || subtype === 'mcq_multiple_answer') {
                 options = tabContent.map(item => item.html);
-                // Convert the labels to their number indexes (+1), and then to strings
-                answers = Array.from(answerLabels).map(label => {
-                    const index = labelPool.indexOf(label);
-                    return (index + 1).toString();
-                });
+                // Convert the labels to their number indexes (+1), sort in ascending order and then convert to strings
+                answers = Array.from(answerLabels)
+                    .map(label => labelPool.indexOf(label) + 1)
+                    .sort((a, b) => a - b)
+                    .map(num => num.toString());
             } else {
                 answers = [document.getElementById("intAnswerInput").value];
             }
