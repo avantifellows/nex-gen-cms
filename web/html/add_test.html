@@ -242,7 +242,7 @@
                 <option value="" selected disabled hidden>Select Year</option>
                 {{ end }}
 
-                {{range $i := seq 16 25}}
+                {{range $i := seq 16 currentYear}}
                 <option {{if eq $year (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
                 {{end}}
             </select>
@@ -352,8 +352,8 @@
                         "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule 
                         "CanSaveSingleSubject" (eq $mode "edit") "TestId" $id)}}
                         {{range .Sections}}
-                            {{template "dest_subtype_row" (dict "SubjectId" $subjectId "Subtype" .Name 
-                            "DisplaySubtype" (getDisplaySubtype .Name) "PosMarks" .PosMarks "NegMarks" .NegMarks
+                            {{template "dest_subtype_row" (dict "SubjectId" $subjectId "Subtype" .Type 
+                            "DisplaySubtype" (getSectionName .Type .Name) "PosMarks" .PosMarks "NegMarks" .NegMarks
                             "ReadOnlyMarks" $hasTestRule)}}
                             {{range .Compulsory.Problems}}
                                 {{ $sr = add $sr 1 }}
@@ -431,6 +431,8 @@
             sessionStorage.removeItem(SESSION_KEY_NAME);
             sessionStorage.removeItem(SESSION_KEY_DURATION);
             sessionStorage.removeItem(SESSION_KEY_LAST_SEARCHED_TEST);
+
+            clearSectionNames();
         }
 
         initSortableForSections();
@@ -474,7 +476,47 @@
         setElementFromStorage('year-dropdown', SESSION_KEY_YEAR);
         setElementFromStorage('test-name', SESSION_KEY_NAME);
         setElementFromStorage('duration', SESSION_KEY_DURATION);
+
+        restoreSectionNames();
     });
+
+    function saveSectionName(subjectId, subtype, value) {
+        const key = getSectionStorageKey(subjectId, subtype);
+
+        if (value && value.trim() !== "") {
+            sessionStorage.setItem(key, value);
+        }
+    }
+
+    function getSectionStorageKey(subjectId, subtype) {
+        return `sectionName_${subjectId}_${subtype}`;
+    }
+
+    function restoreSectionNames() {
+        document.querySelectorAll("tr[id^='subtype-']").forEach(row => {
+            const parts = row.id.split("-");
+            const subjectId = parts[1];
+            const subtype = parts[2];
+
+            const key = getSectionStorageKey(subjectId, subtype);
+            const storedVal = sessionStorage.getItem(key);
+
+            if (storedVal) {
+                const input = row.querySelector("input[name='section-name']");
+                if (input) {
+                    input.value = storedVal;
+                }
+            }
+        });
+    }
+
+    function clearSectionNames() {
+        Object.keys(sessionStorage).forEach(key => {
+            if (key.startsWith("sectionName_")) {
+                sessionStorage.removeItem(key);
+            }
+        });
+    }
 
     function activateLeftTab(tab) {
         const bankTabBtn = document.getElementById('left-tab-bank');
@@ -1020,8 +1062,12 @@
                     currentSectionMarks = 0;
                 }
 
+                const input = row.querySelector("input[name='section-name']");
+                const sectionName = input.value.trim();
+
                 currentSection = {
-                    name: id.split("-")[2],
+                    type: id.split("-")[2],
+                    name: sectionName,
                     pos_marks: getMarksArray(posChips),
                     neg_marks: getMarksArray(negChips),
                     compulsory: { problems: [] }

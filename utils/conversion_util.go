@@ -20,6 +20,19 @@ func StringToInt(s string) int {
 	return num // Return the converted integer
 }
 
+// StringToIntOrDefault converts string to int with validation and fallback
+func StringToIntOrDefault(val string, defaultVal int, min int) int {
+	if val == "" {
+		return defaultVal
+	}
+
+	if v, err := strconv.Atoi(val); err == nil && v >= min {
+		return v
+	}
+
+	return defaultVal
+}
+
 type IntType interface {
 	int8 | int16 | int32
 }
@@ -99,21 +112,6 @@ func Dict(values ...any) map[string]any {
 		dict[key] = value
 	}
 	return dict
-}
-
-func DisplaySubtype(subtype string) string {
-	switch subtype {
-	case "mcq_single_answer":
-		return "MCQ Single Answer"
-	case "mcq_multiple_answer":
-		return "MCQ Multiple Answer"
-	case "numerical_answer":
-		return "Numerical Answer"
-	case "integer_type":
-		return "Integer Type"
-	default:
-		return "Unknown"
-	}
 }
 
 func ToJson(v any) template.JS {

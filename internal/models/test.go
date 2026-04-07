@@ -41,7 +41,8 @@ type ResSubject struct {
 }
 
 type ResSection struct {
-	Name       string        `json:"name"`
+	Type       string        `json:"type"` // system identifier
+	Name       string        `json:"name"` // display name (customizable)
 	Marks      int16         `json:"marks"`
 	PosMarks   []int8        `json:"pos_marks,omitempty"`
 	NegMarks   []int8        `json:"neg_marks,omitempty"`

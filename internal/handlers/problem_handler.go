@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -22,14 +23,17 @@ const problemsKey = "problems"
 
 const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
+const searchProblemsEndPoint = "problems/search"
 const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
 const moveProblemEndPoint = "resources/move"
 
+const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
 const srcProblemRowParentTemplate = "src_problem_row_parent.html"
 const srcProblemRowTemplate = "src_problem_row.html"
-const problemsTemplate = "problems.html"
+const topicProblemsTemplate = "topic_problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
+const searchProblemRowTemplate = "search_problem_row.html"
 const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
 const addConceptModalTemplate = "add_concept_modal.html"
@@ -132,17 +136,10 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	// true is passed for onlyRemote, so that new tags inserted via create problem api can also be fetched
-	tags, err := h.tagsService.GetList(tagsEndPoint, tagsKey, false, true)
+	tagsMap, err := h.getTagsMap()
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching tags: %v", err), http.StatusInternalServerError)
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
-	}
-	// Create a map to quickly lookup tag names by their ID
-	tagsMap := make(map[int]string)
-	// Fill the map with the string name of each tag
-	for _, tagPtr := range *tags {
-		tagsMap[tagPtr.ID] = tagPtr.Name
 	}
 
 	// set subject & tag names on each problem
@@ -168,6 +165,23 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		// for topic screen's Problems tab
 		views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
 	}
+}
+
+func (h *ProblemsHandler) getTagsMap() (map[int]string, error) {
+	// true is passed for onlyRemote, so that new tags inserted via create problem api can also be fetched
+	tags, err := h.tagsService.GetList(tagsEndPoint, tagsKey, false, true)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching tags: %v", err)
+	}
+
+	// Create a map to quickly lookup tag names by their ID
+	tagsMap := make(map[int]string)
+	// Fill the map with the string name of each tag
+	for _, tagPtr := range *tags {
+		tagsMap[tagPtr.ID] = tagPtr.Name
+	}
+
+	return tagsMap, nil
 }
 
 func filterProblems(problems *[]*models.Problem, levels []string, ptype string, selectedIdsRaw string) {
@@ -219,8 +233,12 @@ func filterProblems(problems *[]*models.Problem, levels []string, ptype string, 
 }
 
 func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, problemsTemplate)
+}
+
+func (h *ProblemsHandler) LoadTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	views.ExecuteTemplate(problemsTemplate, responseWriter, topicIdStr, nil)
+	views.ExecuteTemplate(topicProblemsTemplate, responseWriter, topicIdStr, nil)
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -321,6 +339,77 @@ func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, req
 		http.Error(responseWriter, fmt.Sprintf("Error archiving problem: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	search := urlVals.Get("problem-search")
+
+	limit := utils.StringToIntOrDefault(urlVals.Get("limit"), 10, 1)  // min = 1
+	offset := utils.StringToIntOrDefault(urlVals.Get("offset"), 0, 0) // min = 0
+	queryParams := "?lang_code=en&search=" + url.QueryEscape(search) + "&limit=" + strconv.Itoa(limit) + "&offset=" + strconv.Itoa(offset)
+
+	subjectId := utils.StringToInt(urlVals.Get("problems-subject-dropdown"))
+	if subjectId != 0 {
+		queryParams += "&subject_id=" + strconv.Itoa(subjectId)
+	}
+
+	problems, err := h.problemsService.GetList(searchProblemsEndPoint+queryParams, "", false, true)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	subjects, err := h.subjectsService.GetList(handlerutils.SubjectsEndPoint, handlerutils.SubjectsKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, "error fetching subjects", http.StatusInternalServerError)
+		return
+	}
+
+	subjectMap := make(map[int8]*models.Subject)
+	for i := range *subjects {
+		sub := (*subjects)[i]
+		subjectMap[sub.ID] = sub
+	}
+
+	for _, sub := range subjectMap {
+		if sub.ParentID != 0 {
+			if parent, ok := subjectMap[sub.ParentID]; ok {
+				sub.ParentName = parent.Name
+			}
+		}
+	}
+
+	tagsMap, err := h.getTagsMap()
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// set subject & tag names on each problem
+	for _, problemPtr := range *problems {
+		subjectPtr, ok := subjectMap[problemPtr.SubjectID]
+		if !ok {
+			http.Error(responseWriter, "subject not found", http.StatusInternalServerError)
+			return
+		}
+
+		problemPtr.Subject = *subjectPtr
+
+		// Loop through tag ids and add corresponding tag names
+		for _, tagId := range problemPtr.TagIDs {
+			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagId])
+		}
+	}
+
+	// Decide hasMore BEFORE filtering
+	hasMore := len(*problems) >= limit // true if more pages should exist
+	if !hasMore {
+		responseWriter.Header().Set("hasMore", "false")
+	}
+
+	filterProblems(problems, nil, "", "")
+	views.ExecuteTemplate(searchProblemRowTemplate, responseWriter, problems, nil)
 }
 
 func (h *ProblemsHandler) LoadTestAssociations(responseWriter http.ResponseWriter, request *http.Request) {
