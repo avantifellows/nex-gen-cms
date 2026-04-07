@@ -114,19 +114,6 @@ func Dict(values ...any) map[string]any {
 	return dict
 }
 
-func DisplaySubtype(subtype string) string {
-	switch subtype {
-	case "mcq_single_answer":
-		return "MCQ Single Answer"
-	case "numerical_answer":
-		return "Numerical Answer"
-	case "integer_type":
-		return "Integer Type"
-	default:
-		return "Unknown"
-	}
-}
-
 func ToJson(v any) template.JS {
 	b, err := json.Marshal(v)
 	if err != nil {
