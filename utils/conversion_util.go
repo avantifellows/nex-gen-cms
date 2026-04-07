@@ -20,6 +20,19 @@ func StringToInt(s string) int {
 	return num // Return the converted integer
 }
 
+// StringToIntOrDefault converts string to int with validation and fallback
+func StringToIntOrDefault(val string, defaultVal int, min int) int {
+	if val == "" {
+		return defaultVal
+	}
+
+	if v, err := strconv.Atoi(val); err == nil && v >= min {
+		return v
+	}
+
+	return defaultVal
+}
+
 type IntType interface {
 	int8 | int16 | int32
 }
