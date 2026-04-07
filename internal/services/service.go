@@ -50,7 +50,9 @@ func (s *Service[T]) GetList(urlEndPoint string, cacheKey string, onlyCache bool
 	}
 
 	// Cache the data
-	s.cacheRepository.Set(cacheKey, &list)
+	if cacheKey != "" {
+		s.cacheRepository.Set(cacheKey, &list)
+	}
 
 	return &list, nil
 }

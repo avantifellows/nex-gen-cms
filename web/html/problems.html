@@ -1,84 +1,93 @@
+{{ define "content" }}
 <div>
-    <div class="flex gap-4 mb-4">
-        <button class="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded" hx-target="body"
-            hx-get="/topic/add-problem?topic_id={{.}}" hx-push-url="true">Add New Problem
-        </button>
+    <!-- Search + Subject Filter Row -->
+    <div class="flex items-center gap-4 mb-4">
 
-        <button id="move-problems-btn" hx-include='input[name="select-problem"]:checked'
-            class="group flex items-center justify-center min-w-[120px] px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
-            hx-post="/problems/test-associations" hx-target="body" 
-            hx-swap="beforeend" disabled>
-            
-            <span class="group-[.htmx-request]:hidden">
-                Move Problems
-            </span>
+        <input type="hidden" id="problems-restore-flag" value="fresh">
         
-            <span class="hidden group-[.htmx-request]:inline-flex">
-                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            </span>
-        
-        </button>
+        <!-- Search field -->
+        <input type="text" id="problem-search" name="problem-search" placeholder="Search problems by question or code..."
+            class="border border-gray-400 p-2 rounded w-[19rem]">
+
+        <!-- Subject Dropdown -->
+        <select class="border border-gray-400 p-2 rounded w-fit" id="problems-subject-dropdown" 
+            name="problems-subject-dropdown" hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend"
+            onchange="
+                const input = document.getElementById('problem-search');
+                if (input.value.length >= 3) {
+                    htmx.trigger('#problems-table-body', 'searchTriggered');
+                }
+            ">
+            <option value="">All Subjects</option>
+        </select>
 
     </div>
 
-    <div class="shadow-md">
-        <table class="min-w-full bg-white" hx-ext="checkbox-select">
-            <colgroup>
-                <col class="w-[2rem]">   <!-- Checkbox -->
-                <col class="w-[6rem]">   <!-- Code -->
-                <col>                    <!-- Text (flexes) -->
-                <col class="w-[6rem]">   <!-- Actions -->
-            </colgroup>
-            <thead>
-                <tr class="bg-gray-200 text-gray-600 text-sm">
-                    <th class="py-4 text-center">
-                        <input type="checkbox" id="select-all">
-                    </th>
-                    <th class="py-4">Code</th>
-                    <th>Text</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load, refreshProblems"
-                hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
-                hx-on::after-swap="updateHeaderState()" data-mathjax="true">
-                <!-- Rows will be dynamically inserted here -->
-            </tbody>
-        </table>
+    <table class="w-full bg-white shadow-md table-fixed">
+        <colgroup>
+            <col class="w-[6rem]">   <!-- Code -->
+            <col>                   <!-- Text (flexes) -->
+            <col class="w-[6rem]">   <!-- Actions -->
+        </colgroup>
+        <thead>
+            <tr class="bg-gray-200 text-gray-600 text-sm">
+                <th class="py-4">Code</th>
+                <th>Text</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody id="problems-table-body" class="text-gray-600 text-sm" data-mathjax="true"
+            hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=10&offset=0"
+            data-limit="10" data-offset="0" hx-sync="this:replace"
+            hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search, searchTriggered"
+            hx-include="#problem-search,#problems-subject-dropdown"
+            data-loader="#problems-search-loader" data-sentinel="#problems-table-sentinel">
+            <!-- Rows will be dynamically inserted here -->
+        </tbody>
+    </table>
+    <div id="problems-table-sentinel"></div>
+    <div id="problems-search-loader" class="hidden flex justify-center py-4">
+        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
     </div>
 </div>
 <script>
-    var selectAll = document.getElementById("select-all");
-    var tbody = document.getElementById("problemTableBody");
-    var moveBtn = document.getElementById("move-problems-btn");
+    (function () {
+        const searchInput = document.getElementById("problem-search");
+        const subjectDropdown = document.getElementById("problems-subject-dropdown");
+        const restoreFlag = document.getElementById("problems-restore-flag");
+        
+        const STORAGE_KEY = "problemsTabState";
+        
+        if (restoreFlag.value === "restore") {
+            // Back navigation
+            const saved = sessionStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const state = JSON.parse(saved);
 
-    var getCheckboxes = () =>
-        tbody.querySelectorAll('input[name="select-problem"]');
-
-    var updateHeaderState = () => {
-        const all = getCheckboxes();
-        const checked = tbody.querySelectorAll('input[name="select-problem"]:checked');
-
-        selectAll.checked = all.length > 0 && all.length === checked.length;
-        selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
-
-        // Enable / disable Move Problems button
-        moveBtn.disabled = checked.length === 0;
-    };
-
-    // Select All
-    selectAll.addEventListener("change", function () {
-        const checked = this.checked;
-        getCheckboxes().forEach(cb => {
-            cb.checked = checked;
-        });
-        selectAll.indeterminate = false;
-        moveBtn.disabled = !checked;
-    });
-
-    // Individual checkbox
-    tbody.addEventListener("change", function (e) {
-        if (e.target.name !== "select-problem") return;
-        updateHeaderState();
-    });
+                if (state.search) searchInput.value = state.search;
+                if (state.subject) subjectDropdown.value = state.subject;
+            }
+        } else {
+            // Fresh visit
+            sessionStorage.removeItem(STORAGE_KEY);
+        }
+    
+        // Save state whenever search changes
+        function saveState() {
+            // update restore flag state to retain it back on navigating to next screens and then coming back
+            restoreFlag.value = "restore";
+            sessionStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({
+                    search: searchInput.value,
+                    subject: subjectDropdown?.value || ""
+                })
+            );
+        }
+    
+        searchInput.addEventListener("input", saveState);
+        subjectDropdown.addEventListener("change", saveState);
+    })();
 </script>
+{{ end }}

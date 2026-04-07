@@ -10,7 +10,7 @@
         <button id="concepts-tab" data-toggle="sub-tab" class="sub-tab active" onclick="onTopicTabClick(this)"
             hx-trigger="click, load" hx-get="/concepts" hx-target="#subContent">Concepts</button>
         <button id="problems-tab" data-toggle="sub-tab" class="sub-tab" onclick="onTopicTabClick(this)"
-            hx-get="/problems?topic_id={{.TopicPtr.ID}}" hx-target="#subContent">Problems</button>
+            hx-get="/topic/problems?topic_id={{.TopicPtr.ID}}" hx-target="#subContent">Problems</button>
     </div>
     <div id="sub-tabContent">
         <div id="subContent">

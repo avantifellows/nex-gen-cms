@@ -120,7 +120,7 @@ This document provides a comprehensive overview of the Next Generation CMS codeb
 - Problems
   - `GET /problem` → `ProblemsHandler.GetProblem` → base + `problem.html`.
   - `GET /api/topic/problems` → `ProblemsHandler.GetTopicProblems` → either `src_problem_row.html` or `topic_problem_row.html` (filtering by difficulty, subtype, selection).
-  - `GET /problems` → `ProblemsHandler.LoadProblems` → `problems.html` (shell for topic problems).
+  - `GET /topic/problems` → `ProblemsHandler.LoadTopicProblems` → `topic_problems.html` (shell for topic problems).
   - `GET /topic/add-problem` → `ProblemsHandler.AddProblem` → base + `add_problem.html` (+ editor partials).
   - `POST /create-problem` → `ProblemsHandler.CreateProblem` (raw JSON passthrough to API).
   - `GET /problems/edit-problem` → `ProblemsHandler.EditProblem` → base + `add_problem.html` (+ editor partials).
