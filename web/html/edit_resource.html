@@ -1,38 +1,36 @@
 <div class="container mx-auto bg-white shadow-md rounded p-6 mt-4">
   <h1 class="text-2xl font-semibold mb-4">Editing resource</h1>
-  <form hx-patch="/update-resource?id={{.ID}}">
+  <form hx-patch="/update-resource?id={{.Resource.ID}}">
     <div class="mb-4">
       <label for="name" class="block text-gray-700 font-medium mb-2">Resource Name</label>
-      <input type="text" id="name" name="name" class="w-full p-3 border border-gray-300 rounded" value="{{ getName . "en" }}">
+      <input type="text" id="name" name="name" class="w-full p-3 border border-gray-300 rounded" value="{{ getName .Resource "en" }}">
     </div>
     <div class="mb-4">
       <label for="code" class="block text-gray-700 font-medium mb-2">Code</label>
-      <input type="text" id="code" name="code" class="w-full p-3 border border-gray-300 rounded bg-gray-100 text-gray-600" value="{{.Code}}" readonly>
+      <input type="text" id="code" name="code" class="w-full p-3 border border-gray-300 rounded bg-gray-100 text-gray-600" value="{{.Resource.Code}}" readonly>
     </div>
     <div class="mb-4">
       <label for="type" class="block text-gray-700 font-medium mb-2">Type</label>
-      <select id="type" name="type" class="w-full p-3 border border-gray-300 rounded">
-        <option value="class" {{if eq .Type "class"}}selected{{end}}>class</option>
-        <option value="content" {{if eq .Type "content"}}selected{{end}}>content</option>
-        <option value="document" {{if eq .Type "document"}}selected{{end}}>document</option>
-        <option value="quiz" {{if eq .Type "quiz"}}selected{{end}}>quiz</option>
-        <option value="video" {{if eq .Type "video"}}selected{{end}}>video</option>
+      <select id="type" name="type" class="w-full p-3 border border-gray-300 rounded" required>
+        <option value="" disabled hidden {{if or (not .Resource.Type) (eq .Resource.Type "null")}}selected{{end}}>Select Type</option>
+        {{ range .TypeOptions }}
+        <option value="{{.}}" {{if eq $.Resource.Type .}}selected{{end}}>{{.}}</option>
+        {{ end }}
       </select>
     </div>
     <div class="mb-4">
       <label for="subtype" class="block text-gray-700 font-medium mb-2">Subtype</label>
       <select id="subtype" name="subtype" class="w-full p-3 border border-gray-300 rounded">
-        <option value="" {{if not .Subtype}}selected{{end}}></option>
-        <option value="Module" {{if eq .Subtype "Module"}}selected{{end}}>Module</option>
-        <option value="Previous Year Questions" {{if eq .Subtype "Previous Year Questions"}}selected{{end}}>Previous Year Questions</option>
-        <option value="Assessment" {{if eq .Subtype "Assessment"}}selected{{end}}>Assessment</option>
-        <option value="Video Lectures" {{if eq .Subtype "Video Lectures"}}selected{{end}}>Video Lectures</option>
+        <option value="" {{if or (not .Resource.Subtype) (eq .Resource.Subtype "null")}}selected{{end}}>Select Subtype</option>
+        {{ range .SubtypeOptions }}
+        <option value="{{.}}" {{if eq $.Resource.Subtype .}}selected{{end}}>{{.}}</option>
+        {{ end }}
       </select>
     </div>
     <div class="mb-4">
       <label for="src_link" class="block text-gray-700 font-medium mb-2">SrcLink</label>
       <input type="url" id="src_link" name="src_link" class="w-full p-3 border border-gray-300 rounded"
-        placeholder="https://example.com/resource" value="{{.TypeParams.SrcLink}}">
+        placeholder="https://example.com/resource" value="{{.Resource.TypeParams.SrcLink}}">
     </div>
     <button type="submit" class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition">SAVE</button>
   </form>

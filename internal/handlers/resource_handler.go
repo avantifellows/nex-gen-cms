@@ -13,13 +13,29 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const resourcesCurriculumListEndPoint = "resources/curriculum"
-const resourceEndPoint = "resource"
+const resourcesEndPoint = "resource"
+const resourcesCurriculumEndPoint = "resources/curriculum"
 const resourcesKey = "resources"
 
 const resourcesTemplate = "resources.html"
 const resourceRowTemplate = "resource_row.html"
 const editResourceTemplate = "edit_resource.html"
+const addResourceTemplate = "add_resource.html"
+
+var resourceTypeOptions = []string{"class", "content", "document", "quiz", "video"}
+var resourceSubtypeOptions = []string{"Module", "Previous Year Questions", "Assessment", "Video Lectures"}
+
+type addResourceTemplateData struct {
+	ChapterID      string
+	TypeOptions    []string
+	SubtypeOptions []string
+}
+
+type editResourceTemplateData struct {
+	Resource       *models.Resource
+	TypeOptions    []string
+	SubtypeOptions []string
+}
 
 type ResourcesHandler struct {
 	service *services.Service[models.Resource]
@@ -31,10 +47,20 @@ func NewResourcesHandler(service *services.Service[models.Resource]) *ResourcesH
 	}
 }
 
+func (h *ResourcesHandler) OpenAddResource(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterId := request.URL.Query().Get("chapterId")
+	data := addResourceTemplateData{
+		ChapterID:      chapterId,
+		TypeOptions:    resourceTypeOptions,
+		SubtypeOptions: resourceSubtypeOptions,
+	}
+	views.ExecuteTemplate(addResourceTemplate, responseWriter, data, nil)
+}
+
 func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
-	curriculumIdStr := urlVals.Get("curriculum-dropdown")
-	gradeIdStr := urlVals.Get("grade-dropdown")
+	curriculumIdStr := urlVals.Get(CURRICULUM_DROPDOWN_NAME)
+	gradeIdStr := urlVals.Get(GRADE_DROPDOWN_NAME)
 	chapterIdStr := urlVals.Get("chapter_id")
 
 	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
@@ -54,7 +80,7 @@ func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, requ
 	}
 
 	queryParams := fmt.Sprintf("?curriculum_id=%d&grade_id=%d&chapter_id=%d", curriculumId, gradeId, chapterId)
-	resources, err := h.service.GetList(resourcesCurriculumListEndPoint+queryParams, resourcesKey, false, false)
+	resources, err := h.service.GetList(resourcesCurriculumEndPoint+queryParams, resourcesKey, false, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching resources: %v", err), http.StatusInternalServerError)
 		return
@@ -64,7 +90,7 @@ func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, requ
 	// remove test & problem resources because we are already managing those via separate tabs
 	for _, resource := range *resources {
 		resourceType := strings.ToLower(resource.Type)
-		if resourceType == "problem" || resourceType == "test" {
+		if resource.StatusID == constants.StatusArchived || resourceType == "problem" || resourceType == "test" {
 			continue
 		}
 		filteredResources = append(filteredResources, resource)
@@ -86,13 +112,18 @@ func (h *ResourcesHandler) EditResource(responseWriter http.ResponseWriter, requ
 	selectedResourcePtr, err := h.service.GetObject(resourceIdStr,
 		func(resource *models.Resource) bool {
 			return resource.ID == int(resourceId)
-		}, resourcesKey, resourceEndPoint)
+		}, resourcesKey, resourcesEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching resource: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	views.ExecuteTemplate(editResourceTemplate, responseWriter, selectedResourcePtr, template.FuncMap{
+	data := editResourceTemplateData{
+		Resource:       selectedResourcePtr,
+		TypeOptions:    resourceTypeOptions,
+		SubtypeOptions: resourceSubtypeOptions,
+	}
+	views.ExecuteTemplate(editResourceTemplate, responseWriter, data, template.FuncMap{
 		"getName": getResourceName,
 	})
 }
@@ -114,7 +145,7 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 	dummyResourcePtr := &models.Resource{}
 	resourceMap := dummyResourcePtr.BuildMap(resourceCode, resourceName, resourceType, resourceSubtype, srcLink)
 
-	_, err = h.service.UpdateObject(resourceIdStr, resourceEndPoint, resourceMap, resourcesKey,
+	_, err = h.service.UpdateObject(resourceIdStr, resourcesEndPoint, resourceMap, resourcesKey,
 		func(resource *models.Resource) bool {
 			return resource.ID == int(resourceId)
 		})
@@ -138,7 +169,7 @@ func (h *ResourcesHandler) ArchiveResource(responseWriter http.ResponseWriter, r
 		"cms_status_id": constants.StatusArchived,
 	}
 
-	err = h.service.ArchiveObject(resourceIdStr, resourceEndPoint, resourceMap, resourcesKey,
+	err = h.service.ArchiveObject(resourceIdStr, resourcesEndPoint, resourceMap, resourcesKey,
 		func(resource *models.Resource) bool {
 			return resource.ID != int(resourceId)
 		})
@@ -147,6 +178,47 @@ func (h *ResourcesHandler) ArchiveResource(responseWriter http.ResponseWriter, r
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (h *ResourcesHandler) AddResource(responseWriter http.ResponseWriter, request *http.Request) {
+	resourceCode := request.FormValue("code")
+	resourceName := request.FormValue("name")
+	resourceType := request.FormValue("type")
+	resourceSubtype := request.FormValue("subtype")
+	srcLink := request.FormValue("src_link")
+
+	chapterIdStr := request.FormValue("chapter_id")
+	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
+		return
+	}
+
+	curriculumIdStr := request.FormValue(CURRICULUM_DROPDOWN_NAME)
+	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
+		return
+	}
+
+	gradeIdStr := request.FormValue(GRADE_DROPDOWN_NAME)
+	gradeId, err := utils.StringToIntType[int8](gradeIdStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
+		return
+	}
+
+	newResourcePtr := models.NewResource(resourceCode, resourceName, resourceType, resourceSubtype, srcLink, chapterId, curriculumId, gradeId)
+	newResourcePtr, err = h.service.AddObject(newResourcePtr, resourcesKey, resourcesEndPoint)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error adding resource: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	resourcePtrs := []*models.Resource{newResourcePtr}
+	views.ExecuteTemplate(resourceRowTemplate, responseWriter, resourcePtrs, template.FuncMap{
+		"getName": getResourceName,
+	})
 }
 
 func getResourceName(r models.Resource, lang string) string {

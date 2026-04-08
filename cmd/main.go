@@ -99,6 +99,8 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/topic", topicsHandler.GetTopic)
 
 	resourcesHandler := appComponentPtr.ResourcesHandler
+	muxHandler.HandleFunc("/add-resource", resourcesHandler.OpenAddResource)
+	muxHandler.HandleFunc("/create-resource", resourcesHandler.AddResource)
 	muxHandler.HandleFunc("/api/resources", resourcesHandler.GetResources)
 	muxHandler.Handle("/edit-resource", middleware.RequireHTMX(http.HandlerFunc(resourcesHandler.EditResource)))
 	muxHandler.HandleFunc("/update-resource", resourcesHandler.UpdateResource)
