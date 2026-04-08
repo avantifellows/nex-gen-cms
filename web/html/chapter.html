@@ -7,8 +7,28 @@
         <h3 class="text-base font-semibold ml-4">{{ getName .ChapterPtr "en" }}</h3>
     </div>
     <div class="flex space-x-4 py-4">
-        <div class="sub-tab active" hx-trigger="load"
-            hx-get="/topics?id={{.ChapterPtr.ID}}" hx-target="#subContent">Topics</div>
+        <div class="sub-tab active" 
+            id="topics-sub-tab"
+            hx-trigger="load, click"
+            hx-get="/topics?id={{.ChapterPtr.ID}}" 
+            hx-target="#subContent"
+            onclick="
+                document.getElementById('topics-sub-tab').classList.add('active');
+                document.getElementById('resources-sub-tab').classList.remove('active');
+            ">
+            Topics
+        </div>
+        <div class="sub-tab" 
+            id="resources-sub-tab"
+            hx-get="/resources?chapterId={{.ChapterPtr.ID}}"
+            hx-trigger="click"
+            hx-target="#subContent"
+            onclick="
+                document.getElementById('resources-sub-tab').classList.add('active');
+                document.getElementById('topics-sub-tab').classList.remove('active');
+            ">
+            Resources
+        </div>
     </div>
     <div id="sub-tabContent">
         <div id="subContent">

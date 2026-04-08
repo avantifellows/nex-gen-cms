@@ -88,6 +88,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/chapter", chaptersHandler.GetChapter)
 	muxHandler.HandleFunc("/topics", chaptersHandler.LoadTopics)
 	muxHandler.HandleFunc("/api/topics", chaptersHandler.GetTopics)
+	muxHandler.HandleFunc("/resources", chaptersHandler.LoadResources)
 
 	topicsHandler := appComponentPtr.TopicsHandler
 	muxHandler.HandleFunc("/add-topic", topicsHandler.OpenAddTopic)

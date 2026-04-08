@@ -27,6 +27,7 @@ const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
+const resourcesTemplate = "resources.html"
 
 type ChaptersHandler struct {
 	chaptersService *services.Service[models.Chapter]
@@ -300,6 +301,14 @@ func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request
 		ChapterId: chapterIdStr,
 	}
 	views.ExecuteTemplate(topicsTemplate, responseWriter, data, nil)
+}
+
+func (h *ChaptersHandler) LoadResources(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterIdStr := request.URL.Query().Get("chapterId")
+	data := dto.ResourcesData{
+		ChapterId: chapterIdStr,
+	}
+	views.ExecuteTemplate(resourcesTemplate, responseWriter, data, nil)
 }
 
 func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request *http.Request) {

@@ -41,7 +41,7 @@
     }
 
     .sub-tab {
-        @apply text-gray-600 bg-white px-4 py-2;
+        @apply text-gray-600 bg-white px-4 py-2 cursor-pointer;
     }
 
     .sub-tab:focus {
