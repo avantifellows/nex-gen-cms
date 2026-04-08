@@ -58,7 +58,7 @@ window.MathJax = {
     {{ range $section := $subject.Sections }}
         <!-- Combined Header -->
         <div class="text-center font-semibold text-lg bg-gray-100 border-t-2 border-t-gray-500 border-b border-b-gray-300 py-1 mb-4">
-            {{ capitalize $subject.Name }}{{ if $section.Name }} - {{ problemDisplaySubtype $section.Name }}{{ end }}
+            {{ capitalize $subject.Name }} - {{ getSectionName $section.Type $section.Name }}
         </div>
 
         <!-- Compulsory Problems -->

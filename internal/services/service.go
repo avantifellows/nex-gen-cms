@@ -50,7 +50,9 @@ func (s *Service[T]) GetList(urlEndPoint string, cacheKey string, onlyCache bool
 	}
 
 	// Cache the data
-	s.cacheRepository.Set(cacheKey, &list)
+	if cacheKey != "" {
+		s.cacheRepository.Set(cacheKey, &list)
+	}
 
 	return &list, nil
 }
@@ -160,5 +162,19 @@ func (s *Service[T]) ArchiveObject(objIdStr string, urlEndPoint string, body any
 	if list != nil {
 		*list = funk.Filter(*list, objKeepingPredicate).([]*T)
 	}
+	return nil
+}
+
+func (s *Service[T]) Post(urlEndPoint string, body any, result any) error {
+
+	respBytes, err := s.apiRepository.CallAPI(urlEndPoint, http.MethodPost, body)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(respBytes, result); err != nil {
+		return fmt.Errorf("error parsing response: %v", err)
+	}
+
 	return nil
 }

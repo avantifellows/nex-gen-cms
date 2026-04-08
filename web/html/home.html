@@ -14,19 +14,11 @@
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
     <script src="/web/static/js/constants.js"></script>
+    <script src="/web/static/js/infinite-scroll.js"></script>
     <script src="/web/static/js/table-sort.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script>
         function afterDropdownReq(dropdown, selectedValue) {
-            /* 
-             * execute code inside setTimeout(); otherwise playwright test related to onLoaded event trigger 
-             * fails on firefox & webkit sometimes, because 'onLoaded' gets triggered even before setting 
-             * listener for this event to verify
-             */
-            setTimeout(function () {
-                htmx.trigger('#' + dropdown.id, 'onLoaded');
-            }, 0);
-
             // update dropdown value to last selected value from session storage
             var sessionStorageKey;
             switch (dropdown.id) {
@@ -52,6 +44,18 @@
             if (selectedValue) {
                 dropdown.value = selectedValue;
             }
+
+            /* 
+             * execute code inside setTimeout(); otherwise playwright test related to onLoaded event trigger 
+             * fails on firefox & webkit sometimes, because 'onLoaded' gets triggered even before setting 
+             * listener for this event to verify
+             * 
+             * Reason of adding 100ms delay: Without this delay Earlier trigger sometimes fired before dropdown values were ready, 
+             * sending blank dropdown values in API calls
+             */
+             setTimeout(function () {
+                htmx.trigger('#' + dropdown.id, 'onLoaded');
+            }, 100);
         }
     </script>
 </head>
@@ -67,6 +71,8 @@
                 <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
                     data-toggle="tab"
                     hx-on::before-request="sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false')">Tests</button>
+                <button class="nav-link" id="problems-tab" hx-get="/problems" hx-push-url="true" hx-target="body"
+                    data-toggle="tab">Problems</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
@@ -126,6 +132,7 @@
                 // Define URL-to-tab mapping based on expected paths
                 if (path.startsWith("/chapter")) return "chapters-tab";
                 if (path.startsWith("/test")) return "tests-tab";
+                if (path.startsWith("/problem")) return "problems-tab";
                 return null;
             }
 
@@ -151,11 +158,20 @@
                 
                 // Hide subject dropdown when "Tests" tab is active
                 const subjectDropdown = document.getElementById("subject-dropdown");
-                if (activeTabId === "tests-tab" && !(currentPath.endsWith("/add-test") 
-                    || currentPath.endsWith("/edit-test") || currentPath.endsWith("/copy-test"))) {
-                    subjectDropdown.style.display = "none";
-                } else {
-                    subjectDropdown.style.display = "inline-block";
+                if (activeTabId === "tests-tab") { 
+                    if (!(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test") 
+                            || currentPath.endsWith("/copy-test"))) {
+                        subjectDropdown.style.display = "none";
+                    }
+
+                } else if (activeTabId === "problems-tab") {
+                    if (currentPath.endsWith("/problems")) {
+                        const curriculumDropdown = document.getElementById("curriculum-dropdown");
+                        curriculumDropdown.style.display = "none";
+                        const gradeDropdown = document.getElementById("grade-dropdown");
+                        gradeDropdown.style.display = "none";
+                        subjectDropdown.style.display = "none";
+                    }
                 }
 
                 const editablePaths = [
@@ -261,9 +277,11 @@
             }
 
             // Reset chaptersLoaded **only if the chapters tab is active**
-            const chaptersTab = document.getElementById("chapters-tab");
+            const path = window.location.pathname;
+            const isChaptersScreen = path === "/chapters";
+
             // when moving forward in history, it generates pageshow event with persisted=true. Don't reset flag in that case
-            if (chaptersTab.classList.contains("active") && !event.persisted) {
+            if (isChaptersScreen && !event.persisted) {
                 // reset flag to reload chapters on page refresh or direct url entry
                 console.log("Fresh load with chapters tab active. Resetting chaptersLoaded.");
                 sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, "false");
@@ -282,7 +300,26 @@
                 }
             });
         }
+    
+        function showToast(message, type = "error") {
+            const container = document.getElementById("toast-container");
+
+            const toast = document.createElement("div");
+            toast.className = `
+                px-4 py-2 rounded shadow-md text-white text-sm
+                ${type === "error" ? "bg-red-500" : "bg-green-500"}
+            `;
+            toast.innerText = message;
+
+            container.appendChild(toast);
+
+            setTimeout(() => toast.remove(), 3000);
+        }
     </script>
 </body>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] space-y-2 pointer-events-none">
+</div>
 
 </html>

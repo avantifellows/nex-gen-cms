@@ -459,16 +459,17 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"split":             strings.Split,
-		"slice":             utils.Slice,
-		"seq":               utils.Seq,
-		"getName":           getTestName,
-		"add":               utils.Add,
-		"joinInt16":         utils.JoinInt16,
-		"dict":              utils.Dict,
-		"getDisplaySubtype": utils.DisplaySubtype,
-		"toJson":            utils.ToJson,
-		"getParentId":       getParentSubjectId,
+		"split":          strings.Split,
+		"slice":          utils.Slice,
+		"seq":            utils.Seq,
+		"getName":        getTestName,
+		"add":            utils.Add,
+		"joinInt16":      utils.JoinInt16,
+		"dict":           utils.Dict,
+		"getSectionName": views.GetSectionName,
+		"toJson":         utils.ToJson,
+		"getParentId":    getParentSubjectId,
+		"currentYear":    utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
@@ -587,11 +588,11 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"getParentName":     getParentSubjectName,
-		"getParentId":       getParentSubjectId,
-		"joinInt16":         utils.JoinInt16,
-		"dict":              utils.Dict,
-		"getDisplaySubtype": utils.DisplaySubtype,
+		"getParentName":  getParentSubjectName,
+		"getParentId":    getParentSubjectId,
+		"joinInt16":      utils.JoinInt16,
+		"dict":           utils.Dict,
+		"getSectionName": views.GetSectionName,
 	}, filename, addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
@@ -646,16 +647,17 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"split":             strings.Split,
-		"slice":             utils.Slice,
-		"seq":               utils.Seq,
-		"getName":           getTestName,
-		"add":               utils.Add,
-		"joinInt16":         utils.JoinInt16,
-		"dict":              utils.Dict,
-		"getDisplaySubtype": utils.DisplaySubtype,
-		"toJson":            utils.ToJson,
-		"getParentId":       getParentSubjectId,
+		"split":          strings.Split,
+		"slice":          utils.Slice,
+		"seq":            utils.Seq,
+		"getName":        getTestName,
+		"add":            utils.Add,
+		"joinInt16":      utils.JoinInt16,
+		"dict":           utils.Dict,
+		"getSectionName": views.GetSectionName,
+		"toJson":         utils.ToJson,
+		"getParentId":    getParentSubjectId,
+		"currentYear":    utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
@@ -758,6 +760,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 	query := request.URL.Query()
 
 	if len(query) > 0 {
+		// copy test scenario
 		subtype := query.Get("subtype")
 		examIdStr := query.Get("exam_id")
 		curriculumGradesStr := query.Get("curriculum_grades")
@@ -778,6 +781,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 		}
 
 	} else {
+		// new test creation scenario
 		data = dto.AddTestDialogData{}
 	}
 
@@ -845,14 +849,14 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	// Load template
 	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfTemplate)
 	tmpl, err := template.New(pdfTemplate).Funcs(template.FuncMap{
-		"getName":               getTestName,
-		"add":                   utils.Add,
-		"labels":                optionLabels,
-		"capitalize":            utils.Capitalize,
-		"problemDisplaySubtype": utils.DisplaySubtype,
-		"stringToInt":           utils.StringToInt,
-		"trim":                  strings.TrimSpace,
-		"getChapterName":        getProblemChapterName,
+		"getName":        getTestName,
+		"add":            utils.Add,
+		"labels":         optionLabels,
+		"capitalize":     utils.Capitalize,
+		"getSectionName": views.GetSectionName,
+		"stringToInt":    utils.StringToInt,
+		"trim":           strings.TrimSpace,
+		"getChapterName": getProblemChapterName,
 	}).ParseFiles(tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
@@ -1019,16 +1023,17 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"split":             strings.Split,
-		"slice":             utils.Slice,
-		"seq":               utils.Seq,
-		"getName":           getTestName,
-		"add":               utils.Add,
-		"joinInt16":         utils.JoinInt16,
-		"dict":              utils.Dict,
-		"getDisplaySubtype": utils.DisplaySubtype,
-		"toJson":            utils.ToJson,
-		"getParentId":       getParentSubjectId,
+		"split":          strings.Split,
+		"slice":          utils.Slice,
+		"seq":            utils.Seq,
+		"getName":        getTestName,
+		"add":            utils.Add,
+		"joinInt16":      utils.JoinInt16,
+		"dict":           utils.Dict,
+		"getSectionName": views.GetSectionName,
+		"toJson":         utils.ToJson,
+		"getParentId":    getParentSubjectId,
+		"currentYear":    utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }

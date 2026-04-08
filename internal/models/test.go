@@ -8,9 +8,9 @@ type Test struct {
 	Subtype          string            `json:"subtype"`
 	ExamIDs          []int8            `json:"exam_ids"`
 	SkillIDs         []int16           `json:"skill_ids,omitempty"`
-	CurriculumGrades []CurriculumGrade `json:"curriculum_grades"`
+	CurriculumGrades []CurriculumGrade `json:"curriculum_grades,omitempty"`
 	TypeParams       ResTypeParams     `json:"type_params"`
-	StatusID         int8              `json:"cms_status_id"`
+	StatusID         int8              `json:"cms_status_id,omitempty"`
 }
 
 type CurriculumGrade struct {
@@ -41,7 +41,8 @@ type ResSubject struct {
 }
 
 type ResSection struct {
-	Name       string        `json:"name"`
+	Type       string        `json:"type"` // system identifier
+	Name       string        `json:"name"` // display name (customizable)
 	Marks      int16         `json:"marks"`
 	PosMarks   []int8        `json:"pos_marks,omitempty"`
 	NegMarks   []int8        `json:"neg_marks,omitempty"`

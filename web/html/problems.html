@@ -1,24 +1,93 @@
+{{ define "content" }}
 <div>
-    <!-- Add New Problem Link -->
-    <h4 class="text-sm font-semibold text-blue-500 hover:underline mb-4">
-        <a href="/topic/add-problem?topic_id={{.}}" hx-get="/topic/add-problem?topic_id={{.}}" hx-target="body" hx-push-url="true">Add New
-            Problem</a>
-    </h4>
+    <!-- Search + Subject Filter Row -->
+    <div class="flex items-center gap-4 mb-4">
 
-    <div class="shadow-md overflow-x-auto">
-        <table class="min-w-full bg-white">
-            <thead>
-                <tr class="bg-gray-200 text-gray-600 text-sm">
-                    <th class="py-4 text-center">Code</th>
-                    <th class="text-center">Text</th>
-                    <th class="pr-4 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load"
-                hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
-                data-mathjax="true">
-                <!-- Rows will be dynamically inserted here -->
-            </tbody>
-        </table>
+        <input type="hidden" id="problems-restore-flag" value="fresh">
+        
+        <!-- Search field -->
+        <input type="text" id="problem-search" name="problem-search" placeholder="Search problems by question or code..."
+            class="border border-gray-400 p-2 rounded w-[19rem]">
+
+        <!-- Subject Dropdown -->
+        <select class="border border-gray-400 p-2 rounded w-fit" id="problems-subject-dropdown" 
+            name="problems-subject-dropdown" hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend"
+            onchange="
+                const input = document.getElementById('problem-search');
+                if (input.value.length >= 3) {
+                    htmx.trigger('#problems-table-body', 'searchTriggered');
+                }
+            ">
+            <option value="">All Subjects</option>
+        </select>
+
+    </div>
+
+    <table class="w-full bg-white shadow-md table-fixed">
+        <colgroup>
+            <col class="w-[6rem]">   <!-- Code -->
+            <col>                   <!-- Text (flexes) -->
+            <col class="w-[6rem]">   <!-- Actions -->
+        </colgroup>
+        <thead>
+            <tr class="bg-gray-200 text-gray-600 text-sm">
+                <th class="py-4">Code</th>
+                <th>Text</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+
+        <tbody id="problems-table-body" class="text-gray-600 text-sm" data-mathjax="true"
+            hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=10&offset=0"
+            data-limit="10" data-offset="0" hx-sync="this:replace"
+            hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search, searchTriggered"
+            hx-include="#problem-search,#problems-subject-dropdown"
+            data-loader="#problems-search-loader" data-sentinel="#problems-table-sentinel">
+            <!-- Rows will be dynamically inserted here -->
+        </tbody>
+    </table>
+    <div id="problems-table-sentinel"></div>
+    <div id="problems-search-loader" class="hidden flex justify-center py-4">
+        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
     </div>
 </div>
+<script>
+    (function () {
+        const searchInput = document.getElementById("problem-search");
+        const subjectDropdown = document.getElementById("problems-subject-dropdown");
+        const restoreFlag = document.getElementById("problems-restore-flag");
+        
+        const STORAGE_KEY = "problemsTabState";
+        
+        if (restoreFlag.value === "restore") {
+            // Back navigation
+            const saved = sessionStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const state = JSON.parse(saved);
+
+                if (state.search) searchInput.value = state.search;
+                if (state.subject) subjectDropdown.value = state.subject;
+            }
+        } else {
+            // Fresh visit
+            sessionStorage.removeItem(STORAGE_KEY);
+        }
+    
+        // Save state whenever search changes
+        function saveState() {
+            // update restore flag state to retain it back on navigating to next screens and then coming back
+            restoreFlag.value = "restore";
+            sessionStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({
+                    search: searchInput.value,
+                    subject: subjectDropdown?.value || ""
+                })
+            );
+        }
+    
+        searchInput.addEventListener("input", saveState);
+        subjectDropdown.addEventListener("change", saveState);
+    })();
+</script>
+{{ end }}

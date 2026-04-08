@@ -20,6 +20,19 @@ func StringToInt(s string) int {
 	return num // Return the converted integer
 }
 
+// StringToIntOrDefault converts string to int with validation and fallback
+func StringToIntOrDefault(val string, defaultVal int, min int) int {
+	if val == "" {
+		return defaultVal
+	}
+
+	if v, err := strconv.Atoi(val); err == nil && v >= min {
+		return v
+	}
+
+	return defaultVal
+}
+
 type IntType interface {
 	int8 | int16 | int32
 }
@@ -101,19 +114,6 @@ func Dict(values ...any) map[string]any {
 	return dict
 }
 
-func DisplaySubtype(subtype string) string {
-	switch subtype {
-	case "mcq_single_answer":
-		return "MCQ Single Answer"
-	case "numerical_answer":
-		return "Numerical Answer"
-	case "integer_type":
-		return "Integer Type"
-	default:
-		return "Unknown"
-	}
-}
-
 func ToJson(v any) template.JS {
 	b, err := json.Marshal(v)
 	if err != nil {
@@ -140,4 +140,14 @@ func Capitalize(s string) string {
 
 func Append[T any](slice []T, v T) []T {
 	return append(slice, v)
+}
+
+func StringSliceToIntSlice(values []string) []int {
+	var result []int
+	for _, v := range values {
+		if id, err := strconv.Atoi(v); err == nil {
+			result = append(result, id)
+		}
+	}
+	return result
 }
