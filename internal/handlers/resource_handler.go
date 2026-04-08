@@ -6,6 +6,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
@@ -123,6 +124,29 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 	}
 
 	views.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Resource", nil)
+}
+
+func (h *ResourcesHandler) ArchiveResource(responseWriter http.ResponseWriter, request *http.Request) {
+	resourceIdStr := request.URL.Query().Get("id")
+	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Resource ID", http.StatusBadRequest)
+		return
+	}
+
+	resourceMap := map[string]any{
+		"cms_status_id": constants.StatusArchived,
+	}
+
+	err = h.service.ArchiveObject(resourceIdStr, resourceEndPoint, resourceMap, resourcesKey,
+		func(resource *models.Resource) bool {
+			return resource.ID != int(resourceId)
+		})
+
+	// If http error is thrown from here then target row won't be removed by htmx code
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func getResourceName(r models.Resource, lang string) string {
