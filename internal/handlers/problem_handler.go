@@ -38,6 +38,7 @@ const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
 const addConceptModalTemplate = "add_concept_modal.html"
 const editorTemplate = "editor.html"
+const problemAnswerNumericalTemplate = "problem_answer_numerical.html"
 const inputTagsTemplate = "input_tags.html"
 const problemTestAssociationTemplate = "problem_test_association_modal.html"
 const moveProblemsTemplate = "move_problems_modal.html"
@@ -258,8 +259,9 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		"stringToInt":    utils.StringToInt,
 		"toJson":         utils.ToJson,
 		"getConceptName": getConceptName,
+		"dict":           utils.Dict,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
-		editorTemplate, inputTagsTemplate)
+		editorTemplate, problemAnswerNumericalTemplate, inputTagsTemplate)
 }
 
 func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, request *http.Request) {
@@ -300,7 +302,9 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 		"stringToInt":    utils.StringToInt,
 		"toJson":         utils.ToJson,
 		"getConceptName": getConceptName,
-	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate, inputTagsTemplate)
+		"dict":           utils.Dict,
+	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate,
+		problemAnswerNumericalTemplate, inputTagsTemplate)
 }
 
 func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, request *http.Request) {

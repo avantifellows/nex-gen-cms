@@ -140,7 +140,19 @@
     <!-- Save button -->
     <button id="saveButton" type="submit"
         class="w-full bg-blue-500 text-white mb-4 py-3 font-semibold rounded hover:bg-blue-600">Save</button>
+
 </form>
+
+<!-- Templates -->
+<template id="tmplAnsNumeric">
+    {{ $meta := (dict "Answers" nil) }}
+    {{ if .ProblemPtr }}
+        {{ $meta = .ProblemPtr.MetaData }}
+    {{ end }}
+
+    {{ template "problem_answer_numerical" $meta }}
+</template>
+
 <script src="/web/static/js/editor.js"></script>
 <script>
     (() => {
@@ -151,8 +163,11 @@
         const labelPool = 'ABCDEFGHIJ';
 
         // Determine tab count
+        // even when options are not available (in case of interger/numerical type), then
+        // keep 4 tabs so that while editing such problem if type is changed to mcq
+        // then 4 option abs will be visible by default
         let tabs = new Array(
-            {{ if .ProblemPtr }}
+            {{ if and .ProblemPtr (gt (len .ProblemPtr.MetaData.Options) 0) }}
                 {{ len .ProblemPtr.MetaData.Options }}
             {{ else }}
                 4   // by default start with 4 tabs for add problem case
@@ -162,7 +177,7 @@
         let activeIndex = 0;
 
         const answerLabels = new Set([
-            {{ if .ProblemPtr }}
+            {{ if and .ProblemPtr (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
                 {{ range .ProblemPtr.MetaData.Answers }}
                     {{ if . }}
                         '{{ printf "%c" (add 64 (stringToInt .)) }}',
@@ -198,10 +213,19 @@
             answerContent.innerHTML = ''; 
 
             if (problemType === 'mcq_single_answer' || problemType === 'mcq_multiple_answer') {
-                // Add checkboxes
+                // Add options & answer radio/checkboxes
                 renderTabs();
+
+            } else if (problemType === 'numerical_answer') {
+                // Use template
+                const tmpl = document.getElementById('tmplAnsNumeric');
+                const fragment = tmpl.content.cloneNode(true);
+                setupNumericalToggle(fragment);
+                answerContent.appendChild(fragment);
+                ensureNumericAnswer(problemType);
+
             } else {
-                // Add integer/floating only input
+                // Integer type fallback (simple input)
                 let answer = 
                     {{ if .ProblemPtr }}
                         '{{ index .ProblemPtr.MetaData.Answers 0 }}'
@@ -215,43 +239,69 @@
                     alert("Decimal answers are not allowed for Integer type. Value cleared.");
                     answer = '';
                 }
-
                 answerContent.innerHTML = `
-                    <input type="text" name="answer" id="answerInput" class="w-full border border-gray-300 rounded p-2" 
-                        inputmode="${problemType === 'numerical_answer' ? 'decimal' : 'numeric'}"
-                        value="${answer}">
+                    <input type="text" name="answer" id="answerInput" 
+                        class="w-full border border-gray-300 rounded p-2" 
+                        inputmode="numeric" value="${answer}">
                 `;
 
                 ensureNumericAnswer(problemType);            
             }
         }
 
+        function setupNumericalToggle(container) {
+            const radios = container.querySelectorAll('input[name="numType"]');
+            const singleDiv = container.querySelector('#singleInputDiv');
+            const rangeDiv = container.querySelector('#rangeInputDiv');
+
+            radios.forEach(radio => {
+                radio.addEventListener('change', function () {
+                    singleDiv.classList.toggle('hidden', this.value !== 'single');
+                    rangeDiv.classList.toggle('hidden', this.value !== 'range');
+                });
+            });
+        }
+
         function ensureNumericAnswer(problemType) {
-            const input = document.getElementById("answerInput");
+            let inputs = [];
 
-            input.addEventListener("input", function () {
-                let value = this.value;
+            if (problemType === 'numerical_answer') {
+                inputs = [
+                    document.querySelector('[name="singleAnswer"]'),
+                    document.querySelector('[name="minAnswer"]'),
+                    document.querySelector('[name="maxAnswer"]')
+                ].filter(Boolean);
 
-                if (problemType === 'integer_type') {
-                    // Only digits + '-'
-                    value = value.replace(/[^0-9-]/g, '');
+            } else {
+                const input = document.getElementById("answerInput");
+                if (input) inputs = [input];
+            }
 
-                } else if (problemType === 'numerical_answer') {
-                    // Allow digits, '-', '.'
-                    value = value.replace(/[^0-9\-.]/g, '');
+            inputs.forEach(input => {
+                input.addEventListener("input", function () {
+                    let value = this.value;
 
-                    // Only one '.'
-                    const parts = value.split('.');
-                    if (parts.length > 2) {
-                        value = parts[0] + '.' + parts.slice(1).join('');
+                    if (problemType === 'integer_type') {
+                        // Only digits + '-'
+                        value = value.replace(/[^0-9-]/g, '');
+
+                    } else if (problemType === 'numerical_answer') {
+                        // Allow digits, '-', '.'
+                        value = value.replace(/[^0-9\-.]/g, '');
+
+                        // Only one '.'
+                        const parts = value.split('.');
+                        if (parts.length > 2) {
+                            value = parts[0] + '.' + parts.slice(1).join('');
+                        }
                     }
-                }
 
-                // Common logic → handle '-'
-                const hasLeadingMinus = value.startsWith('-');
-                value = (hasLeadingMinus ? '-' : '') + value.replace(/-/g, '');
+                    // Common logic → handle '-'
+                    const hasLeadingMinus = value.startsWith('-');
+                    value = (hasLeadingMinus ? '-' : '') + value.replace(/-/g, '');
 
-                this.value = value;
+                    this.value = value;
+                });
             });
         }
 
@@ -270,9 +320,12 @@
             {{ end }}
         ];
         
-        // Initial render
-        renderTabs();
-        setActiveTab(0);
+        // Initial rendering of options & answers for mcq only
+        const subtype = document.getElementById('problem-type-dropdown').value;
+        if (subtype === 'mcq_single_answer' && subtype === 'mcq_multiple_answer') {
+            renderTabs();
+            setActiveTab(0);
+        }
 
         function getLabel(index) {
             return labelPool[index];
@@ -315,9 +368,7 @@
                 const checkboxLabel = document.createElement('label');
                 checkboxLabel.className = 'mr-4';
                 checkboxLabel.innerHTML = `
-                    <input 
-                        type="${isSingle ? 'radio' : 'checkbox'}" 
-                        name="answer" 
+                    <input type="${isSingle ? 'radio' : 'checkbox'}" name="answer" 
                         value="${label}"
                     > ${label}
                 `;
@@ -514,6 +565,46 @@
                     alert('Please enter the answer.');
                     return false;
                 }
+
+            } else if (subtype === 'numerical_answer') {
+                const container = document.getElementById('answerContent');
+
+                const selectedType = container.querySelector('input[name="numType"]:checked')?.value;
+
+                if (!selectedType) {
+                    alert('Please select answer type (Single or Range).');
+                    return false;
+                }
+
+                if (selectedType === 'single') {
+                    const singleInput = container.querySelector('[name="singleAnswer"]');
+                    const value = singleInput?.value?.trim();
+
+                    if (!value) {
+                        alert('Please enter the answer.');
+                        return false;
+                    }
+
+                } else if (selectedType === 'range') {
+                    const minInput = container.querySelector('[name="minAnswer"]');
+                    const maxInput = container.querySelector('[name="maxAnswer"]');
+
+                    const minVal = minInput?.value?.trim();
+                    const maxVal = maxInput?.value?.trim();
+
+                    if (!minVal || !maxVal) {
+                        alert('Please enter both minimum and maximum values.');
+                        return false;
+                    }
+
+                    const min = parseFloat(minVal);
+                    const max = parseFloat(maxVal);
+
+                    if (min > max) {
+                        alert('Minimum value cannot be greater than maximum value.');
+                        return false;
+                    }
+                }
             }
 
             return true;
@@ -542,7 +633,21 @@
                     .map(label => labelPool.indexOf(label) + 1)
                     .sort((a, b) => a - b)
                     .map(num => num.toString());
+
+            } else if (subtype === 'numerical_answer') {
+                const numType = document.querySelector('input[name="numType"]:checked')?.value;
+
+                if (numType === 'single') {
+                    const val = document.querySelector('[name="singleAnswer"]').value;
+                    answers = [val];
+                } else {
+                    const min = document.querySelector('[name="minAnswer"]').value;
+                    const max = document.querySelector('[name="maxAnswer"]').value;
+                    answers = [min, max];
+                }
+
             } else {
+                // integer_type
                 answers = [document.getElementById("answerInput").value];
             }
             const solution = document.getElementById('solutionDiv').querySelector('.editor').innerHTML.trim();
