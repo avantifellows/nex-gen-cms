@@ -27,7 +27,6 @@ const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
-const resourcesTemplate = "resources.html"
 
 type ChaptersHandler struct {
 	chaptersService *services.Service[models.Chapter]
