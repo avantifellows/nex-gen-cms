@@ -1,0 +1,23 @@
+{{ range . }}
+<tr class="border-b hover:bg-gray-100">
+    <td class="py-4 px-6">{{.Code}}</td>
+    <td class="px-6">{{ getName . "en" }}</td>
+    <td class="px-6">{{.Type}}</td>
+    <td class="px-6">{{.Subtype}}</td>
+    <td class="px-6 text-blue-500 hover:underline">
+        {{ if .TypeParams.SrcLink }}
+        <a href="{{ .TypeParams.SrcLink }}" target="_blank" rel="noopener noreferrer">
+            {{ .TypeParams.SrcLink }}
+        </a>
+        {{ end }}
+    </td>
+    <td class="space-x-4">
+        <button class="action-button">
+            <i class="fa-solid fa-pen"></i>
+        </button>
+        <button class="action-button">
+            <i class="fa-solid fa-trash"></i>
+        </button>
+    </td>
+</tr>
+{{ end }}
