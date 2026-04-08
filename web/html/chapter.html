@@ -9,7 +9,7 @@
     <div class="flex space-x-4 py-4">
         <div class="sub-tab active" 
             id="topics-sub-tab"
-            hx-trigger="load, click"
+            hx-trigger="load[document.getElementById('topics-sub-tab').classList.contains('active')], click"
             hx-get="/topics?id={{.ChapterPtr.ID}}" 
             hx-target="#subContent"
             onclick="
@@ -21,7 +21,7 @@
         <div class="sub-tab" 
             id="resources-sub-tab"
             hx-get="/resources?chapterId={{.ChapterPtr.ID}}"
-            hx-trigger="click"
+            hx-trigger="load[document.getElementById('resources-sub-tab').classList.contains('active')], click"
             hx-target="#subContent"
             onclick="
                 document.getElementById('resources-sub-tab').classList.add('active');

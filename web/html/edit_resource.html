@@ -22,6 +22,7 @@
     <div class="mb-4">
       <label for="subtype" class="block text-gray-700 font-medium mb-2">Subtype</label>
       <select id="subtype" name="subtype" class="w-full p-3 border border-gray-300 rounded">
+        <option value="" {{if not .Subtype}}selected{{end}}></option>
         <option value="Module" {{if eq .Subtype "Module"}}selected{{end}}>Module</option>
         <option value="Previous Year Questions" {{if eq .Subtype "Previous Year Questions"}}selected{{end}}>Previous Year Questions</option>
         <option value="Assessment" {{if eq .Subtype "Assessment"}}selected{{end}}>Assessment</option>

@@ -13,10 +13,12 @@ import (
 )
 
 const resourcesCurriculumListEndPoint = "resources/curriculum"
+const resourceEndPoint = "resource"
 const resourcesKey = "resources"
 
 const resourcesTemplate = "resources.html"
 const resourceRowTemplate = "resource_row.html"
+const editResourceTemplate = "edit_resource.html"
 
 type ResourcesHandler struct {
 	service *services.Service[models.Resource]
@@ -70,6 +72,57 @@ func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, requ
 	views.ExecuteTemplate(resourceRowTemplate, responseWriter, &filteredResources, template.FuncMap{
 		"getName": getResourceName,
 	})
+}
+
+func (h *ResourcesHandler) EditResource(responseWriter http.ResponseWriter, request *http.Request) {
+	resourceIdStr := request.URL.Query().Get("id")
+	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Resource ID", http.StatusBadRequest)
+		return
+	}
+
+	selectedResourcePtr, err := h.service.GetObject(resourceIdStr,
+		func(resource *models.Resource) bool {
+			return resource.ID == int(resourceId)
+		}, resourcesKey, resourceEndPoint)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching resource: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	views.ExecuteTemplate(editResourceTemplate, responseWriter, selectedResourcePtr, template.FuncMap{
+		"getName": getResourceName,
+	})
+}
+
+func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, request *http.Request) {
+	resourceIdStr := request.FormValue("id")
+	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Resource ID", http.StatusBadRequest)
+		return
+	}
+
+	resourceName := request.FormValue("name")
+	resourceCode := request.FormValue("code")
+	resourceType := request.FormValue("type")
+	resourceSubtype := request.FormValue("subtype")
+	srcLink := request.FormValue("src_link")
+
+	dummyResourcePtr := &models.Resource{}
+	resourceMap := dummyResourcePtr.BuildMap(resourceCode, resourceName, resourceType, resourceSubtype, srcLink)
+
+	_, err = h.service.UpdateObject(resourceIdStr, resourceEndPoint, resourceMap, resourcesKey,
+		func(resource *models.Resource) bool {
+			return resource.ID == int(resourceId)
+		})
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error updating resource: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	views.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Resource", nil)
 }
 
 func getResourceName(r models.Resource, lang string) string {

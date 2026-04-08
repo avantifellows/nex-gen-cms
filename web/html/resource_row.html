@@ -12,7 +12,7 @@
         {{ end }}
     </td>
     <td class="space-x-4">
-        <button class="action-button">
+        <button class="action-button" hx-get="/edit-resource?id={{.ID}}" hx-target="#subContent" hx-push-url="true">
             <i class="fa-solid fa-pen"></i>
         </button>
         <button class="action-button">
