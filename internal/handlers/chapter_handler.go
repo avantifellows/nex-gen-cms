@@ -27,6 +27,7 @@ const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
+const topicDropdownOptionalTemplate = "topic_dropdown_optional.html"
 
 type ChaptersHandler struct {
 	chaptersService *services.Service[models.Chapter]
@@ -316,6 +317,8 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	var filename string
 	if view == "list" {
 		filename = topicRowTemplate
+	} else if view == "dropdown-optional" {
+		filename = topicDropdownOptionalTemplate
 	} else {
 		filename = topicDropdownTemplate
 	}

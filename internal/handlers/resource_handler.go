@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"text/template"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
@@ -15,12 +17,14 @@ import (
 
 const resourcesEndPoint = "resource"
 const resourcesCurriculumEndPoint = "resources/curriculum"
+const moveResourceEndPoint = "resources/move"
 const resourcesKey = "resources"
 
 const resourcesTemplate = "resources.html"
 const resourceRowTemplate = "resource_row.html"
 const editResourceTemplate = "edit_resource.html"
 const addResourceTemplate = "add_resource.html"
+const moveResourcesTemplate = "move_resources_modal.html"
 
 var resourceTypeOptions = []string{"class", "content", "document", "quiz", "video"}
 var resourceSubtypeOptions = []string{"Module", "Previous Year Questions", "Assessment", "Video Lectures"}
@@ -252,6 +256,75 @@ func (h *ResourcesHandler) AddResource(responseWriter http.ResponseWriter, reque
 	views.ExecuteTemplate(resourceRowTemplate, responseWriter, resourcePtrs, template.FuncMap{
 		"getName": getResourceName,
 	})
+}
+
+func (h *ResourcesHandler) LoadMoveResources(responseWriter http.ResponseWriter, request *http.Request) {
+	resourceIDs := request.FormValue("resource_ids")
+	if strings.TrimSpace(resourceIDs) == "" {
+		http.Error(responseWriter, "Missing resource IDs", http.StatusBadRequest)
+		return
+	}
+	views.ExecuteTemplate(moveResourcesTemplate, responseWriter, resourceIDs, nil)
+}
+
+func (h *ResourcesHandler) MoveResource(responseWriter http.ResponseWriter, request *http.Request) {
+	err := request.ParseForm()
+	if err != nil {
+		http.Error(responseWriter, "Invalid form", http.StatusBadRequest)
+		return
+	}
+
+	curriculumID, gradeID, subjectID := getCurriculumGradeSubjectIds(request.Form)
+	if curriculumID == 0 || gradeID == 0 || subjectID == 0 {
+		http.Error(responseWriter, "Invalid curriculum, grade or subject ID", http.StatusBadRequest)
+		return
+	}
+
+	chapterIDStr := request.Form.Get("chapter-dropdown")
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Invalid Chapter ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	topicIDStr := strings.TrimSpace(request.Form.Get("topic_id"))
+	var topicID int16
+	if topicIDStr != "" {
+		topicID, err = utils.StringToIntType[int16](topicIDStr)
+		if err != nil {
+			http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
+			return
+		}
+	}
+
+	resourceIDsStr := strings.TrimSpace(request.Form.Get("resource_ids"))
+	if resourceIDsStr == "" {
+		http.Error(responseWriter, "Missing resource IDs", http.StatusBadRequest)
+		return
+	}
+	resourceIDs := utils.StringSliceToIntSlice(strings.Split(resourceIDsStr, ","))
+
+	requestBody := dto.MoveResourcesRequest{
+		ResourceIDs: resourceIDs,
+		CurriculumGrades: []models.CurriculumGrade{
+			{
+				CurriculumID: curriculumID,
+				GradeID:      gradeID,
+			},
+		},
+		SubjectID: subjectID,
+		ChapterID: chapterID,
+		TopicID:   topicID,
+		LangCode:  "en",
+	}
+
+	var result any
+	err = h.service.Post(moveResourceEndPoint, requestBody, &result)
+	if err != nil {
+		log.Println("move resource error:", err)
+		http.Error(responseWriter, "Failed to move resource", http.StatusInternalServerError)
+		return
+	}
 }
 
 func getResourceName(r models.Resource, lang string) string {

@@ -26,7 +26,7 @@
                 {{ else }}
                     hx-get="/api/resources?chapter_id={{.ChapterId}}"
                 {{ end }}
-                hx-trigger="load delay:150ms, change from:(#curriculum-dropdown, #grade-dropdown)"
+                hx-trigger="load delay:150ms, change from:(#curriculum-dropdown, #grade-dropdown), refreshResources"
                 hx-include="#curriculum-dropdown, #grade-dropdown">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>

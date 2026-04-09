@@ -25,7 +25,6 @@ const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
 const searchProblemsEndPoint = "problems/search"
 const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
-const moveProblemEndPoint = "resources/move"
 
 const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
@@ -465,8 +464,8 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 	problemIdsStr := request.Form.Get("problem_ids")
 	problemIds := utils.StringSliceToIntSlice(strings.Split(problemIdsStr, ","))
 
-	reqBody := dto.MoveProblemsRequest{
-		ProblemIDs: problemIds,
+	reqBody := dto.MoveResourcesRequest{
+		ResourceIDs: problemIds,
 		CurriculumGrades: []models.CurriculumGrade{
 			{
 				CurriculumID: curriculumId,
@@ -481,7 +480,7 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 
 	var result any
 
-	err = h.problemsService.Post(moveProblemEndPoint, reqBody, &result)
+	err = h.problemsService.Post(moveResourceEndPoint, reqBody, &result)
 	if err != nil {
 		log.Println("move problems error:", err)
 		http.Error(responseWriter, "Failed to move problems", http.StatusInternalServerError)

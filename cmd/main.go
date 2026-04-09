@@ -106,6 +106,8 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.Handle("/edit-resource", middleware.RequireHTMX(http.HandlerFunc(resourcesHandler.EditResource)))
 	muxHandler.HandleFunc("/update-resource", resourcesHandler.UpdateResource)
 	muxHandler.HandleFunc("/archive-resource", resourcesHandler.ArchiveResource)
+	muxHandler.HandleFunc("/resources/move-resource", resourcesHandler.LoadMoveResources)
+	muxHandler.HandleFunc("/move-resource", resourcesHandler.MoveResource)
 
 	conceptsHandler := appComponentPtr.ConceptsHandler
 	muxHandler.HandleFunc("/api/concepts", conceptsHandler.GetConcepts)

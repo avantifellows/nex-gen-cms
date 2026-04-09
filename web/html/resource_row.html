@@ -15,7 +15,8 @@
         <button class="action-button" hx-get="/edit-resource?id={{.ID}}" hx-target="#subContent" hx-push-url="true">
             <i class="fa-solid fa-pen"></i>
         </button>
-        <button class="action-button opacity-50 cursor-not-allowed" type="button" title="Move (coming soon)" disabled>
+        <button class="action-button" hx-post="/resources/move-resource" hx-target="body" hx-swap="beforeend"
+            hx-vals='{"resource_ids":"{{.ID}}"}' title="Move Resource">
             <i class="fa-solid fa-right-left"></i>
         </button>
         <button class="action-button" hx-delete="/archive-resource?id={{.ID}}"
