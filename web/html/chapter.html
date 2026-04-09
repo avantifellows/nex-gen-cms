@@ -20,7 +20,7 @@
         </div>
         <div class="sub-tab" 
             id="resources-sub-tab"
-            hx-get="/resources?chapterId={{.ChapterPtr.ID}}"
+            hx-get="/chapter/resources?chapterId={{.ChapterPtr.ID}}"
             hx-trigger="load[document.getElementById('resources-sub-tab').classList.contains('active')], click"
             hx-target="#subContent"
             onclick="

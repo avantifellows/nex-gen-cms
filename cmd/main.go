@@ -88,7 +88,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/chapter", chaptersHandler.GetChapter)
 	muxHandler.HandleFunc("/topics", chaptersHandler.LoadTopics)
 	muxHandler.HandleFunc("/api/topics", chaptersHandler.GetTopics)
-	muxHandler.HandleFunc("/resources", chaptersHandler.LoadResources)
+	muxHandler.HandleFunc("/chapter/resources", chaptersHandler.LoadResources)
 
 	topicsHandler := appComponentPtr.TopicsHandler
 	muxHandler.HandleFunc("/add-topic", topicsHandler.OpenAddTopic)
@@ -97,6 +97,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.Handle("/edit-topic", middleware.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic)))
 	muxHandler.HandleFunc("/update-topic", topicsHandler.UpdateTopic)
 	muxHandler.HandleFunc("/topic", topicsHandler.GetTopic)
+	muxHandler.HandleFunc("/topic/resources", topicsHandler.LoadResources)
 
 	resourcesHandler := appComponentPtr.ResourcesHandler
 	muxHandler.HandleFunc("/add-resource", resourcesHandler.OpenAddResource)

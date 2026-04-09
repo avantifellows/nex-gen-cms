@@ -6,4 +6,5 @@ type TopicsData struct {
 
 type ResourcesData struct {
 	ChapterId string
+	TopicId   string
 }

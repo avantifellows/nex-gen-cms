@@ -11,7 +11,12 @@
                     <th class="px-6 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody id="resourceTableBody" class="text-gray-600 text-sm" hx-get="/api/resources?chapter_id={{.ChapterId}}"
+            <tbody id="resourceTableBody" class="text-gray-600 text-sm"
+                {{ if .TopicId }}
+                    hx-get="/api/resources?topic_id={{.TopicId}}"
+                {{ else }}
+                    hx-get="/api/resources?chapter_id={{.ChapterId}}"
+                {{ end }}
                 hx-trigger="load" hx-include="#curriculum-dropdown, #grade-dropdown">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
@@ -19,11 +24,13 @@
     </div>
 
     <!-- Form to add new resource -->
-    <div class="mt-4">
-        <h4 id="addResourceLink" class="text-sm font-semibold text-blue-500 hover:underline" onclick="toggleResourceForm(event, '{{.ChapterId}}')">
-            <a href="#">Add New Resource</a>
-        </h4>
-    </div>
+    {{ if .ChapterId }}
+        <div class="mt-4">
+            <h4 id="addResourceLink" class="text-sm font-semibold text-blue-500 hover:underline" onclick="toggleResourceForm(event, '{{.ChapterId}}')">
+                <a href="#">Add New Resource</a>
+            </h4>
+        </div>
+    {{ end }}
 </div>
 <script>
     function toggleResourceForm(event, chapterId) {
