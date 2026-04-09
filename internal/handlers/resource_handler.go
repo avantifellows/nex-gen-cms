@@ -26,20 +26,17 @@ const editResourceTemplate = "edit_resource.html"
 const addResourceTemplate = "add_resource.html"
 const moveResourcesTemplate = "move_resources_modal.html"
 
-var resourceTypeOptions = []string{"class", "content", "document", "quiz", "video"}
-var resourceSubtypeOptions = []string{"Module", "Previous Year Questions", "Assessment", "Video Lectures"}
+var resourceTypeOptions = []string{"document", "quiz", "video"}
 
 type addResourceTemplateData struct {
-	ChapterID      string
-	TopicID        string
-	TypeOptions    []string
-	SubtypeOptions []string
+	ChapterID   string
+	TopicID     string
+	TypeOptions []string
 }
 
 type editResourceTemplateData struct {
-	Resource       *models.Resource
-	TypeOptions    []string
-	SubtypeOptions []string
+	Resource    *models.Resource
+	TypeOptions []string
 }
 
 type ResourcesHandler struct {
@@ -56,10 +53,9 @@ func (h *ResourcesHandler) OpenAddResource(responseWriter http.ResponseWriter, r
 	chapterId := request.URL.Query().Get("chapterId")
 	topicId := request.URL.Query().Get("topicId")
 	data := addResourceTemplateData{
-		ChapterID:      chapterId,
-		TopicID:        topicId,
-		TypeOptions:    resourceTypeOptions,
-		SubtypeOptions: resourceSubtypeOptions,
+		ChapterID:   chapterId,
+		TopicID:     topicId,
+		TypeOptions: resourceTypeOptions,
 	}
 	views.ExecuteTemplate(addResourceTemplate, responseWriter, data, nil)
 }
@@ -143,9 +139,8 @@ func (h *ResourcesHandler) EditResource(responseWriter http.ResponseWriter, requ
 	}
 
 	data := editResourceTemplateData{
-		Resource:       selectedResourcePtr,
-		TypeOptions:    resourceTypeOptions,
-		SubtypeOptions: resourceSubtypeOptions,
+		Resource:    selectedResourcePtr,
+		TypeOptions: resourceTypeOptions,
 	}
 	views.ExecuteTemplate(editResourceTemplate, responseWriter, data, template.FuncMap{
 		"getName": getResourceName,

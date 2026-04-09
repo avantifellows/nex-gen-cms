@@ -11,7 +11,8 @@
     </div>
     <div class="mb-4">
       <label for="type" class="block text-gray-700 font-medium mb-2">Type</label>
-      <select id="type" name="type" class="w-full p-3 border border-gray-300 rounded" required>
+      <select id="edit-resource-type" name="type" class="w-full p-3 border border-gray-300 rounded" required
+          onchange="ResourceForm.sync('edit-resource-type','edit-resource-subtype')">
         <option value="" disabled hidden {{if or (not .Resource.Type) (eq .Resource.Type "null")}}selected{{end}}>Select Type</option>
         {{ range .TypeOptions }}
         <option value="{{.}}" {{if eq $.Resource.Type .}}selected{{end}}>{{.}}</option>
@@ -20,11 +21,7 @@
     </div>
     <div class="mb-4">
       <label for="subtype" class="block text-gray-700 font-medium mb-2">Subtype</label>
-      <select id="subtype" name="subtype" class="w-full p-3 border border-gray-300 rounded">
-        <option value="" {{if or (not .Resource.Subtype) (eq .Resource.Subtype "null")}}selected{{end}}>Select Subtype</option>
-        {{ range .SubtypeOptions }}
-        <option value="{{.}}" {{if eq $.Resource.Subtype .}}selected{{end}}>{{.}}</option>
-        {{ end }}
+      <select id="edit-resource-subtype" name="subtype" class="w-full p-3 border border-gray-300 rounded" required>
       </select>
     </div>
     <div class="mb-4">
@@ -35,3 +32,6 @@
     <button type="submit" class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition">SAVE</button>
   </form>
 </div>
+<script>
+  ResourceForm.sync('edit-resource-type', 'edit-resource-subtype', {{ printf "%q" .Resource.Subtype }});
+</script>
