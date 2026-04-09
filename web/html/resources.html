@@ -11,13 +11,23 @@
                     <th class="px-6 text-center">Actions</th>
                 </tr>
             </thead>
+            <!-- Reason of using delay:150ms, change from:(#curriculum-dropdown, #grade-dropdown) here:
+             If we use hx-trigger="load", then it is fired immediately (often before afterDropdownReq() finishes 
+             restoring the curriculum/grade dropdown values from URL/session), which will produced the first request 
+             with the default dropdown values (like 1,1), then later another request with the restored values (like 2,3).
+             hx-trigger="load delay:150ms, change from:(#curriculum-dropdown, #grade-dropdown)" ensures the initial load 
+             happens after afterDropdownReq() has had time to set the correct dropdown values (it triggers onLoaded after 100ms), 
+             so you should see only one /api/resources call with the correct params when returning with Resources tab active. 
+             eg - Click edit on any resource -> Back. It should invoke /api/resources only once
+             -->
             <tbody id="resourceTableBody" class="text-gray-600 text-sm"
                 {{ if .TopicId }}
                     hx-get="/api/resources?topic_id={{.TopicId}}"
                 {{ else }}
                     hx-get="/api/resources?chapter_id={{.ChapterId}}"
                 {{ end }}
-                hx-trigger="load" hx-include="#curriculum-dropdown, #grade-dropdown">
+                hx-trigger="load delay:150ms, change from:(#curriculum-dropdown, #grade-dropdown)"
+                hx-include="#curriculum-dropdown, #grade-dropdown">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
