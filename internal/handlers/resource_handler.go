@@ -288,13 +288,14 @@ func (h *ResourcesHandler) MoveResource(responseWriter http.ResponseWriter, requ
 	}
 
 	topicIDStr := strings.TrimSpace(request.Form.Get("topic_id"))
-	var topicID int16
+	var topicIDPtr *int16
 	if topicIDStr != "" {
-		topicID, err = utils.StringToIntType[int16](topicIDStr)
-		if err != nil {
-			http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
+		topicID, parseErr := utils.StringToIntType[int16](topicIDStr)
+		if parseErr != nil {
+			http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", parseErr), http.StatusBadRequest)
 			return
 		}
+		topicIDPtr = &topicID
 	}
 
 	resourceIDsStr := strings.TrimSpace(request.Form.Get("resource_ids"))
@@ -314,7 +315,7 @@ func (h *ResourcesHandler) MoveResource(responseWriter http.ResponseWriter, requ
 		},
 		SubjectID: subjectID,
 		ChapterID: chapterID,
-		TopicID:   topicID,
+		TopicID:   topicIDPtr,
 		LangCode:  "en",
 	}
 

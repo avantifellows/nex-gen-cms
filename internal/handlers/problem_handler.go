@@ -460,6 +460,7 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
 		return
 	}
+	topicIdPtr := &topicId
 
 	problemIdsStr := request.Form.Get("problem_ids")
 	problemIds := utils.StringSliceToIntSlice(strings.Split(problemIdsStr, ","))
@@ -474,7 +475,7 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		},
 		SubjectID: subjectId,
 		ChapterID: chapterId,
-		TopicID:   topicId,
+		TopicID:   topicIdPtr,
 		LangCode:  "en",
 	}
 
