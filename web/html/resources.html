@@ -34,16 +34,15 @@
     </div>
 
     <!-- Form to add new resource -->
-    {{ if .ChapterId }}
-        <div class="mt-4">
-            <h4 id="addResourceLink" class="text-sm font-semibold text-blue-500 hover:underline" onclick="toggleResourceForm(event, '{{.ChapterId}}')">
-                <a href="#">Add New Resource</a>
-            </h4>
-        </div>
-    {{ end }}
+    <div class="mt-4">
+        <h4 id="addResourceLink" class="text-sm font-semibold text-blue-500 hover:underline"
+            onclick="toggleResourceForm(event, '{{.ChapterId}}', '{{.TopicId}}')">
+            <a href="#">Add New Resource</a>
+        </h4>
+    </div>
 </div>
 <script>
-    function toggleResourceForm(event, chapterId) {
+    function toggleResourceForm(event, chapterId, topicId) {
         event.preventDefault();
 
         var form = document.getElementById("addResourceForm");
@@ -51,7 +50,8 @@
         if (form != null) {
             form.remove();
         } else {
-            htmx.ajax('GET', `/add-resource?chapterId=${chapterId}`, {
+            const topicIdParam = topicId ? `&topicId=${topicId}` : '';
+            htmx.ajax('GET', `/add-resource?chapterId=${chapterId}${topicIdParam}`, {
                 target: '#addResourceLink',
                 swap: 'afterend'
             });

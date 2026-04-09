@@ -27,6 +27,7 @@ var resourceSubtypeOptions = []string{"Module", "Previous Year Questions", "Asse
 
 type addResourceTemplateData struct {
 	ChapterID      string
+	TopicID        string
 	TypeOptions    []string
 	SubtypeOptions []string
 }
@@ -49,8 +50,10 @@ func NewResourcesHandler(service *services.Service[models.Resource]) *ResourcesH
 
 func (h *ResourcesHandler) OpenAddResource(responseWriter http.ResponseWriter, request *http.Request) {
 	chapterId := request.URL.Query().Get("chapterId")
+	topicId := request.URL.Query().Get("topicId")
 	data := addResourceTemplateData{
 		ChapterID:      chapterId,
+		TopicID:        topicId,
 		TypeOptions:    resourceTypeOptions,
 		SubtypeOptions: resourceSubtypeOptions,
 	}
@@ -211,6 +214,16 @@ func (h *ResourcesHandler) AddResource(responseWriter http.ResponseWriter, reque
 		return
 	}
 
+	topicIdStr := request.FormValue("topic_id")
+	var topicId int16
+	if strings.TrimSpace(topicIdStr) != "" {
+		topicId, err = utils.StringToIntType[int16](topicIdStr)
+		if err != nil {
+			http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
+			return
+		}
+	}
+
 	curriculumIdStr := request.FormValue(CURRICULUM_DROPDOWN_NAME)
 	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
 	if err != nil {
@@ -226,6 +239,9 @@ func (h *ResourcesHandler) AddResource(responseWriter http.ResponseWriter, reque
 	}
 
 	newResourcePtr := models.NewResource(resourceCode, resourceName, resourceType, resourceSubtype, srcLink, chapterId, curriculumId, gradeId)
+	if topicId != 0 {
+		newResourcePtr.TopicID = topicId
+	}
 	newResourcePtr, err = h.service.AddObject(newResourcePtr, resourcesKey, resourcesEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error adding resource: %v", err), http.StatusInternalServerError)
