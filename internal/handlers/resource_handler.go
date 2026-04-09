@@ -62,6 +62,7 @@ func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, requ
 	curriculumIdStr := urlVals.Get(CURRICULUM_DROPDOWN_NAME)
 	gradeIdStr := urlVals.Get(GRADE_DROPDOWN_NAME)
 	chapterIdStr := urlVals.Get("chapter_id")
+	topicIdStr := urlVals.Get("topic_id")
 
 	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
 	if err != nil {
@@ -73,14 +74,26 @@ func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, requ
 		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
 		return
 	}
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
-	if err != nil {
-		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
-		return
+
+	isTopicRequest := strings.TrimSpace(topicIdStr) != ""
+	var queryParams string
+	if isTopicRequest {
+		topicId, err := utils.StringToIntType[int16](topicIdStr)
+		if err != nil {
+			http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
+			return
+		}
+		queryParams = fmt.Sprintf("?curriculum_id=%d&grade_id=%d&topic_id=%d", curriculumId, gradeId, topicId)
+	} else {
+		chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+		if err != nil {
+			http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
+			return
+		}
+		queryParams = fmt.Sprintf("?curriculum_id=%d&grade_id=%d&chapter_id=%d", curriculumId, gradeId, chapterId)
 	}
 
-	queryParams := fmt.Sprintf("?curriculum_id=%d&grade_id=%d&chapter_id=%d", curriculumId, gradeId, chapterId)
-	resources, err := h.service.GetList(resourcesCurriculumEndPoint+queryParams, resourcesKey, false, false)
+	resources, err := h.service.GetList(resourcesCurriculumEndPoint+queryParams, resourcesKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching resources: %v", err), http.StatusInternalServerError)
 		return
@@ -91,6 +104,10 @@ func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, requ
 	for _, resource := range *resources {
 		resourceType := strings.ToLower(resource.Type)
 		if resource.StatusID == constants.StatusArchived || resourceType == "problem" || resourceType == "test" {
+			continue
+		}
+		// If the request is for chapter resources, keep only rows that don't belong to a topic.
+		if !isTopicRequest && resource.TopicID != 0 {
 			continue
 		}
 		filteredResources = append(filteredResources, resource)

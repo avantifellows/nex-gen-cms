@@ -10,6 +10,7 @@ type Resource struct {
 	Subtype          string             `json:"subtype,omitempty"`
 	StatusID         int8               `json:"cms_status_id,omitempty"`
 	ChapterID        int16              `json:"chapter_id,omitempty"`
+	TopicID          int16              `json:"topic_id,omitempty"`
 	CurriculumGrades []CurriculumGrade  `json:"curriculum_grades,omitempty"`
 	TypeParams       ResourceTypeParams `json:"type_params,omitempty"`
 }
