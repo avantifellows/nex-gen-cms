@@ -968,6 +968,14 @@ video {
   display: flex;
 }
 
+#topic-problems-loader {
+  display: none;
+}
+
+#topic-problems-loader.htmx-request {
+  display: flex;
+}
+
 /* When form is making request */
 
 #move-problems-form.htmx-request .btn-text {
@@ -1841,11 +1849,6 @@ video {
   padding-bottom: 1rem;
 }
 
-.py-6 {
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
-}
-
 .pl-11 {
   padding-left: 2.75rem;
 }
@@ -2055,16 +2058,14 @@ video {
 
 /* Custom styles using @apply */
 
-#loader.htmx-request {
-  display: table-row-group;
-}
-
 /* Wrap MathJax formulae to next line */
+
 mjx-container[jax="CHTML"] mjx-math {
   white-space: normal !important;
 }
 
 /* If a matrix exists, disable wrapping for that formula */
+
 mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
   white-space: nowrap !important;
 }
