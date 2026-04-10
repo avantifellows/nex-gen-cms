@@ -69,7 +69,9 @@
                 {{ range $i, $ans := .ProblemPtr.MetaData.Answers }}
                     {{- if $i }}, {{ end }}
                     {{ printf "%c" (add 64 (stringToInt $ans)) -}}
-                {{ end }}        
+                {{ end }}
+            {{ else if and (eq .ProblemPtr.Subtype "numerical_answer") (eq (len .ProblemPtr.MetaData.Answers) 2) }}
+                [{{ index .ProblemPtr.MetaData.Answers 0 }} to {{ index .ProblemPtr.MetaData.Answers 1 }}]
             {{ else }}
                 {{ range .ProblemPtr.MetaData.Answers }}
                     {{ . }}

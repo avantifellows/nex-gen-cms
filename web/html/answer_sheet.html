@@ -65,7 +65,9 @@ window.MathJax = {
                                     {{ range $i, $ans := $p.MetaData.Answers }}
                                         {{- if $i }}, {{ end }}
                                         {{ printf "%c" (add 64 (stringToInt $ans)) -}}
-                                    {{ end }}                            
+                                    {{ end }}
+                                {{ else if and (eq $p.Subtype "numerical_answer") (eq (len $p.MetaData.Answers) 2) }}
+                                    [{{ index $p.MetaData.Answers 0 }} to {{ index $p.MetaData.Answers 1 }}]
                                 {{ else }}
                                     {{ range $p.MetaData.Answers }}
                                         {{ . }}
