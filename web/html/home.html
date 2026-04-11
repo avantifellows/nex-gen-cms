@@ -131,6 +131,7 @@
             function getTabURLFromPath(path) {
                 // Define URL-to-tab mapping based on expected paths
                 if (path.startsWith("/chapter")) return "chapters-tab";
+                if (path.startsWith("/topic")) return "chapters-tab";
                 if (path.startsWith("/test")) return "tests-tab";
                 if (path.startsWith("/problem")) return "problems-tab";
                 return null;
@@ -155,9 +156,17 @@
                     const activeTab = document.getElementById(activeTabId);
                     if (activeTab) activeTab.classList.add("active");
                 }
-                
-                // Hide subject dropdown when "Tests" tab is active
+
+                const curriculumDropdown = document.getElementById("curriculum-dropdown");
+                const gradeDropdown = document.getElementById("grade-dropdown");
                 const subjectDropdown = document.getElementById("subject-dropdown");
+                [curriculumDropdown, gradeDropdown, subjectDropdown].forEach(dropdown => {
+                    if (dropdown) {
+                        dropdown.style.display = "";
+                    }
+                });
+
+                // Hide subject dropdown when "Tests" tab is active
                 if (activeTabId === "tests-tab") { 
                     if (!(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test") 
                             || currentPath.endsWith("/copy-test"))) {
@@ -166,9 +175,7 @@
 
                 } else if (activeTabId === "problems-tab") {
                     if (currentPath.endsWith("/problems")) {
-                        const curriculumDropdown = document.getElementById("curriculum-dropdown");
                         curriculumDropdown.style.display = "none";
-                        const gradeDropdown = document.getElementById("grade-dropdown");
                         gradeDropdown.style.display = "none";
                         subjectDropdown.style.display = "none";
                     }
