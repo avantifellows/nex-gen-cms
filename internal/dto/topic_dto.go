@@ -2,7 +2,7 @@ package dto
 
 import "github.com/avantifellows/nex-gen-cms/internal/models"
 
-type ChapterData struct {
+type TopicData struct {
 	HomeData
-	ChapterPtr *models.Chapter
+	TopicPtr *models.Topic
 }
