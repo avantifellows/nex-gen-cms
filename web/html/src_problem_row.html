@@ -27,12 +27,17 @@
             const ctx = JSON.parse(document.getElementById("test-context-json").textContent);
             const testId = ctx.testId;
             const testRule = ctx.testRule;
+            const examId = Number(ctx.examId) || 0;
+            const jeeAdvancedExamId = Number(ctx.jeeAdvancedExamId) || 0;
+            const effectiveSubtype = (subtype === "matrix_match" && (jeeAdvancedExamId === 0 || examId !== jeeAdvancedExamId))
+                ? "mcq_single_answer"
+                : subtype;
 
             const questionsTableBody = document.querySelector("#questions-table-body");
 
-            const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${subtype}"]`);
+            const subtypeProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"][data-subtype="subtype-${effectiveSubtype}"]`);
             
-            if (testRule && !validateQuestionAgainstTestRule(testRule, subjectId, subtype, subtypeProblemRows.length, 
+            if (testRule && !validateQuestionAgainstTestRule(testRule, subjectId, effectiveSubtype, subtypeProblemRows.length, 
                     questionsTableBody).isValid) {
                 resolve();
                 return; // validation failed
@@ -57,7 +62,8 @@
                     "read-only-marks": !!testRule,
                     // single subject can be saved only in edit test scenario
                     "can-save-single-subject": mode === "edit",
-                    "test-id": testId
+                    "test-id": testId,
+                    "exam-id": String(examId)
                 }
             });
         });

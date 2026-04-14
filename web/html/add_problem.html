@@ -177,7 +177,7 @@
         let activeIndex = 0;
 
         const answerLabels = new Set([
-            {{ if and .ProblemPtr (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
+            {{ if and .ProblemPtr (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
                 {{ range .ProblemPtr.MetaData.Answers }}
                     {{ if . }}
                         '{{ printf "%c" (add 64 (stringToInt .)) }}',
@@ -198,7 +198,7 @@
 
         function onProblemTypeSelection(problemType) {
             const optionsDiv = document.getElementById('optionsDiv');
-            const isMCQ = problemType === 'mcq_single_answer' || problemType === 'mcq_multiple_answer';
+            const isMCQ = problemType === 'mcq_single_answer' || problemType === 'matrix_match' || problemType === 'mcq_multiple_answer';
             if (isMCQ) {
                 optionsDiv.classList.remove('hidden');
             } else {
@@ -212,7 +212,7 @@
             const answerContent = document.getElementById('answerContent');
             answerContent.innerHTML = ''; 
 
-            if (problemType === 'mcq_single_answer' || problemType === 'mcq_multiple_answer') {
+            if (problemType === 'mcq_single_answer' || problemType === 'matrix_match' || problemType === 'mcq_multiple_answer') {
                 // Add options & answer radio/checkboxes
                 renderTabs();
 
@@ -320,9 +320,9 @@
             {{ end }}
         ];
         
-        // Initial rendering of options & answers for mcq only
+        // Initial rendering of options & answers for mcq & matrix match only
         const subtype = document.getElementById('problem-type-dropdown').value;
-        if (subtype === 'mcq_single_answer' && subtype === 'mcq_multiple_answer') {
+        if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
             renderTabs();
             setActiveTab(0);
         }
@@ -339,7 +339,7 @@
             answerContent.querySelectorAll('label').forEach(label => label.remove());
 
             const problemType = document.getElementById('problem-type-dropdown').value;
-            const isSingle = problemType === 'mcq_single_answer';
+            const isSingle = problemType === 'mcq_single_answer' || problemType === 'matrix_match';
 
             tabs.forEach((_, index) => {
                 const label = getLabel(index);
@@ -379,7 +379,7 @@
 
                 // update answerLabels set on change
                 checkbox.addEventListener('change', (e) => {
-                    if (problemType === 'mcq_single_answer') {
+                    if (problemType === 'mcq_single_answer' || problemType === 'matrix_match') {
                         // Only one allowed → clear all first
                         answerLabels.clear();
                         if (e.target.checked) {
@@ -539,7 +539,7 @@
             }
 
             const subtype = document.getElementById('problem-type-dropdown').value;
-            if (subtype === 'mcq_single_answer' || subtype === 'mcq_multiple_answer') {
+            if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
                 if (typeof tabContent !== 'undefined' && Array.isArray(tabContent)) {
                     for (let i = 0; i < tabContent.length; i++) {
                         const optionLabel = String.fromCharCode(65 + i); // A, B, C...
@@ -626,7 +626,7 @@
 
             let options = null;
             let answers = [];
-            if (subtype === 'mcq_single_answer' || subtype === 'mcq_multiple_answer') {
+            if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
                 options = tabContent.map(item => item.html);
                 // Convert the labels to their number indexes (+1), sort in ascending order and then convert to strings
                 answers = Array.from(answerLabels)

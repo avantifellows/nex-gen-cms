@@ -12,4 +12,6 @@ type HomeData struct {
 	Problems     map[int]*models.Problem // key = Problem ID
 	TopicPtr     *models.Topic
 	TestRule     *models.TestRule
+	// Resolved from exams API (name JeeAdvancedExamName); 0 if not found.
+	JeeAdvancedExamID int16 `json:"jee_advanced_exam_id"`
 }
