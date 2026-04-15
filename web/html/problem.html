@@ -29,18 +29,18 @@
             CONCEPTS
         </h2>
         <p class="mt-2">
-            {{ range $index, $concept := .ProblemPtr.Concepts }}
-                {{ if $index }}, {{ end }}{{ getName $concept "en" }}
-            {{ end }}
+            {{- range $index, $concept := .ProblemPtr.Concepts -}}
+                {{- if $index }}, {{ end -}}{{ getName $concept "en" }}
+            {{- end -}}
         </p>
         {{ end }}
         <h2 class="text-lg font-semibold mt-4">
             SKILL
         </h2>
         <p class="mt-2">
-            {{ range $index, $skill := .ProblemPtr.Skills }}
-                {{ if $index }}, {{ end }}{{ $skill.Name }}
-            {{ end }}
+            {{- range $index, $skill := .ProblemPtr.Skills -}}
+                {{- if $index }}, {{ end -}}{{ $skill.Name }}
+            {{- end -}}
         </p>
         {{ if .ProblemPtr.MetaData.Options }}
         <h2 class="text-lg font-semibold mt-4">
