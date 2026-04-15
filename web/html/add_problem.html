@@ -222,7 +222,7 @@
                 const fragment = tmpl.content.cloneNode(true);
                 setupNumericalToggle(fragment);
                 answerContent.appendChild(fragment);
-                ensureNumericAnswer(problemType);
+                ensureNumericalAnswer();
 
             } else {
                 // Integer type fallback (simple input)
@@ -245,7 +245,7 @@
                         inputmode="numeric" value="${answer}">
                 `;
 
-                ensureNumericAnswer(problemType);            
+                ensureIntegerAnswer();
             }
         }
 
@@ -262,47 +262,61 @@
             });
         }
 
-        function ensureNumericAnswer(problemType) {
-            let inputs = [];
+        function ensureIntegerAnswer() {
+            const input = document.getElementById("answerInput");
+            if (!input) return;
 
-            if (problemType === 'numerical_answer') {
-                inputs = [
-                    document.querySelector('[name="singleAnswer"]'),
-                    document.querySelector('[name="minAnswer"]'),
-                    document.querySelector('[name="maxAnswer"]')
-                ].filter(Boolean);
+            input.addEventListener("input", function () {
+                this.value = sanitizeIntegerInput(this.value);
+            });
+        }
 
-            } else {
-                const input = document.getElementById("answerInput");
-                if (input) inputs = [input];
-            }
+        function ensureNumericalAnswer() {
+            const inputs = [
+                document.querySelector('[name="singleAnswer"]'),
+                document.querySelector('[name="minAnswer"]'),
+                document.querySelector('[name="maxAnswer"]')
+            ].filter(Boolean);
 
             inputs.forEach(input => {
                 input.addEventListener("input", function () {
-                    let value = this.value;
-
-                    if (problemType === 'integer_type') {
-                        // Only digits + '-'
-                        value = value.replace(/[^0-9-]/g, '');
-
-                    } else if (problemType === 'numerical_answer') {
-                        // Allow digits, '-', '.'
-                        value = value.replace(/[^0-9\-.]/g, '');
-
-                        // Only one '.'
-                        const parts = value.split('.');
-                        if (parts.length > 2) {
-                            value = parts[0] + '.' + parts.slice(1).join('');
-                        }
+                    const result = sanitizeNumericalInput(this.value);
+                    this.value = result.value;
+                    if (result.exceedsTwoDecimals) {
+                        this.setCustomValidity('Value exceeds 2 decimal places.');
+                        this.reportValidity();
+                    } else {
+                        this.setCustomValidity('');
                     }
-
-                    // Common logic → handle '-'
-                    const hasLeadingMinus = value.startsWith('-');
-                    value = (hasLeadingMinus ? '-' : '') + value.replace(/-/g, '');
-
-                    this.value = value;
                 });
             });
+        }
+
+        function sanitizeIntegerInput(rawValue) {
+            const safeValue = (rawValue ?? '').toString().replace(/[^0-9-]/g, '');
+            const hasLeadingMinus = safeValue.startsWith('-');
+            return (hasLeadingMinus ? '-' : '') + safeValue.replace(/-/g, '');
+        }
+
+        function sanitizeNumericalInput(rawValue) {
+            const safeValue = (rawValue ?? '').toString().replace(/[^0-9\-.]/g, '');
+            const hasLeadingMinus = safeValue.startsWith('-');
+            const unsignedValue = safeValue.replace(/-/g, '');
+
+            const firstDotIndex = unsignedValue.indexOf('.');
+            if (firstDotIndex === -1) {
+                return {
+                    value: (hasLeadingMinus ? '-' : '') + unsignedValue,
+                    exceedsTwoDecimals: false
+                };
+            }
+
+            const integerPart = unsignedValue.slice(0, firstDotIndex).replace(/\./g, '');
+            const decimalPartRaw = unsignedValue.slice(firstDotIndex + 1).replace(/\./g, '');
+            return {
+                value: (hasLeadingMinus ? '-' : '') + integerPart + '.' + decimalPartRaw.slice(0, 2),
+                exceedsTwoDecimals: decimalPartRaw.length > 2
+            };
         }
 
         const editor = optionsDiv.querySelector('.editor');
