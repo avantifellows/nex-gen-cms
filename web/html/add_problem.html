@@ -163,14 +163,17 @@
         const labelPool = 'ABCDEFGHIJ';
 
         // Determine tab count
-        // even when options are not available (in case of interger/numerical type), then
+        // by default start with 4 tabs for 
+        // 1) add problem case
+        // 2) edit problem case where options are not available
+        // Reason for Edit problem case - even when options are not available (in case of interger/numerical type), then
         // keep 4 tabs so that while editing such problem if type is changed to mcq
-        // then 4 option abs will be visible by default
+        // then 4 option tabs will be visible by default
         let tabs = new Array(
             {{ if and .ProblemPtr (gt (len .ProblemPtr.MetaData.Options) 0) }}
                 {{ len .ProblemPtr.MetaData.Options }}
             {{ else }}
-                4   // by default start with 4 tabs for add problem case
+                4
             {{ end }}
         ).fill(null);
 
