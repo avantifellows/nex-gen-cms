@@ -1,0 +1,70 @@
+{{ define "test_instructions_modal" }}
+<div id="test-instructions-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    onclick="if (event.target === this) closeInstructionsModal()">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-5xl mx-4 p-4">
+        <div class="flex items-center justify-between border-b pb-2">
+            <h2 class="text-lg font-semibold">Test Instructions</h2>
+            <button type="button" class="text-gray-500 hover:text-gray-700"
+                onclick="closeInstructionsModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="test-instructions-editor-wrapper" class="mt-3">
+            {{ template "editor" }}
+        </div>
+
+        <div class="mt-4 flex justify-end gap-2">
+            <button type="button" class="px-4 py-2 border rounded hover:bg-gray-100"
+                onclick="closeInstructionsModal()">
+                Cancel
+            </button>
+            <button type="button" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                onclick="saveInstructionsModal()">
+                Save Instructions
+            </button>
+        </div>
+    </div>
+</div>
+<script src="/web/static/js/editor.js"></script>
+<script>
+    function getCurrentInstructions() {
+        const hiddenInput = document.getElementById("test-instructions");
+        return hiddenInput?.value || "";
+    }
+
+    function getInstructionsEditor() {
+        const wrapper = document.getElementById("test-instructions-editor-wrapper");
+        return wrapper?.querySelector(".editor");
+    }
+
+    function openInstructionsModal() {
+        const modal = document.getElementById("test-instructions-modal");
+        const editor = getInstructionsEditor();
+        const initialInstructions = getCurrentInstructions() || "";
+
+        if (editor) {
+            editor.innerHTML = initialInstructions;
+            if (typeof renderMath === "function") {
+                renderMath(editor);
+            }
+            editor.focus();
+        }
+
+        modal.classList.remove("hidden");
+    }
+
+    function closeInstructionsModal() {
+        const modal = document.getElementById("test-instructions-modal");
+        modal.classList.add("hidden");
+    }
+
+    function saveInstructionsModal() {
+        const hiddenInput = document.getElementById("test-instructions");
+        const editor = getInstructionsEditor();
+        hiddenInput.value = editor ? editor.innerHTML.trim() : "";
+        closeInstructionsModal();
+    }
+</script>
+{{ end }}

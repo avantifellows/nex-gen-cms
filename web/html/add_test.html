@@ -190,7 +190,22 @@
             hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}}, {{index .TestPtr.ExamIDs 0}})'
         {{ end }}>
 
-        <label class="font-semibold">Select Test Code</label>
+        {{ $defaultInstructions := "" }}
+        {{ if and .TestRule .TestRule.Config.Instructions }}
+            {{ $defaultInstructions = printf "%s" .TestRule.Config.Instructions }}
+        {{ end }}
+        {{ $existingInstructions := "" }}
+        {{ if .TestPtr.TypeParams.Instructions }}
+            {{ $existingInstructions = printf "%s" .TestPtr.TypeParams.Instructions }}
+        {{ end }}
+        <div class="flex items-center justify-between">
+            <label class="font-semibold">Select Test Code</label>
+            <button type="button" id="test-instructions-link"
+                class="text-blue-600 hover:text-blue-800 hover:underline"
+                onclick="openInstructionsModal()">
+                Test Instructions
+            </button>
+        </div>
         <div class="flex items-center gap-2 mt-2 mb-2">
             {{/* Define variables with empty values first so as to access them out of if-end block */}}
             {{ $program := "" }}
@@ -247,6 +262,11 @@
                 {{end}}
             </select>
         </div>
+        <input type="hidden" id="test-instructions"
+            value='{{ if $existingInstructions }}{{ $existingInstructions }}{{ else }}{{ $defaultInstructions }}{{ end }}'>
+        <input type="hidden" id="test-instructions-default-from-rule"
+            value='{{ $defaultInstructions }}'>
+        {{ template "test_instructions_modal" }}
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="p-2 border rounded flex-1"
@@ -580,6 +600,11 @@
     // Close with ESC
     addTestDiv.onkeydown = function (e) {
         if (e.key === "Escape") {
+            const modal = document.getElementById("test-instructions-modal");
+            if (modal && !modal.classList.contains("hidden")) {
+                closeInstructionsModal();
+                return;
+            }
             suggestions.classList.add("hidden");
         }
     };
@@ -991,6 +1016,18 @@
                     });
             });
 
+        const typeParams = {
+            duration: document.getElementById('duration').value,
+            marks: parseInt(document.getElementById('total-marks').textContent.trim()),
+            pos_marks: getMarksArray(posChips),
+            neg_marks: getMarksArray(negChips),
+            subjects: subjects
+        };
+        // Only persist instructions when they differ from the test-rule default (omit to let the rule apply; avoids redundant storage).
+        if (shouldIncludeTestInstructionsInPayload()) {
+            typeParams.instructions = getCurrentInstructions();
+        }
+
         return {
             code: code,
             name: [
@@ -1003,16 +1040,16 @@
             subtype: subtype,
             exam_ids: [examId],
             skill_ids: Array.from(skillIdSet),
-            type_params: {
-                duration: document.getElementById('duration').value,
-                marks: parseInt(document.getElementById('total-marks').textContent.trim()),
-                pos_marks: getMarksArray(posChips),
-                neg_marks: getMarksArray(negChips),
-                subjects: subjects
-            },
+            type_params: typeParams,
             // Used spread operator to add curriculum_grades node only for add/copy test scenario; otherwise it won't add this node
             ...(mode !== "edit" ? { curriculum_grades: curriculumGrades } : {})
         };
+    }
+
+    function shouldIncludeTestInstructionsInPayload() {
+        const current = (getCurrentInstructions() || "").trim();
+        const defaultFromRule = (document.getElementById('test-instructions-default-from-rule')?.value || "").trim();
+        return current !== defaultFromRule;
     }
 
     function buildAllSubjectsJson() {

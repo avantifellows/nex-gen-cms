@@ -1062,6 +1062,11 @@ video {
   margin: 1.75rem;
 }
 
+.mx-4 {
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -1705,6 +1710,10 @@ video {
   border-top-color: transparent;
 }
 
+.bg-black\/50 {
+  background-color: rgb(0 0 0 / 0.5);
+}
+
 .bg-blue-100 {
   --tw-bg-opacity: 1;
   background-color: rgb(219 234 254 / var(--tw-bg-opacity));
@@ -1841,9 +1850,8 @@ video {
   padding-bottom: 1rem;
 }
 
-.py-6 {
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
+.pb-2 {
+  padding-bottom: 0.5rem;
 }
 
 .pl-11 {
@@ -2055,16 +2063,14 @@ video {
 
 /* Custom styles using @apply */
 
-#loader.htmx-request {
-  display: table-row-group;
-}
-
 /* Wrap MathJax formulae to next line */
+
 mjx-container[jax="CHTML"] mjx-math {
   white-space: normal !important;
 }
 
 /* If a matrix exists, disable wrapping for that formula */
+
 mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
   white-space: nowrap !important;
 }
@@ -2098,9 +2104,19 @@ mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
   font-weight: 700;
 }
 
+.hover\:text-blue-800:hover {
+  --tw-text-opacity: 1;
+  color: rgb(30 64 175 / var(--tw-text-opacity));
+}
+
 .hover\:text-blue-900:hover {
   --tw-text-opacity: 1;
   color: rgb(30 58 138 / var(--tw-text-opacity));
+}
+
+.hover\:text-gray-700:hover {
+  --tw-text-opacity: 1;
+  color: rgb(55 65 81 / var(--tw-text-opacity));
 }
 
 .hover\:text-gray-800:hover {
