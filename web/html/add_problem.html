@@ -602,6 +602,11 @@
                         return false;
                     }
 
+                    if (sanitizeNumericalInput(value).exceedsTwoDecimals) {
+                        alert('Numerical answers must have at most 2 decimal places.');
+                        return false;
+                    }
+
                 } else if (selectedType === 'range') {
                     const minInput = container.querySelector('[name="minAnswer"]');
                     const maxInput = container.querySelector('[name="maxAnswer"]');
@@ -611,6 +616,12 @@
 
                     if (!minVal || !maxVal) {
                         alert('Please enter both minimum and maximum values.');
+                        return false;
+                    }
+
+                    if (sanitizeNumericalInput(minVal).exceedsTwoDecimals ||
+                        sanitizeNumericalInput(maxVal).exceedsTwoDecimals) {
+                        alert('Numerical answers must have at most 2 decimal places.');
                         return false;
                     }
 
