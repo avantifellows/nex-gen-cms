@@ -168,11 +168,13 @@ func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *ht
 	}
 
 	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
-	data := dto.HomeData{
-		CurriculumID: curriculumId,
-		GradeID:      gradeId,
-		SubjectID:    subjectId,
-		TopicPtr:     selectedTopicPtr,
+	data := dto.TopicData{
+		HomeData: dto.HomeData{
+			CurriculumID: curriculumId,
+			GradeID:      gradeId,
+			SubjectID:    subjectId,
+		},
+		TopicPtr: selectedTopicPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getTopicName,

@@ -124,11 +124,13 @@ func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	data := dto.HomeData{
-		CurriculumID: selectedChapterPtr.CurriculumID,
-		GradeID:      selectedChapterPtr.GradeID,
-		SubjectID:    selectedChapterPtr.SubjectID,
-		ChapterPtr:   selectedChapterPtr,
+	data := dto.ChapterData{
+		HomeData: dto.HomeData{
+			CurriculumID: selectedChapterPtr.CurriculumID,
+			GradeID:      selectedChapterPtr.GradeID,
+			SubjectID:    selectedChapterPtr.SubjectID,
+		},
+		ChapterPtr: selectedChapterPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getChapterName,
@@ -283,11 +285,13 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	data := dto.HomeData{
-		CurriculumID: curriculumId,
-		GradeID:      gradeId,
-		SubjectID:    subjectId,
-		ChapterPtr:   selectedChapterPtr,
+	data := dto.ChapterData{
+		HomeData: dto.HomeData{
+			CurriculumID: curriculumId,
+			GradeID:      gradeId,
+			SubjectID:    subjectId,
+		},
+		ChapterPtr: selectedChapterPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getChapterName,
@@ -297,7 +301,7 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request *http.Request) {
 	chapterIdStr := request.URL.Query().Get("id")
 	data := dto.TopicsData{
-		ChapterId: chapterIdStr,
+		ChapterID: chapterIdStr,
 	}
 	views.ExecuteTemplate(topicsTemplate, responseWriter, data, nil)
 }

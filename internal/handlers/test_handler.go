@@ -294,10 +294,12 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 		return
 	}
 
-	data := dto.HomeData{
-		CurriculumID: selectedTestPtr.CurriculumGrades[0].CurriculumID,
-		GradeID:      selectedTestPtr.CurriculumGrades[0].GradeID,
-		TestPtr:      selectedTestPtr,
+	data := dto.TestData{
+		HomeData: dto.HomeData{
+			CurriculumID: selectedTestPtr.CurriculumGrades[0].CurriculumID,
+			GradeID:      selectedTestPtr.CurriculumGrades[0].GradeID,
+		},
+		TestPtr: selectedTestPtr,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, nil, baseTemplate, testTemplate)
@@ -474,9 +476,9 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
-func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error) {
+func (h *TestsHandler) buildTestData(request *http.Request) (dto.TestData, error) {
 	if err := request.ParseForm(); err != nil {
-		return dto.HomeData{}, fmt.Errorf("invalid form data: %w", err)
+		return dto.TestData{}, fmt.Errorf("invalid form data: %w", err)
 	}
 
 	curriculums := request.Form["curriculum[]"]
@@ -487,12 +489,12 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error
 	for i := range curriculums {
 		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
 		if err != nil {
-			return dto.HomeData{}, fmt.Errorf("invalid curriculum id at index %d", i)
+			return dto.TestData{}, fmt.Errorf("invalid curriculum id at index %d", i)
 		}
 
 		gradeId, err := utils.StringToIntType[int8](grades[i])
 		if err != nil {
-			return dto.HomeData{}, fmt.Errorf("invalid grade id at index %d", i)
+			return dto.TestData{}, fmt.Errorf("invalid grade id at index %d", i)
 		}
 
 		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
@@ -503,7 +505,7 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error
 
 	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
 	if err != nil {
-		return dto.HomeData{}, fmt.Errorf("invalid exam id")
+		return dto.TestData{}, fmt.Errorf("invalid exam id")
 	}
 
 	testRule, err := h.getTestRule(testType, examId)
@@ -511,7 +513,7 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error
 		fmt.Println(err.Error())
 	}
 
-	data := dto.HomeData{
+	data := dto.TestData{
 		TestPtr: &models.Test{
 			ExamIDs:          []int8{examId},
 			Subtype:          testType,
@@ -640,7 +642,7 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		}
 	}
 
-	data := dto.HomeData{
+	data := dto.TestData{
 		TestPtr:  selectedTestPtr,
 		Problems: problemsMap,
 		TestRule: testRule,
@@ -1017,7 +1019,7 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		problemsMap[p.ID] = p
 	}
 
-	data := dto.HomeData{
+	data := dto.TestData{
 		TestPtr:  &copiedTest,
 		Problems: problemsMap,
 	}
