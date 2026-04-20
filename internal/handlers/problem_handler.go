@@ -65,11 +65,13 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	data := dto.HomeData{
-		ProblemPtr:   selectedProblemPtr,
-		CurriculumID: selectedProblemPtr.CurriculumID,
-		GradeID:      selectedProblemPtr.GradeID,
-		SubjectID:    selectedProblemPtr.SubjectID,
+	data := dto.ProblemData{
+		HomeData: dto.HomeData{
+			CurriculumID: selectedProblemPtr.CurriculumID,
+			GradeID:      selectedProblemPtr.GradeID,
+			SubjectID:    selectedProblemPtr.SubjectID,
+		},
+		ProblemPtr: selectedProblemPtr,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -250,7 +252,7 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	data := dto.HomeData{
+	data := dto.ProblemData{
 		TopicPtr: selectedTopicPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -289,11 +291,13 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	data := dto.HomeData{
-		ProblemPtr:   selectedProblemPtr,
-		CurriculumID: selectedProblemPtr.CurriculumID,
-		GradeID:      selectedProblemPtr.GradeID,
-		SubjectID:    selectedProblemPtr.SubjectID,
+	data := dto.ProblemData{
+		HomeData: dto.HomeData{
+			CurriculumID: selectedProblemPtr.CurriculumID,
+			GradeID:      selectedProblemPtr.GradeID,
+			SubjectID:    selectedProblemPtr.SubjectID,
+		},
+		ProblemPtr: selectedProblemPtr,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
