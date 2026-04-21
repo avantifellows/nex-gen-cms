@@ -6,3 +6,8 @@ type ChapterData struct {
 	HomeData
 	ChapterPtr *models.Chapter
 }
+
+type ResourcesData struct {
+	ChapterId string
+	TopicId   string
+}

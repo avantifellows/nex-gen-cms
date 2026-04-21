@@ -35,6 +35,16 @@ func NewTopicsHandler(service *services.Service[models.Topic]) *TopicsHandler {
 	}
 }
 
+func (h *TopicsHandler) LoadResources(responseWriter http.ResponseWriter, request *http.Request) {
+	topicIdStr := request.URL.Query().Get("topicId")
+	chapterIdStr := request.URL.Query().Get("chapterId")
+	data := dto.ResourcesData{
+		ChapterId: chapterIdStr,
+		TopicId: topicIdStr,
+	}
+	views.ExecuteTemplate(resourcesTemplate, responseWriter, data, nil)
+}
+
 func (h *TopicsHandler) OpenAddTopic(responseWriter http.ResponseWriter, request *http.Request) {
 	chapterId := request.URL.Query().Get("chapterId")
 	views.ExecuteTemplate(addTopicTemplate, responseWriter, chapterId, nil)

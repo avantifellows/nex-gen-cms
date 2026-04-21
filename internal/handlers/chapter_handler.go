@@ -27,6 +27,7 @@ const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
+const topicDropdownOptionalTemplate = "topic_dropdown_optional.html"
 
 type ChaptersHandler struct {
 	chaptersService *services.Service[models.Chapter]
@@ -306,12 +307,22 @@ func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request
 	views.ExecuteTemplate(topicsTemplate, responseWriter, data, nil)
 }
 
+func (h *ChaptersHandler) LoadResources(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterIdStr := request.URL.Query().Get("chapterId")
+	data := dto.ResourcesData{
+		ChapterId: chapterIdStr,
+	}
+	views.ExecuteTemplate(resourcesTemplate, responseWriter, data, nil)
+}
+
 func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
 	view := urlVals.Get("view")
 	var filename string
 	if view == "list" {
 		filename = topicRowTemplate
+	} else if view == "dropdown-optional" {
+		filename = topicDropdownOptionalTemplate
 	} else {
 		filename = topicDropdownTemplate
 	}
