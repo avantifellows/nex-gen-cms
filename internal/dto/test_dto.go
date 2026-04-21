@@ -7,6 +7,6 @@ type TestData struct {
 	TestPtr  *models.Test
 	Problems map[int]*models.Problem // key = Problem ID
 	TestRule *models.TestRule
-	// True when the test's exam is JEE Advanced (matrix match gets its own section on add-test).
-	IsJeeAdvancedExam bool `json:"IsJeeAdvancedExam"`
+	// Resolved from exams API (name JeeAdvancedExamName); 0 if not found.
+	JeeAdvancedExamID int16 `json:"jee_advanced_exam_id"`
 }
