@@ -5,6 +5,7 @@ window.ResourceForm = {
     subtypesByType: {
         document: ["Module", "Previous Year Questions"],
         quiz: ["Assessment"],
+        quiz_template: ["Quiz Template"],
         video: ["Video Lectures"],
     },
 

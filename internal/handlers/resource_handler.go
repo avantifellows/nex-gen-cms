@@ -26,7 +26,7 @@ const editResourceTemplate = "edit_resource.html"
 const addResourceTemplate = "add_resource.html"
 const moveResourcesTemplate = "move_resources_modal.html"
 
-var resourceTypeOptions = []string{"document", "quiz", "video"}
+var resourceTypeOptions = []string{"document", "quiz", "quiz_template", "video"}
 
 type addResourceTemplateData struct {
 	ChapterID   string
