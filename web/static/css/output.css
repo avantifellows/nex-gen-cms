@@ -969,6 +969,14 @@ video {
   display: flex;
 }
 
+#topic-problems-loader {
+  display: none;
+}
+
+#topic-problems-loader.htmx-request {
+  display: flex;
+}
+
 /* When form is making request */
 
 #move-problems-form.htmx-request .btn-text {
