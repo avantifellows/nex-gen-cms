@@ -1,6 +1,6 @@
 module github.com/avantifellows/nex-gen-cms
 
-go 1.23
+go 1.24.1
 
 require github.com/joho/godotenv v1.5.1
 
@@ -23,5 +23,5 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.1.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
-	gopkg.in/yaml.v2 v2.2.2 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )

@@ -1,0 +1,80 @@
+{{ define "content" }}
+<div class="max-w-5xl mx-auto py-6">
+    <h2 class="text-2xl font-bold mb-1 text-gray-800">PDF Question Importer <span class="text-sm font-normal text-gray-400 ml-2">(POC)</span></h2>
+    <p class="text-gray-500 text-sm mb-6">Upload a JEE mock test PDF to extract questions using Gemini AI.</p>
+
+    <form method="POST" action="/pdf-import" enctype="multipart/form-data"
+        class="flex items-center gap-4 bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-8">
+        <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Select PDF:</label>
+        <input type="file" name="pdf_file" accept=".pdf" required
+            class="block text-sm text-gray-600 border border-gray-300 rounded px-3 py-1.5 flex-1
+                   file:mr-3 file:py-1 file:px-3 file:border-0 file:rounded file:text-sm
+                   file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+        <button type="submit"
+            class="bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded hover:bg-blue-700 whitespace-nowrap transition-colors">
+            Extract Questions
+        </button>
+    </form>
+
+    {{ if .Processed }}
+
+        {{ if .Error }}
+        <div class="bg-red-50 border border-red-300 text-red-700 rounded-lg px-4 py-3 mb-6 text-sm">
+            <strong>Error:</strong> <pre class="inline whitespace-pre-wrap">{{ .Error }}</pre>
+        </div>
+        {{ else }}
+        <div class="bg-green-50 border border-green-300 text-green-700 rounded-lg px-4 py-3 mb-6 text-sm font-medium">
+            ✓ Extracted <strong>{{ len .Questions }}</strong> question(s)
+        </div>
+
+        <div class="space-y-4">
+            {{ range .Questions }}
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                <div class="flex items-center gap-2 bg-gray-50 border-b border-gray-200 px-4 py-2">
+                    <span class="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded">Q{{ .Number }}</span>
+                    {{ if eq .Type "numerical" }}
+                    <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">Numerical</span>
+                    {{ else }}
+                    <span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2 py-0.5 rounded">MCQ</span>
+                    {{ end }}
+                </div>
+                <div class="px-4 py-3" data-mathjax>
+                    <div class="text-gray-800 text-sm leading-relaxed mb-3">{{ .Text }}</div>
+                    {{ if .Options }}
+                    <ul class="space-y-1 border-t border-gray-100 pt-3">
+                        {{ range $i, $opt := .Options }}
+                        <li class="flex items-start gap-2 text-sm text-gray-700">
+                            <span class="flex-shrink-0 w-5 h-5 bg-gray-100 text-gray-600 rounded text-xs flex items-center justify-center font-semibold">
+                                {{ if eq $i 0 }}A{{ else if eq $i 1 }}B{{ else if eq $i 2 }}C{{ else if eq $i 3 }}D{{ else }}{{ $i }}{{ end }}
+                            </span>
+                            <span>{{ $opt }}</span>
+                        </li>
+                        {{ end }}
+                    </ul>
+                    {{ end }}
+                </div>
+            </div>
+            {{ end }}
+        </div>
+        {{ end }}
+
+        <details class="mt-8 border border-gray-200 rounded-lg overflow-hidden">
+            <summary class="cursor-pointer bg-gray-50 px-4 py-2 text-xs font-medium text-gray-500 hover:bg-gray-100 select-none">
+                Raw Gemini Response (debug)
+            </summary>
+            <pre class="bg-gray-900 text-green-400 text-xs p-4 overflow-auto max-h-96 whitespace-pre-wrap">{{ .RawResponse }}</pre>
+        </details>
+
+        <script>
+            // Trigger MathJax after all async scripts (including MathJax itself) have loaded.
+            // 'load' fires after async scripts; 'DOMContentLoaded' fires too early for async MathJax.
+            window.addEventListener("load", function () {
+                if (window.MathJax) {
+                    MathJax.typesetPromise(document.querySelectorAll('[data-mathjax]')).catch(console.error);
+                }
+            });
+        </script>
+
+    {{ end }}
+</div>
+{{ end }}

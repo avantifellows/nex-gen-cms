@@ -26,6 +26,7 @@ type AppComponent struct {
 	ProblemsHandler    *handlers.ProblemsHandler
 	TagsHandler        *handlers.TagsHandler
 	ExamsHandler       *handlers.ExamsHandler
+	PdfImportHandler   *handlers.PdfImportHandler
 }
 
 func NewAppComponent() (*AppComponent, error) {
@@ -66,6 +67,8 @@ func NewAppComponent() (*AppComponent, error) {
 	tagsHandler := handlers.NewTagsHandler(tagsService)
 	examsHandler := handlers.NewExamsHandler(examsService)
 
+	pdfImportHandler := handlers.NewPdfImportHandler()
+
 	return &AppComponent{
 		CssPathHandler:     cssPathHandler,
 		LoginHandler:       loginHandler,
@@ -81,5 +84,6 @@ func NewAppComponent() (*AppComponent, error) {
 		ProblemsHandler:    problemsHandler,
 		TagsHandler:        tagsHandler,
 		ExamsHandler:       examsHandler,
+		PdfImportHandler:   pdfImportHandler,
 	}, nil
 }
