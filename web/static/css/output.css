@@ -1671,6 +1671,11 @@ video {
   border-color: rgb(37 99 235 / var(--tw-border-opacity));
 }
 
+.border-gray-200 {
+  --tw-border-opacity: 1;
+  border-color: rgb(229 231 235 / var(--tw-border-opacity));
+}
+
 .border-gray-300 {
   --tw-border-opacity: 1;
   border-color: rgb(209 213 219 / var(--tw-border-opacity));
@@ -1839,11 +1844,6 @@ video {
 .py-4 {
   padding-top: 1rem;
   padding-bottom: 1rem;
-}
-
-.py-6 {
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
 }
 
 .pl-11 {
@@ -2055,16 +2055,14 @@ video {
 
 /* Custom styles using @apply */
 
-#loader.htmx-request {
-  display: table-row-group;
-}
-
 /* Wrap MathJax formulae to next line */
+
 mjx-container[jax="CHTML"] mjx-math {
   white-space: normal !important;
 }
 
 /* If a matrix exists, disable wrapping for that formula */
+
 mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
   white-space: nowrap !important;
 }

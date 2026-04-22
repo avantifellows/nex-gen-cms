@@ -55,6 +55,10 @@
                         target="_blank"class="action-button" title="Download Answers PDF">
                             <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
                     </a>
+                    <a href="/download-pdf?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions_with_answers" 
+                        target="_blank" class="action-button" title="Download Questions with Answers PDF">
+                            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q+A</span>
+                    </a>
                     <button class="action-button" hx-get="/tests/copy-test?id={{ $test.ID }}&curriculum_id={{$curriculumId}}" 
                         hx-target="body" title="Copy Test" hx-push-url="true">
                         <i class="fa-solid fa-copy"></i>
