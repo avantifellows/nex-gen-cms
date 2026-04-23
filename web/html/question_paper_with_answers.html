@@ -73,8 +73,8 @@ window.MathJax = {
                     <div class="flex-1 pl-5 whitespace-pre-wrap">{{$p.MetaData.Question}}</div>
                 </div>
 
-                <!-- Show Options only if MCQ -->
-                {{if or (eq $p.Subtype "mcq_single_answer") (eq $p.Subtype "mcq_multiple_answer")}}
+                <!-- Show Options only if MCQ or Matrix Match -->
+                {{if or (eq $p.Subtype "mcq_single_answer") (eq $p.Subtype "mcq_multiple_answer") (eq $p.Subtype "matrix_match")}}
                 <div class="pl-11">
 
                     {{/* Determine option layout */}}
@@ -107,7 +107,24 @@ window.MathJax = {
                     <div class="flex-1 pl-5">
                         <div class="border border-gray-300 rounded p-2 bg-gray-50 text-sm">
                             <span class="font-semibold">Answer:</span>
-                            <span class="ml-2">{{- if eq $p.Subtype "mcq_single_answer" -}}{{- range $p.MetaData.Answers -}}{{- printf "%c" (add 64 (stringToInt .)) -}}{{- end -}}{{- else -}}{{- range $p.MetaData.Answers -}}{{- . -}}{{- end -}}{{- end -}}</span>
+                            <span class="ml-2">
+                                {{ if or (eq $p.Subtype "mcq_single_answer") (eq $p.Subtype "matrix_match") }}
+                                    {{ range $p.MetaData.Answers }}
+                                        {{ printf "%c" (add 64 (stringToInt .)) }}
+                                    {{ end }}
+                                {{ else if eq $p.Subtype "mcq_multiple_answer" }}
+                                    {{ range $i, $ans := $p.MetaData.Answers }}
+                                        {{- if $i }}, {{ end }}
+                                        {{ printf "%c" (add 64 (stringToInt $ans)) -}}
+                                    {{ end }}
+                                {{ else if and (eq $p.Subtype "numerical_answer") (eq (len $p.MetaData.Answers) 2) }}
+                                    [{{ index $p.MetaData.Answers 0 }} to {{ index $p.MetaData.Answers 1 }}]
+                                {{ else }}
+                                    {{ range $p.MetaData.Answers }}
+                                        {{ . }}
+                                    {{ end }}
+                                {{ end }}
+                            </span>
                         </div>
                         <div class="mt-2 border border-gray-200 rounded p-2 bg-white text-sm">
                             <div><span class="font-semibold">Chapter:</span> <span class="ml-1">{{ getChapterName $p "en" }}</span></div>
