@@ -53,6 +53,7 @@ const addTestModalTemplate = "add_test_modal.html"
 const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
 const addCurriculumGradeSelectsTemplate = "add_curriculum_grade_selects.html"
 const questionPaperTemplate = "question_paper.html"
+const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
 
 const testProblemsEndPoint = "resource/test/%d/problems?lang_code=en&" + QUERY_PARAM_CURRICULUM_ID + "=%s"
@@ -852,7 +853,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		problemsMap[p.ID] = p
 	}
 
-	pdfType := request.URL.Query().Get("type") // "questions" or "answers"
+	pdfType := request.URL.Query().Get("type") // "questions", "questions_with_answers", or "answers"
 
 	var pdfTemplate, headerTxt, pdfSuffix string
 	var testRule *models.TestRule
@@ -868,10 +869,27 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			}
 		}
 
+	} else if pdfType == "questions_with_answers" {
+		pdfTemplate = questionPaperWithAnswersTemplate
+		headerTxt = selectedTestPtr.DisplaySubtype() + " - Questions & Answers"
+		pdfSuffix = "Question Paper with Answers"
+
+		if len(selectedTestPtr.ExamIDs) > 0 {
+			testRule, err = h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}
+
 	} else if pdfType == "answers" {
 		pdfTemplate = answerSolutionSheetTemplate
 		headerTxt = selectedTestPtr.DisplaySubtype() + " - Answer Sheet"
 		pdfSuffix = "Answer Sheet"
+	}
+
+	if pdfTemplate == "" {
+		http.Error(responseWriter, `Invalid type: use "questions", "questions_with_answers", or "answers"`, http.StatusBadRequest)
+		return
 	}
 
 	// Load template
