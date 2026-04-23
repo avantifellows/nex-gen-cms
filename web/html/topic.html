@@ -7,10 +7,12 @@
         <h3 class="text-base font-semibold ml-4">{{ getName .TopicPtr "en" }}</h3>
     </div>
     <div class="flex space-x-4 py-4">
-        <button id="concepts-tab" data-toggle="sub-tab" class="sub-tab active" onclick="onTopicTabClick(this)"
+        <button id="topic-concepts-tab" data-toggle="sub-tab" class="sub-tab active" onclick="onTopicTabClick(this)"
             hx-trigger="click, load" hx-get="/concepts" hx-target="#subContent">Concepts</button>
-        <button id="problems-tab" data-toggle="sub-tab" class="sub-tab" onclick="onTopicTabClick(this)"
+        <button id="topic-problems-tab" data-toggle="sub-tab" class="sub-tab" onclick="onTopicTabClick(this)"
             hx-get="/topic/problems?topic_id={{.TopicPtr.ID}}" hx-target="#subContent">Problems</button>
+        <button id="resources-tab" data-toggle="sub-tab" class="sub-tab" onclick="onTopicTabClick(this)"
+            hx-get="/topic/resources?topicId={{.TopicPtr.ID}}&chapterId={{.TopicPtr.ChapterID}}" hx-target="#subContent">Resources</button>
     </div>
     <div id="sub-tabContent">
         <div id="subContent">
@@ -36,8 +38,8 @@
     }
 
     document.querySelector(TOPIC_DIV_SELECTOR).addEventListener(BACK_TO_TOPIC_EVT, () => {
-        // Using default 1st tab having id "concepts-tab"
-        const selectedTab = sessionStorage.getItem(SESSION_KEY_TOPIC_TAB) || "concepts-tab";
+        // Using default 1st tab having id "topic-concepts-tab"
+        let selectedTab = sessionStorage.getItem(SESSION_KEY_TOPIC_TAB) || "topic-concepts-tab";
         const tabButton = document.getElementById(selectedTab);
         if (tabButton) {
             tabButton.click();

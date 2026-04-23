@@ -41,10 +41,15 @@
             </thead>
             <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load, refreshProblems"
                 hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
+                hx-indicator="#topic-problems-loader"
+                hx-on::before-request="this.innerHTML=''"
                 hx-on::after-swap="updateHeaderState()" data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
+    </div>
+    <div id="topic-problems-loader" class="flex justify-center py-4">
+        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
     </div>
 </div>
 <script>

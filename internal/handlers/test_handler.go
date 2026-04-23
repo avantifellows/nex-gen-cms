@@ -55,8 +55,6 @@ const addCurriculumGradeSelectsTemplate = "add_curriculum_grade_selects.html"
 const questionPaperTemplate = "question_paper.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
 
-const resourcesEndPoint = "resource"
-const resourcesCurriculumEndPoint = "resources/curriculum"
 const testProblemsEndPoint = "resource/test/%d/problems?lang_code=en&" + QUERY_PARAM_CURRICULUM_ID + "=%s"
 const testRulesEndPoint = "test-rule"
 
@@ -70,11 +68,13 @@ type TestsHandler struct {
 	testRulesService   *services.Service[models.TestRule]
 	curriculumsService *services.Service[models.Curriculum]
 	gradesService      *services.Service[models.Grade]
+	examsService       *services.Service[models.Exam]
 }
 
 func NewTestsHandler(testsService *services.Service[models.Test], subjectsService *services.Service[models.Subject],
 	problemsService *services.Service[models.Problem], testRulesService *services.Service[models.TestRule],
-	curriculumsService *services.Service[models.Curriculum], gradesService *services.Service[models.Grade]) *TestsHandler {
+	curriculumsService *services.Service[models.Curriculum], gradesService *services.Service[models.Grade],
+	examsService *services.Service[models.Exam]) *TestsHandler {
 	return &TestsHandler{
 		testsService:       testsService,
 		subjectsService:    subjectsService,
@@ -82,6 +82,7 @@ func NewTestsHandler(testsService *services.Service[models.Test], subjectsServic
 		testRulesService:   testRulesService,
 		curriculumsService: curriculumsService,
 		gradesService:      gradesService,
+		examsService:       examsService,
 	}
 }
 
@@ -294,10 +295,12 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 		return
 	}
 
-	data := dto.HomeData{
-		CurriculumID: selectedTestPtr.CurriculumGrades[0].CurriculumID,
-		GradeID:      selectedTestPtr.CurriculumGrades[0].GradeID,
-		TestPtr:      selectedTestPtr,
+	data := dto.TestData{
+		HomeData: dto.HomeData{
+			CurriculumID: selectedTestPtr.CurriculumGrades[0].CurriculumID,
+			GradeID:      selectedTestPtr.CurriculumGrades[0].GradeID,
+		},
+		TestPtr: selectedTestPtr,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, nil, baseTemplate, testTemplate)
@@ -459,24 +462,26 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"split":          strings.Split,
-		"slice":          utils.Slice,
-		"seq":            utils.Seq,
-		"getName":        getTestName,
-		"add":            utils.Add,
-		"joinInt16":      utils.JoinInt16,
-		"dict":           utils.Dict,
-		"getSectionName": views.GetSectionName,
-		"toJson":         utils.ToJson,
-		"getParentId":    getParentSubjectId,
-		"currentYear":    utils.GetCurrentYearLast2Digits,
+		"split":                    strings.Split,
+		"slice":                    utils.Slice,
+		"seq":                      utils.Seq,
+		"getName":                  getTestName,
+		"add":                      utils.Add,
+		"joinInt16":                utils.JoinInt16,
+		"dict":                     utils.Dict,
+		"getSectionName":           views.GetSectionName,
+		"sectionSubtypeForProblem": views.SectionSubtypeForProblem,
+		"examIdFromTest":           views.ExamIDFromTest,
+		"toJson":                   utils.ToJson,
+		"getParentId":              getParentSubjectId,
+		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
 
-func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error) {
+func (h *TestsHandler) buildTestData(request *http.Request) (dto.TestData, error) {
 	if err := request.ParseForm(); err != nil {
-		return dto.HomeData{}, fmt.Errorf("invalid form data: %w", err)
+		return dto.TestData{}, fmt.Errorf("invalid form data: %w", err)
 	}
 
 	curriculums := request.Form["curriculum[]"]
@@ -487,12 +492,12 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error
 	for i := range curriculums {
 		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
 		if err != nil {
-			return dto.HomeData{}, fmt.Errorf("invalid curriculum id at index %d", i)
+			return dto.TestData{}, fmt.Errorf("invalid curriculum id at index %d", i)
 		}
 
 		gradeId, err := utils.StringToIntType[int8](grades[i])
 		if err != nil {
-			return dto.HomeData{}, fmt.Errorf("invalid grade id at index %d", i)
+			return dto.TestData{}, fmt.Errorf("invalid grade id at index %d", i)
 		}
 
 		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
@@ -503,7 +508,7 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error
 
 	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
 	if err != nil {
-		return dto.HomeData{}, fmt.Errorf("invalid exam id")
+		return dto.TestData{}, fmt.Errorf("invalid exam id")
 	}
 
 	testRule, err := h.getTestRule(testType, examId)
@@ -511,7 +516,7 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error
 		fmt.Println(err.Error())
 	}
 
-	data := dto.HomeData{
+	data := dto.TestData{
 		TestPtr: &models.Test{
 			ExamIDs:          []int8{examId},
 			Subtype:          testType,
@@ -519,8 +524,23 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.HomeData, error
 		},
 		TestRule: testRule,
 	}
+	data.JeeAdvancedExamID = h.resolveJeeAdvancedExamID()
 
 	return data, nil
+}
+
+// resolveJeeAdvancedExamID finds the exam id for views.JeeAdvancedExamName in the exams API response.
+func (h *TestsHandler) resolveJeeAdvancedExamID() int16 {
+	exams, err := h.examsService.GetList(examsEndPoint, examsKey, false, false)
+	if err != nil || exams == nil {
+		return 0
+	}
+	for _, e := range *exams {
+		if strings.EqualFold(strings.TrimSpace(e.Name), views.JeeAdvancedExamName) {
+			return e.ID
+		}
+	}
+	return 0
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -553,6 +573,8 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	readOnlyMarks := request.FormValue("read-only-marks") == "true"
 	canSaveSingleSubject := request.FormValue("can-save-single-subject") == "true" // for edit test scenario
 	testId := request.FormValue("test-id")
+	examID, _ := utils.StringToIntType[int8](request.FormValue("exam-id"))
+	sectionSubtype := views.SectionSubtypeForProblem(problemPtr.Subtype, examID, h.resolveJeeAdvancedExamID())
 
 	var filename string
 	var data any
@@ -563,6 +585,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		filename = addTestDestProblemRowWithHeadersTemplate
 		data = map[string]any{
 			"Problem":              problemPtr,
+			"SectionSubtype":       sectionSubtype,
 			"ReadOnlyMarks":        readOnlyMarks,
 			"CanSaveSingleSubject": canSaveSingleSubject,
 			"TestId":               testId,
@@ -573,6 +596,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		filename = addTestDestProblemRowWithSubtypeTemplate
 		data = map[string]any{
 			"Problem":       problemPtr,
+			"SectionSubtype": sectionSubtype,
 			"InsertAfterId": insertAfterId,
 			"ReadOnlyMarks": readOnlyMarks,
 		}
@@ -582,6 +606,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		filename = addTestDestProblemRowWithoutHeadersTemplate
 		data = map[string]any{
 			"Problem":       problemPtr,
+			"SectionSubtype": sectionSubtype,
 			"InsertAfterId": insertAfterId,
 			"ReadOnlyMarks": readOnlyMarks,
 		}
@@ -640,24 +665,27 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		}
 	}
 
-	data := dto.HomeData{
+	data := dto.TestData{
 		TestPtr:  selectedTestPtr,
 		Problems: problemsMap,
 		TestRule: testRule,
 	}
+	data.JeeAdvancedExamID = h.resolveJeeAdvancedExamID()
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"split":          strings.Split,
-		"slice":          utils.Slice,
-		"seq":            utils.Seq,
-		"getName":        getTestName,
-		"add":            utils.Add,
-		"joinInt16":      utils.JoinInt16,
-		"dict":           utils.Dict,
-		"getSectionName": views.GetSectionName,
-		"toJson":         utils.ToJson,
-		"getParentId":    getParentSubjectId,
-		"currentYear":    utils.GetCurrentYearLast2Digits,
+		"split":                    strings.Split,
+		"slice":                    utils.Slice,
+		"seq":                      utils.Seq,
+		"getName":                  getTestName,
+		"add":                      utils.Add,
+		"joinInt16":                utils.JoinInt16,
+		"dict":                     utils.Dict,
+		"getSectionName":           views.GetSectionName,
+		"sectionSubtypeForProblem": views.SectionSubtypeForProblem,
+		"examIdFromTest":           views.ExamIDFromTest,
+		"toJson":                   utils.ToJson,
+		"getParentId":              getParentSubjectId,
+		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }
@@ -1017,23 +1045,26 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		problemsMap[p.ID] = p
 	}
 
-	data := dto.HomeData{
+	data := dto.TestData{
 		TestPtr:  &copiedTest,
 		Problems: problemsMap,
 	}
+	data.JeeAdvancedExamID = h.resolveJeeAdvancedExamID()
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"split":          strings.Split,
-		"slice":          utils.Slice,
-		"seq":            utils.Seq,
-		"getName":        getTestName,
-		"add":            utils.Add,
-		"joinInt16":      utils.JoinInt16,
-		"dict":           utils.Dict,
-		"getSectionName": views.GetSectionName,
-		"toJson":         utils.ToJson,
-		"getParentId":    getParentSubjectId,
-		"currentYear":    utils.GetCurrentYearLast2Digits,
+		"split":                    strings.Split,
+		"slice":                    utils.Slice,
+		"seq":                      utils.Seq,
+		"getName":                  getTestName,
+		"add":                      utils.Add,
+		"joinInt16":                utils.JoinInt16,
+		"dict":                     utils.Dict,
+		"getSectionName":           views.GetSectionName,
+		"sectionSubtypeForProblem": views.SectionSubtypeForProblem,
+		"examIdFromTest":           views.ExamIDFromTest,
+		"toJson":                   utils.ToJson,
+		"getParentId":              getParentSubjectId,
+		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
 }

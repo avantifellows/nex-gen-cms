@@ -2,8 +2,8 @@
     {{ with .Problem }}
         {{ template "dest_subject_row" (dict "SubjectId" (getParentId .Subject) "SubjectName" (getParentName .Subject "en") 
             "ReadOnlyMarks" $.ReadOnlyMarks "CanSaveSingleSubject" $.CanSaveSingleSubject "TestId" $.TestId) }}
-        {{ template "dest_subtype_row" (dict "SubjectId" (getParentId .Subject) "Subtype" .Subtype 
-            "DisplaySubtype" (getSectionName .Subtype "") "ReadOnlyMarks" $.ReadOnlyMarks) }}
-        {{ template "dest_problem_row" (dict "Problem" . "ReadOnlyMarks" $.ReadOnlyMarks) }}
+        {{ template "dest_subtype_row" (dict "SubjectId" (getParentId .Subject) "Subtype" $.SectionSubtype 
+            "DisplaySubtype" (getSectionName $.SectionSubtype "") "ReadOnlyMarks" $.ReadOnlyMarks) }}
+        {{ template "dest_problem_row" (dict "Problem" . "SectionSubtype" $.SectionSubtype "ReadOnlyMarks" $.ReadOnlyMarks) }}
     {{ end }}
 </tbody>

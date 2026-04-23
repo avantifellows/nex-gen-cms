@@ -25,7 +25,6 @@ const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
 const searchProblemsEndPoint = "problems/search"
 const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
-const moveProblemEndPoint = "resources/move"
 
 const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
@@ -38,6 +37,7 @@ const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
 const addConceptModalTemplate = "add_concept_modal.html"
 const editorTemplate = "editor.html"
+const problemAnswerNumericalTemplate = "problem_answer_numerical.html"
 const inputTagsTemplate = "input_tags.html"
 const problemTestAssociationTemplate = "problem_test_association_modal.html"
 const moveProblemsTemplate = "move_problems_modal.html"
@@ -64,11 +64,13 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	data := dto.HomeData{
-		ProblemPtr:   selectedProblemPtr,
-		CurriculumID: selectedProblemPtr.CurriculumID,
-		GradeID:      selectedProblemPtr.GradeID,
-		SubjectID:    selectedProblemPtr.SubjectID,
+	data := dto.ProblemData{
+		HomeData: dto.HomeData{
+			CurriculumID: selectedProblemPtr.CurriculumID,
+			GradeID:      selectedProblemPtr.GradeID,
+			SubjectID:    selectedProblemPtr.SubjectID,
+		},
+		ProblemPtr: selectedProblemPtr,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -249,7 +251,7 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	data := dto.HomeData{
+	data := dto.ProblemData{
 		TopicPtr: selectedTopicPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -258,8 +260,9 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		"stringToInt":    utils.StringToInt,
 		"toJson":         utils.ToJson,
 		"getConceptName": getConceptName,
+		"dict":           utils.Dict,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
-		editorTemplate, inputTagsTemplate)
+		editorTemplate, problemAnswerNumericalTemplate, inputTagsTemplate)
 }
 
 func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, request *http.Request) {
@@ -287,11 +290,13 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	data := dto.HomeData{
-		ProblemPtr:   selectedProblemPtr,
-		CurriculumID: selectedProblemPtr.CurriculumID,
-		GradeID:      selectedProblemPtr.GradeID,
-		SubjectID:    selectedProblemPtr.SubjectID,
+	data := dto.ProblemData{
+		HomeData: dto.HomeData{
+			CurriculumID: selectedProblemPtr.CurriculumID,
+			GradeID:      selectedProblemPtr.GradeID,
+			SubjectID:    selectedProblemPtr.SubjectID,
+		},
+		ProblemPtr: selectedProblemPtr,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -300,7 +305,9 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 		"stringToInt":    utils.StringToInt,
 		"toJson":         utils.ToJson,
 		"getConceptName": getConceptName,
-	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate, inputTagsTemplate)
+		"dict":           utils.Dict,
+	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate,
+		problemAnswerNumericalTemplate, inputTagsTemplate)
 }
 
 func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -461,12 +468,13 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
 		return
 	}
+	topicIdPtr := &topicId
 
 	problemIdsStr := request.Form.Get("problem_ids")
 	problemIds := utils.StringSliceToIntSlice(strings.Split(problemIdsStr, ","))
 
-	reqBody := dto.MoveProblemsRequest{
-		ProblemIDs: problemIds,
+	reqBody := dto.MoveResourcesRequest{
+		ResourceIDs: problemIds,
 		CurriculumGrades: []models.CurriculumGrade{
 			{
 				CurriculumID: curriculumId,
@@ -475,13 +483,13 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		},
 		SubjectID: subjectId,
 		ChapterID: chapterId,
-		TopicID:   topicId,
+		TopicID:   topicIdPtr,
 		LangCode:  "en",
 	}
 
 	var result any
 
-	err = h.problemsService.Post(moveProblemEndPoint, reqBody, &result)
+	err = h.problemsService.Post(moveResourceEndPoint, reqBody, &result)
 	if err != nil {
 		log.Println("move problems error:", err)
 		http.Error(responseWriter, "Failed to move problems", http.StatusInternalServerError)

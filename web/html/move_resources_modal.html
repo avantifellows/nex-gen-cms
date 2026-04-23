@@ -1,0 +1,118 @@
+<div id="move-resources-modal" data-resource-ids='{{.}}'
+    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-3xl">
+        <h2 class="text-lg font-semibold mb-2">Move Resource</h2>
+        <p class="text-sm text-gray-600 mb-6">
+            Select Curriculum, Grade and Subject in any order. Then select Chapter. Topic is optional.
+        </p>
+
+        <form id="move-resources-form" class="space-y-6" hx-post="/move-resource" hx-swap="none"
+            hx-vals='js:{resource_ids: document.getElementById("move-resources-modal").dataset.resourceIds}'
+            hx-on::after-request="handleMoveResourcesResponse(event)"
+            hx-disabled-elt="#move-resources-modal button">
+
+            <div class="grid grid-cols-3 gap-4">
+                <select id="curriculum-dropdown" name="curriculum-dropdown" class="border p-2 rounded w-full"
+                    hx-get="/api/curriculums" hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                    hx-on::after-request="afterMoveResourcesDropdownReq(this)">
+                    <option disabled selected>Loading curriculums...</option>
+                </select>
+
+                <select id="grade-dropdown" name="grade-dropdown" class="border p-2 rounded w-full"
+                    hx-get="/api/grades" hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                    hx-on::after-request="afterMoveResourcesDropdownReq(this)">
+                    <option disabled selected>Loading grades...</option>
+                </select>
+
+                <select id="subject-dropdown" name="subject-dropdown" class="border p-2 rounded w-full"
+                    hx-get="/api/subjects" hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                    hx-on::after-request="afterMoveResourcesDropdownReq(this)">
+                    <option disabled selected>Loading subjects...</option>
+                </select>
+
+                <select id="chapter-dropdown" name="chapter-dropdown" class="border p-2 rounded w-full"
+                    hx-get="/api/chapters" hx-target="this" hx-swap="innerHTML"
+                    hx-trigger="loadChapters, change from:(#move-resources-modal #curriculum-dropdown, #move-resources-modal #grade-dropdown, #move-resources-modal #subject-dropdown)"
+                    hx-include="#move-resources-modal #curriculum-dropdown, #move-resources-modal #grade-dropdown, #move-resources-modal #subject-dropdown"
+                    hx-params="not chapter-dropdown" hx-on::before-request="beforeMoveResourcesChaptersRequest()"
+                    hx-on::after-request="toggleMoveResourceButton()">
+                    <option disabled selected>Loading chapters...</option>
+                </select>
+
+                <select id="topic-dropdown" name="topic_id" class="border p-2 rounded w-full"
+                    hx-get="/api/topics?view=dropdown-optional" hx-trigger="change from:#chapter-dropdown"
+                    hx-target="this" hx-swap="innerHTML" hx-include="#chapter-dropdown"
+                    hx-on::before-request="beforeMoveResourcesTopicsRequest()" hx-on::after-request="toggleMoveResourceButton()">
+                    <option value="" selected hidden>Select Topic (Optional)</option>
+                </select>
+            </div>
+
+            <div class="w-full flex justify-end space-x-2 pt-4">
+                <button type="button" onclick="closeMoveResourcesModal()"
+                    class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 transition">
+                    Cancel
+                </button>
+
+                <button id="move-resource-btn" type="submit" disabled
+                    class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition disabled:bg-gray-300 disabled:cursor-not-allowed">
+                    <span class="btn-text">Move</span>
+                    <span class="btn-loader hidden">Moving...</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function afterMoveResourcesDropdownReq(dropdown) {
+    dropdown.dataset.loaded = "true";
+
+    const modal = document.getElementById("move-resources-modal");
+    const allReady =
+        modal.querySelector("#curriculum-dropdown").dataset.loaded &&
+        modal.querySelector("#grade-dropdown").dataset.loaded &&
+        modal.querySelector("#subject-dropdown").dataset.loaded;
+
+    if (allReady) {
+        htmx.trigger("#chapter-dropdown", "loadChapters");
+    }
+}
+
+function beforeMoveResourcesChaptersRequest() {
+    const chapter = document.getElementById("chapter-dropdown");
+    chapter.innerHTML = '<option disabled selected>Loading chapters...</option>';
+
+    const topic = document.getElementById("topic-dropdown");
+    topic.innerHTML = '<option value="" selected hidden>Select Topic (Optional)</option>';
+
+    const modal = document.getElementById("move-resources-modal");
+    modal.querySelector("#move-resource-btn").disabled = true;
+}
+
+function beforeMoveResourcesTopicsRequest() {
+    const topic = document.getElementById("topic-dropdown");
+    topic.innerHTML = '<option disabled selected>Loading topics...</option>';
+}
+
+function toggleMoveResourceButton() {
+    const modal = document.getElementById("move-resources-modal");
+    const chapter = modal.querySelector("#chapter-dropdown");
+    const moveBtn = modal.querySelector("#move-resource-btn");
+    moveBtn.disabled = !chapter.value;
+}
+
+function handleMoveResourcesResponse(event) {
+    const { xhr, requestConfig } = event.detail;
+    if (requestConfig.path !== "/move-resource") return;
+
+    if (xhr.status === 200) {
+        closeMoveResourcesModal();
+        htmx.trigger("#resourceTableBody", "refreshResources");
+    } else {
+        showToast(xhr.responseText || "Failed to move resource");
+    }
+}
+
+function closeMoveResourcesModal() {
+    document.getElementById("move-resources-modal").remove();
+}
+</script>

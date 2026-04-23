@@ -1,0 +1,23 @@
+<!-- Form to add new resource -->
+<form id="addResourceForm" class="mt-2 flex flex-wrap gap-2"
+    hx-post="/create-resource?chapter_id={{.ChapterID}}{{ if .TopicID }}&topic_id={{.TopicID}}{{ end }}"
+    hx-target="#resourceTableBody"
+    hx-swap="beforeend" hx-include="#curriculum-dropdown, #grade-dropdown"
+    hx-on::after-request="if(event.detail.successful) { this.reset(); ResourceForm.sync('add-resource-type','add-resource-subtype'); }">
+    <input type="text" name="name" placeholder="Resource Name" class="border p-2 w-1/3" required>
+    <select id="add-resource-type" name="type" class="border p-2" required
+        onchange="ResourceForm.sync('add-resource-type','add-resource-subtype')">
+        <option value="" selected disabled hidden>Select Type</option>
+        {{ range .TypeOptions }}
+        <option value="{{.}}">{{.}}</option>
+        {{ end }}
+    </select>
+    <select id="add-resource-subtype" name="subtype" class="border p-2" required disabled>
+        <option value="" selected disabled hidden>Select Subtype</option>
+    </select>
+    <input type="url" name="src_link" placeholder="URL" class="border p-2 flex-1 min-w-56" required>
+    <button type="submit" class="bg-blue-500 text-white p-2 rounded">Create New Resource</button>
+</form>
+<script>
+    ResourceForm.sync('add-resource-type', 'add-resource-subtype');
+</script>
