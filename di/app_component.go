@@ -15,6 +15,7 @@ type AppComponent struct {
 	CssPathHandler     http.Handler
 	LoginHandler       *handlers.LoginHandler
 	ChaptersHandler    *handlers.ChaptersHandler
+	ResourcesHandler   *handlers.ResourcesHandler
 	TopicsHandler      *handlers.TopicsHandler
 	ConceptsHandler    *handlers.ConceptsHandler
 	CurriculumsHandler *handlers.CurriculumsHandler
@@ -34,6 +35,7 @@ func NewAppComponent() (*AppComponent, error) {
 
 	// Initialize service
 	chaptersService := services.NewService[models.Chapter](cacheRepo, apiRepo)
+	resourcesService := services.NewService[models.Resource](cacheRepo, apiRepo)
 	topicsService := services.NewService[models.Topic](cacheRepo, apiRepo)
 	conceptsService := services.NewService[models.Concept](cacheRepo, apiRepo)
 	curriculumsService := services.NewService[models.Curriculum](cacheRepo, apiRepo)
@@ -50,6 +52,7 @@ func NewAppComponent() (*AppComponent, error) {
 	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
 	loginHandler := handlers.NewLoginHandler()
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
+	resourcesHandler := handlers.NewResourcesHandler(resourcesService)
 	topicsHandler := handlers.NewTopicsHandler(topicsService)
 	conceptsHandler := handlers.NewConceptsHandler(conceptsService)
 	curriculumsHandler := handlers.NewCurriculumsHandler(curriculumsService)
@@ -57,7 +60,7 @@ func NewAppComponent() (*AppComponent, error) {
 	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
 	skillsHandler := handlers.NewSkillsHandler(skillsService)
 	testsHandler := handlers.NewTestsHandler(testsService, subjectsService, problemsService, testRulesService,
-		curriculumsService, gradesService)
+		curriculumsService, gradesService, examsService)
 	problemsHandler := handlers.NewProblemsHandler(problemsService, skillsService, subjectsService, topicsService,
 		tagsService)
 	tagsHandler := handlers.NewTagsHandler(tagsService)
@@ -67,6 +70,7 @@ func NewAppComponent() (*AppComponent, error) {
 		CssPathHandler:     cssPathHandler,
 		LoginHandler:       loginHandler,
 		ChaptersHandler:    chaptersHandler,
+		ResourcesHandler:   resourcesHandler,
 		TopicsHandler:      topicsHandler,
 		ConceptsHandler:    conceptsHandler,
 		CurriculumsHandler: curriculumsHandler,

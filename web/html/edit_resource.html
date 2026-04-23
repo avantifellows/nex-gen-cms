@@ -1,0 +1,37 @@
+<div class="container mx-auto bg-white shadow-md rounded p-6 mt-4">
+  <h1 class="text-2xl font-semibold mb-4">Editing resource</h1>
+  <form hx-patch="/update-resource?id={{.Resource.ID}}">
+    <div class="mb-4">
+      <label for="name" class="block text-gray-700 font-medium mb-2">Resource Name</label>
+      <input type="text" id="name" name="name" class="w-full p-3 border border-gray-300 rounded" value="{{ getName .Resource "en" }}">
+    </div>
+    <div class="mb-4">
+      <label for="code" class="block text-gray-700 font-medium mb-2">Code</label>
+      <input type="text" id="code" name="code" class="w-full p-3 border border-gray-300 rounded bg-gray-100 text-gray-600" value="{{.Resource.Code}}" readonly>
+    </div>
+    <div class="mb-4">
+      <label for="type" class="block text-gray-700 font-medium mb-2">Type</label>
+      <select id="edit-resource-type" name="type" class="w-full p-3 border border-gray-300 rounded" required
+          onchange="ResourceForm.sync('edit-resource-type','edit-resource-subtype')">
+        <option value="" disabled hidden {{if or (not .Resource.Type) (eq .Resource.Type "null")}}selected{{end}}>Select Type</option>
+        {{ range .TypeOptions }}
+        <option value="{{.}}" {{if eq $.Resource.Type .}}selected{{end}}>{{.}}</option>
+        {{ end }}
+      </select>
+    </div>
+    <div class="mb-4">
+      <label for="subtype" class="block text-gray-700 font-medium mb-2">Subtype</label>
+      <select id="edit-resource-subtype" name="subtype" class="w-full p-3 border border-gray-300 rounded" required>
+      </select>
+    </div>
+    <div class="mb-4">
+      <label for="src_link" class="block text-gray-700 font-medium mb-2">SrcLink</label>
+      <input type="url" id="src_link" name="src_link" class="w-full p-3 border border-gray-300 rounded" required
+        placeholder="https://example.com/resource" value="{{.Resource.TypeParams.SrcLink}}">
+    </div>
+    <button type="submit" class="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition">SAVE</button>
+  </form>
+</div>
+<script>
+  ResourceForm.sync('edit-resource-type', 'edit-resource-subtype', {{ printf "%q" .Resource.Subtype }});
+</script>

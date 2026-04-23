@@ -357,9 +357,11 @@
                             "ReadOnlyMarks" $hasTestRule)}}
                             {{range .Compulsory.Problems}}
                                 {{ $sr = add $sr 1 }}
-                                {{template "dest_problem_row" (dict "Problem" (index $.Problems .ID) "SrNo" $sr
+                                {{ $prob := index $.Problems .ID }}
+                                {{template "dest_problem_row" (dict "Problem" $prob "SrNo" $sr
                                 "PosMarks" .PosMarks "NegMarks" .NegMarks "DifficultyLevel" .DifficultyLevel "OptionLayout" .OptionLayout 
-                                "ReadOnlyMarks" $hasTestRule)}}
+                                "ReadOnlyMarks" $hasTestRule
+                                "SectionSubtype" (sectionSubtypeForProblem $prob.Subtype (examIdFromTest $.TestPtr) $.JeeAdvancedExamID))}}
                             {{end}}
                         {{end}}
                     {{end}}
@@ -403,7 +405,7 @@
     </form>
 </div>
 <script type="application/json" id="test-context-json">
-  {{ dict "testId" $id "testRule" .TestRule | toJson }}
+  {{ dict "testId" $id "testRule" .TestRule "examId" (examIdFromTest .TestPtr) "jeeAdvancedExamId" .JeeAdvancedExamID | toJson }}
 </script>
 <script>
     var mode = "{{ $mode }}";  // "new", "edit", or "copy"

@@ -698,6 +698,7 @@ video {
 }
 
 .sub-tab {
+  cursor: pointer;
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
   padding-left: 1rem;
@@ -965,6 +966,14 @@ video {
 }
 
 #question-bank-loader.htmx-request {
+  display: flex;
+}
+
+#topic-problems-loader {
+  display: none;
+}
+
+#topic-problems-loader.htmx-request {
   display: flex;
 }
 
