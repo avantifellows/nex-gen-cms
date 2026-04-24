@@ -687,18 +687,16 @@
         let nextRow = problemRow.nextElementSibling;
         problemRow.remove();
 
-        const subject = problemRow.dataset.subject;
-        const subtype = problemRow.dataset.subtype;
-        const tableBody = document.getElementById("questions-table-body");
+        // Remove subtype header row only when it's "dangling" (no problems under it)
+        const nextRowIsProblem = nextRow && nextRow.id.startsWith("problem-");
 
-        // Remove subtype header if no more problems of that subtype under same subject remain
-        const remainingSubtypeProblems = tableBody.querySelectorAll(`tr[id^="problem-"][data-subject="${subject}"][data-subtype="${subtype}"]`);
-        if (remainingSubtypeProblems.length === 0) {
+        if (prevRow.id.startsWith("subtype-") && !nextRowIsProblem) {
             prevRow.remove();
 
-            // Remove subject header if no more problems of that subject remain
-            const remainingSubjectProblems = tableBody.querySelectorAll(`tr[id^="problem-"][data-subject="${subject}"]`);
-            if (remainingSubjectProblems.length === 0) {
+            // Remove subject header row only when it's "dangling" (no sections under it)
+            const nextRowIsSubtypeHeader = nextRow && nextRow.id.startsWith("subtype-");
+
+            if (prevPrevRow.id.startsWith("subject-") && !nextRowIsSubtypeHeader) {
                 prevPrevRow.remove();
                 updateSubjectArrowStates();
             }
