@@ -18,7 +18,7 @@ import (
 )
 
 const pdfImportTemplate = "pdf_import.html"
-const geminiBaseURL = "https://generativelanguage.googleapis.com/v1beta/models/"
+const openRouterURL = "https://openrouter.ai/api/v1/chat/completions"
 
 // ExtractedQuestion holds a single question parsed from the PDF.
 type ExtractedQuestion struct {
@@ -30,10 +30,11 @@ type ExtractedQuestion struct {
 
 type pdfImportData struct {
 	dto.HomeData
-	Questions   []ExtractedQuestion
-	Error       string
-	RawResponse string
-	Processed   bool
+	Questions     []ExtractedQuestion
+	Error         string
+	RawResponse   string
+	ProcessedJSON string
+	Processed     bool
 }
 
 // PdfImportHandler handles PDF question extraction (POC).
@@ -66,26 +67,32 @@ func (h *PdfImportHandler) ProcessPDF(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	apiKey := config.GetEnv("GEMINI_API_KEY", "")
+	apiKey := config.GetEnv("OPENROUTER_API_KEY", "")
 	if apiKey == "" {
-		renderPdfImportPage(w, pdfImportData{Error: "GEMINI_API_KEY is not set in .env", Processed: true})
+		renderPdfImportPage(w, pdfImportData{Error: "OPENROUTER_API_KEY is not set in .env", Processed: true})
 		return
 	}
 
-	questions, rawResp, err := callGemini(pdfBytes, apiKey)
+	questions, rawResp, err := callOpenRouter(pdfBytes, apiKey)
 	if err != nil {
 		renderPdfImportPage(w, pdfImportData{Error: err.Error(), RawResponse: rawResp, Processed: true})
 		return
 	}
 
-	renderPdfImportPage(w, pdfImportData{Questions: questions, RawResponse: rawResp, Processed: true})
+	processedJSON, _ := json.MarshalIndent(questions, "", "  ")
+	renderPdfImportPage(w, pdfImportData{
+		Questions:     questions,
+		RawResponse:   rawResp,
+		ProcessedJSON: string(processedJSON),
+		Processed:     true,
+	})
 }
 
 func renderPdfImportPage(w http.ResponseWriter, data pdfImportData) {
 	views.ExecuteTemplates(w, data, nil, baseTemplate, pdfImportTemplate)
 }
 
-func callGemini(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, string, error) {
+func callOpenRouter(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, string, error) {
 	pdfBase64 := base64.StdEncoding.EncodeToString(pdfBytes)
 
 	prompt := `You are a JEE exam paper parser. Extract every question from this PDF.
@@ -110,25 +117,29 @@ Example output:
   {"question_number":2,"question_text":"Find the value of \[\int_0^1 x \, dx\]","options":[],"question_type":"numerical"}
 ]`
 
+	model := config.GetEnv("OPENROUTER_MODEL", "google/gemini-2.0-flash-001")
+
 	reqBody := map[string]any{
-		"contents": []map[string]any{
+		"model": model,
+		"messages": []map[string]any{
 			{
-				"parts": []map[string]any{
+				"role": "user",
+				"content": []map[string]any{
 					{
-						"inline_data": map[string]any{
-							"mime_type": "application/pdf",
-							"data":      pdfBase64,
+						"type": "file",
+						"file": map[string]any{
+							"filename":  "document.pdf",
+							"file_data": "data:application/pdf;base64," + pdfBase64,
 						},
 					},
 					{
+						"type": "text",
 						"text": prompt,
 					},
 				},
 			},
 		},
-		"generationConfig": map[string]any{
-			"temperature": 0.1,
-		},
+		"temperature": 0.1,
 	}
 
 	bodyBytes, err := json.Marshal(reqBody)
@@ -137,7 +148,7 @@ Example output:
 	}
 
 	// Force IPv4 to avoid i/o timeout on IPv6-only routes.
-	// 5-minute timeout: gemini-2.5-flash can be slow on large PDFs.
+	// 5-minute timeout: large PDFs with multimodal models can be slow.
 	client := &http.Client{
 		Timeout: 300 * time.Second,
 		Transport: &http.Transport{
@@ -147,56 +158,53 @@ Example output:
 		},
 	}
 
-	model := config.GetEnv("GEMINI_MODEL", "gemini-2.0-flash")
-	url := geminiBaseURL + model + ":generateContent?key=" + apiKey
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(bodyBytes))
+	req, err := http.NewRequest(http.MethodPost, openRouterURL, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		return nil, "", fmt.Errorf("creating request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, "", fmt.Errorf("Gemini API call failed: %v", err)
+		return nil, "", fmt.Errorf("OpenRouter API call failed: %v", err)
 	}
 	defer resp.Body.Close()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, "", fmt.Errorf("reading Gemini response: %v", err)
+		return nil, "", fmt.Errorf("reading OpenRouter response: %v", err)
 	}
 	rawResp := string(respBytes)
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, rawResp, fmt.Errorf("Gemini returned status %d", resp.StatusCode)
+		return nil, rawResp, fmt.Errorf("OpenRouter returned status %d", resp.StatusCode)
 	}
 
-	var geminiResp struct {
-		Candidates []struct {
-			Content struct {
-				Parts []struct {
-					Text string `json:"text"`
-				} `json:"parts"`
-			} `json:"content"`
-		} `json:"candidates"`
+	var openRouterResp struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
 		Error *struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
 
-	if err := json.Unmarshal(respBytes, &geminiResp); err != nil {
-		return nil, rawResp, fmt.Errorf("parsing Gemini response: %v", err)
+	if err := json.Unmarshal(respBytes, &openRouterResp); err != nil {
+		return nil, rawResp, fmt.Errorf("parsing OpenRouter response: %v", err)
 	}
-	if geminiResp.Error != nil {
-		return nil, rawResp, fmt.Errorf("Gemini API error: %s", geminiResp.Error.Message)
+	if openRouterResp.Error != nil {
+		return nil, rawResp, fmt.Errorf("OpenRouter API error: %s", openRouterResp.Error.Message)
 	}
-	if len(geminiResp.Candidates) == 0 || len(geminiResp.Candidates[0].Content.Parts) == 0 {
-		return nil, rawResp, fmt.Errorf("Gemini returned no content")
+	if len(openRouterResp.Choices) == 0 {
+		return nil, rawResp, fmt.Errorf("OpenRouter returned no choices")
 	}
 
-	text := strings.TrimSpace(geminiResp.Candidates[0].Content.Parts[0].Text)
+	text := strings.TrimSpace(openRouterResp.Choices[0].Message.Content)
 
-	// Strip markdown code fences if Gemini wrapped the JSON anyway.
+	// Strip markdown code fences if the model wrapped the JSON anyway.
 	if strings.HasPrefix(text, "```") {
 		text = strings.TrimPrefix(text, "```json")
 		text = strings.TrimPrefix(text, "```")
@@ -206,14 +214,14 @@ Example output:
 		text = strings.TrimSpace(text)
 	}
 
-	// Gemini inconsistently escapes LaTeX delimiters: some questions emit bare
+	// Models inconsistently escape LaTeX delimiters: some questions emit bare
 	// \( \) \[ \] (invalid JSON) while others correctly emit \\( \\) \\[ \\].
 	// Normalise by doubling any backslash not followed by a valid JSON escape char.
 	text = fixInvalidJSONEscapes(text)
 
 	var questions []ExtractedQuestion
 	if err := json.Unmarshal([]byte(text), &questions); err != nil {
-		return nil, rawResp, fmt.Errorf("parsing questions JSON: %v\n\nText returned by Gemini:\n%s", err, text)
+		return nil, rawResp, fmt.Errorf("parsing questions JSON: %v\n\nText returned by model:\n%s", err, text)
 	}
 
 	return questions, rawResp, nil
