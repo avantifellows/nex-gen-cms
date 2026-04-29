@@ -11,6 +11,24 @@
     <!-- For Font Awesome library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <script src="https://unpkg.com/mathlive"></script>
+    <script>
+        window.MathJax = {
+            loader: { load: ['[tex]/noerrors'] },
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                packages: { '[+]': ['noerrors'] }
+            }
+        };
+    </script>
+    <style>
+        .mjx-noError {
+            background-color: transparent !important;
+            border: 0 !important;
+            color: inherit !important;
+            font-style: normal !important;
+        }
+    </style>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
     <script src="/web/static/js/constants.js"></script>

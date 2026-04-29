@@ -37,9 +37,12 @@
                     {{ else }}
                     <span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2 py-0.5 rounded">MCQ</span>
                     {{ end }}
+                    {{ if .HasFigure }}
+                    <span class="bg-amber-100 text-amber-800 text-xs font-medium px-2 py-0.5 rounded">Figure</span>
+                    {{ end }}
                 </div>
                 <div class="px-4 py-3" data-mathjax>
-                    <div class="text-gray-800 text-sm leading-relaxed mb-3">{{ .Text }}</div>
+                    <div class="text-gray-800 text-sm leading-relaxed mb-3">{{ .ProcessedText }}</div>
                     {{ if .Options }}
                     <ul class="space-y-1 border-t border-gray-100 pt-3">
                         {{ range $i, $opt := .Options }}
