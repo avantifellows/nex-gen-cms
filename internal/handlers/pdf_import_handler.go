@@ -11,7 +11,9 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +27,12 @@ const openRouterURL = "https://openrouter.ai/api/v1/chat/completions"
 
 var inlineOptionMarkerRegex = regexp.MustCompile(`\(\s*(?:[A-Da-d]|[0-9]{1,2}|i|ii|iii|iv|v|vi|vii|viii|ix|x)\s*\)`)
 
+// odlFigureNumRegex matches [FIGURE_N] tokens emitted in ODL-mode LLM responses.
+var odlFigureNumRegex = regexp.MustCompile(`\[FIGURE_(\d+)\]`)
+var questionStartRegex = regexp.MustCompile(`(?m)(?:^|\n)\s*(?:Q(?:uestion)?\s*)?([1-9]\d{0,2})\s*[\.\-:]\s+`)
+var questionStartLooseRegex = regexp.MustCompile(`(?m)(?:^|\n)\s*(?:Q(?:uestion)?\s*)?([1-9]\d{1,2})\s+`)
+var questionStartInlineRegex = regexp.MustCompile(`(?:^|[\n\r\t ])(?:Q(?:uestion)?\s*)?([1-9]\d{1,2})\s*[\.\-:]\s+`)
+
 // ExtractedQuestion holds a single question parsed from the PDF.
 type ExtractedQuestion struct {
 	Number            int               `json:"question_number"`
@@ -33,16 +41,17 @@ type ExtractedQuestion struct {
 	Type              string            `json:"question_type"`
 	HasFigure         bool              `json:"has_figure"`
 	FigureDescription string            `json:"figure_description"`
+	FigureImagePNG    []byte            `json:"-"` // cropped figure PNG; populated in ODL mode
 	ProcessedText     htmltemplate.HTML `json:"-"` // HTML-safe text with [FIGURE] replaced inline
 }
 
 type pdfImportData struct {
 	dto.HomeData
-	Questions     []ExtractedQuestion
-	Error         string
-	RawResponse   string
-	ProcessedJSON string
-	Processed     bool
+	Questions      []ExtractedQuestion
+	Error          string
+	RawResponse    string
+	ProcessedJSON  string
+	Processed      bool
 }
 
 // PdfImportHandler handles PDF question extraction (POC).
@@ -81,9 +90,9 @@ func (h *PdfImportHandler) ProcessPDF(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	questions, rawResp, err := callOpenRouter(pdfBytes, apiKey)
-	if err != nil {
-		renderPdfImportPage(w, pdfImportData{Error: err.Error(), RawResponse: rawResp, Processed: true})
+	questions, rawResp, callErr := callOpenRouterHybrid(pdfBytes, apiKey)
+	if callErr != nil {
+		renderPdfImportPage(w, pdfImportData{Error: callErr.Error(), RawResponse: rawResp, Processed: true})
 		return
 	}
 
@@ -245,41 +254,454 @@ Example output:
 	return questions, rawResp, nil
 }
 
-// postProcessQuestions builds ProcessedText with the [FIGURE] placeholder
-// replaced inline by the figure-description box.
+// callOpenRouterODL is the two-stage ODL pipeline:
+//
+//  1. Rasterise the PDF to per-page PNGs (for figure cropping).
+//  2. Run OpenDataLoader locally to get text elements + picture bounding boxes.
+//  3. Build a compact prompt: extracted text with [FIGURE_N] markers + cropped
+//     figure images as image_url blocks.
+//  4. Send to OpenRouter and parse the response.
+//  5. Assign the correct cropped PNG to each parsed question.
+func callOpenRouterODL(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, string, error) {
+	// --- Step 1: write PDF to disk (ODL needs a file path) ---
+	tmpPDF, err := os.CreateTemp("", "odl-input-*.pdf")
+	if err != nil {
+		return nil, "", fmt.Errorf("creating temp PDF: %w", err)
+	}
+	defer os.Remove(tmpPDF.Name())
+	if _, err := tmpPDF.Write(pdfBytes); err != nil {
+		tmpPDF.Close()
+		return nil, "", fmt.Errorf("writing temp PDF: %w", err)
+	}
+	tmpPDF.Close()
+
+	// --- Step 2: rasterise PDF pages ---
+	pageImages, err := pdfToImages(pdfBytes, odlRasterDPI)
+	if err != nil {
+		return nil, "", fmt.Errorf("rasterising PDF: %w", err)
+	}
+
+	// --- Step 3: run ODL extraction ---
+	elements, err := extractWithODL(tmpPDF.Name())
+	if err != nil {
+		return nil, "", fmt.Errorf("OpenDataLoader extraction: %w", err)
+	}
+	elements = sortODLElementsReadingOrder(elements)
+
+	// --- Step 4: build content string + crop figure images ---
+	figureCounter := 0
+	figureCrops := map[int][]byte{} // figureNum → cropped PNG bytes
+
+	var contentBuf strings.Builder
+	currentPage := 0
+
+	for _, el := range elements {
+		if el.PageNumber != currentPage {
+			currentPage = el.PageNumber
+			fmt.Fprintf(&contentBuf, "\n\n--- PAGE %d ---\n", currentPage)
+		}
+
+		switch strings.ToLower(el.Type) {
+		case "paragraph", "heading", "caption", "list", "list item", "table":
+			if el.Content != "" {
+				contentBuf.WriteString(el.Content)
+				contentBuf.WriteByte('\n')
+			}
+		case "formula":
+			if el.Content != "" {
+				contentBuf.WriteString(el.Content)
+				contentBuf.WriteByte('\n')
+			}
+		case "picture", "image", "figure":
+			figureCounter++
+			n := figureCounter
+			fmt.Fprintf(&contentBuf, "[FIGURE_%d]\n", n)
+
+			pageIdx := el.PageNumber - 1
+			if pageIdx >= 0 && pageIdx < len(pageImages) {
+				rect, rectErr := odlBboxToPixelRect(el.BoundingBox, pageImages[pageIdx])
+				if rectErr == nil && rect.Dx() > 0 && rect.Dy() > 0 {
+					if cropBytes, cropErr := cropPageToPNG(pageImages[pageIdx], rect); cropErr == nil {
+						figureCrops[n] = cropBytes
+					}
+				}
+			}
+		}
+	}
+
+	extractedText := contentBuf.String()
+
+	// --- Step 5: split into deterministic per-question chunks ---
+	chunks := splitODLQuestionChunks(extractedText)
+	if len(chunks) == 0 {
+		return nil, "", fmt.Errorf("could not detect question boundaries in ODL extracted text")
+	}
+	questions := make([]ExtractedQuestion, 0, len(chunks))
+	rawParts := make([]string, 0, len(chunks))
+
+	for _, ch := range chunks {
+		content := []map[string]any{
+			{
+				"type": "text",
+				"text": buildODLSingleQuestionPrompt(ch.Number, ch.Text),
+			},
+		}
+		for _, figNum := range ch.FigureNums {
+			cropBytes, ok := figureCrops[figNum]
+			if !ok {
+				continue
+			}
+			b64 := base64.StdEncoding.EncodeToString(cropBytes)
+			content = append(content,
+				map[string]any{
+					"type": "text",
+					"text": fmt.Sprintf("Figure %d (referenced as [FIGURE_%d] in the question text):", figNum, figNum),
+				},
+				map[string]any{
+					"type":      "image_url",
+					"image_url": map[string]any{"url": "data:image/png;base64," + b64},
+				},
+			)
+		}
+
+		parsed, rawResp, err := callOpenRouterWithMultimodalContent(content, apiKey)
+		if err != nil {
+			return nil, rawResp, fmt.Errorf("question %d extraction failed: %w", ch.Number, err)
+		}
+		rawParts = append(rawParts, fmt.Sprintf("Q%d:\n%s", ch.Number, rawResp))
+		if len(parsed) == 0 {
+			continue
+		}
+		q := parsed[0]
+		// Keep deterministic boundary from source chunk.
+		q.Number = ch.Number
+		questions = append(questions, q)
+	}
+	rawResp := strings.Join(rawParts, "\n\n-----\n\n")
+
+	// --- Step 6: assign figure crops to questions, normalise [FIGURE_N] → [FIGURE] ---
+	for i := range questions {
+		q := &questions[i]
+		if matches := odlFigureNumRegex.FindStringSubmatch(q.Text); len(matches) > 1 {
+			if n, convErr := strconv.Atoi(matches[1]); convErr == nil {
+				q.FigureImagePNG = figureCrops[n]
+			}
+		}
+		// Replace all [FIGURE_N] with [FIGURE] so buildProcessedText works uniformly.
+		q.Text = odlFigureNumRegex.ReplaceAllString(q.Text, "[FIGURE]")
+	}
+
+	postProcessQuestions(questions)
+	return questions, rawResp, nil
+}
+
+// callOpenRouterHybrid keeps direct-PDF text quality for question/options, then
+// overlays ODL-derived figure crops by question number only when the direct
+// model already set has_figure, so ODL noise (fraction bars, symbol fragments)
+// is not shown on questions the model did not flag as having a figure.
+func callOpenRouterHybrid(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, string, error) {
+	directQuestions, directRaw, err := callOpenRouter(pdfBytes, apiKey)
+	if err != nil {
+		return nil, directRaw, err
+	}
+
+	odlQuestions, odlRaw, err := callOpenRouterODL(pdfBytes, apiKey)
+	if err != nil {
+		// Keep direct output usable even if ODL figure extraction fails.
+		return directQuestions, fmt.Sprintf("DIRECT RESPONSE:\n%s\n\n-----\n\nODL RESPONSE (failed):\n%s", directRaw, odlRaw), nil
+	}
+
+	figureByQuestion := make(map[int][]byte, len(odlQuestions))
+	for _, q := range odlQuestions {
+		if len(q.FigureImagePNG) == 0 {
+			continue
+		}
+		figureByQuestion[q.Number] = q.FigureImagePNG
+	}
+
+	for i := range directQuestions {
+		q := &directQuestions[i]
+		if !q.HasFigure {
+			continue
+		}
+		if fig, ok := figureByQuestion[q.Number]; ok && len(fig) > 0 {
+			q.FigureImagePNG = fig
+		}
+	}
+
+	// Rebuild ProcessedText so attached image crops render in UI.
+	postProcessQuestions(directQuestions)
+	return directQuestions, fmt.Sprintf("DIRECT RESPONSE:\n%s\n\n-----\n\nODL RESPONSE:\n%s", directRaw, odlRaw), nil
+}
+
+func buildODLSingleQuestionPrompt(questionNumber int, chunkText string) string {
+	return fmt.Sprintf(`You are a JEE exam paper parser. Parse exactly ONE question from the extracted source below.
+
+Rules:
+- The question number MUST be %d.
+- Do not merge with previous/next question.
+- Keep all maths in LaTeX using \( ... \) or \[ ... \].
+- Keep options only inside "options" array (not in question_text).
+- Preserve any [FIGURE_N] marker inside question_text where that figure appears.
+
+Return ONLY valid JSON (single object or one-item array) with these fields:
+- question_number (integer)
+- question_text (string)
+- options (array of strings)
+- question_type ("mcq" or "numerical")
+- has_figure (boolean)
+- figure_description (string)
+
+SOURCE CHUNK:
+%s`, questionNumber, chunkText)
+}
+
+func callOpenRouterWithMultimodalContent(content []map[string]any, apiKey string) ([]ExtractedQuestion, string, error) {
+	model := config.GetEnv("OPENROUTER_MODEL", "google/gemini-2.0-flash-001")
+	reqBody := map[string]any{
+		"model": model,
+		"messages": []map[string]any{
+			{"role": "user", "content": content},
+		},
+		"temperature": 0.1,
+	}
+	bodyBytes, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, "", fmt.Errorf("marshal error: %v", err)
+	}
+	client := &http.Client{
+		Timeout: 300 * time.Second,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return (&net.Dialer{Timeout: 30 * time.Second}).DialContext(ctx, "tcp4", addr)
+			},
+		},
+	}
+	req, err := http.NewRequest(http.MethodPost, openRouterURL, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return nil, "", fmt.Errorf("creating request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, "", fmt.Errorf("OpenRouter API call failed: %v", err)
+	}
+	defer resp.Body.Close()
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, "", fmt.Errorf("reading OpenRouter response: %v", err)
+	}
+	rawResp := string(respBytes)
+	if resp.StatusCode != http.StatusOK {
+		return nil, rawResp, fmt.Errorf("OpenRouter returned status %d", resp.StatusCode)
+	}
+	var openRouterResp struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(respBytes, &openRouterResp); err != nil {
+		return nil, rawResp, fmt.Errorf("parsing OpenRouter response: %v", err)
+	}
+	if openRouterResp.Error != nil {
+		return nil, rawResp, fmt.Errorf("OpenRouter API error: %s", openRouterResp.Error.Message)
+	}
+	if len(openRouterResp.Choices) == 0 {
+		return nil, rawResp, fmt.Errorf("OpenRouter returned no choices")
+	}
+	text := strings.TrimSpace(openRouterResp.Choices[0].Message.Content)
+	if strings.HasPrefix(text, "```") {
+		text = strings.TrimPrefix(text, "```json")
+		text = strings.TrimPrefix(text, "```")
+		if idx := strings.LastIndex(text, "```"); idx != -1 {
+			text = text[:idx]
+		}
+		text = strings.TrimSpace(text)
+	}
+	text = fixInvalidJSONEscapes(text)
+	questions, err := parseQuestionsJSON(text)
+	if err != nil {
+		return nil, rawResp, fmt.Errorf("parsing questions JSON: %v\n\nText returned by model:\n%s", err, text)
+	}
+	return questions, rawResp, nil
+}
+
+func parseQuestionsJSON(text string) ([]ExtractedQuestion, error) {
+	var arr []ExtractedQuestion
+	if err := json.Unmarshal([]byte(text), &arr); err == nil {
+		return arr, nil
+	}
+	var one ExtractedQuestion
+	if err := json.Unmarshal([]byte(text), &one); err == nil {
+		return []ExtractedQuestion{one}, nil
+	}
+	return nil, fmt.Errorf("response is neither question array nor single question object")
+}
+
+type odlQuestionChunk struct {
+	Number    int
+	Text      string
+	FigureNums []int
+}
+
+func splitODLQuestionChunks(extractedText string) []odlQuestionChunk {
+	matches := questionStartRegex.FindAllStringSubmatchIndex(extractedText, -1)
+	if len(matches) == 0 {
+		matches = questionStartLooseRegex.FindAllStringSubmatchIndex(extractedText, -1)
+	}
+	if len(matches) == 0 {
+		matches = questionStartInlineRegex.FindAllStringSubmatchIndex(extractedText, -1)
+	}
+	if len(matches) == 0 {
+		return nil
+	}
+
+	// If the source uses two/three-digit question numbers (e.g. 34..46), avoid
+	// treating option markers like 1..4 as question starts.
+	minAcceptedQuestionNumber := 1
+	maxDetectedQuestionNumber := 0
+	for _, m := range matches {
+		if len(m) < 4 {
+			continue
+		}
+		if n, err := strconv.Atoi(extractedText[m[2]:m[3]]); err == nil && n > maxDetectedQuestionNumber {
+			maxDetectedQuestionNumber = n
+		}
+	}
+	if maxDetectedQuestionNumber >= 20 {
+		minAcceptedQuestionNumber = 10
+	}
+
+	chunks := make([]odlQuestionChunk, 0, len(matches))
+	seen := map[int]bool{}
+	lastNum := -1
+	for i, m := range matches {
+		if len(m) < 4 {
+			continue
+		}
+		numStart, numEnd := m[2], m[3]
+		start := m[0]
+		end := len(extractedText)
+		if i+1 < len(matches) {
+			end = matches[i+1][0]
+		}
+		n, err := strconv.Atoi(extractedText[numStart:numEnd])
+		if err != nil {
+			continue
+		}
+		// Heuristics to ignore spurious number matches from body text/math.
+		if n < minAcceptedQuestionNumber || n > 500 {
+			continue
+		}
+		if seen[n] {
+			continue
+		}
+		if lastNum > 0 && n+3 < lastNum {
+			continue
+		}
+		chunkText := strings.TrimSpace(extractedText[start:end])
+		if chunkText == "" {
+			continue
+		}
+		seen[n] = true
+		lastNum = n
+		chunks = append(chunks, odlQuestionChunk{
+			Number:    n,
+			Text:      chunkText,
+			FigureNums: extractFigureNums(chunkText),
+		})
+	}
+	return chunks
+}
+
+func extractFigureNums(s string) []int {
+	matches := odlFigureNumRegex.FindAllStringSubmatch(s, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	seen := map[int]bool{}
+	out := make([]int, 0, len(matches))
+	for _, m := range matches {
+		if len(m) < 2 {
+			continue
+		}
+		n, err := strconv.Atoi(m[1])
+		if err != nil || seen[n] {
+			continue
+		}
+		seen[n] = true
+		out = append(out, n)
+	}
+	return out
+}
+
+// postProcessQuestions builds ProcessedText with the [FIGURE] placeholder with the [FIGURE] placeholder
+// replaced inline by a figure box (image in ODL mode, text description in direct mode).
 func postProcessQuestions(questions []ExtractedQuestion) {
 	for i := range questions {
 		q := &questions[i]
+		q.Text = strings.ReplaceAll(q.Text, `\n`, "\n")
+		for j := range q.Options {
+			q.Options[j] = strings.ReplaceAll(q.Options[j], `\n`, "\n")
+		}
 		q.Text = trimDuplicatedOptionsFromQuestionText(q.Text, q.Options)
 		q.ProcessedText = buildProcessedText(q)
 	}
 }
 
 // buildProcessedText returns HTML-safe question text with any [FIGURE] token
-// replaced by an inline figure-description box.
+// replaced by either a real cropped figure image (ODL mode) or an LLM text
+// description box (direct PDF mode).
 func buildProcessedText(q *ExtractedQuestion) htmltemplate.HTML {
 	figureBox := ""
-	if q.HasFigure && q.FigureDescription != "" {
-		figureBox = fmt.Sprintf(
-			`<div class="my-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">`+
-				`<p class="mb-1 font-semibold text-amber-700">&#128202; Figure / Graph description</p>`+
-				`<p class="leading-relaxed whitespace-pre-wrap">%s</p></div>`,
-			html.EscapeString(q.FigureDescription),
-		)
+	if q.HasFigure {
+		if q.FigureImagePNG != nil {
+			// ODL mode: embed the actual cropped figure image.
+			b64 := base64.StdEncoding.EncodeToString(q.FigureImagePNG)
+			figureBox = fmt.Sprintf(
+				`<div class="my-3 rounded-md border border-gray-200 overflow-hidden">`+
+					`<div class="bg-gray-50 p-2"><img src="data:image/png;base64,%s" class="max-w-full h-auto" /></div>`+
+					`</div>`,
+				b64,
+			)
+		} else if q.FigureDescription != "" {
+			// Direct PDF mode: show LLM text description.
+			figureBox = fmt.Sprintf(
+				`<div class="my-3 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">`+
+					`<p class="mb-1 font-semibold text-amber-700">&#128202; Figure / Graph description</p>`+
+					`<p class="leading-relaxed whitespace-pre-wrap">%s</p></div>`,
+				html.EscapeString(q.FigureDescription),
+			)
+		}
 	}
 
+	// escapeText converts raw question text to browser-safe HTML:
+	// HTML-escapes special chars and turns literal newlines into <br> so that
+	// multi-line question text (options on separate lines etc.) renders correctly.
+	escapeText := func(s string) string {
+		return strings.ReplaceAll(html.EscapeString(s), "\n", "<br>")
+	}
+
+	// [FIGURE] is the normalised placeholder (ODL mode normalises [FIGURE_N] to
+	// [FIGURE] before reaching here; direct PDF mode emits [FIGURE] directly).
 	var sb strings.Builder
 	if q.HasFigure && strings.Contains(q.Text, "[FIGURE]") {
 		parts := strings.Split(q.Text, "[FIGURE]")
 		for i, part := range parts {
-			sb.WriteString(html.EscapeString(part))
+			sb.WriteString(escapeText(part))
 			if i < len(parts)-1 {
 				sb.WriteString(figureBox)
 			}
 		}
 	} else {
-		sb.WriteString(html.EscapeString(q.Text))
-		// If the figure has no inline marker, append the description at the end.
+		sb.WriteString(escapeText(q.Text))
+		// No inline [FIGURE] marker: append the figure box at the end.
 		if q.HasFigure && figureBox != "" {
 			sb.WriteString(figureBox)
 		}

@@ -4,16 +4,20 @@
     <p class="text-gray-500 text-sm mb-6">Upload a JEE mock test PDF to extract questions using OpenRouter AI.</p>
 
     <form method="POST" action="/pdf-import" enctype="multipart/form-data"
-        class="flex items-center gap-4 bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-8">
-        <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Select PDF:</label>
-        <input type="file" name="pdf_file" accept=".pdf" required
-            class="block text-sm text-gray-600 border border-gray-300 rounded px-3 py-1.5 flex-1
-                   file:mr-3 file:py-1 file:px-3 file:border-0 file:rounded file:text-sm
-                   file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
-        <button type="submit"
-            class="bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded hover:bg-blue-700 whitespace-nowrap transition-colors">
-            Extract Questions
-        </button>
+        class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-8 space-y-4">
+
+        <!-- File picker + submit -->
+        <div class="flex items-center gap-4">
+            <label class="text-sm font-medium text-gray-700 whitespace-nowrap">Select PDF:</label>
+            <input type="file" name="pdf_file" accept=".pdf" required
+                class="block text-sm text-gray-600 border border-gray-300 rounded px-3 py-1.5 flex-1
+                       file:mr-3 file:py-1 file:px-3 file:border-0 file:rounded file:text-sm
+                       file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
+            <button type="submit"
+                class="bg-blue-600 text-white text-sm font-semibold px-5 py-2 rounded hover:bg-blue-700 whitespace-nowrap transition-colors">
+                Extract Questions
+            </button>
+        </div>
     </form>
 
     {{ if .Processed }}
@@ -50,7 +54,7 @@
                             <span class="flex-shrink-0 w-5 h-5 bg-gray-100 text-gray-600 rounded text-xs flex items-center justify-center font-semibold">
                                 {{ if eq $i 0 }}A{{ else if eq $i 1 }}B{{ else if eq $i 2 }}C{{ else if eq $i 3 }}D{{ else }}{{ $i }}{{ end }}
                             </span>
-                            <span>{{ $opt }}</span>
+                            <span class="whitespace-pre-line">{{ $opt }}</span>
                         </li>
                         {{ end }}
                     </ul>
