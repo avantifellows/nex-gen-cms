@@ -665,8 +665,9 @@ func buildProcessedText(q *ExtractedQuestion) htmltemplate.HTML {
 			// ODL mode: embed the actual cropped figure image.
 			b64 := base64.StdEncoding.EncodeToString(q.FigureImagePNG)
 			figureBox = fmt.Sprintf(
-				`<div class="my-3 rounded-md border border-gray-200 overflow-hidden">`+
-					`<div class="bg-gray-50 p-2"><img src="data:image/png;base64,%s" class="max-w-full h-auto" /></div>`+
+				`<div class="my-3">`+
+					`<img src="data:image/png;base64,%s" alt="" `+
+					`style="display:block;margin:0 auto;max-width:min(100%%,14em);max-height:min(36vh,11em);width:auto;height:auto;object-fit:contain" />`+
 					`</div>`,
 				b64,
 			)
