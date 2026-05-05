@@ -7,7 +7,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
@@ -106,7 +105,7 @@ func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, requ
 	// remove test & problem resources because we are already managing those via separate tabs
 	for _, resource := range *resources {
 		resourceType := strings.ToLower(resource.Type)
-		if resource.StatusID == constants.StatusArchived || resourceType == "problem" || resourceType == "test" {
+		if resourceType == "problem" || resourceType == "test" {
 			continue
 		}
 		// If the request is for chapter resources, keep only rows that don't belong to a topic.
@@ -176,7 +175,7 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 	views.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Resource", nil)
 }
 
-func (h *ResourcesHandler) ArchiveResource(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ResourcesHandler) DeleteResource(responseWriter http.ResponseWriter, request *http.Request) {
 	resourceIdStr := request.URL.Query().Get("id")
 	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
 	if err != nil {
@@ -184,14 +183,10 @@ func (h *ResourcesHandler) ArchiveResource(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	resourceMap := map[string]any{
-		"cms_status_id": constants.StatusArchived,
-	}
-
-	err = h.service.ArchiveObject(resourceIdStr, resourcesEndPoint, resourceMap, resourcesKey,
+	err = h.service.DeleteObject(resourceIdStr,
 		func(resource *models.Resource) bool {
 			return resource.ID != int(resourceId)
-		})
+		}, resourcesKey, resourcesEndPoint)
 
 	// If http error is thrown from here then target row won't be removed by htmx code
 	if err != nil {
