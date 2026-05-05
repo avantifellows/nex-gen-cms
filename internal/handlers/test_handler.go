@@ -55,6 +55,7 @@ const addCurriculumGradeSelectsTemplate = "add_curriculum_grade_selects.html"
 const questionPaperTemplate = "question_paper.html"
 const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
+const pdfSharedTemplate = "test_pdf_shared.html"
 
 const testProblemsEndPoint = "resource/test/%d/problems?lang_code=en&" + QUERY_PARAM_CURRICULUM_ID + "=%s"
 const testRulesEndPoint = "test-rule"
@@ -894,16 +895,18 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	// Load template
 	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfTemplate)
+	sharedTmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfSharedTemplate)
 	tmpl, err := template.New(pdfTemplate).Funcs(template.FuncMap{
 		"getName":        getTestName,
 		"add":            utils.Add,
 		"labels":         optionLabels,
+		"dict":           utils.Dict,
 		"capitalize":     utils.Capitalize,
 		"getSectionName": views.GetSectionName,
 		"stringToInt":    utils.StringToInt,
 		"trim":           strings.TrimSpace,
 		"getChapterName": getProblemChapterName,
-	}).ParseFiles(tmplPath)
+	}).ParseFiles(sharedTmplPath, tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -917,7 +920,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	// Render HTML to buffer
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.ExecuteTemplate(&buf, pdfTemplate, data); err != nil {
 		http.Error(responseWriter, "Template execution error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
