@@ -50,6 +50,12 @@
         </div>
     </div>
 
+    <!-- Paragraph editor for comprehension type -->
+    <div id="paragraphDiv" class="mb-6 hidden">
+        <p class="font-semibold mb-2">Paragraph:</p>
+        {{ template "editor" }}
+    </div>
+
     <!-- difficulty -->
     <div class="mb-6">
         <p class="font-semibold mb-2">Difficulty Rating</p>
@@ -137,13 +143,98 @@
         <a href="#" class="text-blue-600 underline mt-2 inline-block">Add Source</a>
     </div> -->
 
-    <!-- Save button -->
-    <button id="saveButton" type="submit"
-        class="w-full bg-blue-500 text-white mb-4 py-3 font-semibold rounded hover:bg-blue-600">Save</button>
+    <div id="additionalProblemsContainer" class="space-y-6 mb-6"></div>
+
+    <div id="formActions" class="flex gap-4 pb-4">
+        <button id="addMoreProblemButton" type="button"
+            class="hidden w-1/2 bg-gray-100 text-gray-800 py-3 font-semibold rounded border border-gray-300 hover:bg-gray-200">
+            Add More Problem
+        </button>
+
+        <!-- Save button -->
+        <button id="saveButton" type="submit"
+            class="w-full bg-blue-500 text-white py-3 font-semibold rounded hover:bg-blue-600">Save</button>
+    </div>
 
 </form>
 
 <!-- Templates -->
+<template id="tmplAdditionalProblem">
+    <div class="additional-problem border border-gray-300 rounded p-4 bg-gray-50">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Additional Problem</h3>
+            <button type="button" class="remove-additional-problem text-red-600 hover:text-red-800 font-semibold">
+                &times;
+            </button>
+        </div>
+
+        <!-- topic, skills, concepts -->
+        <div class="grid grid-cols-3 gap-6 mb-6">
+            <div>
+                <p class="font-semibold mb-2">Select Topic:</p>
+                <select name="additional-topic-dropdown"
+                    class="additional-topic-dropdown w-full border border-gray-300 rounded p-2"
+                    data-default-topic-id="{{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}"
+                    hx-get="/api/topics?view=dropdown&chapter-dropdown={{if .TopicPtr}}{{.TopicPtr.ChapterID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}"
+                    hx-trigger="load" hx-target="this" hx-swap="innerHTML">
+                    <option disabled selected>Loading topics...</option>
+                </select>
+            </div>
+            <div>
+                <p class="font-semibold mb-2">Select Skills:</p>
+                <select name="additional-skills-dropdown" multiple hx-trigger="load"
+                    class="additional-skills-dropdown w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
+                    hx-get="/api/skills">
+                    <option disabled>Loading skills...</option>
+                </select>
+            </div>
+            <div>
+                <p class="font-semibold mb-2">Select Concepts:</p>
+                <select name="additional-concepts-dropdown" multiple
+                    class="additional-concepts-dropdown w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto">
+                    <option disabled>Select a topic first</option>
+                </select>
+                <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog"
+                    hx-target="body" hx-swap="beforeend">Add Concept from other topic</a>
+            </div>
+        </div>
+
+        <!-- difficulty -->
+        <div class="mb-6">
+            <p class="font-semibold mb-2">Difficulty Rating</p>
+            <label class="mr-4"><input type="radio" data-name="difficulty" value="easy"> 1</label>
+            <label class="mr-4"><input type="radio" data-name="difficulty" value="medium"> 2</label>
+            <label class="mr-4"><input type="radio" data-name="difficulty" value="hard"> 3</label>
+        </div>
+
+        <!-- Question editor -->
+        <div class="additional-question mb-6">
+            <p class="font-semibold mb-2">Text:</p>
+            {{ template "editor" }}
+        </div>
+
+        <!-- Answer -->
+        <div class="additional-answer mb-6">
+            <p class="font-semibold mb-2">Answer:</p>
+            {{ template "problem_answer_numerical" (dict "Answers" nil) }}
+        </div>
+
+        <!-- Solution -->
+        <div class="additional-solution mb-6">
+            <p class="font-semibold mb-2">Solution:</p>
+            {{ template "editor" }}
+        </div>
+
+        <!-- Tags -->
+        <div class="mb-2">
+            <p class="font-semibold mb-2">Tags:</p>
+            <input type="text" name="additional-tags"
+                class="w-full border border-gray-300 rounded p-2"
+                placeholder="Assign Hashtags">
+        </div>
+    </div>
+</template>
+
 <template id="tmplAnsNumeric">
     {{ $meta := (dict "Answers" nil) }}
     {{ if .ProblemPtr }}
@@ -161,6 +252,12 @@
         const addTabButton = optionsDiv.querySelector('#addTab');
 
         const labelPool = 'ABCDEFGHIJ';
+        const paragraphDiv = document.getElementById('paragraphDiv');
+        const addMoreProblemButton = document.getElementById('addMoreProblemButton');
+        const saveButton = document.getElementById('saveButton');
+        const additionalProblemsContainer = document.getElementById('additionalProblemsContainer');
+        const additionalProblemTemplate = document.getElementById('tmplAdditionalProblem');
+        let additionalProblemCount = 0;
 
         // Determine tab count
         // by default start with 4 tabs for 
@@ -208,8 +305,91 @@
                 optionsDiv.classList.add('hidden');
             }
 
+            const isComprehension = problemType === 'comprehension_type';
+            paragraphDiv.classList.toggle('hidden', !isComprehension);
+            additionalProblemsContainer.classList.toggle('hidden', !isComprehension);
+            addMoreProblemButton.classList.toggle('hidden', !isComprehension);
+            saveButton.classList.toggle('w-full', !isComprehension);
+            saveButton.classList.toggle('w-1/2', isComprehension);
+
             updateAnswerInput(problemType);
         }
+
+        function addAdditionalProblem() {
+            additionalProblemCount += 1;
+
+            const fragment = additionalProblemTemplate.content.cloneNode(true);
+            const problemBlock = fragment.querySelector('.additional-problem');
+            problemBlock.dataset.problemIndex = additionalProblemCount;
+
+            problemBlock.querySelectorAll('input[data-name="difficulty"]').forEach(input => {
+                input.name = `additional-difficulty-${additionalProblemCount}`;
+            });
+
+            const numTypeName = `additional-numType-${additionalProblemCount}`;
+            problemBlock.querySelectorAll('input[name="numType"]').forEach(input => {
+                input.name = numTypeName;
+            });
+            setupNumericalToggle(problemBlock, numTypeName);
+            ensureNumericalAnswer(problemBlock);
+
+            problemBlock.querySelector('.remove-additional-problem').addEventListener('click', () => {
+                problemBlock.remove();
+                renumberAdditionalProblems();
+            });
+
+            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
+            topicDropdown.addEventListener('htmx:afterSwap', () => {
+                topicDropdown.value = topicDropdown.dataset.defaultTopicId;
+                loadAdditionalConcepts(problemBlock);
+            });
+            topicDropdown.addEventListener('change', () => loadAdditionalConcepts(problemBlock));
+
+            additionalProblemsContainer.appendChild(fragment);
+            renumberAdditionalProblems();
+
+            if (window.initializeRichTextEditors) {
+                window.initializeRichTextEditors(problemBlock);
+            }
+            if (window.htmx) {
+                htmx.process(problemBlock);
+            }
+        }
+
+        function renumberAdditionalProblems() {
+            additionalProblemsContainer.querySelectorAll('.additional-problem').forEach((problemBlock, index) => {
+                problemBlock.querySelector('h3').textContent = `Additional Problem ${index + 2}`;
+            });
+        }
+
+        function loadAdditionalConcepts(problemBlock) {
+            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
+            const conceptsDropdown = problemBlock.querySelector('.additional-concepts-dropdown');
+            const topicId = topicDropdown.value;
+
+            if (!topicId) {
+                conceptsDropdown.innerHTML = '<option disabled>Select a topic first</option>';
+                return;
+            }
+
+            conceptsDropdown.innerHTML = '<option disabled>Loading concepts...</option>';
+            fetch(`/api/concepts?topic_id=${encodeURIComponent(topicId)}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.text();
+                })
+                .then(html => {
+                    conceptsDropdown.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error("Error loading concepts:", err);
+                    conceptsDropdown.innerHTML = '<option disabled>Error loading concepts</option>';
+                });
+        }
+
+        addMoreProblemButton.addEventListener('click', addAdditionalProblem);
 
         function updateAnswerInput(problemType) {
             const answerContent = document.getElementById('answerContent');
@@ -219,13 +399,13 @@
                 // Add options & answer radio/checkboxes
                 renderTabs();
 
-            } else if (problemType === 'numerical_answer') {
+            } else if (problemType === 'numerical_answer' || problemType === 'comprehension_type') {
                 // Use template
                 const tmpl = document.getElementById('tmplAnsNumeric');
                 const fragment = tmpl.content.cloneNode(true);
                 setupNumericalToggle(fragment);
                 answerContent.appendChild(fragment);
-                ensureNumericalAnswer();
+                ensureNumericalAnswer(answerContent);
 
             } else {
                 // Integer type fallback (simple input)
@@ -252,8 +432,8 @@
             }
         }
 
-        function setupNumericalToggle(container) {
-            const radios = container.querySelectorAll('input[name="numType"]');
+        function setupNumericalToggle(container, radioName = 'numType') {
+            const radios = container.querySelectorAll(`input[name="${radioName}"]`);
             const singleDiv = container.querySelector('#singleInputDiv');
             const rangeDiv = container.querySelector('#rangeInputDiv');
 
@@ -274,11 +454,11 @@
             });
         }
 
-        function ensureNumericalAnswer() {
+        function ensureNumericalAnswer(container = document) {
             const inputs = [
-                document.querySelector('[name="singleAnswer"]'),
-                document.querySelector('[name="minAnswer"]'),
-                document.querySelector('[name="maxAnswer"]')
+                container.querySelector('[name="singleAnswer"]'),
+                container.querySelector('[name="minAnswer"]'),
+                container.querySelector('[name="maxAnswer"]')
             ].filter(Boolean);
 
             inputs.forEach(input => {
@@ -583,7 +763,7 @@
                     return false;
                 }
 
-            } else if (subtype === 'numerical_answer') {
+            } else if (subtype === 'numerical_answer' || subtype === 'comprehension_type') {
                 const container = document.getElementById('answerContent');
 
                 const selectedType = container.querySelector('input[name="numType"]:checked')?.value;
@@ -662,7 +842,7 @@
                     .sort((a, b) => a - b)
                     .map(num => num.toString());
 
-            } else if (subtype === 'numerical_answer') {
+            } else if (subtype === 'numerical_answer' || subtype === 'comprehension_type') {
                 const numType = document.querySelector('input[name="numType"]:checked')?.value;
 
                 if (numType === 'single') {
