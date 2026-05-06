@@ -597,20 +597,20 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		// Only subtype header needed
 		filename = addTestDestProblemRowWithSubtypeTemplate
 		data = map[string]any{
-			"Problem":       problemPtr,
+			"Problem":        problemPtr,
 			"SectionSubtype": sectionSubtype,
-			"InsertAfterId": insertAfterId,
-			"ReadOnlyMarks": readOnlyMarks,
+			"InsertAfterId":  insertAfterId,
+			"ReadOnlyMarks":  readOnlyMarks,
 		}
 
 	case subtypeExists:
 		// Just problem row
 		filename = addTestDestProblemRowWithoutHeadersTemplate
 		data = map[string]any{
-			"Problem":       problemPtr,
+			"Problem":        problemPtr,
 			"SectionSubtype": sectionSubtype,
-			"InsertAfterId": insertAfterId,
-			"ReadOnlyMarks": readOnlyMarks,
+			"InsertAfterId":  insertAfterId,
+			"ReadOnlyMarks":  readOnlyMarks,
 		}
 	}
 
@@ -970,7 +970,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 				chromedp.Evaluate(`document.getElementById('mathjax-done') ? document.getElementById('mathjax-done').textContent : ''`, &doneText).Do(ctx)
 
 				if doneText == "true" {
-					log.Printf("MathJax done after %d polls", i)
 					return nil
 				}
 				time.Sleep(100 * time.Millisecond)
