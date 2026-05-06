@@ -34,7 +34,8 @@
         <div>
             <p class="font-semibold mb-2">Select Concepts:</p>
             <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="revealed once"
-                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto" hx-swap="beforeend"
+                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
+                hx-swap="{{if .ProblemPtr}}beforeend{{else}}innerHTML{{end}}"
                 hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if .ProblemPtr}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
                     {{ if .ProblemPtr }}
                         {{ range .ProblemPtr.Concepts }}
@@ -45,7 +46,7 @@
                         <option disabled>Loading concepts...</option>
                     {{ end }}
             </select>
-            <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog" 
+            <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog"
                 hx-target="body" hx-swap="beforeend">Add Concept from other topic</a>
         </div>
     </div>
