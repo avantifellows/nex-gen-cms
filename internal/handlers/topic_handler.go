@@ -35,6 +35,16 @@ func NewTopicsHandler(service *services.Service[models.Topic]) *TopicsHandler {
 	}
 }
 
+func (h *TopicsHandler) LoadResources(responseWriter http.ResponseWriter, request *http.Request) {
+	topicIdStr := request.URL.Query().Get("topicId")
+	chapterIdStr := request.URL.Query().Get("chapterId")
+	data := dto.ResourcesData{
+		ChapterId: chapterIdStr,
+		TopicId: topicIdStr,
+	}
+	views.ExecuteTemplate(resourcesTemplate, responseWriter, data, nil)
+}
+
 func (h *TopicsHandler) OpenAddTopic(responseWriter http.ResponseWriter, request *http.Request) {
 	chapterId := request.URL.Query().Get("chapterId")
 	views.ExecuteTemplate(addTopicTemplate, responseWriter, chapterId, nil)
@@ -168,11 +178,13 @@ func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *ht
 	}
 
 	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
-	data := dto.HomeData{
-		CurriculumID: curriculumId,
-		GradeID:      gradeId,
-		SubjectID:    subjectId,
-		TopicPtr:     selectedTopicPtr,
+	data := dto.TopicData{
+		HomeData: dto.HomeData{
+			CurriculumID: curriculumId,
+			GradeID:      gradeId,
+			SubjectID:    subjectId,
+		},
+		TopicPtr: selectedTopicPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getTopicName,

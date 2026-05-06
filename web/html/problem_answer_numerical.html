@@ -1,0 +1,58 @@
+
+{{ define "problem_answer_numerical" }}
+
+{{ $answers := .Answers }}
+{{ $len := 0 }}
+
+{{ if $answers }}
+    {{ $len = len $answers }}
+{{ end }}
+
+{{ $isRange := eq $len 2 }}
+{{ $isSingle := eq $len 1 }}
+
+{{ $single := "" }}
+{{ $min := "" }}
+{{ $max := "" }}
+
+{{ if $isSingle }}
+    {{ $single = index $answers 0 }}
+{{ end }}
+
+{{ if $isRange }}
+    {{ $min = index $answers 0 }}
+    {{ $max = index $answers 1 }}
+{{ end }}
+
+<div>
+
+    <div style="display:none"></div>
+
+    <!-- Number Type Toggle -->
+    <div class="mb-2">
+        <label class="mr-4">
+            <input type="radio" name="numType" value="single"
+                {{ if not $isRange }}checked{{ end }}>
+            Single Value
+        </label>
+        <label>
+            <input type="radio" name="numType" value="range"
+                {{ if $isRange }}checked{{ end }}>
+            Range
+        </label>
+    </div>
+
+    <div id="singleInputDiv" class="{{ if $isRange }}hidden{{ end }}">
+        <input type="text" name="singleAnswer" inputmode="decimal"
+            class="w-full border border-gray-300 rounded p-2" value="{{ $single }}">
+    </div>
+
+    <div id="rangeInputDiv" class="flex gap-2 {{ if not $isRange }}hidden{{ end }}">
+        <input type="text" name="minAnswer" placeholder="Min" value="{{ $min }}"
+            class="w-1/2 border border-gray-300 rounded p-2">
+
+        <input type="text" name="maxAnswer" placeholder="Max" value="{{ $max }}"
+            class="w-1/2 border border-gray-300 rounded p-2">
+    </div>
+</div>
+{{ end }}

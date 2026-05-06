@@ -4,13 +4,13 @@
             <thead>
                 <tr class="bg-gray-200 text-gray-600 text-sm">
                     <th class="py-4 px-6 text-left">
-                        <a href="#" hx-get="/topics?id={{.ChapterId}}" hx-target="#subContent"
+                        <a href="#" hx-get="/topics?id={{.ChapterID}}" hx-target="#subContent"
                             hx-on:click="updateTableSortState('1', 'topics');">
                             Code <i class="fas fa-sort"></i>
                         </a>
                     </th>
                     <th class="px-6 text-left">
-                        <a href="#" hx-get="/topics?id={{.ChapterId}}" hx-target="#subContent"
+                        <a href="#" hx-get="/topics?id={{.ChapterID}}" hx-target="#subContent"
                             hx-on:click="updateTableSortState('2', 'topics');">
                             Name <i class="fas fa-sort"></i>
                         </a>
@@ -24,7 +24,7 @@
                     <th class="px-6 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody id="topicTableBody" class="text-gray-600 text-sm" hx-get="/api/topics?view=list&id={{.ChapterId}}"
+            <tbody id="topicTableBody" class="text-gray-600 text-sm" hx-get="/api/topics?view=list&id={{.ChapterID}}"
                 hx-trigger="load">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
@@ -33,7 +33,7 @@
 
     <!-- Form to add new topic -->
     <div class="mt-4">
-        <h4 id="addTopicLink" class="text-sm font-semibold text-blue-500 hover:underline" onclick="toggleForm(event, {{.ChapterId}})">
+        <h4 id="addTopicLink" class="text-sm font-semibold text-blue-500 hover:underline" onclick="toggleForm(event, {{.ChapterID}})">
             <a href="#">Add New Topic</a>
         </h4>
     </div>

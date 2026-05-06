@@ -25,7 +25,7 @@ This document provides a comprehensive overview of the Next Generation CMS codeb
 - `internal/constants/`
   - `constants.go`: Runtime constants (e.g., HTML folder), sort order enums, resource statuses.
 - `internal/dto/`
-  - View-models (`HomeData`, `PaperData`, `TopicsData`, `SortState`) passed into templates.
+  - View-models (`HomeData`, `ChapterData`, `TopicData`, `ProblemData`, `TestData`, `TopicsData`, `PaperData`, `SortState`) passed into templates.
 - `internal/handlers/`
   - Handlers for chapters, topics, tests, problems, etc. They translate HTTP to service calls and render templates.
   - `handlerutils/`: Shared handler helpers (subject/topic lookups).
@@ -181,8 +181,9 @@ DI (`di/app_component.go`) wires:
 
 DTOs:
 
-- `HomeData`: Pivotal view-model holding selected IDs, pointers to selected `Chapter|Topic|Problem|Test`, map of problems, and an optional `TestRule`.
-- `TopicsData`: For topics tab (ChapterId + sorting state).
+- `HomeData`: Selected curriculum, grade, and subject IDs (shared across screens).
+- `ChapterData` / `TopicData` / `ProblemData` / `TestData`: Embed `HomeData` and add screen-specific pointers and maps as needed.
+- `TopicsData`: For the topics sub-tab (`ChapterID` only; defined in `topics_dto.go`).
 - `PaperData`: For PDF rendering (test + problems + rule).
 
 

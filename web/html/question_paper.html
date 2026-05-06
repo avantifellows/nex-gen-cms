@@ -74,7 +74,7 @@ window.MathJax = {
                 </div>
 
                 <!-- Show Options only if MCQ -->
-                {{if or (eq $p.Subtype "mcq_single_answer") (eq $p.Subtype "mcq_multiple_answer")}}
+                {{if or (eq $p.Subtype "mcq_single_answer") (eq $p.Subtype "mcq_multiple_answer") (eq $p.Subtype "matrix_match")}}
                 <div class="pl-11">
 
                     {{/* Determine option layout */}}

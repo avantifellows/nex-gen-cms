@@ -377,9 +377,11 @@
                             "ReadOnlyMarks" $hasTestRule)}}
                             {{range .Compulsory.Problems}}
                                 {{ $sr = add $sr 1 }}
-                                {{template "dest_problem_row" (dict "Problem" (index $.Problems .ID) "SrNo" $sr
+                                {{ $prob := index $.Problems .ID }}
+                                {{template "dest_problem_row" (dict "Problem" $prob "SrNo" $sr
                                 "PosMarks" .PosMarks "NegMarks" .NegMarks "DifficultyLevel" .DifficultyLevel "OptionLayout" .OptionLayout 
-                                "ReadOnlyMarks" $hasTestRule)}}
+                                "ReadOnlyMarks" $hasTestRule
+                                "SectionSubtype" (sectionSubtypeForProblem $prob.Subtype (examIdFromTest $.TestPtr) $.JeeAdvancedExamID))}}
                             {{end}}
                         {{end}}
                     {{end}}
@@ -423,7 +425,7 @@
     </form>
 </div>
 <script type="application/json" id="test-context-json">
-  {{ dict "testId" $id "testRule" .TestRule | toJson }}
+  {{ dict "testId" $id "testRule" .TestRule "examId" (examIdFromTest .TestPtr) "jeeAdvancedExamId" .JeeAdvancedExamID | toJson }}
 </script>
 <script>
     var mode = "{{ $mode }}";  // "new", "edit", or "copy"
@@ -710,18 +712,16 @@
         let nextRow = problemRow.nextElementSibling;
         problemRow.remove();
 
-        const subject = problemRow.dataset.subject;
-        const subtype = problemRow.dataset.subtype;
-        const tableBody = document.getElementById("questions-table-body");
+        // Remove subtype header row only when it's "dangling" (no problems under it)
+        const nextRowIsProblem = nextRow && nextRow.id.startsWith("problem-");
 
-        // Remove subtype header if no more problems of that subtype under same subject remain
-        const remainingSubtypeProblems = tableBody.querySelectorAll(`tr[id^="problem-"][data-subject="${subject}"][data-subtype="${subtype}"]`);
-        if (remainingSubtypeProblems.length === 0) {
+        if (prevRow.id.startsWith("subtype-") && !nextRowIsProblem) {
             prevRow.remove();
 
-            // Remove subject header if no more problems of that subject remain
-            const remainingSubjectProblems = tableBody.querySelectorAll(`tr[id^="problem-"][data-subject="${subject}"]`);
-            if (remainingSubjectProblems.length === 0) {
+            // Remove subject header row only when it's "dangling" (no sections under it)
+            const nextRowIsSubtypeHeader = nextRow && nextRow.id.startsWith("subtype-");
+
+            if (prevPrevRow.id.startsWith("subject-") && !nextRowIsSubtypeHeader) {
                 prevPrevRow.remove();
                 updateSubjectArrowStates();
             }
