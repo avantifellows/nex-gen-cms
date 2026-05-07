@@ -1,5 +1,7 @@
 package models
 
+import "html/template"
+
 type Test struct {
 	ID               int               `json:"id,omitempty"`
 	Name             []ResName         `json:"name"`
@@ -24,11 +26,12 @@ type ResName struct {
 }
 
 type ResTypeParams struct {
-	Duration string       `json:"duration"`
-	Marks    int16        `json:"marks"`
-	PosMarks []int8       `json:"pos_marks,omitempty"`
-	NegMarks []int8       `json:"neg_marks,omitempty"`
-	Subjects []ResSubject `json:"subjects,omitempty"`
+	Duration     string        `json:"duration"`
+	Marks        int16         `json:"marks"`
+	PosMarks     []int8        `json:"pos_marks,omitempty"`
+	NegMarks     []int8        `json:"neg_marks,omitempty"`
+	Subjects     []ResSubject  `json:"subjects,omitempty"`
+	Instructions template.HTML `json:"instructions,omitempty"`
 }
 
 type ResSubject struct {
