@@ -47,7 +47,8 @@
                     {{ end }}
             </select>
             <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog"
-                hx-target="body" hx-swap="beforeend">Add Concept from other topic</a>
+                hx-target="body" hx-swap="beforeend"
+                onclick="window._conceptModalTargetDropdown = document.getElementById('concepts-dropdown')">Add Concept from other topic</a>
         </div>
     </div>
 
@@ -192,7 +193,8 @@
                     <option disabled>Select a topic first</option>
                 </select>
                 <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog"
-                    hx-target="body" hx-swap="beforeend">Add Concept from other topic</a>
+                    hx-target="body" hx-swap="beforeend"
+                    onclick="window._conceptModalTargetDropdown = this.closest('.additional-problem').querySelector('.additional-concepts-dropdown')">Add Concept from other topic</a>
             </div>
         </div>
 
@@ -309,7 +311,7 @@
                 optionsDiv.classList.add('hidden');
             }
 
-            const isComprehension = problemType === 'comprehension_type';
+            const isComprehension = problemType === 'comprehension';
             paragraphDiv.classList.toggle('hidden', !isComprehension);
             additionalProblemsContainer.classList.toggle('hidden', !isComprehension);
             addMoreProblemButton.classList.toggle('hidden', !isComprehension);
@@ -471,7 +473,7 @@
                 // Add options & answer radio/checkboxes
                 renderTabs();
 
-            } else if (problemType === 'numerical_answer' || problemType === 'comprehension_type') {
+            } else if (problemType === 'numerical_answer' || problemType === 'comprehension') {
                 // Use template
                 const tmpl = document.getElementById('tmplAnsNumeric');
                 const fragment = tmpl.content.cloneNode(true);
@@ -835,7 +837,7 @@
                     return false;
                 }
 
-            } else if (subtype === 'numerical_answer' || subtype === 'comprehension_type') {
+            } else if (subtype === 'numerical_answer' || subtype === 'comprehension') {
                 const container = document.getElementById('answerContent');
 
                 const selectedType = container.querySelector('input[name="numType"]:checked')?.value;
@@ -914,7 +916,7 @@
                     .sort((a, b) => a - b)
                     .map(num => num.toString());
 
-            } else if (subtype === 'numerical_answer' || subtype === 'comprehension_type') {
+            } else if (subtype === 'numerical_answer' || subtype === 'comprehension') {
                 const numType = document.querySelector('input[name="numType"]:checked')?.value;
 
                 if (numType === 'single') {
