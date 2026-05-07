@@ -33,7 +33,7 @@
         </div>
         <div>
             <p class="font-semibold mb-2">Select Concepts:</p>
-            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="revealed once"
+            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
                 class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
                 hx-swap="{{if .ProblemPtr}}beforeend{{else}}innerHTML{{end}}"
                 hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if .ProblemPtr}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
@@ -174,18 +174,14 @@
             <div>
                 <p class="font-semibold mb-2">Select Topic:</p>
                 <select name="additional-topic-dropdown"
-                    class="additional-topic-dropdown w-full border border-gray-300 rounded p-2"
-                    data-default-topic-id="{{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}"
-                    hx-get="/api/topics?view=dropdown&chapter-dropdown={{if .TopicPtr}}{{.TopicPtr.ChapterID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}"
-                    hx-trigger="load" hx-target="this" hx-swap="innerHTML">
+                    class="additional-topic-dropdown w-full border border-gray-300 rounded p-2">
                     <option disabled selected>Loading topics...</option>
                 </select>
             </div>
             <div>
                 <p class="font-semibold mb-2">Select Skills:</p>
-                <select name="additional-skills-dropdown" multiple hx-trigger="load"
-                    class="additional-skills-dropdown w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
-                    hx-get="/api/skills">
+                <select name="additional-skills-dropdown" multiple
+                    class="additional-skills-dropdown w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto">
                     <option disabled>Loading skills...</option>
                 </select>
             </div>
@@ -258,6 +254,13 @@
         const saveButton = document.getElementById('saveButton');
         const additionalProblemsContainer = document.getElementById('additionalProblemsContainer');
         const additionalProblemTemplate = document.getElementById('tmplAdditionalProblem');
+        const mainSkillsDropdown = document.getElementById('skills-dropdown');
+        const mainConceptsDropdown = document.getElementById('concepts-dropdown');
+        const currentTopicId = '{{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}';
+        const currentChapterId = '{{if .TopicPtr}}{{.TopicPtr.ChapterID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
+        let skillsOptionsHtml = '';
+        let topicsOptionsHtml = '';
+        const conceptsOptionsByTopic = new Map();
         let additionalProblemCount = 0;
 
         // Determine tab count
@@ -339,12 +342,7 @@
                 renumberAdditionalProblems();
             });
 
-            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
-            topicDropdown.addEventListener('htmx:afterSwap', () => {
-                topicDropdown.value = topicDropdown.dataset.defaultTopicId;
-                loadAdditionalConcepts(problemBlock);
-            });
-            topicDropdown.addEventListener('change', () => loadAdditionalConcepts(problemBlock));
+            initializeAdditionalDropdowns(problemBlock);
 
             additionalProblemsContainer.appendChild(fragment);
             renumberAdditionalProblems();
@@ -363,6 +361,85 @@
             });
         }
 
+        mainSkillsDropdown.addEventListener('htmx:afterSwap', () => {
+            skillsOptionsHtml = getUnselectedOptionsHtml(mainSkillsDropdown.innerHTML);
+        });
+
+        mainConceptsDropdown.addEventListener('htmx:afterSwap', () => {
+            conceptsOptionsByTopic.set(currentTopicId, getUnselectedOptionsHtml(mainConceptsDropdown.innerHTML));
+        });
+
+        function initializeAdditionalDropdowns(problemBlock) {
+            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
+            const skillsDropdown = problemBlock.querySelector('.additional-skills-dropdown');
+
+            topicDropdown.addEventListener('change', () => loadAdditionalConcepts(problemBlock));
+
+            loadSkillsOptions().then(html => {
+                skillsDropdown.innerHTML = html;
+            });
+
+            loadTopicOptions().then(html => {
+                topicDropdown.innerHTML = html;
+                topicDropdown.value = currentTopicId;
+                loadAdditionalConcepts(problemBlock);
+            });
+        }
+
+        function loadSkillsOptions() {
+            if (skillsOptionsHtml) {
+                return Promise.resolve(skillsOptionsHtml);
+            }
+
+            return fetchText('/api/skills').then(html => {
+                skillsOptionsHtml = getUnselectedOptionsHtml(html);
+                return skillsOptionsHtml;
+            });
+        }
+
+        function loadTopicOptions() {
+            if (topicsOptionsHtml) {
+                return Promise.resolve(topicsOptionsHtml);
+            }
+
+            return fetchText(`/api/topics?view=dropdown&chapter-dropdown=${encodeURIComponent(currentChapterId)}`)
+                .then(html => {
+                    topicsOptionsHtml = getUnselectedOptionsHtml(html);
+                    return topicsOptionsHtml;
+                });
+        }
+
+        function loadConceptOptions(topicId) {
+            if (conceptsOptionsByTopic.has(topicId)) {
+                return Promise.resolve(conceptsOptionsByTopic.get(topicId));
+            }
+
+            return fetchText(`/api/concepts?topic_id=${encodeURIComponent(topicId)}`).then(html => {
+                const optionsHtml = getUnselectedOptionsHtml(html);
+                conceptsOptionsByTopic.set(topicId, optionsHtml);
+                return optionsHtml;
+            });
+        }
+
+        function fetchText(url) {
+            return fetch(url).then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.text();
+            });
+        }
+
+        function getUnselectedOptionsHtml(html) {
+            const select = document.createElement('select');
+            select.innerHTML = html;
+            select.querySelectorAll('option').forEach(option => {
+                option.selected = false;
+                option.removeAttribute('selected');
+            });
+            return select.innerHTML;
+        }
+
         function loadAdditionalConcepts(problemBlock) {
             const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
             const conceptsDropdown = problemBlock.querySelector('.additional-concepts-dropdown');
@@ -374,13 +451,7 @@
             }
 
             conceptsDropdown.innerHTML = '<option disabled>Loading concepts...</option>';
-            fetch(`/api/concepts?topic_id=${encodeURIComponent(topicId)}`)
-                .then(res => {
-                    if (!res.ok) {
-                        throw new Error(`HTTP error! status: ${res.status}`);
-                    }
-                    return res.text();
-                })
+            loadConceptOptions(topicId)
                 .then(html => {
                     conceptsDropdown.innerHTML = html;
                 })
