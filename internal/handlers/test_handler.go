@@ -47,6 +47,7 @@ const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.
 const addTestDestProblemRowTemplate = "dest_problem_row.html"
 const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
 const addTestDestSubjectRowTemplate = "dest_subject_row.html"
+const testInstructionsModalTemplate = "test_instructions_modal.html"
 const addTestSearchedTemplate = "add_test_searched.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
 const addTestModalTemplate = "add_test_modal.html"
@@ -478,7 +479,8 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
-		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
+		testInstructionsModalTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) buildTestData(request *http.Request) (dto.TestData, error) {
@@ -597,20 +599,20 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		// Only subtype header needed
 		filename = addTestDestProblemRowWithSubtypeTemplate
 		data = map[string]any{
-			"Problem":       problemPtr,
+			"Problem":        problemPtr,
 			"SectionSubtype": sectionSubtype,
-			"InsertAfterId": insertAfterId,
-			"ReadOnlyMarks": readOnlyMarks,
+			"InsertAfterId":  insertAfterId,
+			"ReadOnlyMarks":  readOnlyMarks,
 		}
 
 	case subtypeExists:
 		// Just problem row
 		filename = addTestDestProblemRowWithoutHeadersTemplate
 		data = map[string]any{
-			"Problem":       problemPtr,
+			"Problem":        problemPtr,
 			"SectionSubtype": sectionSubtype,
-			"InsertAfterId": insertAfterId,
-			"ReadOnlyMarks": readOnlyMarks,
+			"InsertAfterId":  insertAfterId,
+			"ReadOnlyMarks":  readOnlyMarks,
 		}
 	}
 
@@ -689,7 +691,8 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
-		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
+		testInstructionsModalTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -988,7 +991,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 				chromedp.Evaluate(`document.getElementById('mathjax-done') ? document.getElementById('mathjax-done').textContent : ''`, &doneText).Do(ctx)
 
 				if doneText == "true" {
-					log.Printf("MathJax done after %d polls", i)
 					return nil
 				}
 				time.Sleep(100 * time.Millisecond)
@@ -1087,7 +1089,8 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
-		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
+		testInstructionsModalTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request *http.Request) {
