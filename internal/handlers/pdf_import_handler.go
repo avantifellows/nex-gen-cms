@@ -649,10 +649,82 @@ func postProcessQuestions(questions []ExtractedQuestion) {
 		q.Text = strings.ReplaceAll(q.Text, `\n`, "\n")
 		for j := range q.Options {
 			q.Options[j] = strings.ReplaceAll(q.Options[j], `\n`, "\n")
+			q.Options[j] = normalizeOptionSoftWraps(q.Options[j])
 		}
 		q.Text = trimDuplicatedOptionsFromQuestionText(q.Text, q.Options)
+		q.Text = normalizeQuestionSoftWraps(q.Text)
 		q.ProcessedText = buildProcessedText(q)
 	}
+}
+
+var questionListLineStartRegex = regexp.MustCompile(`(?i)^\s*(?:\(?[a-d]\)|\(?\d{1,3}\)|\([ivx]+\)|[ivx]+\)|\d+\.)\s+`)
+var whitespaceRunRegex = regexp.MustCompile(`\s+`)
+
+// normalizeSoftWrapsSimple collapses PDF soft-wrap newlines into spaces.
+// If preserveListLineStarts is true, it keeps a newline before list-like lines
+// such as "(1) ...", "A) ...", "1. ...".
+//
+// This is intentionally minimal to address:
+// - question_text: "....\nfollows the\n(1) ..." → ".... follows the\n(1) ..."
+// - options: ".... nuclear and\ncell division ...." → ".... nuclear and cell division ...."
+func normalizeSoftWrapsSimple(s string, preserveListLineStarts bool) string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+	lines := strings.Split(s, "\n")
+	if len(lines) <= 1 {
+		return strings.TrimSpace(s)
+	}
+
+	var outLines []string
+	var cur strings.Builder
+
+	flush := func() {
+		if cur.Len() == 0 {
+			return
+		}
+		outLines = append(outLines, strings.TrimSpace(whitespaceRunRegex.ReplaceAllString(cur.String(), " ")))
+		cur.Reset()
+	}
+
+	for _, raw := range lines {
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			// Ignore blank lines for now; neither example needs paragraph preservation.
+			continue
+		}
+
+		if preserveListLineStarts && questionListLineStartRegex.MatchString(line) {
+			flush()
+			outLines = append(outLines, strings.TrimSpace(whitespaceRunRegex.ReplaceAllString(line, " ")))
+			continue
+		}
+
+		if cur.Len() > 0 {
+			cur.WriteByte(' ')
+		}
+		cur.WriteString(line)
+	}
+	flush()
+
+	sep := " "
+	if preserveListLineStarts {
+		sep = "\n"
+	}
+	return strings.TrimSpace(strings.Join(outLines, sep))
+}
+
+// normalizeOptionSoftWraps collapses PDF "soft-wrap" newlines inside a single
+// option into spaces. Options are displayed one-per-line in UI, so preserving
+// intra-option line breaks is usually undesirable.
+func normalizeOptionSoftWraps(s string) string {
+	return normalizeSoftWrapsSimple(s, false)
+}
+
+// normalizeQuestionSoftWraps collapses PDF "soft-wrap" line breaks inside a
+// sentence into spaces, while preserving real paragraph breaks and list-like
+// formatting (e.g. lines starting with "(i)", "(1)", "A)", "1.").
+func normalizeQuestionSoftWraps(s string) string {
+	return normalizeSoftWrapsSimple(s, true)
 }
 
 // buildProcessedText returns HTML-safe question text with any [FIGURE] token
