@@ -571,7 +571,8 @@
             const integerPart = unsignedValue.slice(0, firstDotIndex).replace(/\./g, '');
             const decimalPartRaw = unsignedValue.slice(firstDotIndex + 1).replace(/\./g, '');
             return {
-                value: (hasLeadingMinus ? '-' : '') + integerPart + '.' + decimalPartRaw.slice(0, 2),
+                // Do not truncate decimals while typing; allow user to enter more and show validity error instead.
+                value: (hasLeadingMinus ? '-' : '') + integerPart + '.' + decimalPartRaw,
                 exceedsTwoDecimals: decimalPartRaw.length > 2
             };
         }
@@ -762,13 +763,22 @@
                 return false;
             }
             
-            const prolemJson = buildProblemJson(topicId, chapterId);
-            const url = problemId ? `/update-problem?id=${problemId}` : '/create-problem';
+            const subtype = document.getElementById('problem-type-dropdown').value;
+            const isCreate = !problemId;
+            const isComprehensionCreate = isCreate && subtype === 'comprehension';
+
+            const payload = isComprehensionCreate
+                ? buildComprehensionProblemsPayload(topicId, chapterId)
+                : buildProblemJson(topicId, chapterId);
+
+            const url = problemId
+                ? `/update-problem?id=${problemId}`
+                : (isComprehensionCreate ? '/create-problems' : '/create-problem');
             const method = problemId ? 'PATCH' : 'POST';
 
             fetch(url, {
                 method: method,
-                body: JSON.stringify(prolemJson),
+                body: JSON.stringify(payload),
                 headers: {
                     'Content-Type': 'application/json',  // Specify content type as JSON
                     'HX-Request': 'true'  // so that your server can detect HTMX if needed
@@ -797,19 +807,95 @@
             if (label) btn.innerText = label;
         }
 
+        function fail(msg) {
+            alert(msg);
+            return false;
+        }
+
+        function validateEditorNotEmpty(editorEl, msg) {
+            if (!editorEl || !editorEl.textContent.trim()) {
+                return fail(msg);
+            }
+            return true;
+        }
+
+        function validateNumericalAnswer(rootEl, numTypeName, msgPrefix = '') {
+            if (!rootEl) return fail('Options are not available.');
+
+            const selectedType = rootEl.querySelector(`input[name="${numTypeName}"]:checked`)?.value;
+            if (!selectedType) {
+                return fail(`${msgPrefix}Please select answer type (Single or Range).`);
+            }
+
+            if (selectedType === 'single') {
+                const singleInput = rootEl.querySelector('[name="singleAnswer"]');
+                const value = singleInput?.value?.trim();
+                if (!value) {
+                    return fail(`${msgPrefix}Please enter the answer.`);
+                }
+                if (sanitizeNumericalInput(value).exceedsTwoDecimals) {
+                    return fail('Numerical answers must have at most 2 decimal places.');
+                }
+                return true;
+            }
+
+            if (selectedType === 'range') {
+                const minInput = rootEl.querySelector('[name="minAnswer"]');
+                const maxInput = rootEl.querySelector('[name="maxAnswer"]');
+
+                const minVal = minInput?.value?.trim();
+                const maxVal = maxInput?.value?.trim();
+                if (!minVal || !maxVal) {
+                    return fail(`${msgPrefix}Please enter both minimum and maximum values.`);
+                }
+
+                if (sanitizeNumericalInput(minVal).exceedsTwoDecimals ||
+                    sanitizeNumericalInput(maxVal).exceedsTwoDecimals) {
+                    return fail('Numerical answers must have at most 2 decimal places.');
+                }
+
+                const min = parseFloat(minVal);
+                const max = parseFloat(maxVal);
+                if (min > max) {
+                    return fail('Minimum value cannot be greater than maximum value.');
+                }
+                return true;
+            }
+
+            return fail(`${msgPrefix}Invalid answer type.`);
+        }
+
         function validateFields() {
             const difficulty = document.querySelector('input[name="difficulty"]:checked');
             if (!difficulty) {
-                alert('Please select a difficulty level.');
-                return;
+                return fail('Please select a difficulty level.');
             }
             const editor = document.getElementById('questionDiv').querySelector('.editor');
-            if (!editor.textContent.trim()) {
-                alert('Please enter the question.');
-                return;
-            }
+            if (!validateEditorNotEmpty(editor, 'Please enter the question.')) return false;
 
             const subtype = document.getElementById('problem-type-dropdown').value;
+            if (subtype === 'comprehension') {
+                const paragraphEditor = paragraphDiv.querySelector('.editor');
+                if (!validateEditorNotEmpty(paragraphEditor, 'Please enter the paragraph.')) return false;
+
+                // Validate any additional problems, if present
+                const blocks = additionalProblemsContainer.querySelectorAll('.additional-problem');
+                for (const block of blocks) {
+                    const idx = block.dataset.problemIndex || '';
+                    const diff = block.querySelector(`input[name="additional-difficulty-${idx}"]:checked`);
+                    if (!diff) {
+                        return fail('Please select a difficulty level for each additional problem.');
+                    }
+
+                    const qEditor = block.querySelector('.additional-question .editor');
+                    if (!validateEditorNotEmpty(qEditor, 'Please enter the question for each additional problem.')) return false;
+
+                    if (!validateNumericalAnswer(block, `additional-numType-${idx}`, 'For each additional problem, ')) {
+                        return false;
+                    }
+                }
+            }
+
             if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
                 if (typeof tabContent !== 'undefined' && Array.isArray(tabContent)) {
                     for (let i = 0; i < tabContent.length; i++) {
@@ -826,70 +912,149 @@
                 }
 
                 if (answerLabels.size === 0) {
-                    alert('Please select at least one answer.');
-                    return false;
+                    return fail('Please select at least one answer.');
                 }
                 
             } else if (subtype === 'integer_type') {
                 const answerInput = document.getElementById("answerInput");
                 if (!answerInput.value) {
-                    alert('Please enter the answer.');
-                    return false;
+                    return fail('Please enter the answer.');
                 }
 
             } else if (subtype === 'numerical_answer' || subtype === 'comprehension') {
                 const container = document.getElementById('answerContent');
-
-                const selectedType = container.querySelector('input[name="numType"]:checked')?.value;
-
-                if (!selectedType) {
-                    alert('Please select answer type (Single or Range).');
-                    return false;
-                }
-
-                if (selectedType === 'single') {
-                    const singleInput = container.querySelector('[name="singleAnswer"]');
-                    const value = singleInput?.value?.trim();
-
-                    if (!value) {
-                        alert('Please enter the answer.');
-                        return false;
-                    }
-
-                    if (sanitizeNumericalInput(value).exceedsTwoDecimals) {
-                        alert('Numerical answers must have at most 2 decimal places.');
-                        return false;
-                    }
-
-                } else if (selectedType === 'range') {
-                    const minInput = container.querySelector('[name="minAnswer"]');
-                    const maxInput = container.querySelector('[name="maxAnswer"]');
-
-                    const minVal = minInput?.value?.trim();
-                    const maxVal = maxInput?.value?.trim();
-
-                    if (!minVal || !maxVal) {
-                        alert('Please enter both minimum and maximum values.');
-                        return false;
-                    }
-
-                    if (sanitizeNumericalInput(minVal).exceedsTwoDecimals ||
-                        sanitizeNumericalInput(maxVal).exceedsTwoDecimals) {
-                        alert('Numerical answers must have at most 2 decimal places.');
-                        return false;
-                    }
-
-                    const min = parseFloat(minVal);
-                    const max = parseFloat(maxVal);
-
-                    if (min > max) {
-                        alert('Minimum value cannot be greater than maximum value.');
-                        return false;
-                    }
-                }
+                if (!validateNumericalAnswer(container, 'numType', '')) return false;
             }
 
             return true;
+        }
+
+        function parseTags(raw) {
+            const s = (raw ?? '').toString().trim();
+            if (!s) return [];
+            return s
+                .split(/[\s,]+/g)
+                .map(t => t.trim())
+                .filter(Boolean)
+                .map(t => t.startsWith('#') ? t.slice(1) : t);
+        }
+
+        function buildComprehensionProblemsPayload(topicId, chapterId) {
+            const paragraphEditor = paragraphDiv.querySelector('.editor');
+            const paragraph = paragraphEditor ? paragraphEditor.innerHTML.trim() : '';
+
+            const problems = [];
+            problems.push(buildProblemJson(topicId, chapterId));
+
+            additionalProblemsContainer.querySelectorAll('.additional-problem').forEach(block => {
+                problems.push(buildAdditionalProblemJson(block, chapterId));
+            });
+
+            return { paragraph, problems };
+        }
+
+        function buildAdditionalProblemJson(problemBlock, chapterId) {
+            const idx = problemBlock.dataset.problemIndex;
+            const subtype = document.getElementById('problem-type-dropdown').value;
+
+            const skillsDropdown = problemBlock.querySelector('.additional-skills-dropdown');
+            const selectedSkillIds = Array.from(skillsDropdown?.selectedOptions ?? []).map(opt => parseInt(opt.value, 10));
+
+            const conceptsDropdown = problemBlock.querySelector('.additional-concepts-dropdown');
+            const selectedConceptIds = Array.from(conceptsDropdown?.selectedOptions ?? []).map(opt => parseInt(opt.value, 10));
+
+            const topicId = parseInt(problemBlock.querySelector('.additional-topic-dropdown')?.value ?? '0', 10);
+
+            const curriculumId = parseInt(document.getElementById("curriculum-dropdown").value);
+            const gradeId = parseInt(document.getElementById("grade-dropdown").value);
+            const subjectId = parseInt(document.getElementById("subject-dropdown").value);
+
+            const difficulty = problemBlock.querySelector(`input[name="additional-difficulty-${idx}"]:checked`)?.value;
+
+            const question = problemBlock.querySelector('.additional-question .editor')?.innerHTML?.trim() ?? '';
+
+            const selectedType = problemBlock.querySelector(`input[name="additional-numType-${idx}"]:checked`)?.value;
+            let answers = [];
+            if (selectedType === 'single') {
+                answers = [(problemBlock.querySelector('[name="singleAnswer"]')?.value ?? '').trim()];
+            } else {
+                answers = [
+                    (problemBlock.querySelector('[name="minAnswer"]')?.value ?? '').trim(),
+                    (problemBlock.querySelector('[name="maxAnswer"]')?.value ?? '').trim(),
+                ];
+            }
+
+            const solution = problemBlock.querySelector('.additional-solution .editor')?.innerHTML?.trim() ?? '';
+
+            const tagsRaw = problemBlock.querySelector('input[name="additional-tags"]')?.value ?? '';
+            const tags = parseTags(tagsRaw);
+
+            return buildProblemPayload({
+                subtype,
+                skillIds: selectedSkillIds,
+                curriculumId,
+                gradeId,
+                subjectId,
+                topicId,
+                chapterId,
+                difficulty,
+                question,
+                options: null,
+                answers,
+                solution,
+                conceptIds: selectedConceptIds,
+                tags,
+            });
+        }
+
+        function buildProblemPayload({
+            subtype,
+            skillIds,
+            curriculumId,
+            gradeId,
+            subjectId,
+            topicId,
+            chapterId,
+            difficulty,
+            question,
+            options,
+            answers,
+            solution,
+            conceptIds,
+            tags
+        }) {
+            return {
+                lang_code: "en",
+                type: "problem",
+                subtype: subtype,
+                skill_ids: skillIds,
+                type_params: {
+                    test_ids: []
+                },
+                curriculum_grades: [
+                    {
+                        curriculum_id: curriculumId,
+                        grade_id: gradeId
+                    }
+                ],
+                subject_id: subjectId,
+                topic_id: topicId,
+                chapter_id: chapterId,
+                difficulty_level: difficulty,
+                meta_data: {
+                    text: question,
+                    options: options,
+                    answer: answers,
+                    solutions: [
+                        {
+                            type: "text",
+                            value: solution
+                        }
+                    ]
+                },
+                concept_ids: conceptIds,
+                tags: tags
+            };
         }
 
         function buildProblemJson(topicId, chapterId) {
@@ -937,38 +1102,22 @@
             const conceptsDropdown = document.getElementById("concepts-dropdown");
             const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
 
-            return {
-                lang_code: "en",
-                type: "problem",
-                subtype: subtype,
-                skill_ids: selectedSkillIds,
-                type_params: {
-                    test_ids: []
-                },
-                curriculum_grades: [
-                    {
-                        curriculum_id: curriculumId,
-                        grade_id: gradeId
-                    }
-                ],
-                subject_id: subjectId,
-                topic_id: topicId,
-                chapter_id: chapterId,
-                difficulty_level: difficulty,
-                meta_data: {
-                    text: question,
-                    options: options,
-                    answer: answers,
-                    solutions: [
-                        {
-                            type: "text",
-                            value: solution
-                        }
-                    ]
-                },
-                concept_ids: selectedConceptIds,
-                tags: window.getProblemTags()
-            };
+            return buildProblemPayload({
+                subtype,
+                skillIds: selectedSkillIds,
+                curriculumId,
+                gradeId,
+                subjectId,
+                topicId,
+                chapterId,
+                difficulty,
+                question,
+                options,
+                answers,
+                solution,
+                conceptIds: selectedConceptIds,
+                tags: window.getProblemTags(),
+            });
         }
     })();
 </script>

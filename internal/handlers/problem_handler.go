@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -25,6 +26,7 @@ const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
 const searchProblemsEndPoint = "problems/search"
 const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
+const batchProblemsEndPoint = "resources/problems/batch"
 
 const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
@@ -279,6 +281,22 @@ func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, requ
 	_, err = h.problemsService.AddObject(reqBodyBytes, problemsKey, resourcesEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error adding problem: %v", err), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	reqBodyBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		http.Error(responseWriter, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	// Endpoint expects a JSON object with "problems" array & "paragraph".
+	var result any
+	err = h.problemsService.Post(batchProblemsEndPoint, json.RawMessage(reqBodyBytes), &result)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error adding problems: %v", err), http.StatusInternalServerError)
 		return
 	}
 }
