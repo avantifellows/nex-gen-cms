@@ -126,6 +126,7 @@ IMPORTANT — formatting rules:
 - Do NOT use $...$ or $$...$$ delimiters — use \(...\) and \[...\] only.
 - Every LaTeX expression must be syntactically valid and balanced (matching braces/brackets/delimiters). Do NOT output placeholders like "Math Input", "Math Error", or broken TeX.
 - If the PDF shows an equilibrium constant above a reversible reaction arrow, encode it in LaTeX as \( \overset{K_1}{\rightleftharpoons} \) using the same symbol as printed (e.g. \(K_1\), \(K_2\), \(K_c\)); do not use a bare \( \rightleftharpoons \) that omits the label.
+- Braced superscripts must be ^{...} on the base (e.g. \(2^{3}\), \(x^{-n}\)). Do not insert a spurious backslash before the caret: \(2\^{3}\) is wrong and breaks MathJax; use \(2^{3}\) instead.
 
 FIGURES / GRAPHS / IMAGES:
 - If a question references or depends on a figure, graph, diagram, table, or image (whether embedded in the question body or provided as a separate numbered figure), set "has_figure" to true.
