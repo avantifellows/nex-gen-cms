@@ -18,6 +18,14 @@
         </div>
     </div>
     <div class="bg-white p-6 rounded-lg shadow-md" data-mathjax="true">
+        {{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }}
+        <h2 class="text-lg font-semibold">
+            PARAGRAPH
+        </h2>
+        <p class="mt-2">
+            {{ .ProblemPtr.Paragraph.Body }}
+        </p>
+        {{ end }}
         <h2 class="text-lg font-semibold">
             STATEMENT/TEXT
         </h2>
