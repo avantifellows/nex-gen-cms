@@ -38,6 +38,8 @@
                     <span class="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded">Q{{ .Number }}</span>
                     {{ if eq .Type "numerical" }}
                     <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">Numerical</span>
+                    {{ else if eq .Type "matrix_match" }}
+                    <span class="bg-teal-100 text-teal-900 text-xs font-medium px-2 py-0.5 rounded">Matrix Match</span>
                     {{ else }}
                     <span class="bg-indigo-100 text-indigo-800 text-xs font-medium px-2 py-0.5 rounded">MCQ</span>
                     {{ end }}

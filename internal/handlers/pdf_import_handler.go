@@ -27,6 +27,11 @@ const openRouterURL = "https://openrouter.ai/api/v1/chat/completions"
 
 var inlineOptionMarkerRegex = regexp.MustCompile(`\(\s*(?:[A-Da-d]|[0-9]{1,2}|i|ii|iii|iv|v|vi|vii|viii|ix|x)\s*\)`)
 
+// matrixEmbedPrefix / matrixEmbedSuffix bracket server-generated matrix HTML inside
+// question_text so buildProcessedText can escape plain text without mangling tags.
+const matrixEmbedPrefix = `<div class="my-3 overflow-x-auto"><table class="matrix-extract`
+const matrixEmbedSuffix = `</tbody></table></div>`
+
 // odlFigureNumRegex matches [FIGURE_N] tokens emitted in ODL-mode LLM responses.
 var odlFigureNumRegex = regexp.MustCompile(`\[FIGURE_(\d+)\]`)
 var questionStartRegex = regexp.MustCompile(`(?m)(?:^|\n)\s*(?:Q(?:uestion)?\s*)?([1-9]\d{0,2})\s*[\.\-:]\s+`)
@@ -47,11 +52,11 @@ type ExtractedQuestion struct {
 
 type pdfImportData struct {
 	dto.HomeData
-	Questions      []ExtractedQuestion
-	Error          string
-	RawResponse    string
-	ProcessedJSON  string
-	Processed      bool
+	Questions     []ExtractedQuestion
+	Error         string
+	RawResponse   string
+	ProcessedJSON string
+	Processed     bool
 }
 
 // PdfImportHandler handles PDF question extraction (POC).
@@ -545,8 +550,8 @@ func parseQuestionsJSON(text string) ([]ExtractedQuestion, error) {
 }
 
 type odlQuestionChunk struct {
-	Number    int
-	Text      string
+	Number     int
+	Text       string
 	FigureNums []int
 }
 
@@ -612,8 +617,8 @@ func splitODLQuestionChunks(extractedText string) []odlQuestionChunk {
 		seen[n] = true
 		lastNum = n
 		chunks = append(chunks, odlQuestionChunk{
-			Number:    n,
-			Text:      chunkText,
+			Number:     n,
+			Text:       chunkText,
 			FigureNums: extractFigureNums(chunkText),
 		})
 	}
@@ -652,9 +657,185 @@ func postProcessQuestions(questions []ExtractedQuestion) {
 			q.Options[j] = normalizeOptionSoftWraps(q.Options[j])
 		}
 		q.Text = trimDuplicatedOptionsFromQuestionText(q.Text, q.Options)
-		q.Text = normalizeQuestionSoftWraps(q.Text)
+		if intro, h1, h2, rows, ok := tryExtractMatrixMatchLayout(q.Text); ok {
+			introNorm := normalizeQuestionSoftWraps(intro)
+			tableHTML := buildMatrixMatchTableHTMLString(h1, h2, rows)
+			q.Text = strings.TrimSpace(introNorm + "\n" + tableHTML)
+			q.Type = "matrix_match"
+		} else {
+			q.Text = normalizeQuestionSoftWraps(q.Text)
+		}
 		q.ProcessedText = buildProcessedText(q)
 	}
+}
+
+// normalizeListHeaderLine collapses spaces and unicode dashes for comparing
+// "List-I", "List – I", "List  II", etc.
+func normalizeListHeaderLine(s string) string {
+	s = strings.TrimSpace(strings.ToLower(s))
+	s = strings.ReplaceAll(s, "\t", " ")
+	s = strings.Join(strings.Fields(s), " ")
+	s = strings.ReplaceAll(s, "–", "-")
+	s = strings.ReplaceAll(s, "—", "-")
+	return strings.ReplaceAll(s, " ", "")
+}
+
+func isListIIHeaderLine(line string) bool {
+	n := normalizeListHeaderLine(line)
+	switch n {
+	case "list-ii", "listii", "list-2", "list2":
+		return true
+	default:
+		return false
+	}
+}
+
+func isListIHeaderLine(line string) bool {
+	n := normalizeListHeaderLine(line)
+	switch n {
+	case "list-i", "listi", "list-1", "list1":
+		return true
+	default:
+		return false
+	}
+}
+
+func matrixMatchNonEmptyLines(s string) []string {
+	s = strings.ReplaceAll(s, "\r\n", "\n")
+	s = strings.ReplaceAll(s, "\r", "\n")
+	var out []string
+	for _, line := range strings.Split(s, "\n") {
+		t := strings.TrimSpace(line)
+		if t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
+// matrixMatchNumberedOptionStart is true for lines like "(1) ..." that start
+// the inline MCQ key block after a matrix table.
+func matrixMatchNumberedOptionStart(line string) bool {
+	t := strings.TrimSpace(line)
+	if len(t) < 3 || t[0] != '(' {
+		return false
+	}
+	close := strings.IndexByte(t, ')')
+	if close <= 1 {
+		return false
+	}
+	for _, ch := range t[1:close] {
+		if ch < '0' || ch > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+// tryExtractMatrixMatchLayout detects "List-I" / "List-II" headers followed by
+// alternating row pairs (two lines per row: first column, second column). Row
+// labels are not validated so letters, digits, roman numerals, etc. all work.
+func tryExtractMatrixMatchLayout(text string) (intro, col1Hdr, col2Hdr string, rows [][2]string, ok bool) {
+	lines := matrixMatchNonEmptyLines(text)
+	if len(lines) < 4 {
+		return "", "", "", nil, false
+	}
+	headerIdx := -1
+	for i := 0; i+1 < len(lines); i++ {
+		if isListIHeaderLine(lines[i]) && isListIIHeaderLine(lines[i+1]) {
+			headerIdx = i
+			break
+		}
+	}
+	if headerIdx < 0 {
+		return "", "", "", nil, false
+	}
+	col1Hdr = strings.TrimSpace(lines[headerIdx])
+	col2Hdr = strings.TrimSpace(lines[headerIdx+1])
+	if col1Hdr == "" || col2Hdr == "" {
+		return "", "", "", nil, false
+	}
+	dataStart := headerIdx + 2
+	pos := dataStart
+	const maxMatrixRows = 10
+	for pos+1 < len(lines) && len(rows) < maxMatrixRows {
+		if matrixMatchNumberedOptionStart(lines[pos]) {
+			break
+		}
+		rows = append(rows, [2]string{lines[pos], lines[pos+1]})
+		pos += 2
+	}
+	if len(rows) < 2 {
+		return "", "", "", nil, false
+	}
+	if headerIdx == 0 {
+		intro = ""
+	} else {
+		intro = strings.Join(lines[:headerIdx], "\n")
+	}
+	return intro, col1Hdr, col2Hdr, rows, true
+}
+
+func buildMatrixMatchTableHTMLString(col1Hdr, col2Hdr string, rows [][2]string) string {
+	cell := func(s string) string {
+		return strings.ReplaceAll(html.EscapeString(s), "\n", "<br>")
+	}
+	var b strings.Builder
+	b.WriteString(matrixEmbedPrefix)
+	b.WriteString(` min-w-[12rem] w-full max-w-2xl border-collapse border border-gray-300 text-sm">`)
+	b.WriteString("<thead><tr>")
+	b.WriteString(`<th scope="col" class="border border-gray-300 bg-gray-100 px-3 py-2 text-left font-semibold text-gray-800">`)
+	b.WriteString(html.EscapeString(col1Hdr))
+	b.WriteString(`</th><th scope="col" class="border border-gray-300 bg-gray-100 px-3 py-2 text-left font-semibold text-gray-800">`)
+	b.WriteString(html.EscapeString(col2Hdr))
+	b.WriteString("</th></tr></thead><tbody>")
+	for _, r := range rows {
+		b.WriteString("<tr>")
+		b.WriteString(`<td class="border border-gray-300 px-3 py-2 align-top text-gray-800 whitespace-pre-wrap">`)
+		b.WriteString(cell(r[0]))
+		b.WriteString(`</td><td class="border border-gray-300 px-3 py-2 align-top text-gray-800 whitespace-pre-wrap">`)
+		b.WriteString(cell(r[1]))
+		b.WriteString("</td></tr>")
+	}
+	b.WriteString(matrixEmbedSuffix)
+	return b.String()
+}
+
+func findEmbeddedMatrixTableRange(s string) (start, end int, ok bool) {
+	start = strings.Index(s, matrixEmbedPrefix)
+	if start < 0 {
+		return 0, 0, false
+	}
+	rel := strings.Index(s[start:], matrixEmbedSuffix)
+	if rel < 0 {
+		return 0, 0, false
+	}
+	end = start + rel + len(matrixEmbedSuffix)
+	return start, end, true
+}
+
+// renderPlainQuestionHTML escapes plain question text and inlines [FIGURE].
+// If suppressTrailingFigure is true, an implicit trailing figure box is not
+// appended when the segment has no [FIGURE] marker (used for matrix stems so
+// the figure can be placed after the embedded table).
+func renderPlainQuestionHTML(plain string, q *ExtractedQuestion, figureBox string, escapeText func(string) string, suppressTrailingFigure bool) string {
+	if q.HasFigure && strings.Contains(plain, "[FIGURE]") {
+		parts := strings.Split(plain, "[FIGURE]")
+		var sb strings.Builder
+		for i, part := range parts {
+			sb.WriteString(escapeText(part))
+			if i < len(parts)-1 {
+				sb.WriteString(figureBox)
+			}
+		}
+		return sb.String()
+	}
+	var sb strings.Builder
+	sb.WriteString(escapeText(plain))
+	if q.HasFigure && figureBox != "" && !strings.Contains(plain, "[FIGURE]") && !suppressTrailingFigure {
+		sb.WriteString(figureBox)
+	}
+	return sb.String()
 }
 
 var questionListLineStartRegex = regexp.MustCompile(`(?i)^\s*(?:\(?[a-d]\)|\(?\d{1,3}\)|\([ivx]+\)|[ivx]+\)|\d+\.)\s+`)
@@ -761,25 +942,31 @@ func buildProcessedText(q *ExtractedQuestion) htmltemplate.HTML {
 		return strings.ReplaceAll(html.EscapeString(s), "\n", "<br>")
 	}
 
-	// [FIGURE] is the normalised placeholder (ODL mode normalises [FIGURE_N] to
-	// [FIGURE] before reaching here; direct PDF mode emits [FIGURE] directly).
-	var sb strings.Builder
-	if q.HasFigure && strings.Contains(q.Text, "[FIGURE]") {
-		parts := strings.Split(q.Text, "[FIGURE]")
-		for i, part := range parts {
-			sb.WriteString(escapeText(part))
-			if i < len(parts)-1 {
-				sb.WriteString(figureBox)
+	body := q.Text
+	if start, end, ok := findEmbeddedMatrixTableRange(body); ok {
+		before := strings.TrimSpace(body[:start])
+		tableHTML := body[start:end]
+		after := strings.TrimSpace(body[end:])
+		combinedPlain := before
+		if after != "" {
+			if combinedPlain != "" {
+				combinedPlain += "\n"
 			}
+			combinedPlain += after
 		}
-	} else {
-		sb.WriteString(escapeText(q.Text))
-		// No inline [FIGURE] marker: append the figure box at the end.
-		if q.HasFigure && figureBox != "" {
+		hasFigureMarker := q.HasFigure && strings.Contains(combinedPlain, "[FIGURE]")
+
+		var sb strings.Builder
+		sb.WriteString(renderPlainQuestionHTML(before, q, figureBox, escapeText, true))
+		sb.WriteString(tableHTML)
+		sb.WriteString(renderPlainQuestionHTML(after, q, figureBox, escapeText, true))
+		if q.HasFigure && figureBox != "" && !hasFigureMarker {
 			sb.WriteString(figureBox)
 		}
+		return htmltemplate.HTML(sb.String())
 	}
-	return htmltemplate.HTML(sb.String())
+
+	return htmltemplate.HTML(renderPlainQuestionHTML(body, q, figureBox, escapeText, false))
 }
 
 // trimDuplicatedOptionsFromQuestionText removes a trailing block of option lines
