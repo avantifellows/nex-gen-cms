@@ -265,6 +265,7 @@
         const mainConceptsDropdown = document.getElementById('concepts-dropdown');
         const currentTopicId = '{{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}';
         const currentChapterId = '{{if .TopicPtr}}{{.TopicPtr.ChapterID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
+        const isEditPage = {{ $isEdit }};
         let skillsOptionsHtml = '';
         let topicsOptionsHtml = '';
         const conceptsOptionsByTopic = new Map();
@@ -303,9 +304,9 @@
             onProblemTypeSelection(this.value);
         });
 
-        {{ if $isEdit }}
-        onProblemTypeSelection(problemTypeDropdown.value);
-        {{ end }}
+        if (isEditPage) {
+            onProblemTypeSelection(problemTypeDropdown.value);
+        }
 
         function onProblemTypeSelection(problemType) {
             const optionsDiv = document.getElementById('optionsDiv');
@@ -320,10 +321,10 @@
             paragraphDiv.classList.toggle('hidden', !isComprehension);
             additionalProblemsContainer.classList.toggle('hidden', !isComprehension);
             // "Add More Problem" is only for comprehension CREATE flow, not edit.
-            addMoreProblemButton.classList.toggle('hidden', !isComprehension || {{ $isEdit }});
+            addMoreProblemButton.classList.toggle('hidden', !isComprehension || isEditPage);
             // Full width unless comprehension create (two buttons); edit comprehension uses full width too.
-            saveButton.classList.toggle('w-full', !isComprehension || {{ $isEdit }});
-            saveButton.classList.toggle('w-1/2', isComprehension && !({{ $isEdit }}));
+            saveButton.classList.toggle('w-full', !isComprehension || isEditPage);
+            saveButton.classList.toggle('w-1/2', isComprehension && !isEditPage);
 
             updateAnswerInput(problemType);
         }
@@ -771,17 +772,23 @@
             }
             
             const subtype = document.getElementById('problem-type-dropdown').value;
-            const isCreate = !problemId;
-            const isComprehensionCreate = isCreate && subtype === 'comprehension';
+            const isComprehensionCreate = !isEditPage && subtype === 'comprehension';
 
-            const payload = isComprehensionCreate
+            let payload = isComprehensionCreate
                 ? buildComprehensionProblemsPayload(topicId, chapterId)
                 : buildProblemJson(topicId, chapterId);
 
-            const url = problemId
+            // Edit comprehension: same PATCH body as other types, plus paragraph for the API.
+            if (isEditPage && subtype === 'comprehension') {
+                const paragraphEditor = paragraphDiv.querySelector('.editor');
+                const paragraph = paragraphEditor ? paragraphEditor.innerHTML.trim() : '';
+                payload = { ...payload, paragraph };
+            }
+
+            const url = isEditPage
                 ? `/update-problem?id=${problemId}`
                 : (isComprehensionCreate ? '/create-problems' : '/create-problem');
-            const method = problemId ? 'PATCH' : 'POST';
+            const method = isEditPage ? 'PATCH' : 'POST';
 
             fetch(url, {
                 method: method,
