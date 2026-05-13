@@ -1,4 +1,5 @@
 {{ define "content" }}
+{{ $isEdit := (ne .ProblemPtr nil) }}
 <form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event,        
         {{if .TopicPtr}}
         <!-- add problem -->
@@ -16,7 +17,7 @@
             <p class="font-semibold mb-2">Select Type:</p>
             <select id="problem-type-dropdown" name="problem-type-dropdown"
                 class="w-full border border-gray-300 rounded p-2">
-                {{if .ProblemPtr}}
+                {{if $isEdit}}
                 {{template "problem_type_options" .ProblemPtr.Subtype}}
                 {{else}}
                 {{template "problem_type_options"}}
@@ -27,7 +28,7 @@
             <p class="font-semibold mb-2">Select Skills:</p>
             <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
                 class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
-                hx-get='/api/skills{{if .ProblemPtr}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
+                hx-get='/api/skills{{if $isEdit}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
                 <option disabled>Loading skills...</option>
             </select>
         </div>
@@ -35,9 +36,9 @@
             <p class="font-semibold mb-2">Select Concepts:</p>
             <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
                 class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
-                hx-swap="{{if .ProblemPtr}}beforeend{{else}}innerHTML{{end}}"
-                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if .ProblemPtr}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
-                    {{ if .ProblemPtr }}
+                hx-swap="{{if $isEdit}}beforeend{{else}}innerHTML{{end}}"
+                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if $isEdit}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
+                    {{ if $isEdit }}
                         {{ range .ProblemPtr.Concepts }}
                             <!-- These are already mapped concepts -->
                             <option value="{{.ID}}" selected>{{ getConceptName . "en" }}</option>
@@ -55,24 +56,28 @@
     <!-- Paragraph editor for comprehension type -->
     <div id="paragraphDiv" class="mb-6 hidden">
         <p class="font-semibold mb-2">Paragraph:</p>
+        {{ if and $isEdit .ProblemPtr.Paragraph }}
+        {{ template "editor" .ProblemPtr.Paragraph.Body }}
+        {{ else }}
         {{ template "editor" }}
+        {{ end }}
     </div>
 
     <!-- difficulty -->
     <div class="mb-6">
         <p class="font-semibold mb-2">Difficulty Rating</p>
-        <label class="mr-4"><input type="radio" name="difficulty" value="easy" {{if and .ProblemPtr (eq
+        <label class="mr-4"><input type="radio" name="difficulty" value="easy" {{if and $isEdit (eq
                 .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}> 1</label>
-        <label class="mr-4"><input type="radio" name="difficulty" value="medium" {{if and .ProblemPtr (eq
+        <label class="mr-4"><input type="radio" name="difficulty" value="medium" {{if and $isEdit (eq
                 .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}> 2</label>
-        <label class="mr-4"><input type="radio" name="difficulty" value="hard" {{if and .ProblemPtr (eq
+        <label class="mr-4"><input type="radio" name="difficulty" value="hard" {{if and $isEdit (eq
                 .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}> 3</label>
     </div>
 
     <!-- Question editor -->
     <div id="questionDiv" class="mb-6">
         <p class="font-semibold mb-2">Text:</p>
-        {{ if .ProblemPtr }}
+        {{ if $isEdit }}
         {{ template "editor" .ProblemPtr.MetaData.Question }}
         {{ else }}
         {{ template "editor" }}
@@ -106,7 +111,7 @@
     <!-- Solution -->
     <div class="mb-6" id="solutionDiv">
         <p class="font-semibold mb-2">Solution:</p>
-        {{ if and .ProblemPtr (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
+        {{ if and $isEdit (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
         {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
         {{ else }}
         {{ template "editor" }}
@@ -116,7 +121,7 @@
     <!-- Tags -->
     <div class="mb-6">
         <p class="font-semibold mb-2">Tags:</p>
-        {{ if .ProblemPtr }}
+        {{ if $isEdit }}
             {{ template "input_tags" .ProblemPtr.TagNames }}
         {{ else }}
             {{ template "input_tags" }}
@@ -236,7 +241,7 @@
 
 <template id="tmplAnsNumeric">
     {{ $meta := (dict "Answers" nil) }}
-    {{ if .ProblemPtr }}
+    {{ if $isEdit }}
         {{ $meta = .ProblemPtr.MetaData }}
     {{ end }}
 
@@ -273,7 +278,7 @@
         // keep 4 tabs so that while editing such problem if type is changed to mcq
         // then 4 option tabs will be visible by default
         let tabs = new Array(
-            {{ if and .ProblemPtr (gt (len .ProblemPtr.MetaData.Options) 0) }}
+            {{ if and $isEdit (gt (len .ProblemPtr.MetaData.Options) 0) }}
                 {{ len .ProblemPtr.MetaData.Options }}
             {{ else }}
                 4
@@ -283,7 +288,7 @@
         let activeIndex = 0;
 
         const answerLabels = new Set([
-            {{ if and .ProblemPtr (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
+            {{ if and $isEdit (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
                 {{ range .ProblemPtr.MetaData.Answers }}
                     {{ if . }}
                         '{{ printf "%c" (add 64 (stringToInt .)) }}',
@@ -298,8 +303,8 @@
             onProblemTypeSelection(this.value);
         });
 
-        {{ if .ProblemPtr }}
-            onProblemTypeSelection(problemTypeDropdown.value);
+        {{ if $isEdit }}
+        onProblemTypeSelection(problemTypeDropdown.value);
         {{ end }}
 
         function onProblemTypeSelection(problemType) {
@@ -314,9 +319,11 @@
             const isComprehension = problemType === 'comprehension';
             paragraphDiv.classList.toggle('hidden', !isComprehension);
             additionalProblemsContainer.classList.toggle('hidden', !isComprehension);
-            addMoreProblemButton.classList.toggle('hidden', !isComprehension);
-            saveButton.classList.toggle('w-full', !isComprehension);
-            saveButton.classList.toggle('w-1/2', isComprehension);
+            // "Add More Problem" is only for comprehension CREATE flow, not edit.
+            addMoreProblemButton.classList.toggle('hidden', !isComprehension || {{ $isEdit }});
+            // Full width unless comprehension create (two buttons); edit comprehension uses full width too.
+            saveButton.classList.toggle('w-full', !isComprehension || {{ $isEdit }});
+            saveButton.classList.toggle('w-1/2', isComprehension && !({{ $isEdit }}));
 
             updateAnswerInput(problemType);
         }
@@ -484,7 +491,7 @@
             } else {
                 // Integer type fallback (simple input)
                 let answer = 
-                    {{ if .ProblemPtr }}
+                    {{ if $isEdit }}
                         '{{ index .ProblemPtr.MetaData.Answers 0 }}'
                     {{ else }}
                         ''
@@ -582,7 +589,7 @@
 
         // Initial setup
         const tabContent = [
-            {{ if .ProblemPtr }}
+            {{ if $isEdit }}
                 {{ range .ProblemPtr.MetaData.Options }}
                     { html: `{{ . }}`, preview: `{{ . }}` },
                 {{ end }}
