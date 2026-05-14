@@ -119,12 +119,12 @@
     </div>
 
     <!-- Tags -->
-    <div class="mb-6">
+    <div class="mb-6" id="main-problem-tags">
         <p class="font-semibold mb-2">Tags:</p>
         {{ if $isEdit }}
             {{ template "input_tags" .ProblemPtr.TagNames }}
         {{ else }}
-            {{ template "input_tags" }}
+            {{ template "input_tags" (emptyStringSlice) }}
         {{ end }}
     </div>
 
@@ -230,11 +230,9 @@
         </div>
 
         <!-- Tags -->
-        <div class="mb-2">
+        <div class="mb-6">
             <p class="font-semibold mb-2">Tags:</p>
-            <input type="text" name="additional-tags"
-                class="w-full border border-gray-300 rounded p-2"
-                placeholder="Assign Hashtags">
+            {{ template "input_tags" (emptyStringSlice) }}
         </div>
     </div>
 </template>
@@ -251,6 +249,9 @@
 <script src="/web/static/js/editor.js"></script>
 <script>
     (() => {
+        const initProblemTagsSection = window.initProblemTagsSection;
+        const getTagsForSection = window.getTagsForSection;
+
         const optionsDiv = document.getElementById('optionsDiv');
         const optionTabs = optionsDiv.querySelector('#optionTabs');
         const addTabButton = optionsDiv.querySelector('#addTab');
@@ -266,6 +267,10 @@
         const currentTopicId = '{{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}';
         const currentChapterId = '{{if .TopicPtr}}{{.TopicPtr.ChapterID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
         const isEditPage = {{ $isEdit }};
+
+        const mainTagsRoot = document.querySelector('#main-problem-tags .problem-tags-section');
+        initProblemTagsSection(mainTagsRoot);
+
         let skillsOptionsHtml = '';
         let topicsOptionsHtml = '';
         const conceptsOptionsByTopic = new Map();
@@ -362,6 +367,11 @@
             }
             if (window.htmx) {
                 htmx.process(problemBlock);
+            }
+
+            const tagsRoot = problemBlock.querySelector('.problem-tags-section');
+            if (tagsRoot) {
+                initProblemTagsSection(tagsRoot);
             }
         }
 
@@ -943,16 +953,6 @@
             return true;
         }
 
-        function parseTags(raw) {
-            const s = (raw ?? '').toString().trim();
-            if (!s) return [];
-            return s
-                .split(/[\s,]+/g)
-                .map(t => t.trim())
-                .filter(Boolean)
-                .map(t => t.startsWith('#') ? t.slice(1) : t);
-        }
-
         function buildComprehensionProblemsPayload(topicId, chapterId) {
             const paragraphEditor = paragraphDiv.querySelector('.editor');
             const paragraph = paragraphEditor ? paragraphEditor.innerHTML.trim() : '';
@@ -1000,8 +1000,7 @@
 
             const solution = problemBlock.querySelector('.additional-solution .editor')?.innerHTML?.trim() ?? '';
 
-            const tagsRaw = problemBlock.querySelector('input[name="additional-tags"]')?.value ?? '';
-            const tags = parseTags(tagsRaw);
+            const tags = getTagsForSection(problemBlock.querySelector('.problem-tags-section'));
 
             return buildProblemPayload({
                 subtype,
@@ -1130,7 +1129,7 @@
                 answers,
                 solution,
                 conceptIds: selectedConceptIds,
-                tags: window.getProblemTags(),
+                tags: getTagsForSection(mainTagsRoot),
             });
         }
     })();
