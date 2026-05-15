@@ -47,13 +47,16 @@ const addTestDestProblemRowWithHeadersTemplate = "dest_problem_row_with_headers.
 const addTestDestProblemRowTemplate = "dest_problem_row.html"
 const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
 const addTestDestSubjectRowTemplate = "dest_subject_row.html"
+const testInstructionsModalTemplate = "test_instructions_modal.html"
 const addTestSearchedTemplate = "add_test_searched.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
 const addTestModalTemplate = "add_test_modal.html"
 const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
 const addCurriculumGradeSelectsTemplate = "add_curriculum_grade_selects.html"
 const questionPaperTemplate = "question_paper.html"
+const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
+const pdfSharedTemplate = "test_pdf_shared.html"
 
 const testProblemsEndPoint = "resource/test/%d/problems?lang_code=en&" + QUERY_PARAM_CURRICULUM_ID + "=%s"
 const testRulesEndPoint = "test-rule"
@@ -476,7 +479,8 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
-		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
+		testInstructionsModalTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) buildTestData(request *http.Request) (dto.TestData, error) {
@@ -595,20 +599,20 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		// Only subtype header needed
 		filename = addTestDestProblemRowWithSubtypeTemplate
 		data = map[string]any{
-			"Problem":       problemPtr,
+			"Problem":        problemPtr,
 			"SectionSubtype": sectionSubtype,
-			"InsertAfterId": insertAfterId,
-			"ReadOnlyMarks": readOnlyMarks,
+			"InsertAfterId":  insertAfterId,
+			"ReadOnlyMarks":  readOnlyMarks,
 		}
 
 	case subtypeExists:
 		// Just problem row
 		filename = addTestDestProblemRowWithoutHeadersTemplate
 		data = map[string]any{
-			"Problem":       problemPtr,
+			"Problem":        problemPtr,
 			"SectionSubtype": sectionSubtype,
-			"InsertAfterId": insertAfterId,
-			"ReadOnlyMarks": readOnlyMarks,
+			"InsertAfterId":  insertAfterId,
+			"ReadOnlyMarks":  readOnlyMarks,
 		}
 	}
 
@@ -687,7 +691,8 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
-		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
+		testInstructionsModalTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -852,7 +857,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		problemsMap[p.ID] = p
 	}
 
-	pdfType := request.URL.Query().Get("type") // "questions" or "answers"
+	pdfType := request.URL.Query().Get("type") // "questions", "questions_with_answers", or "answers"
 
 	var pdfTemplate, headerTxt, pdfSuffix string
 	var testRule *models.TestRule
@@ -868,24 +873,43 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			}
 		}
 
+	} else if pdfType == "questions_with_answers" {
+		pdfTemplate = questionPaperWithAnswersTemplate
+		headerTxt = selectedTestPtr.DisplaySubtype() + " - Questions & Answers"
+		pdfSuffix = "Question Paper with Answers"
+
+		if len(selectedTestPtr.ExamIDs) > 0 {
+			testRule, err = h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}
+
 	} else if pdfType == "answers" {
 		pdfTemplate = answerSolutionSheetTemplate
 		headerTxt = selectedTestPtr.DisplaySubtype() + " - Answer Sheet"
 		pdfSuffix = "Answer Sheet"
 	}
 
+	if pdfTemplate == "" {
+		http.Error(responseWriter, `Invalid type: use "questions", "questions_with_answers", or "answers"`, http.StatusBadRequest)
+		return
+	}
+
 	// Load template
 	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfTemplate)
+	sharedTmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfSharedTemplate)
 	tmpl, err := template.New(pdfTemplate).Funcs(template.FuncMap{
 		"getName":        getTestName,
 		"add":            utils.Add,
 		"labels":         optionLabels,
+		"dict":           utils.Dict,
 		"capitalize":     utils.Capitalize,
 		"getSectionName": views.GetSectionName,
 		"stringToInt":    utils.StringToInt,
 		"trim":           strings.TrimSpace,
 		"getChapterName": getProblemChapterName,
-	}).ParseFiles(tmplPath)
+	}).ParseFiles(sharedTmplPath, tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -899,7 +923,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	// Render HTML to buffer
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	if err := tmpl.ExecuteTemplate(&buf, pdfTemplate, data); err != nil {
 		http.Error(responseWriter, "Template execution error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -967,7 +991,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 				chromedp.Evaluate(`document.getElementById('mathjax-done') ? document.getElementById('mathjax-done').textContent : ''`, &doneText).Do(ctx)
 
 				if doneText == "true" {
-					log.Printf("MathJax done after %d polls", i)
 					return nil
 				}
 				time.Sleep(100 * time.Millisecond)
@@ -1066,7 +1089,8 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
-		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate)
+		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
+		testInstructionsModalTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request *http.Request) {

@@ -3,38 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>{{ getName .TestPtr "en" }}</title>
-<script>
-window.MathJax = {
-  startup: {
-    ready: () => {
-      MathJax.startup.defaultReady();
-      document.getElementById('mathjax-done').textContent = 'true';
-    }
-  },
-  chtml: {
-    scale: 0.9,
-    minScale: 0.5
-  },
-  tex: {
-    inlineMath: [["$", "$"], ["\\(", "\\)"]],
-    displayMath: [["$$", "$$"], ["\\[", "\\]"]],
-    processEscapes: true,
-    packages: {'[+]': ['noerrors']}
-  },
-  loader: {
-    load: ['[tex]/noerrors']
-  }
-};
-</script>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" defer></script>
+{{ template "pdf_mathjax_head" . }}
 </head>
 <body class="font-sans text-[14px] m-5 mt-0">
-<div id="mathjax-done" style="display:none"></div>
-
-    <div class="flex justify-between mb-3 w-full">
-        <h2 class="text-lg font-bold">{{ getName .TestPtr "en" }}</h2>
-        <h2 class="text-lg font-bold">Test Code: {{ .TestPtr.Code }}</h2>
-    </div>
+    {{ template "pdf_test_header" . }}
 
     <!-- Table for Answer Sheet -->
     <table class="table-auto w-full border border-gray-300 text-center text-sm">
@@ -57,22 +29,7 @@ window.MathJax = {
                         <tr>
                             <td class="answer-pdf-table-row">{{ $Counter }}.</td>
                             <td class="answer-pdf-table-row">
-                                {{ if or (eq $p.Subtype "mcq_single_answer") (eq $p.Subtype "matrix_match") }}
-                                    {{ range $p.MetaData.Answers }}
-                                        {{ printf "%c" (add 64 (stringToInt .)) }}
-                                    {{ end }}
-                                {{ else if eq $p.Subtype "mcq_multiple_answer" }}
-                                    {{ range $i, $ans := $p.MetaData.Answers }}
-                                        {{- if $i }}, {{ end }}
-                                        {{ printf "%c" (add 64 (stringToInt $ans)) -}}
-                                    {{ end }}
-                                {{ else if and (eq $p.Subtype "numerical_answer") (eq (len $p.MetaData.Answers) 2) }}
-                                    [{{ index $p.MetaData.Answers 0 }} to {{ index $p.MetaData.Answers 1 }}]
-                                {{ else }}
-                                    {{ range $p.MetaData.Answers }}
-                                        {{ . }}
-                                    {{ end }}
-                                {{ end }}
+                                {{ template "pdf_answer_value" (dict "Subtype" $p.Subtype "Answers" $p.MetaData.Answers) }}
                             </td>
                             <td class="answer-pdf-table-row">{{ capitalize $p.DifficultyLevel }}</td>
                             <td class="answer-pdf-table-row">{{ getChapterName $p "en" }}</td>

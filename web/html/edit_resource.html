@@ -23,6 +23,7 @@
       <label for="subtype" class="block text-gray-700 font-medium mb-2">Subtype</label>
       <select id="edit-resource-subtype" name="subtype" class="w-full p-3 border border-gray-300 rounded" required>
       </select>
+      <input type="hidden" id="edit-resource-subtype-value" value="{{.Resource.Subtype}}">
     </div>
     <div class="mb-4">
       <label for="src_link" class="block text-gray-700 font-medium mb-2">SrcLink</label>
@@ -33,5 +34,8 @@
   </form>
 </div>
 <script>
-  ResourceForm.sync('edit-resource-type', 'edit-resource-subtype', {{ printf "%q" .Resource.Subtype }});
+  (() => {
+    const selectedSubtype = document.getElementById('edit-resource-subtype-value')?.value || '';
+    ResourceForm.sync('edit-resource-type', 'edit-resource-subtype', selectedSubtype);
+  })();
 </script>

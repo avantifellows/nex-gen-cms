@@ -19,7 +19,7 @@
             hx-vals='{"resource_ids":"{{.ID}}"}' title="Move Resource">
             <i class="fa-solid fa-right-left"></i>
         </button>
-        <button class="action-button" hx-delete="/archive-resource?id={{.ID}}"
+        <button class="action-button" hx-delete="/delete-resource?id={{.ID}}"
             hx-confirm="Are you sure you want to delete resource {{ getName . "en" }}?" hx-target="closest tr">
             <i class="fa-solid fa-trash"></i>
         </button>

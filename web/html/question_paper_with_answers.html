@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>{{ getName .TestPtr "en" }}</title>
+{{ template "pdf_mathjax_head" . }}
+</head>
+<body class="font-sans text-[14px] m-5 mt-0">
+{{ template "pdf_test_header" . }}
+{{ template "pdf_test_meta" . }}
+
+{{ $Counter := 0 }}
+{{ range $subject := .TestPtr.TypeParams.Subjects }}
+    {{ range $section := $subject.Sections }}
+        <!-- Combined Header -->
+        {{ template "pdf_section_header" (dict "SubjectName" $subject.Name "SectionType" $section.Type "SectionName" $section.Name) }}
+
+        <!-- Compulsory Problems: question + answer -->
+        {{ range $prob := $section.Compulsory.Problems }}
+            {{ $p := index $.ProblemsMap $prob.ID }}
+            {{ $Counter = add $Counter 1 }}
+
+            <div class="mb-6">
+                {{ template "pdf_question_options" (dict "Counter" $Counter "Problem" $p "OptionLayout" $prob.OptionLayout) }}
+
+                <!-- Answer aligned with question text start -->
+                <div class="flex items-start mt-3">
+                    <div class="w-6"></div>
+                    <div class="flex-1 pl-5">
+                        <div class="border border-gray-300 rounded p-2 bg-gray-50 text-sm">
+                            <span class="font-semibold">Answer:</span>
+                            <span class="ml-2">
+                                {{ template "pdf_answer_value" (dict "Subtype" $p.Subtype "Answers" $p.MetaData.Answers) }}
+                            </span>
+                        </div>
+                        <div class="mt-2 border border-gray-200 rounded p-2 bg-white text-sm">
+                            <div><span class="font-semibold">Chapter:</span> <span class="ml-1">{{ getChapterName $p "en" }}</span></div>
+                            <div><span class="font-semibold">Difficulty:</span> <span class="ml-1">{{ capitalize $p.DifficultyLevel }}</span></div>
+                            {{ if and (gt (len $p.MetaData.Solutions) 0) (ne (trim (printf "%s" (index $p.MetaData.Solutions 0).Value)) "") }}
+                            <div class="mt-1">
+                                <span class="font-semibold">Solution:</span>
+                                <span class="ml-1 whitespace-pre-wrap">{{ (index $p.MetaData.Solutions 0).Value }}</span>
+                            </div>
+                            {{ end }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {{ end }}
+    {{ end }}
+{{ end }}
+</body>
+</html>
