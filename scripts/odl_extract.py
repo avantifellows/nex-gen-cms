@@ -59,12 +59,19 @@ def main():
         with open(json_path, encoding="utf-8") as fh:
             data = json.load(fh)
 
-    # Write the element array to stdout for Go to read.
-    json.dump(data, sys.stdout, ensure_ascii=False)
+    # Write UTF-8 bytes to stdout (Go reads raw bytes). Text-mode stdout on
+    # Windows defaults to cp1252 and raises on PDF symbols/private-use chars.
+    _write_json_stdout(data)
+
+
+def _write_json_stdout(obj) -> None:
+    payload = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+    sys.stdout.buffer.write(payload)
+    sys.stdout.buffer.flush()
 
 
 def _fail(msg: str) -> None:
-    json.dump({"error": msg}, sys.stdout, ensure_ascii=False)
+    _write_json_stdout({"error": msg})
     sys.exit(1)
 
 

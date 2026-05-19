@@ -40,6 +40,7 @@ func extractWithODL(pdfPath string) ([]ODLElement, error) {
 	cmd := exec.Command("python", scriptPath, pdfPath)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+	cmd.Env = append(os.Environ(), "PYTHONIOENCODING=utf-8", "PYTHONUTF8=1")
 
 	if runErr := cmd.Run(); runErr != nil {
 		// The script writes a JSON error object to stdout on failure.

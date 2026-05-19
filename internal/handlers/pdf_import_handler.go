@@ -150,7 +150,7 @@ Example output:
   {"question_number":3,"question_text":"The velocity-time graph of a particle is shown below.\n[FIGURE]\nThe acceleration of the particle at \(t = 2\) s is:","options":["zero","\(2 \, \text{m/s}^2\)","\(4 \, \text{m/s}^2\)","\(8 \, \text{m/s}^2\)"],"question_type":"mcq","has_figure":true,"figure_description":"A velocity-time (v-t) graph with the horizontal axis labelled 't (s)' ranging from 0 to 6 and the vertical axis labelled 'v (m/s)' ranging from 0 to 12. A straight line rises from the origin \((0,0)\) to the point \((3, 6)\), then remains horizontal from \((3, 6)\) to \((6, 6)\)."}
 ]`
 
-	model := config.GetEnv("OPENROUTER_MODEL", "google/gemini-2.0-flash-001")
+	model := config.GetEnv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
 
 	reqBody := map[string]any{
 		"model": model,
