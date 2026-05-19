@@ -25,8 +25,11 @@ type ODLElement struct {
 }
 
 // odlRasterDPI is the DPI used when calling pdfToImages for ODL-mode crops.
-// Must be kept in sync with how pageImages are produced.
+// Must stay in sync with bbox→pixel conversion in odlBboxToPixelRect.
 const odlRasterDPI = 150
+
+// odlCropPaddingFraction adds relative padding on each side of figure crops.
+const odlCropPaddingFraction = 0.02
 
 // extractWithODL runs the Python wrapper script and returns the parsed ODL element list.
 // pdfPath must be an absolute path to an existing file on disk.
@@ -260,8 +263,8 @@ func odlBboxToPixelRect(bbox [4]float64, pageImg []byte) (image.Rectangle, error
 	py1 := (pageHeightPts - bottom) * scale // PDF bottom → image bottom
 
 	// Add 2% padding relative to the crop box dimensions.
-	padX := (px1 - px0) * 0.02
-	padY := (py1 - py0) * 0.02
+	padX := (px1 - px0) * odlCropPaddingFraction
+	padY := (py1 - py0) * odlCropPaddingFraction
 
 	ix0 := int(math.Max(0, px0-padX))
 	iy0 := int(math.Max(0, py0-padY))
@@ -272,6 +275,80 @@ func odlBboxToPixelRect(bbox [4]float64, pageImg []byte) (image.Rectangle, error
 		return image.Rectangle{}, fmt.Errorf("degenerate crop rect after padding")
 	}
 	return image.Rect(ix0, iy0, ix1, iy1), nil
+}
+
+// odlFigureRef records where ODL placed a picture/image fragment on a page.
+type odlFigureRef struct {
+	PageNumber  int
+	BoundingBox [4]float64
+}
+
+// ODLFigureCrop is a PNG slice of a figure plus its width in PDF points (1 pt = 1/72 in).
+type ODLFigureCrop struct {
+	PNG     []byte
+	WidthPt float64
+}
+
+// odlBBoxSizePt returns width and height of a PDF-point bbox [left, bottom, right, top].
+func odlBBoxSizePt(bbox [4]float64) (width, height float64) {
+	return bbox[2] - bbox[0], bbox[3] - bbox[1]
+}
+
+// unionODLBboxes returns the minimal axis-aligned box containing all inputs.
+// Each box is [left, bottom, right, top] in PDF points (Y=0 at bottom).
+func unionODLBboxes(boxes [][4]float64) ([4]float64, bool) {
+	if len(boxes) == 0 {
+		return [4]float64{}, false
+	}
+	u := boxes[0]
+	for _, b := range boxes[1:] {
+		if b[0] < u[0] {
+			u[0] = b[0]
+		}
+		if b[1] < u[1] {
+			u[1] = b[1]
+		}
+		if b[2] > u[2] {
+			u[2] = b[2]
+		}
+		if b[3] > u[3] {
+			u[3] = b[3]
+		}
+	}
+	return u, u[2] > u[0] && u[3] > u[1]
+}
+
+// cropODLMergedFigures unions PDF-point bboxes for the given figure refs (same page)
+// and returns one PNG crop covering the full diagram region.
+func cropODLMergedFigures(pageImages [][]byte, refs []odlFigureRef) ([]byte, [4]float64, error) {
+	if len(refs) == 0 {
+		return nil, [4]float64{}, fmt.Errorf("no figure refs to merge")
+	}
+	page := refs[0].PageNumber
+	boxes := make([][4]float64, 0, len(refs))
+	for _, ref := range refs {
+		if ref.PageNumber != page {
+			return nil, [4]float64{}, fmt.Errorf("figures span pages %d and %d", page, ref.PageNumber)
+		}
+		boxes = append(boxes, ref.BoundingBox)
+	}
+	union, ok := unionODLBboxes(boxes)
+	if !ok {
+		return nil, [4]float64{}, fmt.Errorf("degenerate union bbox")
+	}
+	pageIdx := page - 1
+	if pageIdx < 0 || pageIdx >= len(pageImages) {
+		return nil, union, fmt.Errorf("page index %d out of range", pageIdx)
+	}
+	rect, err := odlBboxToPixelRect(union, pageImages[pageIdx])
+	if err != nil {
+		return nil, union, err
+	}
+	crop, err := cropPageToPNG(pageImages[pageIdx], rect)
+	if err != nil {
+		return nil, union, err
+	}
+	return crop, union, nil
 }
 
 // cropPageToPNG crops the given rectangle out of a PNG-encoded page image and

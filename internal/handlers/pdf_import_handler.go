@@ -47,6 +47,7 @@ type ExtractedQuestion struct {
 	HasFigure         bool              `json:"has_figure"`
 	FigureDescription string            `json:"figure_description"`
 	FigureImagePNG    []byte            `json:"-"` // cropped figure PNG; populated in ODL mode
+	FigureWidthPt     float64           `json:"-"` // merged figure width in PDF points (for CSS pt sizing)
 	ProcessedText     htmltemplate.HTML `json:"-"` // HTML-safe text with [FIGURE] replaced inline
 }
 
@@ -262,7 +263,7 @@ Example output:
 
 // runODLPipeline runs OpenDataLoader once over the PDF and crops figures for hybrid import.
 // onlyFigureQuestions limits crop assignment to direct-PDF has_figure questions (empty = all chunks).
-func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool) (map[int][]byte, error) {
+func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool) (map[int]ODLFigureCrop, error) {
 	tmpPDF, err := os.CreateTemp("", "odl-input-*.pdf")
 	if err != nil {
 		return nil, fmt.Errorf("creating temp PDF: %w", err)
@@ -286,7 +287,7 @@ func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool) (map[int]
 	elements = sortODLElementsReadingOrder(elements)
 
 	figureCounter := 0
-	figureCrops := map[int][]byte{}
+	figureRefs := map[int]odlFigureRef{}
 	var contentBuf strings.Builder
 	currentPage := 0
 
@@ -311,16 +312,7 @@ func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool) (map[int]
 			figureCounter++
 			n := figureCounter
 			fmt.Fprintf(&contentBuf, "[FIGURE_%d]\n", n)
-
-			pageIdx := el.PageNumber - 1
-			if pageIdx >= 0 && pageIdx < len(pageImages) {
-				rect, rectErr := odlBboxToPixelRect(el.BoundingBox, pageImages[pageIdx])
-				if rectErr == nil && rect.Dx() > 0 && rect.Dy() > 0 {
-					if cropBytes, cropErr := cropPageToPNG(pageImages[pageIdx], rect); cropErr == nil {
-						figureCrops[n] = cropBytes
-					}
-				}
-			}
+			figureRefs[n] = odlFigureRef{PageNumber: el.PageNumber, BoundingBox: el.BoundingBox}
 		}
 	}
 
@@ -329,17 +321,29 @@ func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool) (map[int]
 		return nil, fmt.Errorf("could not detect question boundaries in ODL extracted text")
 	}
 
-	figureByQuestion := make(map[int][]byte)
+	figureByQuestion := make(map[int]ODLFigureCrop)
 	for _, ch := range chunks {
 		if len(onlyFigureQuestions) > 0 && !onlyFigureQuestions[ch.Number] {
 			continue
 		}
-		for _, figNum := range ch.FigureNums {
-			if crop, ok := figureCrops[figNum]; ok && len(crop) > 0 {
-				figureByQuestion[ch.Number] = crop
-				break
+		if len(ch.FigureNums) == 0 {
+			continue
+		}
+		refs := make([]odlFigureRef, 0, len(ch.FigureNums))
+		for _, fn := range ch.FigureNums {
+			if ref, ok := figureRefs[fn]; ok {
+				refs = append(refs, ref)
 			}
 		}
+		if len(refs) == 0 {
+			continue
+		}
+		crop, union, cropErr := cropODLMergedFigures(pageImages, refs)
+		if cropErr != nil {
+			continue
+		}
+		wPt, _ := odlBBoxSizePt(union)
+		figureByQuestion[ch.Number] = ODLFigureCrop{PNG: crop, WidthPt: wPt}
 	}
 
 	return figureByQuestion, nil
@@ -374,8 +378,9 @@ func callOpenRouterHybrid(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, 
 		if !q.HasFigure {
 			continue
 		}
-		if fig, ok := figureByQuestion[q.Number]; ok && len(fig) > 0 {
-			q.FigureImagePNG = fig
+		if fig, ok := figureByQuestion[q.Number]; ok && len(fig.PNG) > 0 {
+			q.FigureImagePNG = fig.PNG
+			q.FigureWidthPt = fig.WidthPt
 		}
 	}
 
@@ -735,6 +740,25 @@ func normalizeQuestionSoftWraps(s string) string {
 	return normalizeSoftWrapsSimple(s, true)
 }
 
+// figureDisplayScale bumps ODL figures slightly above exact PDF pt size on screen.
+const figureDisplayScale = 1.12
+
+// figureMaxWidthPercent caps width at one column of a 2-column exam page preview.
+const figureMaxWidthPercent = 55
+
+// figureImageStyle sizes an ODL crop from its PDF width (CSS pt), scaled for readability.
+func figureImageStyle(widthPt float64) string {
+	maxW := figureMaxWidthPercent
+	if widthPt <= 0 {
+		return fmt.Sprintf("display:block;margin:0 auto;max-width:%d%%;height:auto;object-fit:contain", maxW)
+	}
+	displayPt := widthPt * figureDisplayScale
+	return fmt.Sprintf(
+		"display:block;margin:0 auto;width:%.2fpt;height:auto;max-width:%d%%;object-fit:contain",
+		displayPt, maxW,
+	)
+}
+
 // buildProcessedText returns HTML-safe question text with any [FIGURE] token
 // replaced by either a real cropped figure image (ODL mode) or an LLM text
 // description box (direct PDF mode).
@@ -742,14 +766,10 @@ func buildProcessedText(q *ExtractedQuestion) htmltemplate.HTML {
 	figureBox := ""
 	if q.HasFigure {
 		if q.FigureImagePNG != nil {
-			// ODL mode: embed the actual cropped figure image.
 			b64 := base64.StdEncoding.EncodeToString(q.FigureImagePNG)
 			figureBox = fmt.Sprintf(
-				`<div class="my-3">`+
-					`<img src="data:image/png;base64,%s" alt="" `+
-					`style="display:block;margin:0 auto;max-width:min(100%%,14em);max-height:min(36vh,11em);width:auto;height:auto;object-fit:contain" />`+
-					`</div>`,
-				b64,
+				`<div class="my-3"><img src="data:image/png;base64,%s" alt="" style="%s" /></div>`,
+				b64, figureImageStyle(q.FigureWidthPt),
 			)
 		} else if q.FigureDescription != "" {
 			// Direct PDF mode: show LLM text description.
