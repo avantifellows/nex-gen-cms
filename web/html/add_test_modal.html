@@ -4,6 +4,18 @@
             {{ if .Subtype }}Copy Test{{ else }}Create New Test{{ end }}
         </h2>
         <form id="addTestForm">
+            <div class="mb-6">
+                <p class="font-medium mb-2">Choose method</p>
+                <label class="block mb-2">
+                    <input type="radio" name="creationMethod" value="question_bank" checked>
+                    Build from question bank/existing tests
+                </label>
+                <label class="block">
+                    <input type="radio" name="creationMethod" value="pdf_import">
+                    Import from question paper (PDF)
+                </label>
+            </div>
+
             <div id="curriculum-grade-container" class="space-y-4 mb-6">
                 <div class="curriculum-grade-set">
                     <div class="grid grid-cols-[1fr_1fr_auto] gap-4 items-center">
