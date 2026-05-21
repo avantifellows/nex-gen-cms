@@ -82,7 +82,7 @@
 
                 <!-- Continue (normal new test flow) -->
                 <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="true"
-                    hx-on::before-request="if (!validateSelectedOptions()) event.preventDefault()"
+                    hx-on::before-request="if (!shouldProceedWithQuestionBankFlow()) event.preventDefault()"
                     class="bg-blue-500 text-white px-4 py-2 rounded {{ if .Subtype }}hidden{{ end }}">Continue</button>
 
                 <!-- Validate (copy mode) -->
@@ -105,6 +105,14 @@
         if (!pdfSection) return;
 
         pdfSection.classList.toggle('hidden', method !== 'pdf_import');
+    }
+
+    function shouldProceedWithQuestionBankFlow() {
+        if (!validateSelectedOptions()) {
+            return false;
+        }
+        const method = document.querySelector('input[name="creationMethod"]:checked')?.value;
+        return method !== 'pdf_import';
     }
 
     function validateSelectedOptions() {
