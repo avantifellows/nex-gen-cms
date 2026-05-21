@@ -15,7 +15,8 @@
         <div>
             <p class="font-semibold mb-2">Select Type:</p>
             <select id="problem-type-dropdown" name="problem-type-dropdown"
-                class="w-full border border-gray-300 rounded p-2">
+                {{if .ProblemPtr}}disabled title="Problem type cannot be changed in edit mode"{{end}}
+                class="w-full border border-gray-300 rounded p-2 {{if .ProblemPtr}}bg-gray-100 text-gray-500 cursor-not-allowed{{end}}">
                 {{if .ProblemPtr}}
                 {{template "problem_type_options" .ProblemPtr.Subtype}}
                 {{else}}
