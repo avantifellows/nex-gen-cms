@@ -118,6 +118,8 @@ func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int
 }
 
 func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	const includeParagraphSiblingsParam = "include_paragraph_siblings"
+
 	urlValues := request.URL.Query()
 	topicIdStr := urlValues.Get("topic-dropdown")
 	topicId, err := utils.StringToIntType[int16](topicIdStr)
@@ -127,6 +129,9 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	}
 
 	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%s&topic_id=%d&lang_code=en", urlValues.Get(CURRICULUM_DROPDOWN_NAME), topicId)
+	if urlValues.Has(includeParagraphSiblingsParam) {
+		queryParams += "&" + includeParagraphSiblingsParam + "=" + urlValues.Get(includeParagraphSiblingsParam)
+	}
 	problems, err := h.problemsService.GetList(problemsEndPoint+queryParams, problemsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
