@@ -62,18 +62,6 @@
 </head>
 
 <body hx-ext="mathJaxLoader">
-    <script>
-        // Reveal Admin tab only for admins. Server still enforces access on /admin/* routes.
-        // In its own <script> block on purpose: subsequent inline JS can error (e.g. htmx
-        // extensions not yet loaded) and we don't want that to keep the Admin tab hidden.
-        document.addEventListener("DOMContentLoaded", function () {
-            var match = document.cookie.match(/(?:^|;\s*)cms_role=([^;]+)/);
-            if (match && match[1] === "admin") {
-                var btn = document.getElementById("admin-tab");
-                if (btn) btn.classList.remove("hidden");
-            }
-        });
-    </script>
     <script src="/web/static/js/nav-tracker.js"></script>
     <div>
         <nav>
@@ -141,6 +129,14 @@
     </script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            // Reveal Admin tab only for admins. Server still enforces access on /admin/* routes;
+            // this just controls the nav affordance via the non-HttpOnly cms_role companion cookie.
+            var roleMatch = document.cookie.match(/(?:^|;\s*)cms_role=([^;]+)/);
+            if (roleMatch && roleMatch[1] === "admin") {
+                var adminBtn = document.getElementById("admin-tab");
+                if (adminBtn) adminBtn.classList.remove("hidden");
+            }
+
             let debounceTimeout;
 
             function getTabURLFromPath(path) {

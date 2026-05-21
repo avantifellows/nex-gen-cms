@@ -92,7 +92,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/dev-login", loginHandler.DevLogin)
 
 	muxHandler.HandleFunc("/home", handlers.GenericHandler)
-	muxHandler.HandleFunc("/add-chapter", handlers.GenericHandler)
+	muxHandler.HandleFunc("/add-chapter", editor(handlers.GenericHandler))
 
 	// Admin user management
 	adminUsers := appComponentPtr.AdminUsersHandler
