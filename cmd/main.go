@@ -97,6 +97,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	// Admin user management
 	adminUsers := appComponentPtr.AdminUsersHandler
 	muxHandler.HandleFunc("/admin/users", admin(adminUsers.List))
+	muxHandler.HandleFunc("/admin/users/create", admin(adminUsers.Create))
 	muxHandler.HandleFunc("/admin/users/active", admin(adminUsers.SetActive))
 	muxHandler.HandleFunc("/admin/users/role", admin(adminUsers.UpdateRole))
 

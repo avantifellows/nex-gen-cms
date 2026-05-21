@@ -62,6 +62,18 @@
 </head>
 
 <body hx-ext="mathJaxLoader">
+    <script>
+        // Reveal Admin tab only for admins. Server still enforces access on /admin/* routes.
+        // In its own <script> block on purpose: subsequent inline JS can error (e.g. htmx
+        // extensions not yet loaded) and we don't want that to keep the Admin tab hidden.
+        document.addEventListener("DOMContentLoaded", function () {
+            var match = document.cookie.match(/(?:^|;\s*)cms_role=([^;]+)/);
+            if (match && match[1] === "admin") {
+                var btn = document.getElementById("admin-tab");
+                if (btn) btn.classList.remove("hidden");
+            }
+        });
+    </script>
     <script src="/web/static/js/nav-tracker.js"></script>
     <div>
         <nav>
@@ -272,18 +284,10 @@
             }
         })
     
-        // Reveal Admin tab only for admins. Server still enforces access on /admin/* routes.
-        (function showAdminTabIfAdmin() {
-            var match = document.cookie.match(/(?:^|;\s*)cms_role=([^;]+)/);
-            if (match && match[1] === "admin") {
-                var btn = document.getElementById("admin-tab");
-                if (btn) btn.classList.remove("hidden");
-            }
-        })();
-
         window.addEventListener("pageshow", function(event) {
-            // Session check
-            if (!document.cookie.includes("cms_session")) {
+            // Session check via the non-HttpOnly companion cookie. cms_session itself is HttpOnly
+            // and intentionally invisible to JS. cms_role is set/cleared in lockstep by the server.
+            if (!document.cookie.includes("cms_role=")) {
                 window.location.href = "/login";
                 return;
             }

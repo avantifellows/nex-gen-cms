@@ -4,7 +4,7 @@
         <h1 class="text-2xl font-bold">CMS Users</h1>
     </div>
 
-    <form hx-post="/admin/users" hx-target="#users-tbody" hx-swap="beforeend"
+    <form hx-post="/admin/users/create" hx-target="#users-tbody" hx-swap="beforeend"
           hx-on::after-request="if(event.detail.successful){this.reset()}"
           class="bg-white rounded shadow p-4 mb-6 grid grid-cols-12 gap-3 items-end">
         <div class="col-span-5">
