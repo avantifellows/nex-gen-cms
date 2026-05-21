@@ -74,6 +74,8 @@
                     hx-on::before-request="sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false')">Tests</button>
                 <button class="nav-link" id="problems-tab" hx-get="/problems" hx-push-url="true" hx-target="body"
                     data-toggle="tab">Problems</button>
+                <button class="nav-link hidden" id="admin-tab" hx-get="/admin/users" hx-push-url="true" hx-target="body"
+                    data-toggle="tab">Admin</button>
 
                 <!-- name attribute is used, because query parameters passed via http request can be 
                  identified by element names only. It is used in chapter_handler.go -->
@@ -270,6 +272,15 @@
             }
         })
     
+        // Reveal Admin tab only for admins. Server still enforces access on /admin/* routes.
+        (function showAdminTabIfAdmin() {
+            var match = document.cookie.match(/(?:^|;\s*)cms_role=([^;]+)/);
+            if (match && match[1] === "admin") {
+                var btn = document.getElementById("admin-tab");
+                if (btn) btn.classList.remove("hidden");
+            }
+        })();
+
         window.addEventListener("pageshow", function(event) {
             // Session check
             if (!document.cookie.includes("cms_session")) {
