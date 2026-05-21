@@ -26,13 +26,15 @@ type GoogleAuth struct {
 	config   *oauth2.Config
 }
 
-// NewGoogleAuth constructs a GoogleAuth from env vars. Returns nil + error if anything is missing.
+// NewGoogleAuth constructs a GoogleAuth from env vars. Returns (nil, nil) when OAuth is
+// unconfigured — callers that need Google must check for that case. Returns an error only when
+// the OIDC discovery itself fails.
 func NewGoogleAuth(ctx context.Context) (*GoogleAuth, error) {
 	clientID := config.GetEnv("GOOGLE_CLIENT_ID", "")
 	clientSecret := config.GetEnv("GOOGLE_CLIENT_SECRET", "")
 	redirectURL := config.GetEnv("OAUTH_REDIRECT_URL", "")
 	if clientID == "" || clientSecret == "" || redirectURL == "" {
-		return nil, errors.New("GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, OAUTH_REDIRECT_URL must be set")
+		return nil, nil
 	}
 
 	provider, err := oidc.NewProvider(ctx, googleIssuer)

@@ -13,6 +13,11 @@ import (
 )
 
 func main() {
+	// Load .env before DI so the OAuth + DB pool can read their env vars at construction time.
+	// setup() also calls LoadEnv (via the mockable ConfigLoader interface) so tests stay unchanged;
+	// godotenv.Load is a no-op the second time around.
+	config.LoadEnv(new(config.Env))
+
 	mux := http.NewServeMux()
 	appComponentPtr, err := di.NewAppComponent()
 	if err != nil {

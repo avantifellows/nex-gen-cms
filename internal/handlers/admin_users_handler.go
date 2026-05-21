@@ -37,7 +37,9 @@ func (h *AdminUsersHandler) List(w http.ResponseWriter, r *http.Request) {
 		"Users": users,
 		"Roles": []string{auth.RoleViewer, auth.RoleEditor, auth.RoleAdmin},
 	}
-	views.ExecuteTemplates(w, data, nil, baseTemplate, adminUsersTemplate)
+	// adminUserRowTemplate is referenced from inside adminUsersTemplate via {{ template }}, so it must
+	// be part of the parsed template set.
+	views.ExecuteTemplates(w, data, nil, baseTemplate, adminUsersTemplate, adminUserRowTemplate)
 }
 
 // Create adds a new user. HTMX POST returns the new row.

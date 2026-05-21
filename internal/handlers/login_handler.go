@@ -31,7 +31,8 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 
 	data := map[string]interface{}{
-		"DevLoginEmail": config.GetEnv("DEV_LOGIN_EMAIL", ""),
+		"DevLoginEmail":    config.GetEnv("DEV_LOGIN_EMAIL", ""),
+		"GoogleConfigured": h.google != nil,
 	}
 	if msg := r.URL.Query().Get("error"); msg != "" {
 		data["Error"] = msg
@@ -41,6 +42,10 @@ func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 // StartGoogleAuth redirects to Google's OAuth consent screen.
 func (h *LoginHandler) StartGoogleAuth(w http.ResponseWriter, r *http.Request) {
+	if h.google == nil {
+		http.Redirect(w, r, "/login?error=Google+sign-in+is+not+configured", http.StatusSeeOther)
+		return
+	}
 	url, err := h.google.AuthCodeURL(w)
 	if err != nil {
 		log.Printf("oauth start: %v", err)
@@ -55,6 +60,10 @@ func (h *LoginHandler) StartGoogleAuth(w http.ResponseWriter, r *http.Request) {
 func (h *LoginHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	defer auth.ClearStateCookie(w)
 
+	if h.google == nil {
+		http.Redirect(w, r, "/login?error=Google+sign-in+is+not+configured", http.StatusSeeOther)
+		return
+	}
 	claims, err := h.google.Exchange(r.Context(), r)
 	if err != nil {
 		log.Printf("oauth callback: %v", err)

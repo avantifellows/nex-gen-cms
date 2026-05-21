@@ -15,6 +15,7 @@
         <div class="mb-4 px-3 py-2 rounded bg-red-50 text-red-700 text-sm text-center">{{ .Error }}</div>
         {{ end }}
 
+        {{ if .GoogleConfigured }}
         <a href="/auth/google/start"
            class="flex items-center justify-center gap-2 w-full border border-gray-300 hover:bg-gray-50 py-2 rounded text-gray-700 font-medium">
             <svg viewBox="0 0 48 48" class="h-5 w-5">
@@ -29,6 +30,11 @@
         <p class="mt-4 text-xs text-gray-500 text-center">
             Use your @avantifellows.org account. Access must be granted by an admin.
         </p>
+        {{ else }}
+        <p class="px-3 py-2 rounded bg-yellow-50 text-yellow-800 text-sm text-center">
+            Google sign-in not configured. Use dev login below.
+        </p>
+        {{ end }}
 
         {{ if .DevLoginEmail }}
         <div class="mt-6 pt-4 border-t border-gray-200">
