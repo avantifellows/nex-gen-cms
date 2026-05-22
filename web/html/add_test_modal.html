@@ -81,8 +81,8 @@
                     class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
 
                 <!-- Continue (normal new test flow) -->
-                <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="true"
-                    hx-on::before-request="if (!shouldProceedWithQuestionBankFlow()) event.preventDefault()"
+                <button id="add-test-continue-btn" type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="true"
+                    hx-on::before-request="handleAddTestContinue(event)"
                     class="bg-blue-500 text-white px-4 py-2 rounded {{ if .Subtype }}hidden{{ end }}">Continue</button>
 
                 <!-- Validate (copy mode) -->
@@ -107,12 +107,42 @@
         pdfSection.classList.toggle('hidden', method !== 'pdf_import');
     }
 
-    function shouldProceedWithQuestionBankFlow() {
+    function handleAddTestContinue(event) {
         if (!validateSelectedOptions()) {
-            return false;
+            event.preventDefault();
+            return;
         }
+
         const method = document.querySelector('input[name="creationMethod"]:checked')?.value;
-        return method !== 'pdf_import';
+        if (method === 'pdf_import') {
+            event.preventDefault();
+            extractQuestionsFromPdf();
+        }
+    }
+
+    async function extractQuestionsFromPdf() {
+        const form = document.getElementById('addTestForm');
+        const continueBtn = document.getElementById('add-test-continue-btn');
+        const formData = new FormData(form);
+
+        continueBtn.disabled = true;
+        try {
+            const response = await fetch('/tests/extract-questions-from-pdf', {
+                method: 'POST',
+                body: formData,
+            });
+            if (!response.ok) {
+                const message = await response.text();
+                alert(message || 'Failed to extract questions from PDF.');
+                return;
+            }
+            closeAddTestModal();
+        } catch (err) {
+            console.error('PDF extraction failed:', err);
+            alert('Failed to extract questions from PDF.');
+        } finally {
+            continueBtn.disabled = false;
+        }
     }
 
     function validateSelectedOptions() {

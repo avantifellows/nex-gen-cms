@@ -29,6 +29,8 @@ This document provides a comprehensive overview of the Next Generation CMS codeb
 - `internal/handlers/`
   - Handlers for chapters, topics, tests, problems, etc. They translate HTTP to service calls and render templates.
   - `handlerutils/`: Shared handler helpers (subject/topic lookups).
+- `internal/pdfimport/`
+  - PDF question extraction: OpenDataLoader layout (`odl.go`), page rasterisation (`raster.go`), OpenRouter hybrid import (`extract.go`).
 - `internal/middleware/`
   - `htmx_middleware.go`: Enforces HTMX-originated requests for certain routes.
 - `internal/models/`

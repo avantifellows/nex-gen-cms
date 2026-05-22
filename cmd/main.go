@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/avantifellows/nex-gen-cms/config"
 	"github.com/avantifellows/nex-gen-cms/di"
@@ -21,7 +22,13 @@ func main() {
 	setup(new(Config), mux, appComponentPtr)
 	// Paths that don't require login
 	exceptions := []string{"/login", "/favicon.ico", "/web/static/css/output.css"}
-	http.ListenAndServe("0.0.0.0:8080", middleware.RequireLogin(mux, exceptions...))
+	server := &http.Server{
+		Addr:         "0.0.0.0:8080",
+		Handler:      middleware.RequireLogin(mux, exceptions...),
+		WriteTimeout: 310 * time.Second, // PDF question extraction may call LLM for several minutes
+		ReadTimeout:  60 * time.Second,
+	}
+	server.ListenAndServe()
 }
 
 type ConfigLoader interface {
@@ -131,6 +138,9 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/download-pdf", testsHandler.DownloadPdf)
 	muxHandler.HandleFunc("/tests/copy-test", testsHandler.CopyTest)
 	muxHandler.HandleFunc("/tests/validate-test", testsHandler.ValidateTest)
+
+	pdfImportHandler := appComponentPtr.PdfImportHandler
+	muxHandler.HandleFunc("/tests/extract-questions-from-pdf", pdfImportHandler.ExtractQuestionsFromPDF)
 
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)

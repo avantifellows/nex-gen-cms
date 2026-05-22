@@ -23,6 +23,7 @@ type AppComponent struct {
 	SubjectsHandler    *handlers.SubjectsHandler
 	SkillsHandler      *handlers.SkillsHandler
 	TestsHandler       *handlers.TestsHandler
+	PdfImportHandler   *handlers.PdfImportHandler
 	ProblemsHandler    *handlers.ProblemsHandler
 	TagsHandler        *handlers.TagsHandler
 	ExamsHandler       *handlers.ExamsHandler
@@ -61,6 +62,7 @@ func NewAppComponent() (*AppComponent, error) {
 	skillsHandler := handlers.NewSkillsHandler(skillsService)
 	testsHandler := handlers.NewTestsHandler(testsService, subjectsService, problemsService, testRulesService,
 		curriculumsService, gradesService, examsService)
+	pdfImportHandler := handlers.NewPdfImportHandler()
 	problemsHandler := handlers.NewProblemsHandler(problemsService, skillsService, subjectsService, topicsService,
 		tagsService)
 	tagsHandler := handlers.NewTagsHandler(tagsService)
@@ -78,6 +80,7 @@ func NewAppComponent() (*AppComponent, error) {
 		SubjectsHandler:    subjectsHandler,
 		SkillsHandler:      skillsHandler,
 		TestsHandler:       testsHandler,
+		PdfImportHandler:   pdfImportHandler,
 		ProblemsHandler:    problemsHandler,
 		TagsHandler:        tagsHandler,
 		ExamsHandler:       examsHandler,

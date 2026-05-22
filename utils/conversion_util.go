@@ -33,6 +33,30 @@ func StringToIntOrDefault(val string, defaultVal int, min int) int {
 	return defaultVal
 }
 
+// AnyToInt converts a JSON-decoded number (float64 or int) to int; returns 0 if not numeric.
+func AnyToInt(v any) int {
+	switch x := v.(type) {
+	case float64:
+		return int(x)
+	case int:
+		return x
+	default:
+		return 0
+	}
+}
+
+// AnyToFloat64 converts a JSON-decoded number (float64 or int) to float64; returns 0 if not numeric.
+func AnyToFloat64(v any) float64 {
+	switch x := v.(type) {
+	case float64:
+		return x
+	case int:
+		return float64(x)
+	default:
+		return 0
+	}
+}
+
 type IntType interface {
 	int8 | int16 | int32
 }
