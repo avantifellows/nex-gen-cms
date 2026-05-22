@@ -91,8 +91,12 @@ log "Creating .env file for application"
 cat > "$APP_DIR/.env" << 'EOF'
 DB_SERVICE_ENDPOINT=${db_service_endpoint}
 DB_SERVICE_TOKEN=${db_service_token}
-CMS_USERNAME=${cms_username}
-CMS_PASSWORD=${cms_password}
+DATABASE_URL=${database_url}
+SESSION_SECRET=${session_secret}
+GOOGLE_CLIENT_ID=${google_client_id}
+GOOGLE_CLIENT_SECRET=${google_client_secret}
+OAUTH_REDIRECT_URL=${oauth_redirect_url}
+APP_ENV=${app_env}
 EOF
 chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
 chmod 600 "$APP_DIR/.env"
