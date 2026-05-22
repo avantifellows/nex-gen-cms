@@ -24,6 +24,7 @@ dnf install -y git nginx golang certbot python3-certbot-nginx firewalld
 
 log "Installing system fonts required for PDF generation (MathJax, Chromium)"
 sudo dnf install -y \
+  fontconfig \
   dejavu-sans-fonts \
   dejavu-serif-fonts \
   dejavu-sans-mono-fonts \
@@ -33,7 +34,9 @@ sudo dnf install -y \
   google-noto-sans-math-fonts
 
 log "Rebuilding font cache"
-sudo fc-cache -fv
+# fontconfig is now installed explicitly above; earlier AMI baselines apparently shipped it
+# transitively. Tolerate fc-cache failure so a font-cache hiccup doesn't abort the entire boot.
+sudo fc-cache -fv || log "fc-cache failed; continuing"
 
 log "Installing Node.js, Playwright and Chromium dependencies"
 
