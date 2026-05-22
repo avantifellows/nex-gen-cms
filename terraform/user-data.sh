@@ -86,7 +86,10 @@ else
     sudo -u "$APP_USER" git clone -b ${repo_branch} ${repo_url} .
 fi
 
-# Create .env file in application directory for godotenv (after git clone)
+# Create .env file in application directory for godotenv (after git clone).
+# Bumping a marker comment here also bumps the rendered user_data hash, which forces an instance
+# replacement under user_data_replace_on_change=true. Use this to redeploy env-var changes:
+# env-rev=2026-05-22-1
 log "Creating .env file for application"
 cat > "$APP_DIR/.env" << 'EOF'
 DB_SERVICE_ENDPOINT=${db_service_endpoint}
