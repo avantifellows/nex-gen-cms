@@ -19,7 +19,9 @@ env:
   TF_VAR_subdomain: ${{ 'new-cms' }}
   TF_VAR_letsencrypt_email: ${{ secrets.TF_VAR_LETSENCRYPT_EMAIL }}
   TF_VAR_repo_url: ${{ 'https://github.com/avantifellows/nex-gen-cms.git' }}
-  TF_VAR_repo_branch: ${{ github.ref_name }}
+  # head_ref is the PR's source branch; ref_name is the push/dispatch branch. PR events surface
+  # ref_name as "<PR#>/merge" (a synthetic ref), so prefer head_ref when it's set.
+  TF_VAR_repo_branch: ${{ github.head_ref || github.ref_name }}
   TF_VAR_db_service_endpoint: ${{ 'https://staging-db.avantifellows.org/api/' }}
   TF_VAR_db_service_token: ${{ secrets.TF_VAR_DB_SERVICE_TOKEN_STAGING }}
   TF_VAR_database_url: ${{ secrets.TF_VAR_DATABASE_URL_STAGING }}
@@ -102,10 +104,14 @@ jobs:
           echo "instance_id=${IID}" >> "$GITHUB_OUTPUT"
           echo "Instance ID: ${IID}"
 
-      - name: Reboot EC2 Instance (no infra changes)
-        if: steps.apply.outputs.apply_changes == 'false' && steps.instance.outputs.instance_id != ''
+      - name: Reboot EC2 Instance
+        # Always reboot. cloud_final_modules: [scripts-user, always] makes user-data.sh re-run on
+        # every boot, which is how new code and .env values actually land on the running instance.
+        # Skipping the reboot when terraform made in-place changes (e.g. user_data updates) means
+        # the metadata is updated but nothing on the box re-reads it.
+        if: steps.instance.outputs.instance_id != ''
         run: |
-          echo "No infra changes detected. Rebooting EC2 instance to pick latest app changes..."
+          echo "Rebooting EC2 instance to pick up latest app + .env changes..."
           aws ec2 reboot-instances --instance-ids "${{ steps.instance.outputs.instance_id }}"
           echo "Reboot signal sent."
 
