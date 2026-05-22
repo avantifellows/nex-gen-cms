@@ -1,9 +1,10 @@
-<div id="addTestModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-    <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
-        <h2 class="text-lg font-semibold mb-4">
+<div id="addTestModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50 p-4">
+    <div class="bg-white rounded shadow-md w-full max-w-md max-h-[90vh] flex flex-col">
+        <h2 class="text-lg font-semibold shrink-0 px-6 pt-6 pb-2">
             {{ if .Subtype }}Copy Test{{ else }}Create New Test{{ end }}
         </h2>
-        <form id="addTestForm">
+        <form id="addTestForm" class="flex flex-col flex-1 min-h-0">
+            <div id="add-test-modal-scroll" class="flex-1 min-h-0 overflow-y-auto px-6">
             {{ if not .Subtype }}
             <div class="mb-6">
                 <p class="font-medium mb-2">Choose method</p>
@@ -74,9 +75,22 @@
                     <option disabled selected>Loading exams...</option>
                 </select>
             </div>
+            </div>
+
+            <div class="shrink-0 px-6 pb-6 pt-3">
+            <div id="pdf-extract-progress" class="hidden mb-3">
+                <div class="flex items-center justify-between gap-2 text-sm text-gray-600 mb-1.5">
+                    <span id="pdf-extract-stage" class="truncate">Starting…</span>
+                    <span id="pdf-extract-pct" class="shrink-0 font-medium text-gray-700">0%</span>
+                </div>
+                <div class="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                    <div id="pdf-extract-bar" class="h-full bg-blue-500 rounded-full transition-[width] duration-300 ease-out"
+                        style="width: 0%"></div>
+                </div>
+            </div>
 
             <!-- Buttons -->
-            <div class="w-full flex-row flex justify-end space-x-2">
+            <div id="add-test-modal-actions" class="w-full flex-row flex justify-end space-x-2">
                 <button type="button" onclick="closeAddTestModal()"
                     class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
 
@@ -92,6 +106,7 @@
                     hx-on::after-request="handleValidateTestResponse(event)">
                     Validate & Save
                 </button>
+            </div>
             </div>
 
         </form>
@@ -120,12 +135,98 @@
         }
     }
 
-    async function extractQuestionsFromPdf() {
+    let pdfExtractionInProgress = false;
+
+    function setPdfExtractionBusy(busy) {
+        pdfExtractionInProgress = busy;
+        const progressPanel = document.getElementById('pdf-extract-progress');
         const form = document.getElementById('addTestForm');
         const continueBtn = document.getElementById('add-test-continue-btn');
+        const cancelBtn = document.querySelector('#addTestModal button[onclick="closeAddTestModal()"]');
+
+        if (progressPanel) progressPanel.classList.toggle('hidden', !busy);
+        if (continueBtn) continueBtn.disabled = busy;
+        if (cancelBtn) cancelBtn.disabled = busy;
+
+        if (form) {
+            form.querySelectorAll('input, select, button, a').forEach((el) => {
+                if (el.closest('#pdf-extract-progress')) return;
+                if (busy) {
+                    if (el.tagName === 'A') {
+                        el.dataset.pdfExtractDisabled = '1';
+                        el.style.pointerEvents = 'none';
+                        el.style.opacity = '0.5';
+                    } else {
+                        el.disabled = true;
+                    }
+                } else {
+                    if (el.dataset.pdfExtractDisabled) {
+                        delete el.dataset.pdfExtractDisabled;
+                        el.style.pointerEvents = '';
+                        el.style.opacity = '';
+                    } else if (el.tagName !== 'A') {
+                        el.disabled = false;
+                    }
+                }
+            });
+        }
+    }
+
+    function updatePdfExtractProgress(percent, stage) {
+        const pct = Math.max(0, Math.min(100, Number(percent) || 0));
+        const bar = document.getElementById('pdf-extract-bar');
+        const pctEl = document.getElementById('pdf-extract-pct');
+        const stageEl = document.getElementById('pdf-extract-stage');
+        if (bar) bar.style.width = pct + '%';
+        if (pctEl) pctEl.textContent = pct + '%';
+        if (stageEl && stage) stageEl.textContent = stage;
+    }
+
+    function handlePdfExtractKeydown(event) {
+        if (!pdfExtractionInProgress) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }
+
+    function handlePdfExtractBeforeUnload(event) {
+        if (!pdfExtractionInProgress) return;
+        event.preventDefault();
+        event.returnValue = '';
+    }
+
+    function parseSSEChunk(buffer) {
+        const events = [];
+        const parts = buffer.split('\n\n');
+        const remainder = parts.pop() || '';
+        for (const part of parts) {
+            if (!part.trim()) continue;
+            let eventName = 'message';
+            let data = '';
+            for (const line of part.split('\n')) {
+                if (line.startsWith('event:')) eventName = line.slice(6).trim();
+                else if (line.startsWith('data:')) data += line.slice(5).trim();
+            }
+            if (data) {
+                try {
+                    events.push({ event: eventName, data: JSON.parse(data) });
+                } catch (_) { /* ignore partial JSON */ }
+            }
+        }
+        return { events, remainder };
+    }
+
+    async function extractQuestionsFromPdf() {
+        const form = document.getElementById('addTestForm');
         const formData = new FormData(form);
 
-        continueBtn.disabled = true;
+        setPdfExtractionBusy(true);
+        updatePdfExtractProgress(0, 'Uploading PDF…');
+        document.addEventListener('keydown', handlePdfExtractKeydown, true);
+        window.addEventListener('beforeunload', handlePdfExtractBeforeUnload);
+
+        let succeeded = false;
         try {
             const response = await fetch('/tests/extract-questions-from-pdf', {
                 method: 'POST',
@@ -136,12 +237,66 @@
                 alert(message || 'Failed to extract questions from PDF.');
                 return;
             }
-            closeAddTestModal();
+
+            const reader = response.body?.getReader();
+            if (!reader) {
+                alert('Failed to extract questions from PDF.');
+                return;
+            }
+
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let failed = false;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const parsed = parseSSEChunk(buffer);
+                buffer = parsed.remainder;
+                for (const evt of parsed.events) {
+                    if (evt.event === 'progress') {
+                        updatePdfExtractProgress(evt.data.percent, evt.data.stage);
+                    } else if (evt.event === 'error') {
+                        alert(evt.data.message || 'Failed to extract questions from PDF.');
+                        failed = true;
+                    } else if (evt.event === 'complete') {
+                        updatePdfExtractProgress(100, 'Extraction complete');
+                        succeeded = true;
+                    }
+                }
+            }
+
+            // Flush any final SSE event still in the buffer
+            if (buffer.trim()) {
+                const parsed = parseSSEChunk(buffer + '\n\n');
+                for (const evt of parsed.events) {
+                    if (evt.event === 'progress') {
+                        updatePdfExtractProgress(evt.data.percent, evt.data.stage);
+                    } else if (evt.event === 'error') {
+                        alert(evt.data.message || 'Failed to extract questions from PDF.');
+                        failed = true;
+                    } else if (evt.event === 'complete') {
+                        updatePdfExtractProgress(100, 'Extraction complete');
+                        succeeded = true;
+                    }
+                }
+            }
+
+            if (!failed && !succeeded) {
+                alert('Extraction ended unexpectedly. Please try again.');
+            }
         } catch (err) {
             console.error('PDF extraction failed:', err);
             alert('Failed to extract questions from PDF.');
         } finally {
-            continueBtn.disabled = false;
+            document.removeEventListener('keydown', handlePdfExtractKeydown, true);
+            window.removeEventListener('beforeunload', handlePdfExtractBeforeUnload);
+            pdfExtractionInProgress = false;
+            setPdfExtractionBusy(false);
+            if (succeeded) {
+                goBackAfterDelay(0);
+            }
         }
     }
 
@@ -239,6 +394,7 @@
     }
 
     function closeAddTestModal() {
+        if (pdfExtractionInProgress) return;
         goBackAfterDelay(0);
     }
 </script>

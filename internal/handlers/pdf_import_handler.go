@@ -18,11 +18,35 @@ func NewPdfImportHandler() *PdfImportHandler {
 	return &PdfImportHandler{}
 }
 
-// ExtractQuestionsFromPDF parses an uploaded PDF and logs extracted questions (add-test modal flow).
+// ExtractQuestionsFromPDF parses an uploaded PDF, streams progress as SSE, then logs results.
 func (h *PdfImportHandler) ExtractQuestionsFromPDF(w http.ResponseWriter, r *http.Request) {
-	questions, rawResp, err := extractQuestionsFromRequest(r)
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "streaming not supported", http.StatusInternalServerError)
+		return
+	}
+
+	writeSSE := func(event string, payload any) {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return
+		}
+		fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, data)
+		flusher.Flush()
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+
+	onProgress := func(percent int, stage string) {
+		writeSSE("progress", map[string]any{"percent": percent, "stage": stage})
+	}
+
+	questions, rawResp, err := extractQuestionsFromRequest(r, onProgress)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		writeSSE("error", map[string]string{"message": err.Error()})
 		return
 	}
 
@@ -31,10 +55,10 @@ func (h *PdfImportHandler) ExtractQuestionsFromPDF(w http.ResponseWriter, r *htt
 		log.Printf("pdf import: raw LLM response length=%d bytes", len(rawResp))
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	writeSSE("complete", map[string]any{"question_count": len(questions)})
 }
 
-func extractQuestionsFromRequest(r *http.Request) ([]pdfimport.ExtractedQuestion, string, error) {
+func extractQuestionsFromRequest(r *http.Request, onProgress pdfimport.ProgressFunc) ([]pdfimport.ExtractedQuestion, string, error) {
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		return nil, "", fmt.Errorf("failed to parse form: %w", err)
 	}
@@ -50,8 +74,12 @@ func extractQuestionsFromRequest(r *http.Request) ([]pdfimport.ExtractedQuestion
 		return nil, "", fmt.Errorf("failed to read PDF: %w", err)
 	}
 
+	if onProgress != nil {
+		onProgress(5, "PDF received, starting extraction…")
+	}
+
 	apiKey := config.GetEnv("OPENROUTER_API_KEY", "")
-	return pdfimport.ExtractQuestions(pdfBytes, apiKey)
+	return pdfimport.ExtractQuestionsWithProgress(pdfBytes, apiKey, onProgress)
 }
 
 func logExtractedQuestions(questions []pdfimport.ExtractedQuestion) {

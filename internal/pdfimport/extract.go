@@ -48,12 +48,26 @@ type ExtractedQuestion struct {
 	ProcessedText     htmltemplate.HTML `json:"-"` // HTML-safe text with [FIGURE] replaced inline
 }
 
+// ProgressFunc reports extraction percent (0–100) and a short stage label for the UI.
+type ProgressFunc func(percent int, stage string)
+
+func reportProgress(on ProgressFunc, percent int, stage string) {
+	if on != nil {
+		on(percent, stage)
+	}
+}
+
 // ExtractQuestions runs hybrid PDF extraction (direct LLM parse + ODL figure crops).
 func ExtractQuestions(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, string, error) {
+	return ExtractQuestionsWithProgress(pdfBytes, apiKey, nil)
+}
+
+// ExtractQuestionsWithProgress is like ExtractQuestions but emits coarse-grained progress.
+func ExtractQuestionsWithProgress(pdfBytes []byte, apiKey string, onProgress ProgressFunc) ([]ExtractedQuestion, string, error) {
 	if apiKey == "" {
 		return nil, "", fmt.Errorf("OPENROUTER_API_KEY is not set in .env")
 	}
-	return callOpenRouterHybrid(pdfBytes, apiKey)
+	return callOpenRouterHybrid(pdfBytes, apiKey, onProgress)
 }
 
 func callOpenRouter(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, string, error) {
@@ -204,7 +218,8 @@ Example output:
 
 // runODLPipeline runs OpenDataLoader once over the PDF and crops figures for hybrid import.
 // onlyFigureQuestions limits crop assignment to direct-PDF has_figure questions (empty = all chunks).
-func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool) (map[int]ODLFigureCrop, error) {
+func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool, onProgress ProgressFunc) (map[int]ODLFigureCrop, error) {
+	reportProgress(onProgress, 72, "Rasterizing PDF pages…")
 	tmpPDF, err := os.CreateTemp("", "odl-input-*.pdf")
 	if err != nil {
 		return nil, fmt.Errorf("creating temp PDF: %w", err)
@@ -221,6 +236,7 @@ func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool) (map[int]
 		return nil, fmt.Errorf("rasterising PDF: %w", err)
 	}
 
+	reportProgress(onProgress, 78, "Detecting layout and figures…")
 	elements, err := extractWithODL(tmpPDF.Name())
 	if err != nil {
 		return nil, fmt.Errorf("OpenDataLoader extraction: %w", err)
@@ -262,6 +278,7 @@ func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool) (map[int]
 		return nil, fmt.Errorf("could not detect question boundaries in ODL extracted text")
 	}
 
+	reportProgress(onProgress, 84, "Cropping figure images…")
 	figureByQuestion := make(map[int]ODLFigureCrop)
 	for _, ch := range chunks {
 		if len(onlyFigureQuestions) > 0 && !onlyFigureQuestions[ch.Number] {
@@ -294,11 +311,13 @@ func runODLPipeline(pdfBytes []byte, onlyFigureQuestions map[int]bool) (map[int]
 // overlays ODL-derived figure crops by question number only when the direct
 // model already set has_figure, so ODL noise (fraction bars, symbol fragments)
 // is not shown on questions the model did not flag as having a figure.
-func callOpenRouterHybrid(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, string, error) {
+func callOpenRouterHybrid(pdfBytes []byte, apiKey string, onProgress ProgressFunc) ([]ExtractedQuestion, string, error) {
+	reportProgress(onProgress, 10, "Analyzing questions with AI (this may take several minutes)…")
 	directQuestions, directRaw, err := callOpenRouter(pdfBytes, apiKey)
 	if err != nil {
 		return nil, directRaw, err
 	}
+	reportProgress(onProgress, 68, "AI analysis complete")
 
 	figQuestions := make(map[int]bool)
 	for _, q := range directQuestions {
@@ -306,7 +325,7 @@ func callOpenRouterHybrid(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, 
 			figQuestions[q.Number] = true
 		}
 	}
-	figureByQuestion, err := runODLPipeline(pdfBytes, figQuestions)
+	figureByQuestion, err := runODLPipeline(pdfBytes, figQuestions, onProgress)
 	var odlRaw string
 	if err != nil {
 		odlRaw = "ODL layout failed: " + err.Error()
@@ -325,8 +344,10 @@ func callOpenRouterHybrid(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, 
 		}
 	}
 
+	reportProgress(onProgress, 92, "Formatting extracted questions…")
 	// Rebuild ProcessedText so attached image crops render in UI.
 	postProcessQuestions(directQuestions)
+	reportProgress(onProgress, 100, "Extraction complete")
 	return directQuestions, fmt.Sprintf("DIRECT RESPONSE:\n%s\n\n-----\n\nODL RESPONSE:\n%s", directRaw, odlRaw), nil
 }
 
