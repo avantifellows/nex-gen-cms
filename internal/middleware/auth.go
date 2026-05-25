@@ -2,42 +2,12 @@ package middleware
 
 import (
 	"net/http"
+
+	"github.com/avantifellows/nex-gen-cms/internal/auth"
 )
 
-const sessionCookieName = "cms_session"
-
-// Set a cookie for a logged-in user
-func SetSessionCookie(w http.ResponseWriter) {
-	cookie := &http.Cookie{
-		Name:   sessionCookieName,
-		Value:  "true",
-		Path:   "/",
-		MaxAge: 7200, // 2 hours
-	}
-	http.SetCookie(w, cookie)
-}
-
-// Check if a user is logged in
-func IsLoggedIn(r *http.Request) bool {
-	cookie, err := r.Cookie(sessionCookieName)
-	if err != nil {
-		return false
-	}
-	return cookie.Value == "true"
-}
-
-// Logout by clearing the cookie
-func Logout(w http.ResponseWriter) {
-	cookie := &http.Cookie{
-		Name:   sessionCookieName,
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
-	}
-	http.SetCookie(w, cookie)
-}
-
-// Middleware to restrict access
+// RequireLogin verifies the session cookie. Unauthenticated requests are redirected to /login
+// (or sent HX-Redirect for htmx requests). Exception paths skip the check entirely.
 func RequireLogin(next http.Handler, exceptions ...string) http.Handler {
 	exceptionSet := make(map[string]struct{}, len(exceptions))
 	for _, e := range exceptions {
@@ -50,18 +20,51 @@ func RequireLogin(next http.Handler, exceptions ...string) http.Handler {
 			return
 		}
 
-		if !IsLoggedIn(r) {
-			if r.Header.Get("HX-Request") == "true" {
-				// For HTMX requests, set HX-Redirect header with StatusUnauthorized; otherwise it will add login
-				// screen inside the target element (eg - under tests tab for /api/tests call) instead of
-				// moving to separate login screen
-				w.Header().Set("HX-Redirect", "/login")
-				w.WriteHeader(http.StatusUnauthorized)
-			} else {
-				http.Redirect(w, r, "/login", http.StatusSeeOther)
-			}
+		claims := auth.ReadSession(r)
+		if claims == nil {
+			redirectToLogin(w, r)
 			return
 		}
-		next.ServeHTTP(w, r)
+
+		next.ServeHTTP(w, r.WithContext(auth.WithSession(r.Context(), claims)))
 	})
+}
+
+// RequireRole wraps a handler so that only sessions with role >= need can reach it.
+// Lower roles get 403 (or HX-equivalent). Unauthenticated requests fall through to /login.
+func RequireRole(need string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		claims := auth.FromContext(r.Context())
+		if claims == nil {
+			claims = auth.ReadSession(r)
+		}
+		if claims == nil {
+			redirectToLogin(w, r)
+			return
+		}
+		if !auth.AtLeast(claims.Role, need) {
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("HX-Reswap", "none")
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(auth.WithSession(r.Context(), claims)))
+	})
+}
+
+// RequireRoleFunc is the http.HandlerFunc-flavored convenience wrapper.
+func RequireRoleFunc(need string, h http.HandlerFunc) http.HandlerFunc {
+	return RequireRole(need, h).ServeHTTP
+}
+
+func redirectToLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", "/login")
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }

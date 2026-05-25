@@ -1,0 +1,51 @@
+{{ define "content" }}
+<div class="max-w-5xl">
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold">CMS Users</h1>
+    </div>
+
+    <form hx-post="/admin/users/create" hx-target="#users-tbody" hx-swap="beforeend"
+          hx-on::after-request="if(event.detail.successful){this.reset()}"
+          class="bg-white rounded shadow p-4 mb-6 grid grid-cols-12 gap-3 items-end">
+        <div class="col-span-5">
+            <label class="block text-xs text-gray-600 mb-1">Email</label>
+            <input name="email" type="email" required placeholder="someone@avantifellows.org"
+                   class="w-full border p-2 rounded">
+        </div>
+        <div class="col-span-3">
+            <label class="block text-xs text-gray-600 mb-1">Full name</label>
+            <input name="full_name" type="text" placeholder="Optional"
+                   class="w-full border p-2 rounded">
+        </div>
+        <div class="col-span-2">
+            <label class="block text-xs text-gray-600 mb-1">Role</label>
+            <select name="role" class="w-full border p-2 rounded">
+                {{ range .Roles }}<option value="{{ . }}" {{ if eq . "editor" }}selected{{ end }}>{{ . }}</option>{{ end }}
+            </select>
+        </div>
+        <div class="col-span-2">
+            <button type="submit" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">
+                Add user
+            </button>
+        </div>
+    </form>
+
+    <div class="bg-white rounded shadow overflow-hidden">
+        <table class="w-full text-sm">
+            <thead class="bg-gray-50 text-left text-gray-600">
+                <tr>
+                    <th class="py-2 px-4">Email</th>
+                    <th class="py-2 px-4">Full name</th>
+                    <th class="py-2 px-4">Role</th>
+                    <th class="py-2 px-4">Active</th>
+                    <th class="py-2 px-4">Last login</th>
+                    <th class="py-2 px-4"></th>
+                </tr>
+            </thead>
+            <tbody id="users-tbody">
+                {{ range .Users }}{{ template "admin_user_row.html" . }}{{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{ end }}
