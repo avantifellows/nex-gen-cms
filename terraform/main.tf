@@ -139,11 +139,6 @@ resource "aws_instance" "web" {
   availability_zone      = data.aws_availability_zones.available.names[0]
 
   user_data = local.user_data
-  # Cloud-init caches user-data on first boot. Subsequent in-place updates of the user_data
-  # attribute don't reach the running instance, so adding/changing env vars rendered into
-  # user-data.sh requires replacing the instance. Code-only changes still go via the
-  # reboot+git-pull path (no user_data change, no replacement).
-  user_data_replace_on_change = true
 
   root_block_device {
     volume_type           = "gp3"

@@ -104,14 +104,15 @@ jobs:
           echo "instance_id=${IID}" >> "$GITHUB_OUTPUT"
           echo "Instance ID: ${IID}"
 
-      - name: Reboot EC2 Instance
-        # Always reboot. cloud_final_modules: [scripts-user, always] makes user-data.sh re-run on
-        # every boot, which is how new code and .env values actually land on the running instance.
-        # Skipping the reboot when terraform made in-place changes (e.g. user_data updates) means
-        # the metadata is updated but nothing on the box re-reads it.
-        if: steps.instance.outputs.instance_id != ''
+      - name: Reboot EC2 Instance (no infra changes)
+        # AWS provider 5.x stop/starts the instance on user_data change, and
+        # cloud_final_modules: [scripts-user, always] re-runs user-data.sh on every boot — so
+        # terraform-side changes already get the latest user-data onto the box. This manual
+        # reboot is only needed when terraform had no diff to apply (code-only deploys), to
+        # make user-data.sh re-pull and rebuild.
+        if: steps.apply.outputs.apply_changes == 'false' && steps.instance.outputs.instance_id != ''
         run: |
-          echo "Rebooting EC2 instance to pick up latest app + .env changes..."
+          echo "No infra changes detected. Rebooting EC2 instance to pick up latest app changes..."
           aws ec2 reboot-instances --instance-ids "${{ steps.instance.outputs.instance_id }}"
           echo "Reboot signal sent."
 
