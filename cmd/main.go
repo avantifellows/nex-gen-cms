@@ -150,6 +150,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/topic/add-problem", problemsHandler.AddProblem)
 	muxHandler.HandleFunc("/topic/add-problem/add-concept-dialog", problemsHandler.AddConceptModal)
 	muxHandler.HandleFunc("/create-problem", problemsHandler.CreateProblem)
+	muxHandler.HandleFunc("/create-problems", problemsHandler.CreateProblems)
 	muxHandler.HandleFunc("/problems/edit-problem", problemsHandler.EditProblem)
 	muxHandler.HandleFunc("/update-problem", problemsHandler.UpdateProblem)
 	muxHandler.HandleFunc("/archive-problem", problemsHandler.ArchiveProblem)

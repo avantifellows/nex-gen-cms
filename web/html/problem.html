@@ -18,7 +18,15 @@
         </div>
     </div>
     <div class="bg-white p-6 rounded-lg shadow-md" data-mathjax="true">
+        {{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }}
         <h2 class="text-lg font-semibold">
+            PARAGRAPH
+        </h2>
+        <p class="mt-2">
+            {{ .ProblemPtr.Paragraph.Body }}
+        </p>
+        {{ end }}
+        <h2 class="text-lg font-semibold{{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }} mt-4{{ end }}">
             STATEMENT/TEXT
         </h2>
         <p class="mt-2">
@@ -70,7 +78,7 @@
                     {{- if $i }}, {{ end }}
                     {{ printf "%c" (add 64 (stringToInt $ans)) -}}
                 {{ end }}
-            {{ else if and (eq .ProblemPtr.Subtype "numerical_answer") (eq (len .ProblemPtr.MetaData.Answers) 2) }}
+            {{ else if and (or (eq .ProblemPtr.Subtype "numerical_answer") (eq .ProblemPtr.Subtype "comprehension")) (eq (len .ProblemPtr.MetaData.Answers) 2) }}
                 [{{ index .ProblemPtr.MetaData.Answers 0 }} to {{ index .ProblemPtr.MetaData.Answers 1 }}]
             {{ else }}
                 {{ range .ProblemPtr.MetaData.Answers }}

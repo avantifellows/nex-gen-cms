@@ -128,6 +128,12 @@ func EmptySlice[T any]() []T {
 	return []T{}
 }
 
+// EmptyStringSlice returns an empty []string for html/template pipelines
+// (e.g. {{ template "input_tags" (emptyStringSlice) }}; subtemplates cannot take nil).
+func EmptyStringSlice() []string {
+	return EmptySlice[string]()
+}
+
 func Dict(values ...any) map[string]any {
 	dict := make(map[string]any)
 	for i := 0; i < len(values); i += 2 {

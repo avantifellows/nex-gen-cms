@@ -113,7 +113,7 @@
                             <th class="p-2">Action</th>
                         </tr>
                     </thead>
-                    <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems"
+                    <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems?include_paragraph_siblings=true"
                         hx-trigger="change from:(#topic-dropdown, .level-checkbox, #ptype-dropdown)"
                         hx-include="#topic-dropdown, #curriculum-dropdown, #subject-dropdown, .level-checkbox, #ptype-dropdown"
                         data-mathjax="true" hx-indicator="#question-bank-loader"
