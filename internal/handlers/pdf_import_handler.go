@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/avantifellows/nex-gen-cms/config"
+	"github.com/avantifellows/nex-gen-cms/internal/models"
 	"github.com/avantifellows/nex-gen-cms/internal/pdfimport"
 )
 
@@ -44,21 +45,18 @@ func (h *PdfImportHandler) ExtractQuestionsFromPDF(w http.ResponseWriter, r *htt
 		writeSSE("progress", map[string]any{"percent": percent, "stage": stage})
 	}
 
-	questions, rawResp, err := extractQuestionsFromRequest(r, onProgress)
+	problems, _, err := extractProblemsFromRequest(r, onProgress)
 	if err != nil {
 		writeSSE("error", map[string]string{"message": err.Error()})
 		return
 	}
 
-	logExtractedQuestions(questions)
-	if rawResp != "" {
-		log.Printf("pdf import: raw LLM response length=%d bytes", len(rawResp))
-	}
+	logExtractedProblems(problems)
 
-	writeSSE("complete", map[string]any{"question_count": len(questions)})
+	writeSSE("complete", map[string]any{"question_count": len(problems)})
 }
 
-func extractQuestionsFromRequest(r *http.Request, onProgress pdfimport.ProgressFunc) ([]pdfimport.ExtractedQuestion, string, error) {
+func extractProblemsFromRequest(r *http.Request, onProgress pdfimport.ProgressFunc) ([]models.Problem, string, error) {
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		return nil, "", fmt.Errorf("failed to parse form: %w", err)
 	}
@@ -79,17 +77,17 @@ func extractQuestionsFromRequest(r *http.Request, onProgress pdfimport.ProgressF
 	}
 
 	apiKey := config.GetEnv("OPENROUTER_API_KEY", "")
-	return pdfimport.ExtractQuestionsWithProgress(pdfBytes, apiKey, onProgress)
+	return pdfimport.ExtractProblemsWithProgress(pdfBytes, apiKey, onProgress)
 }
 
-func logExtractedQuestions(questions []pdfimport.ExtractedQuestion) {
-	log.Printf("pdf import: extracted %d question(s)", len(questions))
-	for _, q := range questions {
-		payload, err := json.Marshal(q)
+func logExtractedProblems(problems []models.Problem) {
+	log.Printf("pdf import: extracted %d problem(s)", len(problems))
+	for i, p := range problems {
+		payload, err := json.Marshal(p)
 		if err != nil {
-			log.Printf("pdf import: question %d: marshal error: %v", q.Number, err)
+			log.Printf("pdf import: problem %d: marshal error: %v", i+1, err)
 			continue
 		}
-		log.Printf("pdf import: question %d: %s", q.Number, string(payload))
+		log.Printf("pdf import: problem %d (subtype=%s): %s", i+1, p.Subtype, string(payload))
 	}
 }

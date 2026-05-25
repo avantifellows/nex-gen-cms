@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/avantifellows/nex-gen-cms/config"
+	"github.com/avantifellows/nex-gen-cms/internal/models"
 )
 
 const openRouterURL = "https://openrouter.ai/api/v1/chat/completions"
@@ -58,12 +59,20 @@ func reportProgress(on ProgressFunc, percent int, stage string) {
 }
 
 // ExtractQuestions runs hybrid PDF extraction (direct LLM parse + ODL figure crops).
-func ExtractQuestions(pdfBytes []byte, apiKey string) ([]ExtractedQuestion, string, error) {
-	return ExtractQuestionsWithProgress(pdfBytes, apiKey, nil)
+func ExtractQuestions(pdfBytes []byte, apiKey string) ([]models.Problem, string, error) {
+	return ExtractProblemsWithProgress(pdfBytes, apiKey, nil)
 }
 
-// ExtractQuestionsWithProgress is like ExtractQuestions but emits coarse-grained progress.
-func ExtractQuestionsWithProgress(pdfBytes []byte, apiKey string, onProgress ProgressFunc) ([]ExtractedQuestion, string, error) {
+// ExtractProblemsWithProgress extracts questions from a PDF and returns CMS Problem objects.
+func ExtractProblemsWithProgress(pdfBytes []byte, apiKey string, onProgress ProgressFunc) ([]models.Problem, string, error) {
+	extracted, raw, err := extractQuestionsWithProgress(pdfBytes, apiKey, onProgress)
+	if err != nil {
+		return nil, raw, err
+	}
+	return ProblemsFromExtracted(extracted), raw, nil
+}
+
+func extractQuestionsWithProgress(pdfBytes []byte, apiKey string, onProgress ProgressFunc) ([]ExtractedQuestion, string, error) {
 	if apiKey == "" {
 		return nil, "", fmt.Errorf("OPENROUTER_API_KEY is not set in .env")
 	}
@@ -93,7 +102,7 @@ For each question return a JSON object with exactly these fields:
 - question_number: integer (the question number as printed)
 - question_text: full question text with LaTeX math (include any sub-parts/paragraphs; insert [FIGURE] placeholder where applicable)
 - options: array of strings with LaTeX math — one entry per option (A, B, C, D text). Empty array [] for numerical questions that have no options.
-- question_type: "mcq" if options are present, "numerical" if no options
+- question_type: "matrix_match" for two-column matching (List-I / List-II style) or similar matrix-matching layout, otherwise "mcq_single_answer" if options are present, else "numerical_answer" if no options
 - has_figure: boolean — true if the question contains or references a figure/graph/image/diagram/table
 - figure_description: string — detailed description of the figure (empty string "" if has_figure is false)
 
@@ -101,9 +110,9 @@ Return ONLY a valid JSON array — no markdown fences, no explanation, no extra 
 
 Example output:
 [
-  {"question_number":1,"question_text":"If \(f(x) = x^2 + 1\), find \(f(3)\).","options":["\(9\)","\(10\)","\(12\)","None of these"],"question_type":"mcq","has_figure":false,"figure_description":""},
-  {"question_number":2,"question_text":"Find the value of \[\int_0^1 x \, dx\]","options":[],"question_type":"numerical","has_figure":false,"figure_description":""},
-  {"question_number":3,"question_text":"The velocity-time graph of a particle is shown below.\n[FIGURE]\nThe acceleration of the particle at \(t = 2\) s is:","options":["zero","\(2 \, \text{m/s}^2\)","\(4 \, \text{m/s}^2\)","\(8 \, \text{m/s}^2\)"],"question_type":"mcq","has_figure":true,"figure_description":"A velocity-time (v-t) graph with the horizontal axis labelled 't (s)' ranging from 0 to 6 and the vertical axis labelled 'v (m/s)' ranging from 0 to 12. A straight line rises from the origin \((0,0)\) to the point \((3, 6)\), then remains horizontal from \((3, 6)\) to \((6, 6)\)."}
+  {"question_number":1,"question_text":"If \(f(x) = x^2 + 1\), find \(f(3)\).","options":["\(9\)","\(10\)","\(12\)","None of these"],"question_type":"mcq_single_answer","has_figure":false,"figure_description":""},
+  {"question_number":2,"question_text":"Find the value of \[\int_0^1 x \, dx\]","options":[],"question_type":"numerical_answer","has_figure":false,"figure_description":""},
+  {"question_number":3,"question_text":"The velocity-time graph of a particle is shown below.\n[FIGURE]\nThe acceleration of the particle at \(t = 2\) s is:","options":["zero","\(2 \, \text{m/s}^2\)","\(4 \, \text{m/s}^2\)","\(8 \, \text{m/s}^2\)"],"question_type":"mcq_single_answer","has_figure":true,"figure_description":"A velocity-time (v-t) graph with the horizontal axis labelled 't (s)' ranging from 0 to 6 and the vertical axis labelled 'v (m/s)' ranging from 0 to 12. A straight line rises from the origin \((0,0)\) to the point \((3, 6)\), then remains horizontal from \((3, 6)\) to \((6, 6)\)."}
 ]`
 
 	model := config.GetEnv("OPENROUTER_MODEL", "google/gemini-2.5-flash")
