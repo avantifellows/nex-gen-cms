@@ -16,3 +16,5 @@ terraform/terraform.tfvars
 terraform/terraform.prod.tfvars
 
 .cursorignore
+# Local working notes (not for the repo)
+TODO.md
