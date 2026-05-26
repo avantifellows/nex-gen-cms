@@ -307,10 +307,18 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 	}
 }
 
-// postBatchProblems forwards a batch create payload to resources/problems/batch.
-func (h *ProblemsHandler) postBatchProblems(reqBody []byte) error {
-	var result any
-	return h.problemsService.Post(batchProblemsEndPoint, json.RawMessage(reqBody), &result)
+// postBatchProblems forwards a batch create payload to resources/problems/batch and returns created problems.
+func (h *ProblemsHandler) postBatchProblems(reqBody []byte) ([]models.Problem, error) {
+	var parsed struct {
+		Created []models.Problem `json:"created"`
+	}
+	if err := h.problemsService.Post(batchProblemsEndPoint, json.RawMessage(reqBody), &parsed); err != nil {
+		return nil, err
+	}
+	if len(parsed.Created) == 0 {
+		return nil, fmt.Errorf("no problems created")
+	}
+	return parsed.Created, nil
 }
 
 func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, request *http.Request) {

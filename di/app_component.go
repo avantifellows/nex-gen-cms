@@ -84,7 +84,7 @@ func NewAppComponent() (*AppComponent, error) {
 		curriculumsService, gradesService, examsService)
 	problemsHandler := handlers.NewProblemsHandler(problemsService, skillsService, subjectsService, topicsService,
 		tagsService)
-	pdfImportHandler := handlers.NewPdfImportHandler(problemsHandler)
+	pdfImportHandler := handlers.NewPdfImportHandler(problemsHandler, testsService)
 	tagsHandler := handlers.NewTagsHandler(tagsService)
 	examsHandler := handlers.NewExamsHandler(examsService)
 
