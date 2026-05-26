@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Avanti Next Generation CMS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <!-- For tailwind css library -->
     <link href="/web/static/css/output.css" rel="stylesheet">
@@ -61,59 +64,68 @@
     </script>
 </head>
 
-<body hx-ext="mathJaxLoader">
+<body class="bg-bg text-ink min-h-screen" hx-ext="mathJaxLoader">
     <script src="/web/static/js/nav-tracker.js"></script>
     <div>
-        <nav>
-            <div class="nav nav-tabs flex" id="nav-tab">
-                <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="true" hx-target="body"
-                    data-toggle="tab"
-                    hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
-                <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
-                    data-toggle="tab"
-                    hx-on::before-request="sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false')">Tests</button>
-                <button class="nav-link" id="problems-tab" hx-get="/problems" hx-push-url="true" hx-target="body"
-                    data-toggle="tab">Problems</button>
-                <button class="nav-link hidden" id="admin-tab" hx-get="/admin/users" hx-push-url="true" hx-target="body"
-                    data-toggle="tab">Admin</button>
+        <header class="bg-bg-card border-b border-border shadow-card">
+            <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
+                <nav>
+                    <div class="nav nav-tabs flex flex-wrap items-center gap-y-2 border-b-0" id="nav-tab">
+                        <a href="/chapters" class="shrink-0 mr-4 sm:mr-6 flex items-center" aria-label="Avanti Fellows">
+                            <img src="https://cdn.avantifellows.org/af_logos/avanti_logo_black_text.webp"
+                                 alt="Avanti Fellows" class="h-8 sm:h-9">
+                        </a>
 
-                <!-- name attribute is used, because query parameters passed via http request can be 
-                 identified by element names only. It is used in chapter_handler.go -->
-                <select class="ms-8" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
-                    hx-trigger="load" hx-on::after-request="afterDropdownReq(this, 
-                    {{ if .CurriculumID }}{{ .CurriculumID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
-                    <!-- HTMX will replace this with the new options -->
-                    <option value="" disabled selected>Loading curriculums...</option>
-                </select>
-                <select class="ms-4" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
-                    hx-on::after-request="afterDropdownReq(this, 
-                    {{ if .GradeID }}{{ .GradeID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
-                    <!-- HTMX will replace this with the new options -->
-                    <option value="" disabled selected>Loading grades...</option>
-                </select>
-                <select class="ms-4" id="subject-dropdown" name="subject-dropdown" hx-get="/api/subjects"
-                    hx-trigger="load"
-                    hx-on::after-request="afterDropdownReq(this, {{ if .SubjectID }}{{ .SubjectID }}{{ else }}null{{ end }})"
-                    onchange="sessionStorage.setItem('selectedSubject', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false');">
-                    <!-- HTMX will replace this with the new options -->
-                    <option value="" disabled selected>Loading subjects...</option>
-                </select>
+                        <button class="nav-link" id="chapters-tab" hx-get="/chapters" hx-push-url="true" hx-target="body"
+                            data-toggle="tab"
+                            hx-on::before-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">Chapters</button>
+                        <button class="nav-link" id="tests-tab" hx-get="/tests" hx-push-url="true" hx-target="body"
+                            data-toggle="tab"
+                            hx-on::before-request="sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false')">Tests</button>
+                        <button class="nav-link" id="problems-tab" hx-get="/problems" hx-push-url="true" hx-target="body"
+                            data-toggle="tab">Problems</button>
+                        <button class="nav-link hidden" id="admin-tab" hx-get="/admin/users" hx-push-url="true" hx-target="body"
+                            data-toggle="tab">Admin</button>
 
-                <!-- Logout button at far right -->
-                <button hx-post="/logout"
-                    class="text-sm font-semibold px-3 py-1 ms-auto me-2 my-1 rounded bg-blue-500 text-white hover:bg-blue-600">
-                    Logout
-                </button>
+                        <!-- name attribute is used, because query parameters passed via http request can be
+                         identified by element names only. It is used in chapter_handler.go -->
+                        <select class="form-select-compact ms-4 sm:ms-6 w-auto" id="curriculum-dropdown" name="curriculum-dropdown" hx-get="/api/curriculums"
+                            hx-trigger="load" hx-on::after-request="afterDropdownReq(this,
+                            {{ if .CurriculumID }}{{ .CurriculumID }}{{ else }}null{{ end }})"
+                            onchange="sessionStorage.setItem('selectedCurriculum', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
+                            <!-- HTMX will replace this with the new options -->
+                            <option value="" disabled selected>Loading curriculums...</option>
+                        </select>
+                        <select class="form-select-compact ms-3 w-auto" id="grade-dropdown" name="grade-dropdown" hx-get="/api/grades" hx-trigger="load"
+                            hx-on::after-request="afterDropdownReq(this,
+                            {{ if .GradeID }}{{ .GradeID }}{{ else }}null{{ end }})"
+                            onchange="sessionStorage.setItem('selectedGrade', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
+                            <!-- HTMX will replace this with the new options -->
+                            <option value="" disabled selected>Loading grades...</option>
+                        </select>
+                        <select class="form-select-compact ms-3 w-auto" id="subject-dropdown" name="subject-dropdown" hx-get="/api/subjects"
+                            hx-trigger="load"
+                            hx-on::after-request="afterDropdownReq(this, {{ if .SubjectID }}{{ .SubjectID }}{{ else }}null{{ end }})"
+                            onchange="sessionStorage.setItem('selectedSubject', this.value); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false');">
+                            <!-- HTMX will replace this with the new options -->
+                            <option value="" disabled selected>Loading subjects...</option>
+                        </select>
+
+                        <!-- Logout button at far right -->
+                        <button hx-post="/logout"
+                            class="btn-secondary btn-sm ms-auto my-2">
+                            Sign out
+                        </button>
+                    </div>
+                </nav>
             </div>
-        </nav>
+        </header>
 
-        <div class="m-7" id="nav-tabContent">
+        <main class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6" id="nav-tabContent">
             <div id="content">
-                {{ block "content" . }}<p>Select a tab to load content.</p>{{ end }}
+                {{ block "content" . }}<p class="text-ink-muted">Select a tab to load content.</p>{{ end }}
             </div>
-        </div>
+        </main>
     </div>
 
     <!-- Modules (type="module") are scoped, meaning functions are not global by default.
@@ -203,12 +215,12 @@
 
                         if (allowDropdownChanges) {
                             // Unfreeze
-                            el.classList.remove("bg-gray-100", "cursor-not-allowed");
+                            el.classList.remove("bg-bg-card-alt", "cursor-not-allowed");
                             el.style.pointerEvents = "";
                             el.removeAttribute("tabindex");
                         } else {
                             // Freeze
-                            el.classList.add("bg-gray-100", "cursor-not-allowed");
+                            el.classList.add("bg-bg-card-alt", "cursor-not-allowed");
                             el.style.pointerEvents = "none";
                             el.setAttribute("tabindex", "-1");
                         }
@@ -318,8 +330,8 @@
 
             const toast = document.createElement("div");
             toast.className = `
-                px-4 py-2 rounded shadow-md text-white text-sm
-                ${type === "error" ? "bg-red-500" : "bg-green-500"}
+                px-4 py-2 rounded-lg shadow-card text-text-on-accent text-sm font-medium
+                ${type === "error" ? "bg-danger" : "bg-success"}
             `;
             toast.innerText = message;
 

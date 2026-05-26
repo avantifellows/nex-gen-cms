@@ -1,11 +1,11 @@
 <div>
 	<div class="flex items-center justify-between mb-2">
 		<h3 class="text-base font-semibold">Selected Test</h3>
-		<div class="text-sm text-gray-600">{{.TestPtr.Code}} — {{ (index .TestPtr.Name 0).Resource }}</div>
+		<div class="text-sm text-ink-muted">{{.TestPtr.Code}} — {{ (index .TestPtr.Name 0).Resource }}</div>
 	</div>
 	<table class="mt-2 w-full border text-left">
 		<thead>
-			<tr class="bg-gray-200">
+			<tr class="bg-bg-card-alt">
 				<th class="p-2">Code</th>
 				<th class="p-2">Question</th>
 				<th class="p-2">Action</th>
@@ -15,12 +15,12 @@
 			{{ range $index, $subject := .TestPtr.TypeParams.Subjects }}
 				<tr>
 					<td colspan="3" class="p-0">
-						<div class="flex items-center justify-between p-1 bg-gray-100">
-							<h2 class="text-sm font-semibold bg-gray-100 p-2 capitalize">
+						<div class="flex items-center justify-between p-1 bg-bg-card-alt">
+							<h2 class="text-sm font-semibold bg-bg-card-alt p-2 capitalize">
 								{{$subject.Name}}
 							</h2>	
 							<button type="button"
-								class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+								class="px-3 py-1 bg-accent text-white rounded hover:bg-accent text-xs"
 								onclick="addAllFromSubject(this)">
 								Add All
 							</button>

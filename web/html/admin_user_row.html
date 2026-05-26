@@ -1,6 +1,6 @@
 <tr class="border-b" id="user-row-{{ .ID }}">
     <td class="py-2 px-4">{{ .Email }}</td>
-    <td class="py-2 px-4">{{ if .FullName }}{{ .FullName }}{{ else }}<span class="text-gray-400">—</span>{{ end }}</td>
+    <td class="py-2 px-4">{{ if .FullName }}{{ .FullName }}{{ else }}<span class="text-ink-muted/70">—</span>{{ end }}</td>
     <td class="py-2 px-4">
         <form hx-post="/admin/users/role" hx-target="#user-row-{{ .ID }}" hx-swap="outerHTML">
             <input type="hidden" name="id" value="{{ .ID }}">
@@ -13,24 +13,24 @@
     </td>
     <td class="py-2 px-4">
         {{ if .IsActive }}
-        <span class="px-2 py-0.5 rounded text-xs bg-green-100 text-green-700">active</span>
+        <span class="px-2 py-0.5 rounded text-xs bg-success-bg text-success">active</span>
         {{ else }}
-        <span class="px-2 py-0.5 rounded text-xs bg-gray-200 text-gray-600">inactive</span>
+        <span class="px-2 py-0.5 rounded text-xs bg-bg-card-alt text-ink-muted">inactive</span>
         {{ end }}
     </td>
-    <td class="py-2 px-4 text-gray-500">
-        {{ if .LastLoginAt }}{{ .LastLoginAt.Format "2006-01-02 15:04" }}{{ else }}<span class="text-gray-400">never</span>{{ end }}
+    <td class="py-2 px-4 text-ink-muted">
+        {{ if .LastLoginAt }}{{ .LastLoginAt.Format "2006-01-02 15:04" }}{{ else }}<span class="text-ink-muted/70">never</span>{{ end }}
     </td>
     <td class="py-2 px-4 text-right">
         {{ if .IsActive }}
         <button hx-post="/admin/users/active?id={{ .ID }}&active=false"
                 hx-target="#user-row-{{ .ID }}" hx-swap="outerHTML"
                 hx-confirm="Deactivate {{ .Email }}?"
-                class="text-red-600 hover:underline">Deactivate</button>
+                class="text-danger hover:text-accent-hover hover:underline">Deactivate</button>
         {{ else }}
         <button hx-post="/admin/users/active?id={{ .ID }}&active=true"
                 hx-target="#user-row-{{ .ID }}" hx-swap="outerHTML"
-                class="text-blue-600 hover:underline">Reactivate</button>
+                class="text-accent hover:text-accent-hover hover:underline font-medium">Reactivate</button>
         {{ end }}
     </td>
 </tr>

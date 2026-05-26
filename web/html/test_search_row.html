@@ -17,12 +17,12 @@
         {{ $curriculumId := $cg.CurriculumID }}
         {{ $gradeId := $cg.GradeID }}
 
-        <tr class="border-b hover:bg-gray-100" hx-swap="outerHTML">
+        <tr class="border-b border-border/40 hover:bg-bg-hover transition-colors" hx-swap="outerHTML">
             {{ if eq $i 0 }}
                 <!-- Show code and name only for first curriculum-grade -->
                 <td class="py-4 px-6" rowspan="{{ $total }}">{{ $test.Code }}</td>
 
-                <td class="px-6 text-blue-500 hover:underline" rowspan="{{ $total }}">
+                <td class="px-6 text-accent hover:text-accent-hover hover:underline font-medium" rowspan="{{ $total }}">
                     <a href="/test?id={{ $test.ID }}&curriculum_id={{ $curriculumId }}&grade_id={{ $gradeId }}"
                        hx-get="/test?id={{ $test.ID }}&curriculum_id={{ $curriculumId }}&grade_id={{ $gradeId }}"
                        hx-target="body" hx-push-url="true">

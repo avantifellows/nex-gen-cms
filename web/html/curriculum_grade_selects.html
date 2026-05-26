@@ -11,7 +11,7 @@
         <option disabled selected>Loading grades...</option>
     </select>
 
-    <button type="button" class="text-red-500 text-sm hover:font-bold w-6 text-center {{ if eq $count 1 }}invisible{{ end }}"
+    <button type="button" class="text-danger text-sm hover:font-bold w-6 text-center {{ if eq $count 1 }}invisible{{ end }}"
         hx-on:click="removeCurriculumGradeRow(this)">✕</button>
 </div>
 {{ end }}

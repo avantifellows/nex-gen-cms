@@ -2,78 +2,105 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles using @apply */
+/* ===========================================================
+ * Avanti Fellows — Warm Professional
+ * Tokens live in tailwind.config.js (accent/bg/ink/brand/border).
+ * Use the @theme tokens via Tailwind classes in templates;
+ * the @apply rules below keep legacy component classes working.
+ * =========================================================== */
+
+@layer base {
+    html {
+        font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+        color: theme('colors.ink.DEFAULT');
+        background-color: theme('colors.bg.DEFAULT');
+    }
+
+    body {
+        @apply bg-bg text-ink min-h-screen;
+    }
+
+    /* Numeric data — codes, counts, dates, emails — uses a monospace face for a data-rich feel. */
+    .font-mono,
+    .font-mono * {
+        font-feature-settings: 'tnum' 1, 'lnum' 1;
+    }
+}
+
 @layer components {
+
+    /* --- Nav (top tab bar) ------------------------------------------------ */
     .nav {
         @apply flex flex-wrap pl-0 mb-0 list-none;
     }
 
     .nav-tabs {
-        @apply border-b border-gray-300;
+        @apply border-b border-border bg-bg-card;
     }
 
     .nav-link {
-        @apply block px-4 py-2 text-blue-600 no-underline transition-colors duration-150 ease-in-out;
+        @apply inline-flex items-center px-4 py-3 text-sm font-bold uppercase tracking-wide
+               text-ink-muted no-underline transition-colors duration-150 ease-in-out
+               border-b-2 border-transparent;
     }
 
-    .nav-link:focus {
-        @apply text-blue-700;
-    }
-
+    .nav-link:focus,
     .nav-link:hover {
-        @apply text-blue-700;
+        @apply text-ink border-accent/40;
     }
 
     .nav-tabs .nav-link {
-        @apply -mb-px border border-transparent rounded-t-md;
-    }
-
-    .nav-tabs .nav-link:focus {
-        @apply border-t border-t-gray-100 border-r border-r-gray-100 border-b border-b-gray-200 border-l border-l-gray-100 isolate;
-    }
-
-    .nav-tabs .nav-link:hover {
-        @apply border-t border-t-gray-100 border-r border-r-gray-100 border-b border-b-gray-200 border-l border-l-gray-100 isolate;
+        @apply -mb-px rounded-none;
     }
 
     .nav-tabs .nav-link.active {
-        @apply text-gray-600 bg-white border border-t-gray-200 border-r-gray-200 border-b-white border-l-gray-200;
+        @apply text-ink bg-transparent border-b-2 border-accent;
     }
 
+    /* --- Sub-tabs (used inside chapter / topic detail) ------------------- */
     .sub-tab {
-        @apply text-gray-600 bg-white px-4 py-2 cursor-pointer;
+        @apply inline-flex items-center min-h-[40px] px-4 py-2 rounded-lg cursor-pointer
+               text-sm font-bold uppercase tracking-wide text-ink-muted
+               bg-bg-card border border-border transition-colors;
     }
 
-    .sub-tab:focus {
-        @apply text-white bg-red-400 rounded;
-    }
-
+    .sub-tab:focus,
     .sub-tab:hover {
-        @apply text-white bg-red-400 rounded;
+        @apply text-text-on-accent bg-accent-hover border-accent-hover;
     }
 
     .sub-tab.active {
-        @apply text-white bg-red-500 rounded;
+        @apply text-text-on-accent bg-accent border-accent;
     }
 
+    /* --- Row action buttons (pencil, trash, copy, download icons) -------- */
     .action-button {
-        @apply text-blue-500 hover:text-red-500 hover:scale-110;
+        @apply text-ink-muted transition-transform hover:text-accent hover:scale-110;
     }
 
+    /* --- Chips (filter tags inside inputs) ------------------------------- */
     .chip {
-        @apply px-1 py-0.5 bg-gray-200 rounded text-xs inline-block;
+        @apply inline-block px-2 py-0.5 rounded-full text-xs font-medium
+               bg-bg-card-alt text-ink border border-border;
     }
 
     .chip-box {
-        @apply flex flex-wrap gap-1 border border-gray-300 rounded py-1 min-h-[2rem];
+        @apply flex flex-wrap gap-1 border border-border rounded-lg py-1 min-h-[2rem] bg-bg-input;
     }
 
     .chip-editor {
         @apply outline-none text-left min-w-[1rem];
     }
 
+    /* Concept chips (rich-text editor) */
+    .concept-chip {
+        @apply inline-flex items-center gap-1 rounded-full px-2 py-1
+               bg-brand-blue-bg text-ink border border-brand-blue;
+    }
+
+    /* --- Rich-text editor surface --------------------------------------- */
     .editor {
-        font-family: Arial, sans-serif;
+        font-family: 'Inter', system-ui, -apple-system, Arial, sans-serif;
     }
 
     .editor ul,
@@ -88,56 +115,182 @@
 
     .editor hr,
     .output hr {
-        @apply m-4 border-t border-gray-600 border-0;
+        @apply m-4 border-t border-border;
     }
 
     .editor-fullscreen {
-        @apply fixed top-0 left-0 w-screen h-screen z-[9999] bg-white flex flex-col;
+        @apply fixed top-0 left-0 w-screen h-screen z-[9999] bg-bg-card flex flex-col;
     }
 
     .editor-fullscreen #editor {
         @apply grow overflow-y-auto;
     }
 
+    /* --- MCQ tabs inside the problem editor ----------------------------- */
     .mcq-tab {
-        @apply flex items-center bg-white rounded-t px-3 py-1 relative cursor-pointer border border-gray-300;
+        @apply flex items-center relative cursor-pointer rounded-t-lg
+               bg-bg-card border border-border px-3 py-1;
     }
 
     .mcq-tab button {
-        @apply text-sm text-gray-500 hover:text-red-600;
+        @apply text-sm text-ink-muted hover:text-accent;
     }
 
     .mcq-tab-add {
-        @apply w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-gray-100 border border-gray-300 rounded;
+        @apply w-8 h-8 flex items-center justify-center rounded-lg
+               text-ink-muted bg-bg-card border border-border
+               hover:text-accent hover:bg-bg-card-alt transition-colors;
     }
 
     .mcq-tab.active {
-        @apply border-t border-l border-r border-b-0 border-gray-300 bg-gray-100;
+        @apply bg-bg-card-alt border-b-0;
     }
 
     .answer-pdf-table-row {
-        @apply border border-gray-300 px-4 py-2;
+        @apply border border-border px-4 py-2;
     }
 
-    .concept-chip {
-        @apply flex items-center bg-blue-100 text-blue-800 rounded px-2 py-1 gap-1;
+    /* ====================================================================
+     * Shared "design system" component classes used by the template restyles.
+     * Treat these as the building blocks the af_lms UI Style Guide calls out.
+     * ==================================================================== */
+
+    /* --- Buttons -------------------------------------------------------- */
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-lg
+               text-sm font-bold uppercase tracking-wide transition-colors
+               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40
+               disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] px-4 py-2;
     }
-    
-    /* Loader is hidden by default */
-    #search-btn-loader {
+
+    .btn-sm {
+        @apply min-h-[36px] px-3 py-1 text-xs;
+    }
+
+    .btn-lg {
+        @apply min-h-[48px] px-5 py-3 text-sm;
+    }
+
+    .btn-primary {
+        @apply btn bg-accent text-text-on-accent shadow-sm
+               hover:bg-accent-hover active:bg-accent-hover;
+    }
+
+    .btn-secondary {
+        @apply btn bg-bg-card text-ink border-2 border-border
+               hover:bg-bg-card-alt hover:border-accent/40;
+    }
+
+    .btn-ghost {
+        @apply btn bg-transparent text-accent
+               hover:text-accent-hover hover:bg-bg-hover;
+    }
+
+    .btn-danger {
+        @apply btn bg-danger text-text-on-accent shadow-sm
+               hover:bg-accent-hover;
+    }
+
+    .btn-danger-ghost {
+        @apply btn bg-transparent text-danger
+               hover:bg-danger-bg;
+    }
+
+    /* "Add new <X>" link rendered as a soft accent button. */
+    .add-new-link {
+        @apply inline-flex items-center gap-1 text-sm font-bold uppercase tracking-wide
+               text-accent hover:text-accent-hover transition-colors;
+    }
+
+    /* --- Cards / Panels ------------------------------------------------- */
+    .card {
+        @apply bg-bg-card rounded-lg border border-border shadow-card;
+    }
+
+    .card-pad {
+        @apply p-6;
+    }
+
+    .card-pad-sm {
+        @apply p-4;
+    }
+
+    /* --- Form inputs ---------------------------------------------------- */
+    .form-input,
+    .form-select {
+        @apply min-h-[44px] w-full rounded-lg border-2 border-border bg-bg-input
+               px-3 py-2 text-sm text-ink placeholder:text-ink-muted/70
+               focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20
+               disabled:bg-bg-card-alt disabled:cursor-not-allowed transition-colors;
+    }
+
+    /* Compact variant used inside the nav bar so dropdowns don't dominate. */
+    .form-select-compact {
+        @apply h-10 min-h-0 rounded-lg border border-border bg-bg-input
+               px-3 py-1.5 text-sm text-ink
+               focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20
+               transition-colors;
+    }
+
+    .form-label {
+        @apply block text-xs font-bold uppercase tracking-wide text-ink-muted mb-1;
+    }
+
+    /* --- Tables --------------------------------------------------------- */
+    .app-table {
+        @apply min-w-full bg-bg-card;
+    }
+
+    .app-table thead tr {
+        @apply bg-bg-card-alt border-b-2 border-border-accent text-ink-muted;
+    }
+
+    .app-table th {
+        @apply px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-muted;
+    }
+
+    .app-table td {
+        @apply px-6 py-4 text-sm text-ink;
+    }
+
+    .app-table tbody tr {
+        @apply border-b border-border/40 hover:bg-bg-hover transition-colors;
+    }
+
+    /* --- Badges --------------------------------------------------------- */
+    .badge {
+        @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide;
+    }
+
+    .badge-muted   { @apply badge bg-bg-card-alt text-ink-muted; }
+    .badge-accent  { @apply badge bg-accent text-text-on-accent; }
+    .badge-success { @apply badge bg-success-bg text-success; }
+    .badge-warning { @apply badge bg-warning-bg text-warning border border-warning-border; }
+    .badge-danger  { @apply badge bg-danger-bg text-danger; }
+    .badge-info    { @apply badge bg-info-bg text-ink; }
+
+    /* --- Page chrome ---------------------------------------------------- */
+    .page-title {
+        @apply text-xl sm:text-2xl font-bold uppercase tracking-tight text-ink;
+    }
+
+    .section-title {
+        @apply text-lg font-bold uppercase tracking-wide text-ink
+               border-b-2 border-border-accent pb-2 mb-4;
+    }
+
+    /* HTMX loader visibility helpers ------------------------------------ */
+    #search-btn-loader,
+    #searched-test-loader,
+    #question-bank-loader,
+    #topic-problems-loader {
         display: none;
     }
 
-    /* HTMX makes the loader visible during request */
-    #search-btn-loader.htmx-request {
-        display: flex;
-    }  
-    
-    #searched-test-loader {
-        display: none;
-    }
-
-    #searched-test-loader.htmx-request {
+    #search-btn-loader.htmx-request,
+    #searched-test-loader.htmx-request,
+    #question-bank-loader.htmx-request,
+    #topic-problems-loader.htmx-request {
         display: flex;
     }
 
@@ -145,25 +298,8 @@
         display: block;
     }
 
-    /* Hide results during request */
     #searched-test-results.htmx-request {
         display: none;
-    }
-
-    #question-bank-loader {
-        display: none;
-    }
-
-    #question-bank-loader.htmx-request {
-        display: flex;
-    }
-
-    #topic-problems-loader {
-        display: none;
-    }
-
-    #topic-problems-loader.htmx-request {
-        display: flex;
     }
 
     /* When form is making request */
