@@ -14,6 +14,7 @@ const (
 	SortOrderDesc SortOrder = "desc"
 
 	StatusArchived = 1
+	StatusDraft    = 2
 )
 
 // runtime constant

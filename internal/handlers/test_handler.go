@@ -488,27 +488,12 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.TestData, error
 		return dto.TestData{}, fmt.Errorf("invalid form data: %w", err)
 	}
 
-	curriculums := request.Form["curriculum[]"]
-	grades := request.Form["grade[]"]
-	testType := request.FormValue("modal-testType")
-
-	var curriculumGrades []models.CurriculumGrade
-	for i := range curriculums {
-		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
-		if err != nil {
-			return dto.TestData{}, fmt.Errorf("invalid curriculum id at index %d", i)
-		}
-
-		gradeId, err := utils.StringToIntType[int8](grades[i])
-		if err != nil {
-			return dto.TestData{}, fmt.Errorf("invalid grade id at index %d", i)
-		}
-
-		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
-			CurriculumID: curriculumId,
-			GradeID:      gradeId,
-		})
+	curriculumGrades, err := handlerutils.ParseCurriculumGradesFromForm(request.Form)
+	if err != nil {
+		return dto.TestData{}, err
 	}
+
+	testType := request.FormValue("modal-testType")
 
 	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
 	if err != nil {

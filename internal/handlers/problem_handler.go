@@ -307,6 +307,12 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 	}
 }
 
+// postBatchProblems forwards a batch create payload to resources/problems/batch.
+func (h *ProblemsHandler) postBatchProblems(reqBody []byte) error {
+	var result any
+	return h.problemsService.Post(batchProblemsEndPoint, json.RawMessage(reqBody), &result)
+}
+
 func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, request *http.Request) {
 	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
 	if err != nil {

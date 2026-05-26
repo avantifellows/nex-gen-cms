@@ -137,15 +137,22 @@
 
     let pdfExtractionInProgress = false;
 
-    function setPdfExtractionBusy(busy) {
+    function setPdfExtractionBusy(busy, options = {}) {
         pdfExtractionInProgress = busy;
+        const keepProgressVisible = options.keepProgressVisible === true;
         const progressPanel = document.getElementById('pdf-extract-progress');
         const form = document.getElementById('addTestForm');
         const continueBtn = document.getElementById('add-test-continue-btn');
         const cancelBtn = document.querySelector('#addTestModal button[onclick="closeAddTestModal()"]');
 
-        if (progressPanel) progressPanel.classList.toggle('hidden', !busy);
-        if (continueBtn) continueBtn.disabled = busy;
+        if (progressPanel) {
+            if (busy || keepProgressVisible) {
+                progressPanel.classList.remove('hidden');
+            } else {
+                progressPanel.classList.add('hidden');
+            }
+        }
+        if (continueBtn) continueBtn.disabled = busy || keepProgressVisible;
         if (cancelBtn) cancelBtn.disabled = busy;
 
         if (form) {
@@ -261,7 +268,8 @@
                         alert(evt.data.message || 'Failed to extract questions from PDF.');
                         failed = true;
                     } else if (evt.event === 'complete') {
-                        updatePdfExtractProgress(100, 'Extraction complete');
+                        const count = evt.data.question_count ?? 0;
+                        updatePdfExtractProgress(100, count ? `Saved ${count} question(s)` : 'No questions found');
                         succeeded = true;
                     }
                 }
@@ -277,7 +285,8 @@
                         alert(evt.data.message || 'Failed to extract questions from PDF.');
                         failed = true;
                     } else if (evt.event === 'complete') {
-                        updatePdfExtractProgress(100, 'Extraction complete');
+                        const count = evt.data.question_count ?? 0;
+                        updatePdfExtractProgress(100, count ? `Saved ${count} question(s)` : 'No questions found');
                         succeeded = true;
                     }
                 }
@@ -293,10 +302,7 @@
             document.removeEventListener('keydown', handlePdfExtractKeydown, true);
             window.removeEventListener('beforeunload', handlePdfExtractBeforeUnload);
             pdfExtractionInProgress = false;
-            setPdfExtractionBusy(false);
-            if (succeeded) {
-                goBackAfterDelay(0);
-            }
+            setPdfExtractionBusy(false, { keepProgressVisible: succeeded });
         }
     }
 
