@@ -55,15 +55,15 @@
     <div class="mb-6">
         <p class="form-label mb-2">Difficulty Rating</p>
         <div class="flex gap-2 flex-wrap">
-            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-text-on-accent transition-colors">
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
                 <input type="radio" name="difficulty" value="easy" class="accent-accent" {{if and .ProblemPtr (eq .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}>
                 <span class="font-bold">1 — Easy</span>
             </label>
-            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-text-on-accent transition-colors">
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
                 <input type="radio" name="difficulty" value="medium" class="accent-accent" {{if and .ProblemPtr (eq .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}>
                 <span class="font-bold">2 — Medium</span>
             </label>
-            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-[:checked]:border-accent has-[:checked]:bg-accent has-[:checked]:text-text-on-accent transition-colors">
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
                 <input type="radio" name="difficulty" value="hard" class="accent-accent" {{if and .ProblemPtr (eq .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}>
                 <span class="font-bold">3 — Hard</span>
             </label>

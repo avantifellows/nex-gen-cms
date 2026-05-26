@@ -9,7 +9,7 @@
         hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">
         {{ .Code }}</a></td>
     <td class="p-2 text-center">
-        <select class="border border-border rounded px-2 py-1 text-sm bg-bg-card"
+        <select class="border border-border rounded-sm px-2 py-1 text-sm bg-bg-card"
             name="difficulty-level" data-problem-id="{{.ID}}" onchange="handleDifficultyChange(this)">
             <option value="easy"   {{if eq $difficulty "easy"}}selected{{end}}>1</option>
             <option value="medium" {{if eq $difficulty "medium"}}selected{{end}}>2</option>
@@ -21,7 +21,7 @@
      in type *models.Problem" -->
     {{ template "chip_box_cells" (dict "PosMarks" $.PosMarks "NegMarks" $.NegMarks "ReadOnlyMarks" $.ReadOnlyMarks) }}
 	<td class="p-2">
-        <select class="border border-border rounded px-2 py-1 text-sm bg-bg-card" name="options-layout">
+        <select class="border border-border rounded-sm px-2 py-1 text-sm bg-bg-card" name="options-layout">
             <option value="2x2"
                 {{if or
                     (and $.OptionLayout (eq $.OptionLayout.Rows 2) (eq $.OptionLayout.Cols 2))
@@ -43,7 +43,7 @@
     </td>    
     <td class="p-2">
 		<div class="action-cell-flex flex items-center justify-between w-full whitespace-nowrap">
-			<button class="px-2 bg-danger text-white rounded"
+			<button class="px-2 bg-danger text-white rounded-sm"
 				hx-on:click="removeQuestionFromTest(this)">X</button>
 			<span class="validation-error-slot inline-flex items-center justify-center w-4">
 				<i class="validation-error-icon fa-solid fa-circle-exclamation text-danger invisible"></i>

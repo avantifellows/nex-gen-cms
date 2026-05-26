@@ -7,7 +7,7 @@
         <!-- Toolbar with icons -->
         <div class="toolbar bg-bg-card-alt border-b border-border flex flex-wrap gap-2 p-2">
             <select title="Font Family"
-                class="fontSelector border border-border rounded px-2 py-1 text-sm cursor-pointer">
+                class="fontSelector border border-border rounded-sm px-2 py-1 text-sm cursor-pointer">
                 <option value="Arial" style="font-family: Arial;">Arial</option>
                 <option value="'Courier New', monospace" style="font-family: 'Courier New', monospace;">Courier New
                 </option>
@@ -17,7 +17,7 @@
             </select>
 
             <!-- Bold/Italic/Underline grouped buttons -->
-            <div class="flex gap-0 border border-border rounded overflow-hidden">
+            <div class="flex gap-0 border border-border rounded-sm overflow-hidden">
                 <button title="Bold" type="button"
                     class="boldBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border-r border-border"><i
                         class="fas fa-bold"></i></button>
@@ -31,7 +31,7 @@
 
             <!-- Font Size Selector -->
             <select title="Font Size"
-                class="fontSizeSelector border border-border rounded px-2 py-1 text-sm cursor-pointer">
+                class="fontSizeSelector border border-border rounded-sm px-2 py-1 text-sm cursor-pointer">
                 <option value="8px">8</option>
                 <option value="9px">9</option>
                 <option value="10px">10</option>
@@ -44,7 +44,7 @@
             </select>
 
             <!-- Color Pickers with Icons -->
-            <div class="flex items-center border border-border rounded overflow-hidden">
+            <div class="flex items-center border border-border rounded-sm overflow-hidden">
                 <!-- Foreground/Text Color -->
                 <label title="Text Color"
                     class="foreColorLabel flex items-center justify-center w-8 h-8 border-r border-border bg-bg-card hover:bg-brand-blue-bg cursor-pointer">
@@ -61,7 +61,7 @@
             </div>
 
             <!-- Ordered and Unordered List Buttons -->
-            <div class="flex gap-0 border border-border rounded overflow-hidden">
+            <div class="flex gap-0 border border-border rounded-sm overflow-hidden">
                 <button title="Unordered List" type="button"
                     class="ulBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border-r border-border">
                     <i class="fas fa-list-ul"></i>
@@ -72,45 +72,45 @@
             </div>
 
             <!-- Paragraph Formatting Dropdown -->
-            <div class="relative flex-shrink-0">
+            <div class="relative shrink-0">
                 <button title="Alignment" type="button"
-                    class="paragraphDropdownBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border border-border rounded h-full flex items-center justify-center">
+                    class="paragraphDropdownBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border border-border rounded-sm h-full flex items-center justify-center">
                     <i class="fas fa-align-left"></i>
                     <i class="fas fa-caret-down text-xs ml-1"></i>
                 </button>
 
                 <!-- Dropdown: 3x2 Grid of Icon Buttons -->
                 <div
-                    class="paragraphDropdownMenu absolute mt-1 hidden bg-bg-card border border-border rounded shadow-card p-2 grid grid-cols-3 gap-2 w-32">
+                    class="paragraphDropdownMenu absolute mt-1 hidden bg-bg-card border border-border rounded-sm shadow-card p-2 grid grid-cols-3 gap-2 w-32">
                     <button data-cmd="justifyLeft" type="button"
-                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded" title="Align Left">
+                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded-sm" title="Align Left">
                         <i class="fas fa-align-left"></i>
                     </button>
                     <button data-cmd="justifyCenter" type="button"
-                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded" title="Align Center">
+                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded-sm" title="Align Center">
                         <i class="fas fa-align-center"></i>
                     </button>
                     <button data-cmd="justifyRight" type="button"
-                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded" title="Align Right">
+                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded-sm" title="Align Right">
                         <i class="fas fa-align-right"></i>
                     </button>
                     <button data-cmd="justifyFull" type="button"
-                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded" title="Justify">
+                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded-sm" title="Justify">
                         <i class="fas fa-align-justify"></i>
                     </button>
                     <button data-cmd="outdent" type="button"
-                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded" title="Outdent">
+                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded-sm" title="Outdent">
                         <i class="fas fa-indent fa-rotate-180"></i>
                     </button>
                     <button data-cmd="indent" type="button"
-                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded" title="Indent">
+                        class="w-8 h-8 flex items-center justify-center hover:bg-brand-blue-bg rounded-sm" title="Indent">
                         <i class="fas fa-indent"></i>
                     </button>
                 </div>
             </div>
 
             <select title="Line Height"
-                class="lineHeightSelector border border-border rounded px-2 py-1 text-sm cursor-pointer">
+                class="lineHeightSelector border border-border rounded-sm px-2 py-1 text-sm cursor-pointer">
                 <option value="1">1</option>
                 <option value="1.2">1.2</option>
                 <option value="1.5" selected>1.5</option>
@@ -121,34 +121,34 @@
             <!-- Insert Table Button + Grid Popup -->
             <div class="relative">
                 <button title="Table" type="button"
-                    class="insertTableBtn bg-bg-card border border-border rounded px-3 py-1 text-sm hover:bg-brand-blue-bg h-full">
+                    class="insertTableBtn bg-bg-card border border-border rounded-sm px-3 py-1 text-sm hover:bg-brand-blue-bg h-full">
                     <i class="fas fa-table"></i>
                 </button>
 
                 <!-- Table Grid Picker -->
                 <div
-                    class="tableGridPopup absolute left-0 mt-1 p-2 border border-border bg-bg-card shadow-card rounded hidden z-50 w-max">
+                    class="tableGridPopup absolute left-0 mt-1 p-2 border border-border bg-bg-card shadow-card rounded-sm hidden z-50 w-max">
                     <div class="tableGrid grid grid-cols-10 gap-1"></div>
                     <div class="tableGridLabel text-xs text-center mt-2 text-ink-muted">0 × 0</div>
                 </div>
             </div>
 
             <button title="Link" type="button"
-                class="linkBtn bg-bg-card border border-border rounded px-3 py-1 text-sm hover:bg-brand-blue-bg">
+                class="linkBtn bg-bg-card border border-border rounded-sm px-3 py-1 text-sm hover:bg-brand-blue-bg">
                 <i class="fas fa-link"></i>
             </button>
 
             <button title="Horizontal Rule" type="button"
-                class="hrBtn bg-bg-card border border-border rounded px-3 py-1 text-sm hover:bg-brand-blue-bg">
+                class="hrBtn bg-bg-card border border-border rounded-sm px-3 py-1 text-sm hover:bg-brand-blue-bg">
                 <i class="fas fa-minus"></i>
             </button>
 
             <input type="file" accept="image/*" class="imageUpload hidden">
             <button title="Image" type="button"
-                class="imageBtn bg-bg-card border border-border rounded px-3 py-1 text-sm hover:bg-brand-blue-bg"><i
+                class="imageBtn bg-bg-card border border-border rounded-sm px-3 py-1 text-sm hover:bg-brand-blue-bg"><i
                     class="fas fa-image"></i></button>
 
-            <div class="flex gap-0 border border-border rounded overflow-hidden">
+            <div class="flex gap-0 border border-border rounded-sm overflow-hidden">
                 <button title="Toggle Fullscreen" type="button"
                     class="fullscreenBtn bg-bg-card border-r border-border px-3 py-1 text-sm hover:bg-brand-blue-bg">
                     <i class="fas fa-expand-arrows-alt"></i>
@@ -161,11 +161,11 @@
             </div>
 
             <button title="Math" type="button"
-                class="mathBtn bg-bg-card border border-border rounded px-3 py-1 text-sm hover:bg-brand-blue-bg"><i
+                class="mathBtn bg-bg-card border border-border rounded-sm px-3 py-1 text-sm hover:bg-brand-blue-bg"><i
                     class="fas fa-square-root-variable"></i></button>
 
             <button title="Toggle Preview" type="button"
-                class="previewToggleBtn bg-bg-card border border-border rounded px-3 py-1 text-sm hover:bg-brand-blue-bg">
+                class="previewToggleBtn bg-bg-card border border-border rounded-sm px-3 py-1 text-sm hover:bg-brand-blue-bg">
                 <i class="fas fa-eye"></i>
             </button>
 
@@ -175,7 +175,7 @@
         </div>
 
         <pre contenteditable="true"
-            class="codeView whitespace-pre-wrap text-sm p-2 h-52 bg-bg-card-alt border border-border rounded overflow-y-auto hidden"></pre>
+            class="codeView whitespace-pre-wrap text-sm p-2 h-52 bg-bg-card-alt border border-border rounded-sm overflow-y-auto hidden"></pre>
 
     </div>
 

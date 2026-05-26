@@ -3,7 +3,7 @@
     <td class="p-2 whitespace-nowrap" colspan="4">
         <!-- Editable field -->
         <input type="text" name="section-name" value="{{.DisplaySubtype}}"
-            class="border rounded px-2 py-1 w-full bg-bg-card" maxlength="100"
+            class="border rounded-sm px-2 py-1 w-full bg-bg-card" maxlength="100"
             onchange="saveSectionName('{{.SubjectId}}','{{.Subtype}}', this.value)"/>
     </td>
     {{ template "chip_box_cells" . }}

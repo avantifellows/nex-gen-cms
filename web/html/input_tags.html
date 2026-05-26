@@ -2,7 +2,7 @@
 <div class="relative">
     <div id="tagsInput" class="flex flex-wrap items-center w-full border p-2 gap-2 cursor-text">
         <!-- chips will go here -->
-        <input id="tagTextInput" type="text" class="flex-1 min-w-[100px] border-none outline-none p-1"
+        <input id="tagTextInput" type="text" class="flex-1 min-w-[100px] border-none outline-hidden p-1"
             placeholder="Assign Hashtags" hx-get="/api/tags" hx-target="#tagAutocomplete"
             hx-trigger="input changed delay:300ms" hx-ext="tagInputExtension" />
     </div>

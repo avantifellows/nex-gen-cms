@@ -9,7 +9,7 @@
                 <h3 class="form-label mb-2">Search concept by word</h3>
                 <div id="chip-container" class="flex flex-wrap gap-2 border-2 border-border rounded-lg p-2 min-h-[44px] cursor-text bg-bg-input focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
                     <!-- Chips will be added here dynamically -->
-                    <input id="chip-input" type="text" class="flex-1 min-w-[100px] outline-none bg-transparent"
+                    <input id="chip-input" type="text" class="flex-1 min-w-[100px] outline-hidden bg-transparent"
                            placeholder="Type to search concepts..." onfocus="showConceptDropdown()"
                            oninput="filterConceptDropdown(this.value)" onkeydown="handleChipInputKey(event)"
                            onblur="hideConceptDropdown()">
