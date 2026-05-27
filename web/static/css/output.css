@@ -2286,11 +2286,6 @@ body {
   background-color: rgb(243 244 246 / var(--tw-bg-opacity));
 }
 
-.bg-gray-200 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(229 231 235 / var(--tw-bg-opacity));
-}
-
 .bg-gray-50 {
   --tw-bg-opacity: 1;
   background-color: rgb(249 250 251 / var(--tw-bg-opacity));
@@ -2658,11 +2653,6 @@ mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
 
 .hover\:bg-bg-hover:hover {
   background-color: rgba(173, 47, 47, 0.06);
-}
-
-.hover\:bg-blue-400:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(96 165 250 / var(--tw-bg-opacity));
 }
 
 .hover\:bg-brand-blue-bg:hover {

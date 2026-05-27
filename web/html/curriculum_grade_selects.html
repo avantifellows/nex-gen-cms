@@ -2,11 +2,11 @@
 {{ $count := .Count }}
 {{ if not $count }}{{ $count = 1 }}{{ end }}
 <div class="grid grid-cols-[1fr_1fr_auto] gap-4 items-center curriculum-grade-row">
-    <select name="curriculum[]" class="border p-2 rounded w-full" hx-get="/api/curriculums" hx-trigger="load"
+    <select name="curriculum[]" class="form-select" hx-get="/api/curriculums" hx-trigger="load"
         data-selected="{{with .Item}}{{.CurriculumID}}{{end}}" hx-on::after-request="selectPreloadedOption(this)">
         <option disabled selected>Loading curriculums...</option>
     </select>
-    <select name="grade[]" class="border p-2 rounded w-full" hx-get="/api/grades" hx-trigger="load"
+    <select name="grade[]" class="form-select" hx-get="/api/grades" hx-trigger="load"
         data-selected="{{with .Item}}{{.GradeID}}{{end}}" hx-on::after-request="selectPreloadedOption(this)">
         <option disabled selected>Loading grades...</option>
     </select>
