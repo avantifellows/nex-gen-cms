@@ -1,37 +1,35 @@
 <div id="problem-test-association-modal"
-    class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50"
+    class="fixed inset-0 bg-ink/40 flex justify-center items-center z-50 p-4"
     data-problem-ids="{{range $i, $p := .}}{{if $i}},{{end}}{{$p.ProblemID}}{{end}}">
 
-    <div class="bg-white p-6 rounded shadow-md w-full max-w-lg">
+    <div class="card shadow-xl rounded-xl w-full max-w-lg p-6 max-h-[90vh] flex flex-col">
 
         <!-- Title -->
-        <h2 class="text-lg font-semibold mb-2">
-            Problem Test Associations
-        </h2>
+        <h2 class="page-title mb-2">Problem Test Associations</h2>
 
         <!-- Description -->
-        <p class="text-sm text-gray-600 mb-4">
+        <p class="text-sm text-ink-muted mb-4">
             Please note that selected problems are associated with the following tests.
         </p>
-        
+
         <!-- Table -->
-        <div class="max-h-64 overflow-y-auto mb-6 border">
-            <table class="min-w-full text-sm">
-                <thead class="bg-gray-200 text-gray-600 sticky top-0">
+        <div class="card overflow-hidden flex-1 overflow-y-auto mb-6 max-h-64">
+            <table class="app-table">
+                <thead class="sticky top-0">
                     <tr>
-                        <th class="px-4 py-2 text-left">Problem Code</th>
-                        <th class="px-4 py-2 text-left">Associated Test IDs</th>
+                        <th>Problem Code</th>
+                        <th>Associated Test IDs</th>
                     </tr>
                 </thead>
                 <tbody>
                     {{range .}}
-                    <tr class="border-t">
-                        <td class="px-4 py-2">{{.ProblemCode}}</td>
-                        <td class="px-4 py-2">
+                    <tr class="border-b border-border/40">
+                        <td class="font-mono">{{.ProblemCode}}</td>
+                        <td class="font-mono">
                             {{if .Tests}}
                                 {{range $i, $t := .Tests}}{{if $i}}, {{end}}{{$t.TestCode}}{{end}}
                             {{else}}
-                                <span class="text-gray-500 italic">No tests found</span>
+                                <span class="text-ink-muted italic font-sans">No tests found</span>
                             {{end}}
                         </td>
                     </tr>
@@ -41,24 +39,22 @@
         </div>
 
         <!-- Buttons -->
-        <div class="w-full flex justify-end space-x-2">
-            <button type="button" class="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400 transition" onclick="closeProblemTestAssociationModal()">
+        <div class="flex gap-3 justify-end">
+            <button type="button" class="btn-secondary" onclick="closeProblemTestAssociationModal()">
                 Close
             </button>
 
             <button type="button" hx-swap="outerHTML"
-                class="group flex items-center justify-center min-w-[90px] bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition"
+                class="btn-primary group min-w-[120px]"
                 hx-post="/problems/move-problems" hx-target="#problem-test-association-modal"
                 hx-vals='js:{problem_ids: event.target.closest("#problem-test-association-modal").dataset.problemIds}'>
-                
+
                 <!-- Text -->
-                <span class="group-[.htmx-request]:hidden">
-                    Move
-                </span>
+                <span class="group-[.htmx-request]:hidden">Move</span>
 
                 <!-- Spinner -->
                 <span class="hidden group-[.htmx-request]:inline-flex">
-                    <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div class="w-4 h-4 border-2 border-text-on-accent border-t-transparent rounded-full animate-spin"></div>
                 </span>
 
             </button>

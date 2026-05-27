@@ -64,6 +64,10 @@ To run the CMS locally, follow these steps:
 1. **nex-gen-cms:** [feat/tests](https://github.com/avantifellows/nex-gen-cms/tree/feat/tests)
 2. **db-service:** [adding-language-table](https://github.com/avantifellows/db-service/tree/adding-language-table)
 
+### UI Style Guide
+
+The CMS follows the **Warm Professional** design language shared with the rest of the AF product family (af_lms, hr-feedback.avantifellows.org). Brand tokens, typography rules, component conventions and HTML snippets are documented in [`docs/UI-Style-Guide.md`](docs/UI-Style-Guide.md). Read that before adding new screens or editing existing ones so the look stays consistent.
+
 ### Tailwind Setup:
 #### ✅ Only Running the App?
 

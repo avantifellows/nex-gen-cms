@@ -2,13 +2,13 @@
 <div class="relative">
     <div id="tagsInput" class="flex flex-wrap items-center w-full border p-2 gap-2 cursor-text">
         <!-- chips will go here -->
-        <input id="tagTextInput" type="text" class="flex-1 min-w-[100px] border-none outline-none p-1"
+        <input id="tagTextInput" type="text" class="flex-1 min-w-[100px] border-none outline-hidden p-1"
             placeholder="Assign Hashtags" hx-get="/api/tags" hx-target="#tagAutocomplete"
             hx-trigger="input changed delay:300ms" hx-ext="tagInputExtension" />
     </div>
     <!-- Autocomplete dropdown -->
     <div id="tagAutocomplete"
-        class="absolute top-full left-0 right-0 bg-white border border-gray-300 border-t-0 rounded-b-md shadow-lg max-h-40 overflow-y-auto z-10">
+        class="absolute top-full left-0 right-0 bg-bg-card border border-border border-t-0 rounded-b-md shadow-lg max-h-40 overflow-y-auto z-10">
         <!-- suggestions will be inserted here -->
     </div>
 </div>
@@ -71,10 +71,10 @@
 
             tags.forEach(tag => {
                 const chip = document.createElement('span');
-                chip.className = 'chip bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full flex items-center gap-1';
+                chip.className = 'chip bg-brand-blue-bg text-accent-hover text-sm px-2 py-1 rounded-full flex items-center gap-1';
                 chip.innerHTML = `
                     ${tag}
-                    <button type="button" class="ml-1 text-blue-800 hover:text-blue-900 font-bold">&times;</button>
+                    <button type="button" class="ml-1 text-accent-hover hover:text-accent-hover font-bold">&times;</button>
                 `;
                 chip.querySelector('button').addEventListener('click', () => removeTag(tag));
                 container.insertBefore(chip, input);

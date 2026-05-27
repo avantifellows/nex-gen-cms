@@ -1,14 +1,14 @@
 {{ define "content" }}
 <div>
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex flex-wrap justify-between items-center gap-y-3 mb-4">
 
         <!-- Left side: Test type dropdown + Search -->
-        <div class="flex items-center space-x-4">
+        <div class="flex flex-wrap items-center gap-3">
 
-            <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on 
+            <!-- hx-trigger="onLoaded from:(#curriculum-dropdown, #grade-dropdown)" is added to load tests on
             coming back from single test to tests list screen -->
-            <select id="testtype-dropdown" name="testtype-dropdown" hx-ext="tests-view-loader" 
-                class="border border-gray-400 p-2 rounded" hx-get="/tests?mode=filter"
+            <select id="testtype-dropdown" name="testtype-dropdown" hx-ext="tests-view-loader"
+                class="form-select-compact w-auto" hx-get="/tests?mode=filter"
                 hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
                 hx-target="#test-table-wrapper" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
                 onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
@@ -17,24 +17,24 @@
 
             <!-- Search field -->
             <input type="text" id="test-search" name="search" placeholder="Search tests by code or name..."
-                class="border border-gray-400 p-2 rounded w-64" hx-get="/tests?mode=search" hx-ext="search-store"
+                class="form-input w-72" hx-get="/tests?mode=search" hx-ext="search-store"
                 hx-trigger="keyup[this.value.length>=3] delay:500ms" hx-target="#test-table-wrapper">
 
         </div>
 
         <!-- Add New Test Link -->
-        <h4 class="text-sm font-semibold text-blue-500 hover:underline ml-4">
-            <a href="#" 
-                hx-get="/tests/add-test-dialog" 
-                hx-target="body" 
+        <h4 class="add-new-link ml-4">
+            <a href="#"
+                hx-get="/tests/add-test-dialog"
+                hx-target="body"
                 hx-push-url="true"
-                hx-swap="beforeend">Add New Test</a>
+                hx-swap="beforeend">+ Add New Test</a>
         </h4>
     </div>
 
     <!-- Content Area -->
     <div id="subcontent">
-        <div id="test-table-wrapper" class="shadow-md my-6 overflow-x-auto">
+        <div id="test-table-wrapper" class="card overflow-x-auto my-6">
             <!-- Table content will be loaded here based on mode filter or search -->
         </div>
     </div>
