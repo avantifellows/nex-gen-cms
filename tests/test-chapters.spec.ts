@@ -1,6 +1,17 @@
 import { test, expect } from "@playwright/test";
 import { dropdowns, HOME_PAGE_URL } from "./utils";
 import * as mock from "./mock";
+import * as fs from "fs";
+
+function mergeHomeContent(contentPath: string) {
+    let contentData = fs.readFileSync(contentPath, "utf-8");
+    let baseData = fs.readFileSync("web/html/home.html", "utf-8");
+    const extractedBody = baseData.match(/<body>([\s\S]*?)<\/body>/);
+    if (extractedBody) {
+        baseData = extractedBody[1].trim();
+    }
+    return baseData.replace(/{{ block "content" . }}[\s\S]*?{{ end }}/, contentData);
+}
 
 test('verify that all table headers, add new chapter link are available and form is hidden', async ({ page }) => {
 
@@ -51,6 +62,35 @@ test('clicking add new chapter opens form and clicking it again hides it', async
 
     await addChapterLink.click();
     await expect(addChapterForm).toBeHidden();
+});
+
+test('topic routes keep Chapters active and restore top-level filters', async ({ page }) => {
+    for (const { urlPattern, content } of dropdowns) {
+        await mock.mockDropdownApi(page, urlPattern, content);
+    }
+
+    await page.route(/\/tests$/, async route => {
+        await route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            body: mergeHomeContent('web/html/tests.html')
+        });
+    });
+
+    await page.goto(HOME_PAGE_URL);
+    await page.click('#tests-tab');
+    await expect(page.locator('#subject-dropdown')).toBeHidden();
+
+    await page.evaluate(() => {
+        history.pushState({}, '', '/topic?id=11');
+        htmx.trigger(document.body, 'htmx:afterSettle');
+    });
+
+    await expect(page).toHaveURL(/\/topic\?id=11$/);
+    await expect(page.locator('#chapters-tab')).toHaveClass(/active/);
+    await expect(page.locator('#curriculum-dropdown')).toBeVisible();
+    await expect(page.locator('#grade-dropdown')).toBeVisible();
+    await expect(page.locator('#subject-dropdown')).toBeVisible();
 });
 
 // TODO: Update following test once sorting state management is shifted from server to client
