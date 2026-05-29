@@ -171,7 +171,7 @@
                 const subjectDropdown = document.getElementById("subject-dropdown");
                 if (activeTabId === "tests-tab") { 
                     if (!(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test") 
-                            || currentPath.endsWith("/copy-test"))) {
+                            || currentPath.endsWith("/copy-test") || currentPath.includes("/import-review"))) {
                         subjectDropdown.style.display = "none";
                     }
 
@@ -190,7 +190,8 @@
                     "/tests",
                     "/tests/add-test",
                     "/tests/edit-test",
-                    "/tests/copy-test"
+                    "/tests/copy-test",
+                    "/tests/import-review"
                 ];
 
                 const allowDropdownChanges = editablePaths.includes(currentPath);

@@ -1,0 +1,133 @@
+{{ define "content" }}
+<div class="flex flex-col min-h-[calc(100vh-8rem)]" id="import-review-root"
+    data-test-id="{{ .TestPtr.ID }}">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <a href="/tests" class="text-blue-600 hover:underline text-sm" hx-get="/tests" hx-target="body"
+                hx-push-url="true">← Back to Tests</a>
+            <h2 class="text-lg font-semibold mt-1">Review imported questions</h2>
+            <p class="text-sm text-gray-600 mt-1">
+                Draft test: <span class="font-medium">{{ getName .TestPtr "en" }}</span>
+                · {{ .TestPtr.Subtype }}
+                · {{ len .Problems }} question(s)
+            </p>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs">
+            {{ range .TestPtr.CurriculumGrades }}
+            <span class="bg-gray-100 border border-gray-200 rounded px-2 py-1">Curriculum {{ .CurriculumID }} · Grade {{ .GradeID }}</span>
+            {{ end }}
+        </div>
+    </div>
+
+    <div class="flex flex-1 gap-4 min-h-0">
+        <!-- Sidebar -->
+        <aside class="w-1/4 min-w-[12rem] max-w-xs border border-gray-200 rounded bg-gray-50 flex flex-col">
+            <p class="font-medium text-sm px-3 py-2 border-b border-gray-200 bg-white rounded-t">Questions</p>
+            <ul id="import-review-sidebar" class="flex-1 overflow-y-auto p-2 space-y-1">
+                {{ range $i, $p := .Problems }}
+                <li>
+                    <button type="button"
+                        class="import-review-nav-btn w-full text-left px-3 py-2 rounded text-sm border border-transparent hover:bg-white hover:border-gray-200 flex items-center gap-2"
+                        data-problem-id="{{ $p.ID }}" data-index="{{ $i }}">
+                        <span class="import-review-status-icon shrink-0 w-5 text-center text-gray-400" aria-hidden="true">○</span>
+                        <span class="truncate">Q{{ add $i 1 }}</span>
+                        <span class="import-review-nav-hint ml-auto text-xs text-gray-400 truncate max-w-[4rem]">{{ $p.Subtype }}</span>
+                    </button>
+                </li>
+                {{ end }}
+            </ul>
+        </aside>
+
+        <!-- Main editor -->
+        <main class="flex-1 min-w-0 border border-gray-200 rounded bg-white p-4 overflow-y-auto">
+            <div id="import-review-editor-panel">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="font-medium text-sm block mb-1">Chapter <span class="text-red-600">*</span></label>
+                        <select id="review-chapter-dropdown" name="review-chapter-dropdown" class="p-2 border rounded w-full"
+                            hx-get="/api/chapters?view=dropdown"
+                            hx-trigger="change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), load"
+                            hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown">
+                            <option value="">Select Chapter</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="font-medium text-sm block mb-1">Topic <span class="text-red-600">*</span></label>
+                        <select id="review-topic-dropdown" name="review-topic-dropdown" class="p-2 border rounded w-full"
+                            hx-get="/api/topics?view=dropdown"
+                            hx-trigger="change from:#review-chapter-dropdown"
+                            hx-include="#review-chapter-dropdown">
+                            <option value="">Select Topic</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <p class="font-semibold mb-2 text-sm">Type</p>
+                        <select id="review-problem-type" class="w-full border border-gray-300 rounded p-2 bg-gray-100 text-gray-600 cursor-not-allowed" disabled
+                            title="Problem type cannot be changed during import review">
+                            {{ template "problem_type_options" "" }}
+                        </select>
+                    </div>
+                    <div>
+                        <p class="font-semibold mb-2 text-sm">Difficulty</p>
+                        <label class="mr-4"><input type="radio" name="review-difficulty" value="easy"> 1</label>
+                        <label class="mr-4"><input type="radio" name="review-difficulty" value="medium" checked> 2</label>
+                        <label class="mr-4"><input type="radio" name="review-difficulty" value="hard"> 3</label>
+                    </div>
+                </div>
+
+                <div id="review-question-div" class="mb-6">
+                    <p class="font-semibold mb-2">Question</p>
+                    {{ template "editor" }}
+                </div>
+
+                <div id="review-options-div" class="mb-6 hidden">
+                    <p class="font-semibold mb-2">Options</p>
+                    <div id="review-option-tabs" class="flex items-center overflow-x-auto">
+                        <button id="review-add-tab" type="button" title="Add Option" class="mcq-tab-add">+</button>
+                    </div>
+                    {{ template "editor" }}
+                </div>
+
+                <div class="mb-6" id="review-answer-div">
+                    <p class="font-semibold mb-2">Answer</p>
+                    <div id="review-answer-content"></div>
+                </div>
+
+                <div class="mb-6" id="review-solution-div">
+                    <p class="font-semibold mb-2">Solution</p>
+                    {{ template "editor" }}
+                </div>
+
+                <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                    <button type="button" id="review-approve-btn"
+                        class="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700">
+                        Approve
+                    </button>
+                    <button type="button" id="review-exclude-btn"
+                        class="bg-gray-200 text-gray-800 px-4 py-2 rounded text-sm hover:bg-gray-300">
+                        Exclude
+                    </button>
+                    <span id="review-save-status" class="text-sm text-gray-500 self-center ml-2"></span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="mt-4 pt-4 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
+        <p id="import-review-progress" class="text-sm text-gray-600">0 / 0 approved</p>
+        <button type="button" id="import-review-continue-btn" disabled
+            class="bg-blue-500 text-white px-5 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            hx-get="/tests/import-review/continue?test_id={{ .TestPtr.ID }}&curriculum_id={{ .CurriculumID }}&grade_id={{ .GradeID }}"
+            hx-target="body" hx-swap="none">
+            Continue to test setup
+        </button>
+    </footer>
+</div>
+
+<script type="application/json" id="import-review-bootstrap">{{ toJson (dict "testId" .TestPtr.ID "problems" .Problems) }}</script>
+<script src="/web/static/js/editor.js"></script>
+<!-- <script src="/web/static/js/import-test-review.js"></script> -->
+{{ end }}

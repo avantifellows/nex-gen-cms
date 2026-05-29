@@ -170,6 +170,8 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 
 	pdfImportHandler := appComponentPtr.PdfImportHandler
 	muxHandler.HandleFunc("/tests/extract-questions-from-pdf", pdfImportHandler.ExtractQuestionsFromPDF)
+	muxHandler.HandleFunc("/tests/import-review", editor(pdfImportHandler.ImportTestReview))
+	// muxHandler.HandleFunc("/tests/import-review/continue", editor(pdfImportHandler.ImportTestReviewContinue))
 
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)

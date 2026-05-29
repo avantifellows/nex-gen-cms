@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"os"
@@ -11,26 +12,38 @@ import (
 
 	"github.com/avantifellows/nex-gen-cms/config"
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	"github.com/avantifellows/nex-gen-cms/internal/pdfimport"
-	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
 const (
 	pdfImportDefaultDifficulty = "medium"
 	pdfImportLangCode          = "en"
+	importTestReviewTemplate   = "import_test_review.html"
 )
 
-// PdfImportHandler handles HTTP endpoints for PDF question import.
+// PdfImportHandler handles HTTP endpoints for PDF question import and post-import review.
 type PdfImportHandler struct {
 	problemsHandler *ProblemsHandler
-	testsService    *services.Service[models.Test]
+	testsHandler    *TestsHandler
 }
 
-func NewPdfImportHandler(problemsHandler *ProblemsHandler, testsService *services.Service[models.Test]) *PdfImportHandler {
-	return &PdfImportHandler{problemsHandler: problemsHandler, testsService: testsService}
+func NewPdfImportHandler(problemsHandler *ProblemsHandler, testsHandler *TestsHandler) *PdfImportHandler {
+	return &PdfImportHandler{
+		problemsHandler: problemsHandler,
+		testsHandler:    testsHandler,
+	}
+}
+
+// pdfImportCreatedFixture stores identifiers of draft objects created during PDF import.
+// This lets later runs skip calling create-problems and create-test APIs.
+type pdfImportCreatedFixture struct {
+	TestID     int   `json:"test_id"`
+	ProblemIDs []int `json:"problem_ids"`
 }
 
 // ExtractQuestionsFromPDF parses an uploaded PDF, streams progress as SSE, batch-saves problems, then completes.
@@ -59,6 +72,24 @@ func (h *PdfImportHandler) ExtractQuestionsFromPDF(w http.ResponseWriter, r *htt
 		writeSSE("progress", map[string]any{"percent": percent, "stage": stage})
 	}
 
+	// If a created fixture is configured, reuse the already-created draft objects in DB
+	// (skips create-problems + create-test; extraction may still be skipped via PDF_IMPORT_FIXTURE).
+	if fixturePath := config.GetEnv("PDF_IMPORT_CREATED_FIXTURE", ""); fixturePath != "" {
+		fixture, err := loadPDFImportCreatedFixture(fixturePath)
+		if err != nil {
+			writeSSE("error", map[string]string{"message": err.Error()})
+			return
+		}
+		if onProgress != nil {
+			onProgress(100, "Reusing draft test/problems from fixture")
+		}
+		writeSSE("complete", map[string]any{
+			"question_count": len(fixture.ProblemIDs),
+			"test_id":        fixture.TestID,
+		})
+		return
+	}
+
 	problems, curriculumGrades, testSubtype, examID, err := extractProblemsFromRequest(r, onProgress)
 	if err != nil {
 		writeSSE("error", map[string]string{"message": err.Error()})
@@ -83,6 +114,19 @@ func (h *PdfImportHandler) ExtractQuestionsFromPDF(w http.ResponseWriter, r *htt
 		if err != nil {
 			writeSSE("error", map[string]string{"message": fmt.Sprintf("failed to create draft test: %v", err)})
 			return
+		}
+
+		// Optional: persist created draft IDs to a fixture for future re-runs without DB growth.
+		if createdFixturePath := config.GetEnv("PDF_IMPORT_CREATED_DUMP_PATH", ""); createdFixturePath != "" {
+			ids := make([]int, 0, len(createdProblems))
+			for _, p := range createdProblems {
+				ids = append(ids, p.ID)
+			}
+			fixture := pdfImportCreatedFixture{TestID: testPtr.ID, ProblemIDs: ids}
+			if err := writePDFImportCreatedFixture(createdFixturePath, fixture); err != nil {
+				// Non-fatal: user can still proceed with review.
+				onProgress(99, fmt.Sprintf("Warning: failed to write created fixture: %v", err))
+			}
 		}
 
 		onProgress(100, "Questions saved and draft test created")
@@ -187,6 +231,38 @@ func writePDFImportFixture(path string, problems []models.Problem) error {
 	return os.WriteFile(path, data, 0o644)
 }
 
+func loadPDFImportCreatedFixture(path string) (*pdfImportCreatedFixture, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read PDF_IMPORT_CREATED_FIXTURE %s: %w", path, err)
+	}
+	var fixture pdfImportCreatedFixture
+	if err := json.Unmarshal(data, &fixture); err != nil {
+		return nil, fmt.Errorf("parse PDF_IMPORT_CREATED_FIXTURE %s: %w", path, err)
+	}
+	if fixture.TestID == 0 {
+		return nil, fmt.Errorf("PDF_IMPORT_CREATED_FIXTURE %s missing test_id", path)
+	}
+	if len(fixture.ProblemIDs) == 0 {
+		return nil, fmt.Errorf("PDF_IMPORT_CREATED_FIXTURE %s contains no problem_ids", path)
+	}
+	return &fixture, nil
+}
+
+func writePDFImportCreatedFixture(path string, fixture pdfImportCreatedFixture) error {
+	data, err := json.MarshalIndent(fixture, "", "  ")
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(path)
+	if dir != "." && dir != "" {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
 // marshalPDFImportBatchBody builds the POST resources/problems/batch JSON for PDF import.
 func marshalPDFImportBatchBody(problems []models.Problem, curriculumGrades []models.CurriculumGrade) ([]byte, error) {
 	items := make([]map[string]any, len(problems))
@@ -207,8 +283,8 @@ func marshalPDFImportBatchBody(problems []models.Problem, curriculumGrades []mod
 }
 
 func (h *PdfImportHandler) createDraftTestFromProblems(created []models.Problem, curriculumGrades []models.CurriculumGrade, testSubtype string, examID int8) (*models.Test, error) {
-	if h.testsService == nil {
-		return nil, fmt.Errorf("tests service is not configured")
+	if h.testsHandler == nil {
+		return nil, fmt.Errorf("tests handler is not configured")
 	}
 	if len(created) == 0 {
 		return nil, fmt.Errorf("no created problems to add to test")
@@ -254,5 +330,181 @@ func (h *PdfImportHandler) createDraftTestFromProblems(created []models.Problem,
 		StatusID: constants.StatusDraft,
 	}
 
-	return h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
+	return h.testsHandler.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
+}
+
+// ImportTestReview renders the per-question review UI for a draft test created from PDF import.
+func (h *PdfImportHandler) ImportTestReview(responseWriter http.ResponseWriter, request *http.Request) {
+	testIDStr := request.URL.Query().Get("test_id")
+	if testIDStr == "" {
+		http.Error(responseWriter, "test_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch the test once. (curriculum_id is only required for the test-problems API below.)
+	testPtr, code, err := h.testsHandler.getTest(responseWriter, requestWithQuery(request, map[string]string{"id": testIDStr}))
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	if testPtr.StatusID != constants.StatusDraft {
+		http.Error(responseWriter, "only draft tests can be reviewed for import", http.StatusBadRequest)
+		return
+	}
+
+	if len(testPtr.CurriculumGrades) == 0 {
+		http.Error(responseWriter, "test has no curriculum/grade; cannot load imported questions", http.StatusBadRequest)
+		return
+	}
+	cg := testPtr.CurriculumGrades[0]
+	curriculumID := utils.IntToString(cg.CurriculumID)
+	gradeID := utils.IntToString(cg.GradeID)
+
+	problemsReq := requestWithQuery(request, map[string]string{
+		"id":                      testIDStr,
+		QUERY_PARAM_CURRICULUM_ID: curriculumID,
+		"grade_id":                gradeID,
+	})
+	problems := h.testsHandler.getTestProblems(responseWriter, problemsReq)
+	if problems == nil {
+		return
+	}
+
+	data := dto.ImportTestReviewData{
+		TestPtr:  testPtr,
+		Problems: *problems,
+	}
+	if len(testPtr.CurriculumGrades) > 0 {
+		data.CurriculumID = testPtr.CurriculumGrades[0].CurriculumID
+		data.GradeID = testPtr.CurriculumGrades[0].GradeID
+	}
+
+	setHtmxReplaceURL(responseWriter, request)
+
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"toJson":    utils.ToJson,
+		"getName":   getTestName,
+		"dict":      utils.Dict,
+		"add":       utils.Add,
+		"joinInt16": utils.JoinInt16,
+	}, baseTemplate, importTestReviewTemplate, problemTypeOptionsTemplate,
+		editorTemplate, problemAnswerNumericalTemplate, inputTagsTemplate)
+}
+
+// ImportTestReviewContinue validates reviewed questions and opens test composition (edit draft test).
+// func (h *PdfImportHandler) ImportTestReviewContinue(responseWriter http.ResponseWriter, request *http.Request) {
+// 	testIDStr := request.URL.Query().Get("test_id")
+// 	if testIDStr == "" {
+// 		http.Error(responseWriter, "test_id is required", http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	// Fetch the test once. (curriculum_id is only required for the test-problems API below.)
+// 	testPtr, code, err := h.testsHandler.getTest(responseWriter, requestWithQuery(request, map[string]string{"id": testIDStr}))
+// 	if err != nil {
+// 		http.Error(responseWriter, err.Error(), code)
+// 		return
+// 	}
+
+// 	if len(testPtr.CurriculumGrades) == 0 {
+// 		http.Error(responseWriter, "test has no curriculum/grade; cannot validate imported questions", http.StatusBadRequest)
+// 		return
+// 	}
+// 	cg := testPtr.CurriculumGrades[0]
+// 	curriculumID := utils.IntToString(cg.CurriculumID)
+// 	gradeID := utils.IntToString(cg.GradeID)
+
+// 	problemsReq := requestWithQuery(request, map[string]string{
+// 		"id":                      testIDStr,
+// 		QUERY_PARAM_CURRICULUM_ID: curriculumID,
+// 		"grade_id":                gradeID,
+// 	})
+// 	problems := h.testsHandler.getTestProblems(responseWriter, problemsReq)
+// 	if problems == nil {
+// 		return
+// 	}
+
+// 	ordered := orderProblemsForTest(testPtr, *problems)
+// 	var missing []string
+// 	for i, p := range ordered {
+// 		if p.TopicID == 0 || p.ChapterID == 0 {
+// 			missing = append(missing, fmt.Sprintf("Q%d", i+1))
+// 		}
+// 	}
+// 	if len(missing) > 0 {
+// 		http.Error(responseWriter,
+// 			fmt.Sprintf("Assign chapter and topic for: %s", strings.Join(missing, ", ")),
+// 			http.StatusBadRequest)
+// 		return
+// 	}
+
+// 	redirectURL := fmt.Sprintf("/tests/edit-test?id=%s&%s=%s&grade_id=%s",
+// 		testIDStr, QUERY_PARAM_CURRICULUM_ID, curriculumID, gradeID)
+// 	responseWriter.Header().Set("HX-Redirect", redirectURL)
+// }
+
+// func orderProblemsForTest(testPtr *models.Test, problems []*models.Problem) []*models.Problem {
+// 	byID := make(map[int]*models.Problem, len(problems))
+// 	for _, p := range problems {
+// 		if p == nil || p.StatusID == constants.StatusArchived {
+// 			continue
+// 		}
+// 		byID[p.ID] = p
+// 	}
+
+// 	var ordered []*models.Problem
+// 	seen := make(map[int]bool)
+// 	appendID := func(id int) {
+// 		if id == 0 || seen[id] {
+// 			return
+// 		}
+// 		if p, ok := byID[id]; ok {
+// 			seen[id] = true
+// 			ordered = append(ordered, p)
+// 		}
+// 	}
+
+// 	for _, subj := range testPtr.TypeParams.Subjects {
+// 		for _, sec := range subj.Sections {
+// 			for _, rp := range sec.Compulsory.Problems {
+// 				appendID(rp.ID)
+// 			}
+// 			if sec.Optional != nil {
+// 				for _, rp := range sec.Optional.Problems {
+// 					appendID(rp.ID)
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	for _, p := range problems {
+// 		if p == nil || p.StatusID == constants.StatusArchived || seen[p.ID] {
+// 			continue
+// 		}
+// 		ordered = append(ordered, p)
+// 	}
+// 	return ordered
+// }
+
+func setHtmxReplaceURL(w http.ResponseWriter, r *http.Request) {
+	replaceURL := r.URL.Path
+	if r.URL.RawQuery != "" {
+		replaceURL += "?" + r.URL.RawQuery
+	}
+	w.Header().Set("HX-Replace-Url", replaceURL)
+}
+
+func requestWithQuery(r *http.Request, params map[string]string) *http.Request {
+	q := r.URL.Query()
+	for k, v := range params {
+		if v != "" {
+			q.Set(k, v)
+		}
+	}
+	u := *r.URL
+	u.RawQuery = q.Encode()
+	clone := *r
+	clone.URL = &u
+	return &clone
 }

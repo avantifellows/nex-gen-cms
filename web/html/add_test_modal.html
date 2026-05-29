@@ -113,6 +113,7 @@
     </div>
 </div>
 <script>
+    (function () {
     function toggleCreationMethod() {
         const method = document.querySelector('input[name="creationMethod"]:checked')?.value;
         const pdfSection = document.getElementById('pdf-import-section');
@@ -137,43 +138,31 @@
 
     let pdfExtractionInProgress = false;
 
-    function setPdfExtractionBusy(busy, options = {}) {
+    function setPdfExtractionBusy(busy) {
         pdfExtractionInProgress = busy;
-        const keepProgressVisible = options.keepProgressVisible === true;
         const progressPanel = document.getElementById('pdf-extract-progress');
         const form = document.getElementById('addTestForm');
         const continueBtn = document.getElementById('add-test-continue-btn');
         const cancelBtn = document.querySelector('#addTestModal button[onclick="closeAddTestModal()"]');
 
         if (progressPanel) {
-            if (busy || keepProgressVisible) {
+            if (busy) {
                 progressPanel.classList.remove('hidden');
             } else {
                 progressPanel.classList.add('hidden');
             }
         }
-        if (continueBtn) continueBtn.disabled = busy || keepProgressVisible;
+        if (continueBtn) continueBtn.disabled = busy;
         if (cancelBtn) cancelBtn.disabled = busy;
 
         if (form) {
-            form.querySelectorAll('input, select, button, a').forEach((el) => {
+            // In this modal we don't rely on disabling anchors; disable only form controls.
+            form.querySelectorAll('input, select, button').forEach((el) => {
                 if (el.closest('#pdf-extract-progress')) return;
                 if (busy) {
-                    if (el.tagName === 'A') {
-                        el.dataset.pdfExtractDisabled = '1';
-                        el.style.pointerEvents = 'none';
-                        el.style.opacity = '0.5';
-                    } else {
-                        el.disabled = true;
-                    }
+                    el.disabled = true;
                 } else {
-                    if (el.dataset.pdfExtractDisabled) {
-                        delete el.dataset.pdfExtractDisabled;
-                        el.style.pointerEvents = '';
-                        el.style.opacity = '';
-                    } else if (el.tagName !== 'A') {
-                        el.disabled = false;
-                    }
+                    el.disabled = false;
                 }
             });
         }
@@ -234,6 +223,17 @@
         window.addEventListener('beforeunload', handlePdfExtractBeforeUnload);
 
         let succeeded = false;
+        const cleanup = () => {
+            document.removeEventListener('keydown', handlePdfExtractKeydown, true);
+            window.removeEventListener('beforeunload', handlePdfExtractBeforeUnload);
+        };
+
+        const failAndCleanup = (message) => {
+            if (message) alert(message);
+            cleanup();
+            setPdfExtractionBusy(false);
+        };
+
         try {
             const response = await fetch('/tests/extract-questions-from-pdf', {
                 method: 'POST',
@@ -241,19 +241,61 @@
             });
             if (!response.ok) {
                 const message = await response.text();
-                alert(message || 'Failed to extract questions from PDF.');
+                failAndCleanup(message || 'Failed to extract questions from PDF.');
                 return;
             }
 
             const reader = response.body?.getReader();
             if (!reader) {
-                alert('Failed to extract questions from PDF.');
+                failAndCleanup('Failed to extract questions from PDF.');
                 return;
             }
 
             const decoder = new TextDecoder();
             let buffer = '';
             let failed = false;
+
+            const handleSseEvent = (evt) => {
+                if (evt.event === 'progress') {
+                    updatePdfExtractProgress(evt.data.percent, evt.data.stage);
+                    return;
+                }
+                if (evt.event === 'error') {
+                    alert(evt.data.message || 'Failed to extract questions from PDF.');
+                    failed = true;
+                    return;
+                }
+                if (evt.event === 'complete') {
+                    const count = evt.data.question_count ?? 0;
+                    const testId = evt.data.test_id;
+                    updatePdfExtractProgress(100, count ? `Saved ${count} question(s)` : 'No questions found');
+                    succeeded = true;
+                    if (testId) {
+                        const reviewUrl = `/tests/import-review?test_id=${testId}`;
+                        if (typeof htmx !== 'undefined') {
+                            // Keep the modal visible while the next screen loads to avoid a blank gap.
+                            updatePdfExtractProgress(100, 'Opening review…');
+
+                            const modal = document.getElementById('addTestModal');
+                            // Replace the add-test-dialog entry (not a 3rd push) so Back returns to /tests.
+                            htmx.ajax('GET', reviewUrl, {
+                                target: 'body',
+                                swap: 'innerHTML',
+                            }).then(() => {
+                                cleanup();
+                                pdfExtractionInProgress = false;
+                                if (modal) modal.remove();
+                            }).catch((e) => {
+                                console.error('Failed to open review screen:', e);
+                                failAndCleanup('Failed to open review screen.');
+                            });
+                        } else {
+                            updatePdfExtractProgress(100, 'Opening review…');
+                            window.location.href = reviewUrl;
+                        }
+                    }
+                }
+            };
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -262,16 +304,7 @@
                 const parsed = parseSSEChunk(buffer);
                 buffer = parsed.remainder;
                 for (const evt of parsed.events) {
-                    if (evt.event === 'progress') {
-                        updatePdfExtractProgress(evt.data.percent, evt.data.stage);
-                    } else if (evt.event === 'error') {
-                        alert(evt.data.message || 'Failed to extract questions from PDF.');
-                        failed = true;
-                    } else if (evt.event === 'complete') {
-                        const count = evt.data.question_count ?? 0;
-                        updatePdfExtractProgress(100, count ? `Saved ${count} question(s)` : 'No questions found');
-                        succeeded = true;
-                    }
+                    handleSseEvent(evt);
                 }
             }
 
@@ -279,30 +312,27 @@
             if (buffer.trim()) {
                 const parsed = parseSSEChunk(buffer + '\n\n');
                 for (const evt of parsed.events) {
-                    if (evt.event === 'progress') {
-                        updatePdfExtractProgress(evt.data.percent, evt.data.stage);
-                    } else if (evt.event === 'error') {
-                        alert(evt.data.message || 'Failed to extract questions from PDF.');
-                        failed = true;
-                    } else if (evt.event === 'complete') {
-                        const count = evt.data.question_count ?? 0;
-                        updatePdfExtractProgress(100, count ? `Saved ${count} question(s)` : 'No questions found');
-                        succeeded = true;
-                    }
+                    handleSseEvent(evt);
                 }
             }
 
             if (!failed && !succeeded) {
-                alert('Extraction ended unexpectedly. Please try again.');
+                failAndCleanup('Extraction ended unexpectedly. Please try again.');
+                return;
             }
+            if (failed) {
+                failAndCleanup('');
+                return;
+            }
+
+            // If we didn't navigate away, we can cleanup now.
+            // (When we navigate to review via HTMX, cleanup happens in the req.then/req.catch handlers.)
+            cleanup();
+            // Do not re-enable the modal here: if we're opening review via HTMX, the request may still be in-flight.
+            // Success path removes the modal; failure path re-enables it in req.catch().
         } catch (err) {
             console.error('PDF extraction failed:', err);
-            alert('Failed to extract questions from PDF.');
-        } finally {
-            document.removeEventListener('keydown', handlePdfExtractKeydown, true);
-            window.removeEventListener('beforeunload', handlePdfExtractBeforeUnload);
-            pdfExtractionInProgress = false;
-            setPdfExtractionBusy(false, { keepProgressVisible: succeeded });
+            failAndCleanup('Failed to extract questions from PDF.');
         }
     }
 
@@ -403,4 +433,14 @@
         if (pdfExtractionInProgress) return;
         goBackAfterDelay(0);
     }
+
+    window.toggleCreationMethod = toggleCreationMethod;
+    window.handleAddTestContinue = handleAddTestContinue;
+    window.closeAddTestModal = closeAddTestModal;
+    window.handleAddCurriculumGradeResponse = handleAddCurriculumGradeResponse;
+    window.handleValidateTestResponse = handleValidateTestResponse;
+    window.selectPreloadedOption = selectPreloadedOption;
+    window.removeCurriculumGradeRow = removeCurriculumGradeRow;
+    window.validateSelectedOptions = validateSelectedOptions;
+    })();
 </script>
