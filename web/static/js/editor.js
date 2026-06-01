@@ -365,8 +365,18 @@ window.initializeRichTextEditors = function (root = document) {
         return result.trim();
     }
 
-    toolbar.querySelector('.mathBtn').addEventListener('click', (event) => {
-        insertMath(editor, event);
+    toolbar.querySelector('.mathBtn').addEventListener('click', () => {
+        insertMath(editor);
+    });
+
+    editor.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') {
+            e.preventDefault();
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            if (!editor.contains(selection.anchorNode)) return;
+            insertInlineMathDelimiters(editor);
+        }
     });
 });
 };
