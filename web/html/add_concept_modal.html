@@ -1,60 +1,60 @@
-<div id="addConceptModal" class="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center z-50">
-    <div class="bg-white p-6 rounded shadow-md w-full max-w-5xl">
-        <h2 class="text-lg font-semibold mb-4">Add Concept</h2>
-        
+<div id="addConceptModal" class="fixed inset-0 bg-ink/40 flex justify-center items-center z-50 p-4">
+    <div class="card shadow-xl rounded-xl p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+        <h2 class="page-title mb-6">Add Concept</h2>
+
         <form id="addConceptForm" class="space-y-6">
 
             <!-- Search by word -->
             <div>
-                <h3 class="text-md font-semibold mb-2">Search concept by word</h3>
-                <div id="chip-container" class="flex flex-wrap gap-2 border rounded p-2 min-h-[44px] cursor-text">
+                <h3 class="form-label mb-2">Search concept by word</h3>
+                <div id="chip-container" class="flex flex-wrap gap-2 border-2 border-border rounded-lg p-2 min-h-[44px] cursor-text bg-bg-input focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
                     <!-- Chips will be added here dynamically -->
-                    <input id="chip-input" type="text" class="flex-1 min-w-[100px] outline-none"
-                           placeholder="Type to search concepts..." onfocus="showConceptDropdown()" 
+                    <input id="chip-input" type="text" class="flex-1 min-w-[100px] outline-hidden bg-transparent"
+                           placeholder="Type to search concepts..." onfocus="showConceptDropdown()"
                            oninput="filterConceptDropdown(this.value)" onkeydown="handleChipInputKey(event)"
                            onblur="hideConceptDropdown()">
                 </div>
                 <div id="concept-suggestion-box" class="relative">
                     <ul id="concept-suggestions"
-                        class="absolute bg-white border rounded mt-1 max-h-48 overflow-y-auto hidden w-full z-10">
+                        class="absolute bg-bg-card border border-border rounded-lg shadow-card mt-1 max-h-48 overflow-y-auto hidden w-full z-10">
                         <!-- Options inserted dynamically -->
                     </ul>
                 </div>
                 <!-- Separate Add button for word search -->
                 <div class="w-full flex justify-end mt-2">
                     <button type="button" onclick="addWordSearchConcepts()"
-                            class="bg-blue-500 text-white px-4 py-2 rounded">Add</button>
+                            class="btn-primary">Add</button>
                 </div>
             </div>
 
             <!-- Search by topic name -->
             <div>
-                <h3 class="text-md font-semibold mb-2">Search concept by topic name</h3>
+                <h3 class="form-label mb-2">Search concept by topic name</h3>
                 <div class="flex gap-2 mb-3">
                     <!-- Curriculum -->
                     <select id="curriculum-dropdown" name="curriculum-dropdown"
-                            class="border p-2 rounded w-40" hx-get="/api/curriculums"
+                            class="form-select w-40" hx-get="/api/curriculums"
                             hx-trigger="load" hx-on::after-request="afterConceptModalDropdownReq(this)">
                         <option disable selected>Loading curriculums...</option>
                     </select>
 
                     <!-- Grade -->
                     <select id="grade-dropdown" name="grade-dropdown"
-                            class="border p-2 rounded w-40" hx-get="/api/grades"
+                            class="form-select w-40" hx-get="/api/grades"
                             hx-trigger="load" hx-on::after-request="afterConceptModalDropdownReq(this)">
                         <option disabled selected>Loading grades...</option>
                     </select>
 
                     <!-- Subject -->
                     <select id="subject-dropdown" name="subject-dropdown"
-                            class="border p-2 rounded w-40" hx-get="/api/subjects"
+                            class="form-select w-40" hx-get="/api/subjects"
                             hx-trigger="load" hx-on::after-request="afterConceptModalDropdownReq(this)">
                         <option disabled selected>Loading subjects...</option>
                     </select>
 
                     <!-- Chapter -->
                     <select id="chapter-dropdown" name="chapter-dropdown"
-                            class="border p-2 rounded w-40" hx-get="/api/chapters"
+                            class="form-select w-40" hx-get="/api/chapters"
                             hx-trigger="loadChapters, change from:(#addConceptModal #curriculum-dropdown, #addConceptModal #grade-dropdown, #addConceptModal #subject-dropdown)"
                             hx-include="#addConceptModal #curriculum-dropdown, #addConceptModal #grade-dropdown, #addConceptModal #subject-dropdown"
                             hx-params="not chapter-dropdown" hx-on::before-request="beforeChaptersRequest();">
@@ -63,7 +63,7 @@
 
                     <!-- Topic -->
                     <select id="topic-dropdown" name="topic_id"
-                            class="border p-2 rounded w-40" hx-get="/api/topics?view=dropdown" 
+                            class="form-select w-40" hx-get="/api/topics?view=dropdown" 
                             hx-trigger="change from:#chapter-dropdown" hx-include="#chapter-dropdown"
                             hx-on::before-request="beforeTopicsRequest();">
                         <option disabled selected>Select a chapter first</option>
@@ -73,10 +73,10 @@
 
                 <!-- Concept -->
                 <div class="flex flex-col w-full">
-                    <label for="concept-dropdown" class="text-sm font-medium mb-1">Concepts</label>
-                    <select id="concept-dropdown" name="concept-dropdown" multiple 
-                            class="border p-2 rounded w-full max-h-48 overflow-y-auto"
-                            hx-get="/api/concepts?view=dropdown" 
+                    <label for="concept-dropdown" class="form-label">Concepts</label>
+                    <select id="concept-dropdown" name="concept-dropdown" multiple
+                            class="form-select max-h-48 overflow-y-auto"
+                            hx-get="/api/concepts?view=dropdown"
                             hx-trigger="change from:#topic-dropdown" hx-include="#topic-dropdown"
                             hx-on::before-request="this.innerHTML = '<option disabled>Loading concepts...</option>'">
                         <option disabled>Select a topic first</option>
@@ -85,11 +85,9 @@
             </div>
 
             <!-- Buttons -->
-            <div class="w-full flex-row flex justify-end space-x-2">
-                <button type="button" onclick="closeAddConceptModal()"
-                        class="bg-gray-300 px-4 py-2 rounded">Cancel</button>
-                <button type="button" onclick="addConcepts()" 
-                        class="bg-blue-500 text-white px-4 py-2 rounded">Add</button>
+            <div class="flex justify-end gap-3 pt-2 border-t border-border">
+                <button type="button" onclick="closeAddConceptModal()" class="btn-secondary">Cancel</button>
+                <button type="button" onclick="addConcepts()" class="btn-primary">Add</button>
             </div>
         </form>
     </div>
@@ -103,7 +101,7 @@
             // show loading placeholder
             const box = document.getElementById("concept-suggestions");
             box.classList.remove("hidden");
-            box.innerHTML = `<li class="px-3 py-2 text-gray-500">Loading concepts...</li>`;
+            box.innerHTML = `<li class="px-3 py-2 text-ink-muted">Loading concepts...</li>`;
 
             fetch('/api/concepts?mode=data')
                 .then(res => res.json())
@@ -113,7 +111,7 @@
                 })
                 .catch(err => {
                     console.error("Failed to load concepts", err);
-                    box.innerHTML = `<li class="px-3 py-2 text-red-500">Failed to load concepts</li>`;
+                    box.innerHTML = `<li class="px-3 py-2 text-danger">Failed to load concepts</li>`;
                 });
         } else {
             renderConceptSuggestions("");
@@ -153,7 +151,7 @@
             .forEach(c => {
                 const li = document.createElement("li");
                 li.textContent = getConceptName(c);
-                li.className = "px-3 py-2 hover:bg-gray-100 cursor-pointer";
+                li.className = "px-3 py-2 hover:bg-bg-card-alt cursor-pointer";
                 li.onmousedown = (e) => {
                     // preventDefault() ensures the input doesn’t lose focus by preventing call to onblur. 
                     // Without it suggestions box would hide as we are calling hideConceptDropdownWithDelay() onblur
@@ -175,7 +173,7 @@
         const chipContainer = document.getElementById("chip-container");
         const chip = document.createElement("div");
         chip.className = "concept-chip";
-        chip.innerHTML = `${getConceptName(concept)} <span class="cursor-pointer text-red-500" onclick="removeChip(${concept.id}, this)">×</span>`;
+        chip.innerHTML = `${getConceptName(concept)} <span class="cursor-pointer text-danger" onclick="removeChip(${concept.id}, this)">×</span>`;
         chip.dataset.id = concept.id;
         chipContainer.insertBefore(chip, document.getElementById("chip-input"));
 
@@ -197,7 +195,7 @@
         const selectedIds = getSelectedChipIds();
         if (!validateConceptSelection(selectedIds)) return;
 
-        const backConceptsDropdown = document.querySelector("#concepts-dropdown");
+        const backConceptsDropdown = getTargetConceptsDropdown();
 
         selectedIds.forEach(id => {
             const concept = allConcepts.find(c => c.id === id);
@@ -248,6 +246,14 @@
         }
 
         modal.remove();
+        window._conceptModalTargetDropdown = null;
+    }
+
+    // Returns the concepts dropdown of the problem block whose "Add Concept from other topic"
+    // link opened this modal. Falls back to the main problem's concepts dropdown for safety.
+    function getTargetConceptsDropdown() {
+        return window._conceptModalTargetDropdown
+            || document.getElementById("concepts-dropdown");
     }
 
     function beforeChaptersRequest() {
@@ -272,8 +278,8 @@
 
         if (!validateConceptSelection(selected)) return;
 
-        // Target dropdown in back screen
-        const backConceptsDropdown = document.querySelector("#concepts-dropdown");
+        // Target the concepts dropdown of the problem block whose link opened this modal
+        const backConceptsDropdown = getTargetConceptsDropdown();
 
         selected.forEach(opt => {
             const existing = backConceptsDropdown.querySelector(`option[value="${opt.value}"]`);
@@ -332,10 +338,10 @@
     function updateHighlight(suggestions) {
         suggestions.forEach((li, idx) => {
             if (idx === highlightedIndex) {
-                li.classList.add("bg-blue-100");
+                li.classList.add("bg-brand-blue-bg");
                 ensureVisible(li);  // keep highlighted li in view
             } else {
-                li.classList.remove("bg-blue-100");
+                li.classList.remove("bg-brand-blue-bg");
             }
         });
     }

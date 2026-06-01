@@ -1,5 +1,6 @@
 {{ define "content" }}
-<form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event,        
+{{ $isEdit := (ne .ProblemPtr nil) }}
+<form class="card card-pad max-w-6xl mx-auto" onsubmit="createProblem(event,
         {{if .TopicPtr}}
         <!-- add problem -->
             {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}, null
@@ -8,15 +9,16 @@
             {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
         {{end}}
 );">
-    <h2 class="text-lg font-semibold mb-4">{{if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
+    <h2 class="page-title mb-6">{{if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
 
     <!-- type, skills, concepts -->
-    <div class="grid grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div>
-            <p class="font-semibold mb-2">Select Type:</p>
+            <label class="form-label" for="problem-type-dropdown">Type</label>
             <select id="problem-type-dropdown" name="problem-type-dropdown"
-                class="w-full border border-gray-300 rounded p-2">
-                {{if .ProblemPtr}}
+                {{if .ProblemPtr}}disabled title="Problem type cannot be changed in edit mode"{{end}}
+                class="form-select {{if .ProblemPtr}}bg-bg-card-alt text-ink-muted cursor-not-allowed{{end}}">
+                {{if $isEdit}}
                 {{template "problem_type_options" .ProblemPtr.Subtype}}
                 {{else}}
                 {{template "problem_type_options"}}
@@ -24,19 +26,20 @@
             </select>
         </div>
         <div>
-            <p class="font-semibold mb-2">Select Skills:</p>
+            <label class="form-label" for="skills-dropdown">Skills</label>
             <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
-                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
-                hx-get='/api/skills{{if .ProblemPtr}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
+                class="form-select h-24 overflow-y-auto"
+                hx-get='/api/skills{{if $isEdit}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
                 <option disabled>Loading skills...</option>
             </select>
         </div>
         <div>
-            <p class="font-semibold mb-2">Select Concepts:</p>
-            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="revealed once"
-                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto" hx-swap="beforeend"
-                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if .ProblemPtr}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
-                    {{ if .ProblemPtr }}
+            <label class="form-label" for="concepts-dropdown">Concepts</label>
+            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
+                class="form-select h-24 overflow-y-auto"
+                hx-swap="{{if $isEdit}}beforeend{{else}}innerHTML{{end}}"
+                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if $isEdit}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
+                    {{ if $isEdit }}
                         {{ range .ProblemPtr.Concepts }}
                             <!-- These are already mapped concepts -->
                             <option value="{{.ID}}" selected>{{ getConceptName . "en" }}</option>
@@ -45,26 +48,45 @@
                         <option disabled>Loading concepts...</option>
                     {{ end }}
             </select>
-            <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog" 
-                hx-target="body" hx-swap="beforeend">Add Concept from other topic</a>
+            <a href="#" class="add-new-link mt-1 inline-block" hx-get="/topic/add-problem/add-concept-dialog"
+                hx-target="body" hx-swap="beforeend"
+                onclick="window._conceptModalTargetDropdown = document.getElementById('concepts-dropdown')">+ Add concept from other topic</a>
         </div>
+    </div>
+
+    <!-- Paragraph editor for comprehension type -->
+    <div id="paragraphDiv" class="mb-6 hidden">
+        <p class="form-label mb-2">Paragraph</p>
+        {{ if and $isEdit .ProblemPtr.Paragraph }}
+        {{ template "editor" .ProblemPtr.Paragraph.Body }}
+        {{ else }}
+        {{ template "editor" }}
+        {{ end }}
     </div>
 
     <!-- difficulty -->
     <div class="mb-6">
-        <p class="font-semibold mb-2">Difficulty Rating</p>
-        <label class="mr-4"><input type="radio" name="difficulty" value="easy" {{if and .ProblemPtr (eq
-                .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}> 1</label>
-        <label class="mr-4"><input type="radio" name="difficulty" value="medium" {{if and .ProblemPtr (eq
-                .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}> 2</label>
-        <label class="mr-4"><input type="radio" name="difficulty" value="hard" {{if and .ProblemPtr (eq
-                .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}> 3</label>
+        <p class="form-label mb-2">Difficulty Rating</p>
+        <div class="flex gap-2 flex-wrap">
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                <input type="radio" name="difficulty" value="easy" class="accent-accent" {{if and $isEdit (eq .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}>
+                <span class="font-bold">1 — Easy</span>
+            </label>
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                <input type="radio" name="difficulty" value="medium" class="accent-accent" {{if and $isEdit (eq .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}>
+                <span class="font-bold">2 — Medium</span>
+            </label>
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                <input type="radio" name="difficulty" value="hard" class="accent-accent" {{if and $isEdit (eq .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}>
+                <span class="font-bold">3 — Hard</span>
+            </label>
+        </div>
     </div>
 
     <!-- Question editor -->
     <div id="questionDiv" class="mb-6">
-        <p class="font-semibold mb-2">Text:</p>
-        {{ if .ProblemPtr }}
+        <p class="form-label mb-2">Text</p>
+        {{ if $isEdit }}
         {{ template "editor" .ProblemPtr.MetaData.Question }}
         {{ else }}
         {{ template "editor" }}
@@ -73,7 +95,7 @@
 
     <!-- Options -->
     <div id="optionsDiv" class="mb-6">
-        <p class="font-semibold mb-2">Options:</p>
+        <p class="form-label mb-2">Options</p>
         <!-- MCQ Option Tabs -->
         <div id="optionTabs" class="flex items-center overflow-x-auto">
             <!-- Tabs will be inserted before this -->
@@ -89,7 +111,7 @@
 
     <!-- Answer -->
     <div class="mb-6" id="answerDiv">
-        <p class="font-semibold mb-2">Answer:</p>
+        <p class="form-label mb-2">Answer</p>
         <div id="answerContent">
             <!-- Either checkboxes or integer input will be inserted here -->
         </div>
@@ -97,8 +119,8 @@
 
     <!-- Solution -->
     <div class="mb-6" id="solutionDiv">
-        <p class="font-semibold mb-2">Solution:</p>
-        {{ if and .ProblemPtr (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
+        <p class="form-label mb-2">Solution</p>
+        {{ if and $isEdit (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
         {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
         {{ else }}
         {{ template "editor" }}
@@ -106,20 +128,20 @@
     </div>
 
     <!-- Tags -->
-    <div class="mb-6">
-        <p class="font-semibold mb-2">Tags:</p>
-        {{ if .ProblemPtr }}
+    <div class="mb-6" id="main-problem-tags">
+        <p class="form-label mb-2">Tags</p>
+        {{ if $isEdit }}
             {{ template "input_tags" .ProblemPtr.TagNames }}
         {{ else }}
-            {{ template "input_tags" }}
+            {{ template "input_tags" (emptyStringSlice) }}
         {{ end }}
     </div>
 
     <!-- SOURCE -->
     <!-- <div class="mb-6">
         <p class="font-semibold mb-2">SOURCE</p>
-        <table class="w-full text-left border border-gray-300">
-            <thead class="bg-gray-200">
+        <table class="w-full text-left border border-border">
+            <thead class="bg-bg-card-alt">
                 <tr>
                     <th class="px-4 py-2">Name</th>
                     <th class="px-4 py-2">Mode</th>
@@ -134,19 +156,106 @@
                 </tr>
             </tbody>
         </table>
-        <a href="#" class="text-blue-600 underline mt-2 inline-block">Add Source</a>
+        <a href="#" class="text-accent underline mt-2 inline-block">Add Source</a>
     </div> -->
 
+    <div id="additionalProblemsContainer" class="space-y-6 mb-6"></div>
+
     <!-- Save button -->
-    <button id="saveButton" type="submit"
-        class="w-full bg-blue-500 text-white mb-4 py-3 font-semibold rounded hover:bg-blue-600">Save</button>
+    <div id="formActions" class="flex gap-3 justify-end pt-2">
+        <button type="button" class="btn-secondary" onclick="window.history.back()">Cancel</button>
+        <button id="addMoreProblemButton" type="button" class="btn-secondary hidden">Add More Problem</button>
+        <button id="saveButton" type="submit" class="btn-primary btn-lg">Save Problem</button>
+    </div>
 
 </form>
 
 <!-- Templates -->
+<template id="tmplAdditionalProblem">
+    <div class="additional-problem card card-pad-sm bg-bg-card-alt">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold uppercase tracking-wide text-ink">Additional Problem</h3>
+            <button type="button" class="remove-additional-problem text-danger hover:text-accent-hover font-bold text-xl leading-none">
+                &times;
+            </button>
+        </div>
+
+        <!-- topic, skills, concepts -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div>
+                <p class="form-label mb-2">Topic</p>
+                <select name="additional-topic-dropdown"
+                    class="additional-topic-dropdown form-select">
+                    <option disabled selected>Loading topics...</option>
+                </select>
+            </div>
+            <div>
+                <p class="form-label mb-2">Skills</p>
+                <select name="additional-skills-dropdown" multiple
+                    class="additional-skills-dropdown form-select h-24 overflow-y-auto">
+                    <option disabled>Loading skills...</option>
+                </select>
+            </div>
+            <div>
+                <p class="form-label mb-2">Concepts</p>
+                <select name="additional-concepts-dropdown" multiple
+                    class="additional-concepts-dropdown form-select h-24 overflow-y-auto">
+                    <option disabled>Select a topic first</option>
+                </select>
+                <a href="#" class="add-new-link mt-1 inline-block" hx-get="/topic/add-problem/add-concept-dialog"
+                    hx-target="body" hx-swap="beforeend"
+                    onclick="window._conceptModalTargetDropdown = this.closest('.additional-problem').querySelector('.additional-concepts-dropdown')">+ Add concept from other topic</a>
+            </div>
+        </div>
+
+        <!-- difficulty -->
+        <div class="mb-6">
+            <p class="form-label mb-2">Difficulty Rating</p>
+            <div class="flex gap-2 flex-wrap">
+                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                    <input type="radio" data-name="difficulty" value="easy" class="accent-accent">
+                    <span class="font-bold">1 — Easy</span>
+                </label>
+                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                    <input type="radio" data-name="difficulty" value="medium" class="accent-accent">
+                    <span class="font-bold">2 — Medium</span>
+                </label>
+                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                    <input type="radio" data-name="difficulty" value="hard" class="accent-accent">
+                    <span class="font-bold">3 — Hard</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Question editor -->
+        <div class="additional-question mb-6">
+            <p class="form-label mb-2">Text</p>
+            {{ template "editor" }}
+        </div>
+
+        <!-- Answer -->
+        <div class="additional-answer mb-6">
+            <p class="form-label mb-2">Answer</p>
+            {{ template "problem_answer_numerical" (dict "Answers" nil) }}
+        </div>
+
+        <!-- Solution -->
+        <div class="additional-solution mb-6">
+            <p class="form-label mb-2">Solution</p>
+            {{ template "editor" }}
+        </div>
+
+        <!-- Tags -->
+        <div class="mb-6">
+            <p class="form-label mb-2">Tags</p>
+            {{ template "input_tags" (emptyStringSlice) }}
+        </div>
+    </div>
+</template>
+
 <template id="tmplAnsNumeric">
     {{ $meta := (dict "Answers" nil) }}
-    {{ if .ProblemPtr }}
+    {{ if $isEdit }}
         {{ $meta = .ProblemPtr.MetaData }}
     {{ end }}
 
@@ -156,11 +265,32 @@
 <script src="/web/static/js/editor.js"></script>
 <script>
     (() => {
+        const initProblemTagsSection = window.initProblemTagsSection;
+        const getTagsForSection = window.getTagsForSection;
+
         const optionsDiv = document.getElementById('optionsDiv');
         const optionTabs = optionsDiv.querySelector('#optionTabs');
         const addTabButton = optionsDiv.querySelector('#addTab');
 
         const labelPool = 'ABCDEFGHIJ';
+        const paragraphDiv = document.getElementById('paragraphDiv');
+        const addMoreProblemButton = document.getElementById('addMoreProblemButton');
+        const saveButton = document.getElementById('saveButton');
+        const additionalProblemsContainer = document.getElementById('additionalProblemsContainer');
+        const additionalProblemTemplate = document.getElementById('tmplAdditionalProblem');
+        const mainSkillsDropdown = document.getElementById('skills-dropdown');
+        const mainConceptsDropdown = document.getElementById('concepts-dropdown');
+        const currentTopicId = '{{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}';
+        const currentChapterId = '{{if .TopicPtr}}{{.TopicPtr.ChapterID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
+        const isEditPage = {{ $isEdit }};
+
+        const mainTagsRoot = document.querySelector('#main-problem-tags .problem-tags-section');
+        initProblemTagsSection(mainTagsRoot);
+
+        let skillsOptionsHtml = '';
+        let topicsOptionsHtml = '';
+        const conceptsOptionsByTopic = new Map();
+        let additionalProblemCount = 0;
 
         // Determine tab count
         // by default start with 4 tabs for 
@@ -170,7 +300,7 @@
         // keep 4 tabs so that while editing such problem if type is changed to mcq
         // then 4 option tabs will be visible by default
         let tabs = new Array(
-            {{ if and .ProblemPtr (gt (len .ProblemPtr.MetaData.Options) 0) }}
+            {{ if and $isEdit (gt (len .ProblemPtr.MetaData.Options) 0) }}
                 {{ len .ProblemPtr.MetaData.Options }}
             {{ else }}
                 4
@@ -180,7 +310,7 @@
         let activeIndex = 0;
 
         const answerLabels = new Set([
-            {{ if and .ProblemPtr (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
+            {{ if and $isEdit (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
                 {{ range .ProblemPtr.MetaData.Answers }}
                     {{ if . }}
                         '{{ printf "%c" (add 64 (stringToInt .)) }}',
@@ -195,9 +325,9 @@
             onProblemTypeSelection(this.value);
         });
 
-        {{ if .ProblemPtr }}
+        if (isEditPage) {
             onProblemTypeSelection(problemTypeDropdown.value);
-        {{ end }}
+        }
 
         function onProblemTypeSelection(problemType) {
             const optionsDiv = document.getElementById('optionsDiv');
@@ -208,8 +338,163 @@
                 optionsDiv.classList.add('hidden');
             }
 
+            const isComprehension = problemType === 'comprehension';
+            paragraphDiv.classList.toggle('hidden', !isComprehension);
+            additionalProblemsContainer.classList.toggle('hidden', !isComprehension);
+            // "Add More Problem" is only for comprehension CREATE flow, not edit.
+            addMoreProblemButton.classList.toggle('hidden', !isComprehension || isEditPage);
+
             updateAnswerInput(problemType);
         }
+
+        function addAdditionalProblem() {
+            additionalProblemCount += 1;
+
+            const fragment = additionalProblemTemplate.content.cloneNode(true);
+            const problemBlock = fragment.querySelector('.additional-problem');
+            problemBlock.dataset.problemIndex = additionalProblemCount;
+
+            problemBlock.querySelectorAll('input[data-name="difficulty"]').forEach(input => {
+                input.name = `additional-difficulty-${additionalProblemCount}`;
+            });
+
+            const numTypeName = `additional-numType-${additionalProblemCount}`;
+            problemBlock.querySelectorAll('input[name="numType"]').forEach(input => {
+                input.name = numTypeName;
+            });
+            setupNumericalToggle(problemBlock, numTypeName);
+            ensureNumericalAnswer(problemBlock);
+
+            problemBlock.querySelector('.remove-additional-problem').addEventListener('click', () => {
+                problemBlock.remove();
+                renumberAdditionalProblems();
+            });
+
+            initializeAdditionalDropdowns(problemBlock);
+
+            additionalProblemsContainer.appendChild(fragment);
+            renumberAdditionalProblems();
+
+            if (window.initializeRichTextEditors) {
+                window.initializeRichTextEditors(problemBlock);
+            }
+            if (window.htmx) {
+                htmx.process(problemBlock);
+            }
+
+            const tagsRoot = problemBlock.querySelector('.problem-tags-section');
+            if (tagsRoot) {
+                initProblemTagsSection(tagsRoot);
+            }
+        }
+
+        function renumberAdditionalProblems() {
+            additionalProblemsContainer.querySelectorAll('.additional-problem').forEach((problemBlock, index) => {
+                problemBlock.querySelector('h3').textContent = `Additional Problem ${index + 2}`;
+            });
+        }
+
+        mainSkillsDropdown.addEventListener('htmx:afterSwap', () => {
+            skillsOptionsHtml = getUnselectedOptionsHtml(mainSkillsDropdown.innerHTML);
+        });
+
+        mainConceptsDropdown.addEventListener('htmx:afterSwap', () => {
+            conceptsOptionsByTopic.set(currentTopicId, getUnselectedOptionsHtml(mainConceptsDropdown.innerHTML));
+        });
+
+        function initializeAdditionalDropdowns(problemBlock) {
+            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
+            const skillsDropdown = problemBlock.querySelector('.additional-skills-dropdown');
+
+            topicDropdown.addEventListener('change', () => loadAdditionalConcepts(problemBlock));
+
+            loadSkillsOptions().then(html => {
+                skillsDropdown.innerHTML = html;
+            });
+
+            loadTopicOptions().then(html => {
+                topicDropdown.innerHTML = html;
+                topicDropdown.value = currentTopicId;
+                loadAdditionalConcepts(problemBlock);
+            });
+        }
+
+        function loadSkillsOptions() {
+            if (skillsOptionsHtml) {
+                return Promise.resolve(skillsOptionsHtml);
+            }
+
+            return fetchText('/api/skills').then(html => {
+                skillsOptionsHtml = getUnselectedOptionsHtml(html);
+                return skillsOptionsHtml;
+            });
+        }
+
+        function loadTopicOptions() {
+            if (topicsOptionsHtml) {
+                return Promise.resolve(topicsOptionsHtml);
+            }
+
+            return fetchText(`/api/topics?view=dropdown&chapter-dropdown=${encodeURIComponent(currentChapterId)}`)
+                .then(html => {
+                    topicsOptionsHtml = getUnselectedOptionsHtml(html);
+                    return topicsOptionsHtml;
+                });
+        }
+
+        function loadConceptOptions(topicId) {
+            if (conceptsOptionsByTopic.has(topicId)) {
+                return Promise.resolve(conceptsOptionsByTopic.get(topicId));
+            }
+
+            return fetchText(`/api/concepts?topic_id=${encodeURIComponent(topicId)}`).then(html => {
+                const optionsHtml = getUnselectedOptionsHtml(html);
+                conceptsOptionsByTopic.set(topicId, optionsHtml);
+                return optionsHtml;
+            });
+        }
+
+        function fetchText(url) {
+            return fetch(url).then(res => {
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status}`);
+                }
+                return res.text();
+            });
+        }
+
+        function getUnselectedOptionsHtml(html) {
+            const select = document.createElement('select');
+            select.innerHTML = html;
+            select.querySelectorAll('option').forEach(option => {
+                option.selected = false;
+                option.removeAttribute('selected');
+            });
+            return select.innerHTML;
+        }
+
+        function loadAdditionalConcepts(problemBlock) {
+            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
+            const conceptsDropdown = problemBlock.querySelector('.additional-concepts-dropdown');
+            const topicId = topicDropdown.value;
+
+            if (!topicId) {
+                conceptsDropdown.innerHTML = '<option disabled>Select a topic first</option>';
+                return;
+            }
+
+            conceptsDropdown.innerHTML = '<option disabled>Loading concepts...</option>';
+            loadConceptOptions(topicId)
+                .then(html => {
+                    conceptsDropdown.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error("Error loading concepts:", err);
+                    conceptsDropdown.innerHTML = '<option disabled>Error loading concepts</option>';
+                });
+        }
+
+        addMoreProblemButton.addEventListener('click', addAdditionalProblem);
 
         function updateAnswerInput(problemType) {
             const answerContent = document.getElementById('answerContent');
@@ -219,18 +504,18 @@
                 // Add options & answer radio/checkboxes
                 renderTabs();
 
-            } else if (problemType === 'numerical_answer') {
+            } else if (problemType === 'numerical_answer' || problemType === 'comprehension') {
                 // Use template
                 const tmpl = document.getElementById('tmplAnsNumeric');
                 const fragment = tmpl.content.cloneNode(true);
                 setupNumericalToggle(fragment);
                 answerContent.appendChild(fragment);
-                ensureNumericalAnswer();
+                ensureNumericalAnswer(answerContent);
 
             } else {
                 // Integer type fallback (simple input)
                 let answer = 
-                    {{ if .ProblemPtr }}
+                    {{ if $isEdit }}
                         '{{ index .ProblemPtr.MetaData.Answers 0 }}'
                     {{ else }}
                         ''
@@ -243,8 +528,8 @@
                     answer = '';
                 }
                 answerContent.innerHTML = `
-                    <input type="text" name="answer" id="answerInput" 
-                        class="w-full border border-gray-300 rounded p-2" 
+                    <input type="text" name="answer" id="answerInput"
+                        class="form-input font-mono"
                         inputmode="numeric" value="${answer}">
                 `;
 
@@ -252,8 +537,8 @@
             }
         }
 
-        function setupNumericalToggle(container) {
-            const radios = container.querySelectorAll('input[name="numType"]');
+        function setupNumericalToggle(container, radioName = 'numType') {
+            const radios = container.querySelectorAll(`input[name="${radioName}"]`);
             const singleDiv = container.querySelector('#singleInputDiv');
             const rangeDiv = container.querySelector('#rangeInputDiv');
 
@@ -274,11 +559,11 @@
             });
         }
 
-        function ensureNumericalAnswer() {
+        function ensureNumericalAnswer(container = document) {
             const inputs = [
-                document.querySelector('[name="singleAnswer"]'),
-                document.querySelector('[name="minAnswer"]'),
-                document.querySelector('[name="maxAnswer"]')
+                container.querySelector('[name="singleAnswer"]'),
+                container.querySelector('[name="minAnswer"]'),
+                container.querySelector('[name="maxAnswer"]')
             ].filter(Boolean);
 
             inputs.forEach(input => {
@@ -317,7 +602,8 @@
             const integerPart = unsignedValue.slice(0, firstDotIndex).replace(/\./g, '');
             const decimalPartRaw = unsignedValue.slice(firstDotIndex + 1).replace(/\./g, '');
             return {
-                value: (hasLeadingMinus ? '-' : '') + integerPart + '.' + decimalPartRaw.slice(0, 2),
+                // Do not truncate decimals while typing; allow user to enter more and show validity error instead.
+                value: (hasLeadingMinus ? '-' : '') + integerPart + '.' + decimalPartRaw,
                 exceedsTwoDecimals: decimalPartRaw.length > 2
             };
         }
@@ -327,7 +613,7 @@
 
         // Initial setup
         const tabContent = [
-            {{ if .ProblemPtr }}
+            {{ if $isEdit }}
                 {{ range .ProblemPtr.MetaData.Options }}
                     { html: `{{ . }}`, preview: `{{ . }}` },
                 {{ end }}
@@ -508,13 +794,28 @@
                 return false;
             }
             
-            const prolemJson = buildProblemJson(topicId, chapterId);
-            const url = problemId ? `/update-problem?id=${problemId}` : '/create-problem';
-            const method = problemId ? 'PATCH' : 'POST';
+            const subtype = document.getElementById('problem-type-dropdown').value;
+            const isComprehensionCreate = !isEditPage && subtype === 'comprehension';
+
+            let payload = isComprehensionCreate
+                ? buildComprehensionProblemsPayload(topicId, chapterId)
+                : buildProblemJson(topicId, chapterId);
+
+            // Edit comprehension: same PATCH body as other types, plus paragraph for the API.
+            if (isEditPage && subtype === 'comprehension') {
+                const paragraphEditor = paragraphDiv.querySelector('.editor');
+                const paragraph = paragraphEditor ? paragraphEditor.innerHTML.trim() : '';
+                payload = { ...payload, paragraph };
+            }
+
+            const url = isEditPage
+                ? `/update-problem?id=${problemId}`
+                : (isComprehensionCreate ? '/create-problems' : '/create-problem');
+            const method = isEditPage ? 'PATCH' : 'POST';
 
             fetch(url, {
                 method: method,
-                body: JSON.stringify(prolemJson),
+                body: JSON.stringify(payload),
                 headers: {
                     'Content-Type': 'application/json',  // Specify content type as JSON
                     'HX-Request': 'true'  // so that your server can detect HTMX if needed
@@ -543,19 +844,95 @@
             if (label) btn.innerText = label;
         }
 
+        function fail(msg) {
+            alert(msg);
+            return false;
+        }
+
+        function validateEditorNotEmpty(editorEl, msg) {
+            if (!editorEl || !editorEl.textContent.trim()) {
+                return fail(msg);
+            }
+            return true;
+        }
+
+        function validateNumericalAnswer(rootEl, numTypeName, msgPrefix = '') {
+            if (!rootEl) return fail('Options are not available.');
+
+            const selectedType = rootEl.querySelector(`input[name="${numTypeName}"]:checked`)?.value;
+            if (!selectedType) {
+                return fail(`${msgPrefix}Please select answer type (Single or Range).`);
+            }
+
+            if (selectedType === 'single') {
+                const singleInput = rootEl.querySelector('[name="singleAnswer"]');
+                const value = singleInput?.value?.trim();
+                if (!value) {
+                    return fail(`${msgPrefix}Please enter the answer.`);
+                }
+                if (sanitizeNumericalInput(value).exceedsTwoDecimals) {
+                    return fail('Numerical answers must have at most 2 decimal places.');
+                }
+                return true;
+            }
+
+            if (selectedType === 'range') {
+                const minInput = rootEl.querySelector('[name="minAnswer"]');
+                const maxInput = rootEl.querySelector('[name="maxAnswer"]');
+
+                const minVal = minInput?.value?.trim();
+                const maxVal = maxInput?.value?.trim();
+                if (!minVal || !maxVal) {
+                    return fail(`${msgPrefix}Please enter both minimum and maximum values.`);
+                }
+
+                if (sanitizeNumericalInput(minVal).exceedsTwoDecimals ||
+                    sanitizeNumericalInput(maxVal).exceedsTwoDecimals) {
+                    return fail('Numerical answers must have at most 2 decimal places.');
+                }
+
+                const min = parseFloat(minVal);
+                const max = parseFloat(maxVal);
+                if (min > max) {
+                    return fail('Minimum value cannot be greater than maximum value.');
+                }
+                return true;
+            }
+
+            return fail(`${msgPrefix}Invalid answer type.`);
+        }
+
         function validateFields() {
             const difficulty = document.querySelector('input[name="difficulty"]:checked');
             if (!difficulty) {
-                alert('Please select a difficulty level.');
-                return;
+                return fail('Please select a difficulty level.');
             }
             const editor = document.getElementById('questionDiv').querySelector('.editor');
-            if (!editor.textContent.trim()) {
-                alert('Please enter the question.');
-                return;
-            }
+            if (!validateEditorNotEmpty(editor, 'Please enter the question.')) return false;
 
             const subtype = document.getElementById('problem-type-dropdown').value;
+            if (subtype === 'comprehension') {
+                const paragraphEditor = paragraphDiv.querySelector('.editor');
+                if (!validateEditorNotEmpty(paragraphEditor, 'Please enter the paragraph.')) return false;
+
+                // Validate any additional problems, if present
+                const blocks = additionalProblemsContainer.querySelectorAll('.additional-problem');
+                for (const block of blocks) {
+                    const idx = block.dataset.problemIndex || '';
+                    const diff = block.querySelector(`input[name="additional-difficulty-${idx}"]:checked`);
+                    if (!diff) {
+                        return fail('Please select a difficulty level for each additional problem.');
+                    }
+
+                    const qEditor = block.querySelector('.additional-question .editor');
+                    if (!validateEditorNotEmpty(qEditor, 'Please enter the question for each additional problem.')) return false;
+
+                    if (!validateNumericalAnswer(block, `additional-numType-${idx}`, 'For each additional problem, ')) {
+                        return false;
+                    }
+                }
+            }
+
             if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
                 if (typeof tabContent !== 'undefined' && Array.isArray(tabContent)) {
                     for (let i = 0; i < tabContent.length; i++) {
@@ -572,70 +949,138 @@
                 }
 
                 if (answerLabels.size === 0) {
-                    alert('Please select at least one answer.');
-                    return false;
+                    return fail('Please select at least one answer.');
                 }
                 
             } else if (subtype === 'integer_type') {
                 const answerInput = document.getElementById("answerInput");
                 if (!answerInput.value) {
-                    alert('Please enter the answer.');
-                    return false;
+                    return fail('Please enter the answer.');
                 }
 
-            } else if (subtype === 'numerical_answer') {
+            } else if (subtype === 'numerical_answer' || subtype === 'comprehension') {
                 const container = document.getElementById('answerContent');
-
-                const selectedType = container.querySelector('input[name="numType"]:checked')?.value;
-
-                if (!selectedType) {
-                    alert('Please select answer type (Single or Range).');
-                    return false;
-                }
-
-                if (selectedType === 'single') {
-                    const singleInput = container.querySelector('[name="singleAnswer"]');
-                    const value = singleInput?.value?.trim();
-
-                    if (!value) {
-                        alert('Please enter the answer.');
-                        return false;
-                    }
-
-                    if (sanitizeNumericalInput(value).exceedsTwoDecimals) {
-                        alert('Numerical answers must have at most 2 decimal places.');
-                        return false;
-                    }
-
-                } else if (selectedType === 'range') {
-                    const minInput = container.querySelector('[name="minAnswer"]');
-                    const maxInput = container.querySelector('[name="maxAnswer"]');
-
-                    const minVal = minInput?.value?.trim();
-                    const maxVal = maxInput?.value?.trim();
-
-                    if (!minVal || !maxVal) {
-                        alert('Please enter both minimum and maximum values.');
-                        return false;
-                    }
-
-                    if (sanitizeNumericalInput(minVal).exceedsTwoDecimals ||
-                        sanitizeNumericalInput(maxVal).exceedsTwoDecimals) {
-                        alert('Numerical answers must have at most 2 decimal places.');
-                        return false;
-                    }
-
-                    const min = parseFloat(minVal);
-                    const max = parseFloat(maxVal);
-
-                    if (min > max) {
-                        alert('Minimum value cannot be greater than maximum value.');
-                        return false;
-                    }
-                }
+                if (!validateNumericalAnswer(container, 'numType', '')) return false;
             }
 
             return true;
+        }
+
+        function buildComprehensionProblemsPayload(topicId, chapterId) {
+            const paragraphEditor = paragraphDiv.querySelector('.editor');
+            const paragraph = paragraphEditor ? paragraphEditor.innerHTML.trim() : '';
+
+            const problems = [];
+            problems.push(buildProblemJson(topicId, chapterId));
+
+            additionalProblemsContainer.querySelectorAll('.additional-problem').forEach(block => {
+                problems.push(buildAdditionalProblemJson(block, chapterId));
+            });
+
+            return { paragraph, problems };
+        }
+
+        function buildAdditionalProblemJson(problemBlock, chapterId) {
+            const idx = problemBlock.dataset.problemIndex;
+            const subtype = document.getElementById('problem-type-dropdown').value;
+
+            const skillsDropdown = problemBlock.querySelector('.additional-skills-dropdown');
+            const selectedSkillIds = Array.from(skillsDropdown?.selectedOptions ?? []).map(opt => parseInt(opt.value, 10));
+
+            const conceptsDropdown = problemBlock.querySelector('.additional-concepts-dropdown');
+            const selectedConceptIds = Array.from(conceptsDropdown?.selectedOptions ?? []).map(opt => parseInt(opt.value, 10));
+
+            const topicId = parseInt(problemBlock.querySelector('.additional-topic-dropdown')?.value ?? '0', 10);
+
+            const curriculumId = parseInt(document.getElementById("curriculum-dropdown").value);
+            const gradeId = parseInt(document.getElementById("grade-dropdown").value);
+            const subjectId = parseInt(document.getElementById("subject-dropdown").value);
+
+            const difficulty = problemBlock.querySelector(`input[name="additional-difficulty-${idx}"]:checked`)?.value;
+
+            const question = problemBlock.querySelector('.additional-question .editor')?.innerHTML?.trim() ?? '';
+
+            const selectedType = problemBlock.querySelector(`input[name="additional-numType-${idx}"]:checked`)?.value;
+            let answers = [];
+            if (selectedType === 'single') {
+                answers = [(problemBlock.querySelector('[name="singleAnswer"]')?.value ?? '').trim()];
+            } else {
+                answers = [
+                    (problemBlock.querySelector('[name="minAnswer"]')?.value ?? '').trim(),
+                    (problemBlock.querySelector('[name="maxAnswer"]')?.value ?? '').trim(),
+                ];
+            }
+
+            const solution = problemBlock.querySelector('.additional-solution .editor')?.innerHTML?.trim() ?? '';
+
+            const tags = getTagsForSection(problemBlock.querySelector('.problem-tags-section'));
+
+            return buildProblemPayload({
+                subtype,
+                skillIds: selectedSkillIds,
+                curriculumId,
+                gradeId,
+                subjectId,
+                topicId,
+                chapterId,
+                difficulty,
+                question,
+                options: null,
+                answers,
+                solution,
+                conceptIds: selectedConceptIds,
+                tags,
+            });
+        }
+
+        function buildProblemPayload({
+            subtype,
+            skillIds,
+            curriculumId,
+            gradeId,
+            subjectId,
+            topicId,
+            chapterId,
+            difficulty,
+            question,
+            options,
+            answers,
+            solution,
+            conceptIds,
+            tags
+        }) {
+            return {
+                lang_code: "en",
+                type: "problem",
+                subtype: subtype,
+                skill_ids: skillIds,
+                type_params: {
+                    test_ids: []
+                },
+                curriculum_grades: [
+                    {
+                        curriculum_id: curriculumId,
+                        grade_id: gradeId
+                    }
+                ],
+                subject_id: subjectId,
+                topic_id: topicId,
+                chapter_id: chapterId,
+                difficulty_level: difficulty,
+                meta_data: {
+                    text: question,
+                    options: options,
+                    answer: answers,
+                    solutions: [
+                        {
+                            type: "text",
+                            value: solution
+                        }
+                    ]
+                },
+                concept_ids: conceptIds,
+                tags: tags
+            };
         }
 
         function buildProblemJson(topicId, chapterId) {
@@ -662,7 +1107,7 @@
                     .sort((a, b) => a - b)
                     .map(num => num.toString());
 
-            } else if (subtype === 'numerical_answer') {
+            } else if (subtype === 'numerical_answer' || subtype === 'comprehension') {
                 const numType = document.querySelector('input[name="numType"]:checked')?.value;
 
                 if (numType === 'single') {
@@ -683,38 +1128,22 @@
             const conceptsDropdown = document.getElementById("concepts-dropdown");
             const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
 
-            return {
-                lang_code: "en",
-                type: "problem",
-                subtype: subtype,
-                skill_ids: selectedSkillIds,
-                type_params: {
-                    test_ids: []
-                },
-                curriculum_grades: [
-                    {
-                        curriculum_id: curriculumId,
-                        grade_id: gradeId
-                    }
-                ],
-                subject_id: subjectId,
-                topic_id: topicId,
-                chapter_id: chapterId,
-                difficulty_level: difficulty,
-                meta_data: {
-                    text: question,
-                    options: options,
-                    answer: answers,
-                    solutions: [
-                        {
-                            type: "text",
-                            value: solution
-                        }
-                    ]
-                },
-                concept_ids: selectedConceptIds,
-                tags: window.getProblemTags()
-            };
+            return buildProblemPayload({
+                subtype,
+                skillIds: selectedSkillIds,
+                curriculumId,
+                gradeId,
+                subjectId,
+                topicId,
+                chapterId,
+                difficulty,
+                question,
+                options,
+                answers,
+                solution,
+                conceptIds: selectedConceptIds,
+                tags: getTagsForSection(mainTagsRoot),
+            });
         }
     })();
 </script>

@@ -1,0 +1,51 @@
+{{ define "content" }}
+<div class="max-w-5xl">
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="page-title">CMS Users</h1>
+    </div>
+
+    <form hx-post="/admin/users/create" hx-target="#users-tbody" hx-swap="beforeend"
+          hx-on::after-request="if(event.detail.successful){this.reset()}"
+          class="card card-pad-sm mb-6 grid grid-cols-12 gap-3 items-end">
+        <div class="col-span-5">
+            <label class="form-label">Email</label>
+            <input name="email" type="email" required placeholder="someone@avantifellows.org"
+                   class="form-input">
+        </div>
+        <div class="col-span-3">
+            <label class="form-label">Full name</label>
+            <input name="full_name" type="text" placeholder="Optional"
+                   class="form-input">
+        </div>
+        <div class="col-span-2">
+            <label class="form-label">Role</label>
+            <select name="role" class="form-select">
+                {{ range .Roles }}<option value="{{ . }}" {{ if eq . "editor" }}selected{{ end }}>{{ . }}</option>{{ end }}
+            </select>
+        </div>
+        <div class="col-span-2">
+            <button type="submit" class="btn-primary w-full">
+                Add user
+            </button>
+        </div>
+    </form>
+
+    <div class="card overflow-hidden">
+        <table class="app-table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Full name</th>
+                    <th>Role</th>
+                    <th>Active</th>
+                    <th>Last login</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="users-tbody">
+                {{ range .Users }}{{ template "admin_user_row.html" . }}{{ end }}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{ end }}

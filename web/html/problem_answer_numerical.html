@@ -44,15 +44,15 @@
 
     <div id="singleInputDiv" class="{{ if $isRange }}hidden{{ end }}">
         <input type="text" name="singleAnswer" inputmode="decimal"
-            class="w-full border border-gray-300 rounded p-2" value="{{ $single }}">
+            class="w-full border border-border rounded-sm p-2" value="{{ $single }}">
     </div>
 
     <div id="rangeInputDiv" class="flex gap-2 {{ if not $isRange }}hidden{{ end }}">
         <input type="text" name="minAnswer" placeholder="Min" value="{{ $min }}"
-            class="w-1/2 border border-gray-300 rounded p-2">
+            class="w-1/2 border border-border rounded-sm p-2">
 
         <input type="text" name="maxAnswer" placeholder="Max" value="{{ $max }}"
-            class="w-1/2 border border-gray-300 rounded p-2">
+            class="w-1/2 border border-border rounded-sm p-2">
     </div>
 </div>
 {{ end }}

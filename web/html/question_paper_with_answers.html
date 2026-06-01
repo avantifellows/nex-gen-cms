@@ -27,13 +27,13 @@
                 <div class="flex items-start mt-3">
                     <div class="w-6"></div>
                     <div class="flex-1 pl-5">
-                        <div class="border border-gray-300 rounded p-2 bg-gray-50 text-sm">
+                        <div class="border border-gray-300 rounded-sm p-2 bg-gray-50 text-sm">
                             <span class="font-semibold">Answer:</span>
                             <span class="ml-2">
                                 {{ template "pdf_answer_value" (dict "Subtype" $p.Subtype "Answers" $p.MetaData.Answers) }}
                             </span>
                         </div>
-                        <div class="mt-2 border border-gray-200 rounded p-2 bg-white text-sm">
+                        <div class="mt-2 border border-gray-200 rounded-sm p-2 bg-white text-sm">
                             <div><span class="font-semibold">Chapter:</span> <span class="ml-1">{{ getChapterName $p "en" }}</span></div>
                             <div><span class="font-semibold">Difficulty:</span> <span class="ml-1">{{ capitalize $p.DifficultyLevel }}</span></div>
                             {{ if and (gt (len $p.MetaData.Solutions) 0) (ne (trim (printf "%s" (index $p.MetaData.Solutions 0).Value)) "") }}

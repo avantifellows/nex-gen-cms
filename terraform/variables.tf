@@ -75,16 +75,39 @@ variable "db_service_token" {
   sensitive   = true
 }
 
-variable "cms_username" {
-  description = "CMS username"
+variable "database_url" {
+  description = "Postgres DSN used for direct cms_user_permission lookups (e.g. postgres://user:pass@host:5432/db?sslmode=require)"
   type        = string
   sensitive   = true
 }
 
-variable "cms_password" {
-  description = "CMS password"
+variable "session_secret" {
+  description = "HMAC key used to sign the session JWT cookie. Any long random string."
   type        = string
   sensitive   = true
+}
+
+variable "google_client_id" {
+  description = "Google OAuth 2.0 Client ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth 2.0 Client Secret"
+  type        = string
+  sensitive   = true
+}
+
+variable "oauth_redirect_url" {
+  description = "Full https://<host>/auth/google/callback URL registered with Google for this environment"
+  type        = string
+}
+
+variable "app_env" {
+  description = "Sets APP_ENV in the deployed .env. Use 'production' to flag cookies as Secure (HTTPS-only)."
+  type        = string
+  default     = "production"
 }
 
 # Instance configuration
