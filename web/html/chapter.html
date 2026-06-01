@@ -1,16 +1,16 @@
 {{ define "content" }}
-<div class="card card-pad mb-4">
-    <div class="flex items-center mb-4">
-        <button class="btn-ghost btn-sm" onclick="window.history.back()">
+<div class="bg-white mb-4">
+    <div class="flex items-center">
+        <button class="action-button" onclick="window.history.back()">
             <i class="fa-solid fa-chevron-left"></i> Back
         </button>
-        <h3 class="ml-4 text-lg font-bold uppercase tracking-wide text-ink">{{ getName .ChapterPtr "en" }}</h3>
+        <h3 class="text-base font-semibold ml-4">{{ getName .ChapterPtr "en" }}</h3>
     </div>
-    <div class="flex flex-wrap gap-3 py-2 border-b border-border">
-        <div class="sub-tab active"
+    <div class="flex space-x-4 py-4">
+        <div class="sub-tab active" 
             id="topics-sub-tab"
             hx-trigger="load[document.getElementById('topics-sub-tab').classList.contains('active')], click"
-            hx-get="/topics?id={{.ChapterPtr.ID}}"
+            hx-get="/topics?id={{.ChapterPtr.ID}}" 
             hx-target="#subContent"
             onclick="
                 document.getElementById('topics-sub-tab').classList.add('active');
@@ -18,7 +18,7 @@
             ">
             Topics
         </div>
-        <div class="sub-tab"
+        <div class="sub-tab" 
             id="resources-sub-tab"
             hx-get="/chapter/resources?chapterId={{.ChapterPtr.ID}}"
             hx-trigger="load[document.getElementById('resources-sub-tab').classList.contains('active')], click"
@@ -30,7 +30,7 @@
             Resources
         </div>
     </div>
-    <div id="sub-tabContent" class="pt-4">
+    <div id="sub-tabContent">
         <div id="subContent">
         </div>
     </div>

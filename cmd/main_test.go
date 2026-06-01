@@ -56,10 +56,7 @@ func TestSetup(t *testing.T) {
 
 	// Create a new MockServeMux to capture registered routes
 	mockServeMux := NewMockServeMux()
-	appComponentPtr, err := di.NewAppComponent()
-	if err != nil || appComponentPtr == nil {
-		t.Skipf("DI init failed (likely missing DATABASE_URL / GOOGLE_CLIENT_ID in test env): %v", err)
-	}
+	appComponentPtr, _ := di.NewAppComponent()
 	chaptersHandler := appComponentPtr.ChaptersHandler
 	topicsHandler := appComponentPtr.TopicsHandler
 

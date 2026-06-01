@@ -113,18 +113,14 @@ Content-Transfer-Encoding: 7bit
 Content-Disposition: attachment; filename="userdata.txt"
 
 ${templatefile("${path.module}/user-data.sh", {
-  domain               = local.domain
-  repo_url             = var.repo_url
-  repo_branch          = var.repo_branch
-  db_service_endpoint  = var.db_service_endpoint
-  db_service_token     = var.db_service_token
-  database_url         = var.database_url
-  session_secret       = var.session_secret
-  google_client_id     = var.google_client_id
-  google_client_secret = var.google_client_secret
-  oauth_redirect_url   = var.oauth_redirect_url
-  app_env              = var.app_env
-  letsencrypt_email    = var.letsencrypt_email
+  domain              = local.domain
+  repo_url            = var.repo_url
+  repo_branch         = var.repo_branch
+  db_service_endpoint = var.db_service_endpoint
+  db_service_token    = var.db_service_token
+  cms_username        = var.cms_username
+  cms_password        = var.cms_password
+  letsencrypt_email   = var.letsencrypt_email
 })}
 --//
 EOF

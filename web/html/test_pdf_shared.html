@@ -64,14 +64,6 @@ window.MathJax = {
 
 {{ define "pdf_question_options" }}
 <div class="mb-6">
-    {{ if and (eq .Problem.Subtype "comprehension") .Problem.Paragraph }}
-    <div class="flex items-start mb-3 pl-11">
-        <div class="flex-1 border border-gray-200 rounded p-3 bg-gray-50 text-sm">
-            <div class="font-semibold mb-1">Paragraph</div>
-            <div class="whitespace-pre-wrap">{{ .Problem.Paragraph.Body }}</div>
-        </div>
-    </div>
-    {{ end }}
     <div class="flex items-start mb-2">
         <div class="w-6 font-semibold">Q{{ .Counter }}.</div>
         <div class="flex-1 pl-5 whitespace-pre-wrap">{{ .Problem.MetaData.Question }}</div>
@@ -114,7 +106,7 @@ window.MathJax = {
         {{- if $i }}, {{ end }}
         {{ printf "%c" (add 64 (stringToInt $ans)) -}}
     {{ end }}
-{{ else if and (or (eq .Subtype "numerical_answer") (eq .Subtype "comprehension")) (eq (len .Answers) 2) }}
+{{ else if and (eq .Subtype "numerical_answer") (eq (len .Answers) 2) }}
     [{{ index .Answers 0 }} to {{ index .Answers 1 }}]
 {{ else }}
     {{ range .Answers }}

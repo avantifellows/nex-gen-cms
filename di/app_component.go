@@ -1,25 +1,19 @@
 package di
 
 import (
-	"context"
-	"database/sql"
 	"net/http"
 	"time"
 
-	"github.com/avantifellows/nex-gen-cms/internal/auth"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	remote_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/remote"
-	pgrepo "github.com/avantifellows/nex-gen-cms/internal/repositories/db"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 )
 
 type AppComponent struct {
-	DB                 *sql.DB
 	CssPathHandler     http.Handler
 	LoginHandler       *handlers.LoginHandler
-	AdminUsersHandler  *handlers.AdminUsersHandler
 	ChaptersHandler    *handlers.ChaptersHandler
 	ResourcesHandler   *handlers.ResourcesHandler
 	TopicsHandler      *handlers.TopicsHandler
@@ -35,25 +29,11 @@ type AppComponent struct {
 }
 
 func NewAppComponent() (*AppComponent, error) {
-	// Auth-related dependencies (Postgres + Google OIDC) are constructed before app handlers so that
-	// failures here surface as startup errors rather than runtime 500s.
-	database, err := pgrepo.Open()
-	if err != nil {
-		return nil, err
-	}
-	usersRepo := pgrepo.NewCmsUserRepo(database)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	googleAuth, err := auth.NewGoogleAuth(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Existing content services (cache + DB-service API)
+	// Initialize repositories
 	cacheRepo := local_repo.NewCacheRepository(5*time.Minute, 10*time.Minute)
 	apiRepo := remote_repo.NewAPIRepository()
 
+	// Initialize service
 	chaptersService := services.NewService[models.Chapter](cacheRepo, apiRepo)
 	resourcesService := services.NewService[models.Resource](cacheRepo, apiRepo)
 	topicsService := services.NewService[models.Topic](cacheRepo, apiRepo)
@@ -68,9 +48,9 @@ func NewAppComponent() (*AppComponent, error) {
 	testRulesService := services.NewService[models.TestRule](cacheRepo, apiRepo)
 	examsService := services.NewService[models.Exam](cacheRepo, apiRepo)
 
+	// Initialize handlers
 	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
-	loginHandler := handlers.NewLoginHandler(googleAuth, usersRepo)
-	adminUsersHandler := handlers.NewAdminUsersHandler(usersRepo)
+	loginHandler := handlers.NewLoginHandler()
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
 	resourcesHandler := handlers.NewResourcesHandler(resourcesService)
 	topicsHandler := handlers.NewTopicsHandler(topicsService)
@@ -87,10 +67,8 @@ func NewAppComponent() (*AppComponent, error) {
 	examsHandler := handlers.NewExamsHandler(examsService)
 
 	return &AppComponent{
-		DB:                 database,
 		CssPathHandler:     cssPathHandler,
 		LoginHandler:       loginHandler,
-		AdminUsersHandler:  adminUsersHandler,
 		ChaptersHandler:    chaptersHandler,
 		ResourcesHandler:   resourcesHandler,
 		TopicsHandler:      topicsHandler,

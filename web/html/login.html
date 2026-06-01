@@ -3,55 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Avanti CMS</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Login</title>
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
     <link href="/web/static/css/output.css" rel="stylesheet">
 </head>
-<body class="flex items-center justify-center min-h-screen bg-bg text-ink px-4">
-    <div class="card card-pad w-full max-w-md">
-        <div class="flex flex-col items-center mb-6">
-            <img src="https://cdn.avantifellows.org/af_logos/avanti_logo_black_text.webp"
-                 alt="Avanti Fellows" class="h-10 mb-4">
-            <h1 class="page-title">Avanti CMS</h1>
-            <p class="mt-2 text-sm text-ink-muted">Sign in to continue</p>
-        </div>
+<body class="flex items-center justify-center h-screen bg-gray-100">
+    <div class="bg-white p-8 rounded shadow-md w-96">
+        <h1 class="text-xl font-bold mb-4 text-center">Login</h1>
 
         {{ if .Error }}
-        <div class="mb-4 px-3 py-2 rounded-lg bg-danger-bg text-danger text-sm text-center font-medium">{{ .Error }}</div>
+        <div class="mb-4 text-red-600 text-center">{{ .Error }}</div>
         {{ end }}
 
-        {{ if .GoogleConfigured }}
-        <a href="/auth/google/start"
-           class="btn-secondary w-full">
-            <svg viewBox="0 0 48 48" class="h-5 w-5">
-                <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/>
-                <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16.1 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.2 4 9.5 8.5 6.3 14.7z"/>
-                <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.5-5.2l-6.2-5.3c-2.1 1.6-4.8 2.5-7.3 2.5-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.4 39.4 16.1 44 24 44z"/>
-                <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.3 5.6l6.2 5.3C40.7 35.4 44 30.2 44 24c0-1.2-.1-2.3-.4-3.5z"/>
-            </svg>
-            <span>Sign in with Google</span>
-        </a>
+        <form hx-post="/login" hx-target="body">
+            <label class="block mb-2">Username</label>
+            <input type="text" name="username" required class="w-full border p-2 rounded mb-4">
 
-        <p class="mt-4 text-xs text-ink-muted text-center">
-            Use your @avantifellows.org account. Access must be granted by an admin.
-        </p>
-        {{ else }}
-        <p class="px-3 py-2 rounded-lg bg-warning-bg text-warning border border-warning-border text-sm text-center">
-            Google sign-in not configured. Use dev login below.
-        </p>
-        {{ end }}
+            <label class="block mb-2">Password</label>
+            <input type="password" name="password" required class="w-full border p-2 rounded mb-6">
 
-        {{ if .DevLoginEmail }}
-        <div class="mt-6 pt-4 border-t border-border">
-            <p class="text-xs text-ink-muted text-center mb-2">Dev login (local only):</p>
-            <button hx-post="/dev-login" class="btn-secondary w-full">
-                Sign in as <span class="font-mono ms-1">{{ .DevLoginEmail }}</span>
+            <button type="submit" class="w-full bg-blue-500 text-white py-2 rounded">
+                Login
             </button>
-        </div>
-        {{ end }}
+        </form>
     </div>
 </body>
 </html>

@@ -1,8 +1,4 @@
-window.initializeRichTextEditors = function (root = document) {
-    root.querySelectorAll('.container').forEach(container => {
-    if (container.dataset.editorInitialized === 'true') return;
-    container.dataset.editorInitialized = 'true';
-
+document.querySelectorAll('.container').forEach(container => {
     const editorWrapper = container.querySelector(".editor-wrapper");
     const output = container.querySelector('.output');
 
@@ -162,7 +158,7 @@ window.initializeRichTextEditors = function (root = document) {
     // Create 10x10 grid cells
     for (let i = 1; i <= 100; i++) {
         const cell = document.createElement("div");
-        cell.className = "w-4 h-4 bg-bg-card-alt hover:bg-accent";
+        cell.className = "w-4 h-4 bg-gray-200 hover:bg-blue-400";
         cell.dataset.row = Math.ceil(i / 10);
         cell.dataset.col = i % 10 === 0 ? 10 : i % 10;
 
@@ -184,7 +180,7 @@ window.initializeRichTextEditors = function (root = document) {
             [...gridContainer.children].forEach(cell => {
                 const r = parseInt(cell.dataset.row);
                 const c = parseInt(cell.dataset.col);
-                cell.style.backgroundColor = (r <= selectedRows && c <= selectedCols) ? '#ad2f2f' : '#f3ece5';
+                cell.style.backgroundColor = (r <= selectedRows && c <= selectedCols) ? '#60a5fa' : '#e5e7eb';
             });
         }
     });
@@ -369,6 +365,3 @@ window.initializeRichTextEditors = function (root = document) {
         insertMath(editor, event);
     });
 });
-};
-
-window.initializeRichTextEditors();

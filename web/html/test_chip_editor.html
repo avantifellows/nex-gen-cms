@@ -5,8 +5,8 @@
     {{ $readonly := .Readonly }}
 
     <label class="font-semibold">{{ $label }}</label>
-    <div class="flex items-center border rounded-sm p-2 w-full">
-        <span class="text-ink-muted">{{ if eq $label "Award" }}+{{ else }}-{{ end }}</span>
+    <div class="flex items-center border rounded p-2 w-full">
+        <span class="text-gray-500">{{ if eq $label "Award" }}+{{ else }}-{{ end }}</span>
         <div id="chip-box" class="chip-box ml-2 w-full" onclick="focusEditable(this)">
             <div id="{{ $id }}"
                 contenteditable="{{ if $readonly }}false{{ else }}true{{ end }}"

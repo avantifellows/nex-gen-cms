@@ -1,15 +1,8 @@
 <!-- Form to add new topic -->
-<form id="addTopicForm" class="card card-pad-sm mt-3 flex flex-wrap items-end gap-3"
-    hx-post="/create-topic?chapter_id={{.}}" hx-target="#topicTableBody"
+<form id="addTopicForm" class="mt-2 space-x-2" hx-post="/create-topic?chapter_id={{.}}" hx-target="#topicTableBody"
     hx-swap="beforeend" hx-include="#curriculum-dropdown"
     hx-on::after-request="if(event.detail.successful) this.reset()">
-    <div>
-        <label class="form-label" for="add-topic-code">Code</label>
-        <input id="add-topic-code" type="text" name="code" placeholder="Topic code" class="form-input w-48 font-mono">
-    </div>
-    <div class="flex-1 min-w-[240px]">
-        <label class="form-label" for="add-topic-name">Name</label>
-        <input id="add-topic-name" type="text" name="name" placeholder="Topic name" class="form-input">
-    </div>
-    <button type="submit" class="btn-primary">Create Topic</button>
+    <input type="text" name="code" placeholder="Code" class="border p-2">
+    <input type="text" name="name" placeholder="Name" class="border p-2 w-1/3">
+    <button type="submit" class="bg-blue-500 text-white p-2 rounded">Create New Topic</button>
 </form>

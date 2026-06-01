@@ -1,43 +1,45 @@
 <div>
-    <div class="flex flex-wrap gap-3 mb-4">
-        <button class="btn-primary btn-sm" hx-target="body"
-            hx-get="/topic/add-problem?topic_id={{.}}" hx-push-url="true">+ Add New Problem
+    <div class="flex gap-4 mb-4">
+        <button class="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded" hx-target="body"
+            hx-get="/topic/add-problem?topic_id={{.}}" hx-push-url="true">Add New Problem
         </button>
 
         <button id="move-problems-btn" hx-include='input[name="select-problem"]:checked'
-            class="btn-primary btn-sm group min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-card-alt disabled:text-ink-muted"
-            hx-post="/problems/test-associations" hx-target="body"
+            class="group flex items-center justify-center min-w-[120px] px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded disabled:bg-gray-300 disabled:cursor-not-allowed"
+            hx-post="/problems/test-associations" hx-target="body" 
             hx-swap="beforeend" disabled>
-
-            <span class="group-[.htmx-request]:hidden">Move Problems</span>
-
-            <span class="hidden group-[.htmx-request]:inline-flex">
-                <div class="w-4 h-4 border-2 border-text-on-accent border-t-transparent rounded-full animate-spin"></div>
+            
+            <span class="group-[.htmx-request]:hidden">
+                Move Problems
             </span>
-
+        
+            <span class="hidden group-[.htmx-request]:inline-flex">
+                <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            </span>
+        
         </button>
 
     </div>
 
-    <div class="card overflow-hidden">
-        <table class="app-table">
+    <div class="shadow-md">
+        <table class="min-w-full bg-white">
             <colgroup>
-                <col class="w-8">   <!-- Checkbox -->
-                <col class="w-24">   <!-- Code -->
+                <col class="w-[2rem]">   <!-- Checkbox -->
+                <col class="w-[6rem]">   <!-- Code -->
                 <col>                    <!-- Text (flexes) -->
-                <col class="w-24">   <!-- Actions -->
+                <col class="w-[6rem]">   <!-- Actions -->
             </colgroup>
             <thead>
-                <tr>
-                    <th class="text-center">
-                        <input type="checkbox" id="select-all" class="accent-accent">
+                <tr class="bg-gray-200 text-gray-600 text-sm">
+                    <th class="py-4 text-center">
+                        <input type="checkbox" id="select-all">
                     </th>
-                    <th>Code</th>
+                    <th class="py-4">Code</th>
                     <th>Text</th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody id="problemTableBody" class="text-ink-muted text-sm" hx-trigger="load, refreshProblems"
+            <tbody id="problemTableBody" class="text-gray-600 text-sm" hx-trigger="load, refreshProblems"
                 hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
                 hx-indicator="#topic-problems-loader"
                 hx-on::before-request="this.innerHTML=''"
@@ -47,7 +49,7 @@
         </table>
     </div>
     <div id="topic-problems-loader" class="flex justify-center py-4">
-        <div class="w-6 h-6 border-4 border-border border-t-accent rounded-full animate-spin"></div>
+        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
     </div>
 </div>
 <script>

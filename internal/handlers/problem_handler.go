@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -26,7 +25,6 @@ const problemsEndPoint = "problems"
 const problemEndPoint = "resource/problem/%d/en/%s"
 const searchProblemsEndPoint = "problems/search"
 const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
-const batchProblemsEndPoint = "resources/problems/batch"
 
 const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
@@ -118,8 +116,6 @@ func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int
 }
 
 func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	const includeParagraphSiblingsParam = "include_paragraph_siblings"
-
 	urlValues := request.URL.Query()
 	topicIdStr := urlValues.Get("topic-dropdown")
 	topicId, err := utils.StringToIntType[int16](topicIdStr)
@@ -129,9 +125,6 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	}
 
 	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%s&topic_id=%d&lang_code=en", urlValues.Get(CURRICULUM_DROPDOWN_NAME), topicId)
-	if urlValues.Has(includeParagraphSiblingsParam) {
-		queryParams += "&" + includeParagraphSiblingsParam + "=" + urlValues.Get(includeParagraphSiblingsParam)
-	}
 	problems, err := h.problemsService.GetList(problemsEndPoint+queryParams, problemsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
@@ -262,13 +255,12 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		TopicPtr: selectedTopicPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16":        utils.JoinInt16,
-		"add":              utils.Add,
-		"stringToInt":      utils.StringToInt,
-		"toJson":           utils.ToJson,
-		"getConceptName":   getConceptName,
-		"dict":             utils.Dict,
-		"emptyStringSlice": utils.EmptyStringSlice,
+		"joinInt16":      utils.JoinInt16,
+		"add":            utils.Add,
+		"stringToInt":    utils.StringToInt,
+		"toJson":         utils.ToJson,
+		"getConceptName": getConceptName,
+		"dict":           utils.Dict,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, problemAnswerNumericalTemplate, inputTagsTemplate)
 }
@@ -291,22 +283,6 @@ func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, requ
 	}
 }
 
-func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	reqBodyBytes, err := io.ReadAll(request.Body)
-	if err != nil {
-		http.Error(responseWriter, "Invalid input", http.StatusBadRequest)
-		return
-	}
-
-	// Endpoint expects a JSON object with "problems" array & "paragraph".
-	var result any
-	err = h.problemsService.Post(batchProblemsEndPoint, json.RawMessage(reqBodyBytes), &result)
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error adding problems: %v", err), http.StatusInternalServerError)
-		return
-	}
-}
-
 func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, request *http.Request) {
 	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
 	if err != nil {
@@ -324,13 +300,12 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16":        utils.JoinInt16,
-		"add":              utils.Add,
-		"stringToInt":      utils.StringToInt,
-		"toJson":           utils.ToJson,
-		"getConceptName":   getConceptName,
-		"dict":             utils.Dict,
-		"emptyStringSlice": utils.EmptyStringSlice,
+		"joinInt16":      utils.JoinInt16,
+		"add":            utils.Add,
+		"stringToInt":    utils.StringToInt,
+		"toJson":         utils.ToJson,
+		"getConceptName": getConceptName,
+		"dict":           utils.Dict,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate,
 		problemAnswerNumericalTemplate, inputTagsTemplate)
 }

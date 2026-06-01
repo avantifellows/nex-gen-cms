@@ -1,39 +1,39 @@
 {{ define "content" }}
 <div>
-    <div class="card overflow-x-auto my-6" hx-ext="table-sort" data-sort-scope="chapters">
-        <table class="app-table">
+    <div class="shadow-md my-6 overflow-x-auto" hx-ext="table-sort" data-sort-scope="chapters">
+        <table class="min-w-full bg-white">
             <thead>
-                <tr>
-                    <th>
-                        <a href="#" class="hover:text-accent" hx-get="/chapters" hx-target="body" hx-on:click="updateTableSortState('1', 'chapters');"
+                <tr class="bg-gray-200 text-gray-600 text-sm">
+                    <th class="py-4 px-6 text-left">
+                        <a href="#" hx-get="/chapters" hx-target="body" hx-on:click="updateTableSortState('1', 'chapters');"
                             hx-on::before-request="sessionStorage.removeItem(window.CHAPTERS_LOADED_KEY)">
                             Code <i class="fas fa-sort"></i>
                         </a>
                     </th>
-                    <th>
-                        <a href="#" class="hover:text-accent" hx-get="/chapters" hx-target="body" hx-on:click="updateTableSortState('2', 'chapters');"
+                    <th class="px-6 text-left">
+                        <a href="#" hx-get="/chapters" hx-target="body" hx-on:click="updateTableSortState('2', 'chapters');"
                             hx-on::before-request="sessionStorage.removeItem(window.CHAPTERS_LOADED_KEY)">
                             Name <i class="fas fa-sort"></i>
                         </a>
                     </th>
-                    <th class="text-center">
-                        <a href="#" class="hover:text-accent" hx-get="/chapters" hx-target="body" hx-on:click="updateTableSortState('3', 'chapters');"
+                    <th class="px-6 text-center">
+                        <a href="#" hx-get="/chapters" hx-target="body" hx-on:click="updateTableSortState('3', 'chapters');"
                             hx-on::before-request="sessionStorage.removeItem(window.CHAPTERS_LOADED_KEY)">
                             Topics <i class="fas fa-sort"></i>
                         </a>
                     </th>
-                    <th class="text-center">Chapter Tests</th>
-                    <th class="text-center">PSV</th>
-                    <th class="text-center">MOD</th>
-                    <th class="text-center">CV</th>
-                    <th class="text-center">CT</th>
-                    <th class="text-center">Status</th>
-                    <th class="text-center">Actions</th>
+                    <th class="px-6 text-center">Chapter Tests</th>
+                    <th class="px-6 text-center">PSV</th>
+                    <th class="px-6 text-center">MOD</th>
+                    <th class="px-6 text-center">CV</th>
+                    <th class="px-6 text-center">CT</th>
+                    <th class="px-6 text-center">Status</th>
+                    <th class="px-6 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody id="chapterTableBody" hx-ext="chaptersLoader" hx-get="/api/chapters?view=list"
-                hx-trigger="load[!document.getElementById('curriculum-dropdown').options[0].disabled],
-                onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown),
+            <tbody id="chapterTableBody" hx-ext="chaptersLoader" class="text-gray-600 text-sm" hx-get="/api/chapters?view=list"
+                hx-trigger="load[!document.getElementById('curriculum-dropdown').options[0].disabled], 
+                onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), 
                 change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
                 hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown"
                 hx-on::after-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'true')">
@@ -44,8 +44,8 @@
 
     <!-- Form to add new chapter -->
     <div class="mt-4">
-        <h4 id="addChapterLink" class="add-new-link" onclick="toggleForm(event)">
-            <a href="#">+ Add New Chapter</a>
+        <h4 id="addChapterLink" class="text-sm font-semibold text-blue-500 hover:underline" onclick="toggleForm(event)">
+            <a href="#">Add New Chapter</a>
         </h4>
     </div>
 

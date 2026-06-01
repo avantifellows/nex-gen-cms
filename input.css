@@ -1,348 +1,187 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* -----------------------------------------------------------------------------
- * Content sources — Tailwind v4 auto-detects most files, but we list our
- * Go template directory explicitly so additions there are always scanned.
- * Safelist (classes Tailwind would otherwise tree-shake away because they
- * appear only in server-fetched HTML, e.g. PDF instructions) goes through
- * @source inline().
- * --------------------------------------------------------------------------- */
-
-@source "./web/**/*.html";
-@source "./web/**/*.js";
-@source inline("list-disc list-decimal pl-6 htmx-request");
-
-/* -----------------------------------------------------------------------------
- * Avanti Fellows — Warm Professional design tokens.
- * Mirrors the af_lms UI Style Guide so the two CMS apps share a look.
- * Tokens here become both CSS custom properties (--color-accent, …) and
- * matching utility classes (bg-accent, text-accent, border-accent, …).
- * --------------------------------------------------------------------------- */
-
-@theme {
-  /* Accent — AF brand maroon (matches hr-feedback.avantifellows.org) */
-  --color-accent:           #ad2f2f;
-  --color-accent-hover:     #8a2525;
-  --color-text-on-accent:   #ffffff;
-
-  /* Surfaces */
-  --color-bg:               #f5efe8; /* warm beige page background */
-  --color-bg-card:          #fffaf5; /* cream card background */
-  --color-bg-card-alt:      #f3ece5; /* table headers, alt rows, disabled */
-  --color-bg-input:         #ffffff;
-  --color-bg-hover:         rgba(173, 47, 47, 0.06);
-
-  /* Text (dark brown family) */
-  --color-ink:              #261410;
-  --color-ink-secondary:    #685851;
-  --color-ink-muted:        #685851;
-
-  /* Borders */
-  --color-border:           rgba(38, 20, 16, 0.15);
-  --color-border-accent:    #ad2f2f;
-
-  /* Status */
-  --color-danger:           #ad2f2f;
-  --color-danger-bg:        rgba(173, 47, 47, 0.08);
-  --color-success:          #1e6b4b;
-  --color-success-bg:       rgba(30, 107, 75, 0.12);
-  --color-warning:          #8c5a1d;
-  --color-warning-bg:       rgba(140, 90, 29, 0.08);
-  --color-warning-border:   #8c5a1d;
-  --color-info:             #9AC4FA;
-  --color-info-bg:          rgba(154, 196, 250, 0.15);
-
-  /* Brand variety palette */
-  --color-brand-coral:      #E96D57;
-  --color-brand-gold:       #FFD063;
-  --color-brand-amber:      #FFB763;
-  --color-brand-blue:       #9AC4FA;
-  --color-brand-salmon:     #FF9683;
-  --color-brand-orange:     #D77C11;
-  --color-brand-coral-bg:   rgba(233, 109, 87, 0.10);
-  --color-brand-gold-bg:    rgba(255, 208, 99, 0.15);
-  --color-brand-amber-bg:   rgba(255, 183, 99, 0.12);
-  --color-brand-blue-bg:    rgba(154, 196, 250, 0.15);
-
-  /* Typography */
-  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial,
-               sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-
-  /* Card elevation — used by .card and friends */
-  --shadow-card: 0 1px 2px 0 rgba(38, 20, 16, 0.05),
-                 0 1px 3px 0 rgba(38, 20, 16, 0.08);
-}
-
-/* -----------------------------------------------------------------------------
- * v3 → v4 compatibility: bare `border` (without explicit color) used to fall
- * back to gray-200; v4 falls back to `currentColor`. Many existing templates
- * write `class="border"` and expect the brand border tint. Pin the default
- * here so we don't have to retrofit every template.
- * --------------------------------------------------------------------------- */
-
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-border);
-  }
-
-  html {
-    font-family: var(--font-sans);
-    color: var(--color-ink);
-    background-color: var(--color-bg);
-  }
-
-  body {
-    @apply bg-bg text-ink min-h-screen;
-  }
-
-  /* Numeric data — codes, counts, dates, emails — use tabular nums for a
-     data-rich feel when font-mono is applied. */
-  .font-mono,
-  .font-mono * {
-    font-feature-settings: "tnum" 1, "lnum" 1;
-  }
-}
-
-/* -----------------------------------------------------------------------------
- * State-machine classes — these are toggled by JS (`.active`, `.htmx-request`,
- * id-scoped loader visibility) and aren't real Tailwind utilities. They stay
- * as plain CSS in the components layer.
- * --------------------------------------------------------------------------- */
-
+/* Custom styles using @apply */
 @layer components {
+    .nav {
+        @apply flex flex-wrap pl-0 mb-0 list-none;
+    }
 
-  /* --- Nav (top tab bar) ---------------------------------------------- */
-  .nav {
-    @apply flex flex-wrap pl-0 mb-0 list-none;
-  }
+    .nav-tabs {
+        @apply border-b border-gray-300;
+    }
 
-  .nav-tabs {
-    @apply border-b border-border bg-bg-card;
-  }
+    .nav-link {
+        @apply block px-4 py-2 text-blue-600 no-underline transition-colors duration-150 ease-in-out;
+    }
 
-  .nav-link {
-    @apply inline-flex items-center px-4 py-3 text-sm font-bold uppercase tracking-wide
-           text-ink-muted no-underline transition-colors duration-150 ease-in-out
-           border-b-2 border-transparent;
-  }
-  .nav-link:focus,
-  .nav-link:hover {
-    @apply text-ink border-accent/40;
-  }
-  .nav-tabs .nav-link {
-    @apply -mb-px rounded-none;
-  }
-  .nav-tabs .nav-link.active {
-    @apply text-ink bg-transparent border-b-2 border-accent;
-  }
+    .nav-link:focus {
+        @apply text-blue-700;
+    }
 
-  /* --- Sub-tabs (chapter / topic detail) ------------------------------ */
-  .sub-tab {
-    @apply inline-flex items-center min-h-[40px] px-4 py-2 rounded-lg cursor-pointer
-           text-sm font-bold uppercase tracking-wide text-ink-muted
-           bg-bg-card border border-border transition-colors;
-  }
-  .sub-tab:focus,
-  .sub-tab:hover {
-    @apply text-text-on-accent bg-accent-hover border-accent-hover;
-  }
-  .sub-tab.active {
-    @apply text-text-on-accent bg-accent border-accent;
-  }
+    .nav-link:hover {
+        @apply text-blue-700;
+    }
 
-  /* --- Row action buttons (pencil / trash / copy icons) --------------- */
-  .action-button {
-    @apply text-ink-muted transition-transform hover:text-accent hover:scale-110;
-  }
+    .nav-tabs .nav-link {
+        @apply -mb-px border border-transparent rounded-t-md;
+    }
 
-  /* --- Chips ---------------------------------------------------------- */
-  .chip {
-    @apply inline-block px-2 py-0.5 rounded-full text-xs font-medium
-           bg-bg-card-alt text-ink border border-border;
-  }
-  .chip-box {
-    @apply flex flex-wrap gap-1 border border-border rounded-lg py-1 min-h-[2rem] bg-bg-input;
-  }
-  .chip-editor {
-    @apply outline-hidden text-left min-w-[1rem];
-  }
-  .concept-chip {
-    @apply inline-flex items-center gap-1 rounded-full px-2 py-1
-           bg-brand-blue-bg text-ink border border-brand-blue;
-  }
+    .nav-tabs .nav-link:focus {
+        @apply border-t border-t-gray-100 border-r border-r-gray-100 border-b border-b-gray-200 border-l border-l-gray-100 isolate;
+    }
 
-  /* --- Rich-text editor surface --------------------------------------- */
-  .editor {
-    font-family: var(--font-sans);
-  }
-  .editor ul,
-  .output ul { @apply list-disc ml-6; }
-  .editor ol,
-  .output ol { @apply list-decimal ml-6; }
-  .editor hr,
-  .output hr { @apply m-4 border-t border-border; }
-  .editor-fullscreen {
-    @apply fixed top-0 left-0 w-screen h-screen z-[9999] bg-bg-card flex flex-col;
-  }
-  .editor-fullscreen #editor {
-    @apply grow overflow-y-auto;
-  }
+    .nav-tabs .nav-link:hover {
+        @apply border-t border-t-gray-100 border-r border-r-gray-100 border-b border-b-gray-200 border-l border-l-gray-100 isolate;
+    }
 
-  /* --- MCQ tabs inside the problem editor ----------------------------- */
-  .mcq-tab {
-    @apply flex items-center relative cursor-pointer rounded-t-lg
-           bg-bg-card border border-border px-3 py-1;
-  }
-  .mcq-tab button {
-    @apply text-sm text-ink-muted hover:text-accent;
-  }
-  .mcq-tab.active {
-    @apply bg-bg-card-alt border-b-0;
-  }
-  .mcq-tab-add {
-    @apply w-8 h-8 flex items-center justify-center rounded-lg
-           text-ink-muted bg-bg-card border border-border
-           hover:text-accent hover:bg-bg-card-alt transition-colors;
-  }
+    .nav-tabs .nav-link.active {
+        @apply text-gray-600 bg-white border border-t-gray-200 border-r-gray-200 border-b-white border-l-gray-200;
+    }
 
-  .answer-pdf-table-row {
-    @apply border border-border px-4 py-2;
-  }
+    .sub-tab {
+        @apply text-gray-600 bg-white px-4 py-2 cursor-pointer;
+    }
 
-  /* --- HTMX loader visibility helpers --------------------------------- */
-  #search-btn-loader,
-  #searched-test-loader,
-  #question-bank-loader,
-  #topic-problems-loader {
-    display: none;
-  }
-  #search-btn-loader.htmx-request,
-  #searched-test-loader.htmx-request,
-  #question-bank-loader.htmx-request,
-  #topic-problems-loader.htmx-request {
-    display: flex;
-  }
-  #searched-test-results { display: block; }
-  #searched-test-results.htmx-request { display: none; }
-  #move-problems-form.htmx-request .btn-text { display: none; }
-  #move-problems-form.htmx-request .btn-loader { display: inline; }
+    .sub-tab:focus {
+        @apply text-white bg-red-400 rounded;
+    }
+
+    .sub-tab:hover {
+        @apply text-white bg-red-400 rounded;
+    }
+
+    .sub-tab.active {
+        @apply text-white bg-red-500 rounded;
+    }
+
+    .action-button {
+        @apply text-blue-500 hover:text-red-500 hover:scale-110;
+    }
+
+    .chip {
+        @apply px-1 py-0.5 bg-gray-200 rounded text-xs inline-block;
+    }
+
+    .chip-box {
+        @apply flex flex-wrap gap-1 border border-gray-300 rounded py-1 min-h-[2rem];
+    }
+
+    .chip-editor {
+        @apply outline-none text-left min-w-[1rem];
+    }
+
+    .editor {
+        font-family: Arial, sans-serif;
+    }
+
+    .editor ul,
+    .output ul {
+        @apply list-disc ml-6;
+    }
+
+    .editor ol,
+    .output ol {
+        @apply list-decimal ml-6;
+    }
+
+    .editor hr,
+    .output hr {
+        @apply m-4 border-t border-gray-600 border-0;
+    }
+
+    .editor-fullscreen {
+        @apply fixed top-0 left-0 w-screen h-screen z-[9999] bg-white flex flex-col;
+    }
+
+    .editor-fullscreen #editor {
+        @apply grow overflow-y-auto;
+    }
+
+    .mcq-tab {
+        @apply flex items-center bg-white rounded-t px-3 py-1 relative cursor-pointer border border-gray-300;
+    }
+
+    .mcq-tab button {
+        @apply text-sm text-gray-500 hover:text-red-600;
+    }
+
+    .mcq-tab-add {
+        @apply w-8 h-8 flex items-center justify-center text-gray-500 hover:text-blue-600 hover:bg-gray-100 border border-gray-300 rounded;
+    }
+
+    .mcq-tab.active {
+        @apply border-t border-l border-r border-b-0 border-gray-300 bg-gray-100;
+    }
+
+    .answer-pdf-table-row {
+        @apply border border-gray-300 px-4 py-2;
+    }
+
+    .concept-chip {
+        @apply flex items-center bg-blue-100 text-blue-800 rounded px-2 py-1 gap-1;
+    }
+    
+    /* Loader is hidden by default */
+    #search-btn-loader {
+        display: none;
+    }
+
+    /* HTMX makes the loader visible during request */
+    #search-btn-loader.htmx-request {
+        display: flex;
+    }  
+    
+    #searched-test-loader {
+        display: none;
+    }
+
+    #searched-test-loader.htmx-request {
+        display: flex;
+    }
+
+    #searched-test-results {
+        display: block;
+    }
+
+    /* Hide results during request */
+    #searched-test-results.htmx-request {
+        display: none;
+    }
+
+    #question-bank-loader {
+        display: none;
+    }
+
+    #question-bank-loader.htmx-request {
+        display: flex;
+    }
+
+    #topic-problems-loader {
+        display: none;
+    }
+
+    #topic-problems-loader.htmx-request {
+        display: flex;
+    }
+
+    /* When form is making request */
+    #move-problems-form.htmx-request .btn-text {
+        display: none;
+    }
+
+    #move-problems-form.htmx-request .btn-loader {
+        display: inline;
+    }
 }
 
-/* -----------------------------------------------------------------------------
- * Design-system utilities. Defined via @utility so they compose with Tailwind
- * variants (hover:, sm:, md:, …) like first-class utilities.
- * --------------------------------------------------------------------------- */
-
-@utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-lg
-         text-sm font-bold uppercase tracking-wide transition-colors
-         focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent/40
-         disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] px-4 py-2;
-}
-@utility btn-sm { @apply min-h-[36px] px-3 py-1 text-xs; }
-@utility btn-lg { @apply min-h-[48px] px-5 py-3 text-sm; }
-
-@utility btn-primary {
-  @apply btn bg-accent text-text-on-accent shadow-card
-         hover:bg-accent-hover active:bg-accent-hover;
-}
-@utility btn-secondary {
-  @apply btn bg-bg-card text-ink border-2 border-border
-         hover:bg-bg-card-alt hover:border-accent/40;
-}
-@utility btn-ghost {
-  @apply btn bg-transparent text-accent
-         hover:text-accent-hover hover:bg-bg-hover;
-}
-@utility btn-danger {
-  @apply btn bg-danger text-text-on-accent shadow-card
-         hover:bg-accent-hover;
-}
-@utility btn-danger-ghost {
-  @apply btn bg-transparent text-danger
-         hover:bg-danger-bg;
-}
-
-@utility add-new-link {
-  @apply inline-flex items-center gap-1 text-sm font-bold uppercase tracking-wide
-         text-accent hover:text-accent-hover transition-colors;
-}
-
-@utility card {
-  @apply bg-bg-card rounded-lg border border-border shadow-card;
-}
-@utility card-pad    { @apply p-6; }
-@utility card-pad-sm { @apply p-4; }
-
-@utility form-input {
-  @apply min-h-[44px] w-full rounded-lg border-2 border-border bg-bg-input
-         px-3 py-2 text-sm text-ink placeholder:text-ink-muted/70
-         focus:outline-hidden focus:border-accent focus:ring-2 focus:ring-accent/20
-         disabled:bg-bg-card-alt disabled:cursor-not-allowed transition-colors;
-}
-@utility form-select {
-  @apply min-h-[44px] w-full rounded-lg border-2 border-border bg-bg-input
-         px-3 py-2 text-sm text-ink placeholder:text-ink-muted/70
-         focus:outline-hidden focus:border-accent focus:ring-2 focus:ring-accent/20
-         disabled:bg-bg-card-alt disabled:cursor-not-allowed transition-colors;
-}
-@utility form-select-compact {
-  @apply h-10 min-h-0 rounded-lg border border-border bg-bg-input
-         px-3 py-1.5 text-sm text-ink
-         focus:outline-hidden focus:border-accent focus:ring-2 focus:ring-accent/20
-         transition-colors;
-}
-@utility form-label {
-  @apply block text-xs font-bold uppercase tracking-wide text-ink-muted mb-1;
-}
-
-@utility app-table {
-  @apply min-w-full bg-bg-card;
-}
-.app-table thead tr {
-  @apply bg-bg-card-alt border-b-2 border-border-accent text-ink-muted;
-}
-.app-table th {
-  @apply px-6 py-3 text-left text-xs font-bold uppercase tracking-wider text-ink-muted;
-}
-.app-table td {
-  @apply px-6 py-4 text-sm text-ink;
-}
-.app-table tbody tr {
-  @apply border-b border-border/40 hover:bg-bg-hover transition-colors;
-}
-
-@utility badge {
-  @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide;
-}
-@utility badge-muted   { @apply badge bg-bg-card-alt text-ink-muted; }
-@utility badge-accent  { @apply badge bg-accent text-text-on-accent; }
-@utility badge-success { @apply badge bg-success-bg text-success; }
-@utility badge-warning { @apply badge bg-warning-bg text-warning border border-warning-border; }
-@utility badge-danger  { @apply badge bg-danger-bg text-danger; }
-@utility badge-info    { @apply badge bg-info-bg text-ink; }
-
-@utility page-title {
-  @apply text-xl sm:text-2xl font-bold uppercase tracking-tight text-ink;
-}
-@utility section-title {
-  @apply text-lg font-bold uppercase tracking-wide text-ink
-         border-b-2 border-border-accent pb-2 mb-4;
-}
-
-/* -----------------------------------------------------------------------------
- * MathJax — wrap formulae to next line, but keep matrices on one line.
- * --------------------------------------------------------------------------- */
-
+/* Wrap MathJax formulae to next line */
 mjx-container[jax="CHTML"] mjx-math {
-  white-space: normal !important;
+    white-space: normal !important;
 }
 
+/* If a matrix exists, disable wrapping for that formula */
 mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
-  white-space: nowrap !important;
+    white-space: nowrap !important;
 }

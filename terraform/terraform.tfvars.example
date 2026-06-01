@@ -21,14 +21,10 @@ repo_url    = "https://github.com/your-org/nex-gen-cms.git"
 repo_branch = "main"
 
 # Application environment variables
-db_service_endpoint  = "https://your-db-service.example.com/"
-db_service_token     = "your-database-service-token"
-database_url         = "postgres://user:pass@host:5432/db?sslmode=require"
-session_secret       = "your-long-random-session-secret"
-google_client_id     = "xxx.apps.googleusercontent.com"
-google_client_secret = "your-google-oauth-secret"
-oauth_redirect_url   = "https://your-host.example.com/auth/google/callback"
-# app_env defaults to "production"; leave commented for HTTPS deploys
+db_service_endpoint = "https://your-db-service.example.com/"
+db_service_token    = "your-database-service-token"
+cms_username = "your-cms-username"
+cms_password = "your-cms-password"
 
 # EC2 settings
 instance_type   = "t4g.small"

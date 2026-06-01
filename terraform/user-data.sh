@@ -24,7 +24,6 @@ dnf install -y git nginx golang certbot python3-certbot-nginx firewalld
 
 log "Installing system fonts required for PDF generation (MathJax, Chromium)"
 sudo dnf install -y \
-  fontconfig \
   dejavu-sans-fonts \
   dejavu-serif-fonts \
   dejavu-sans-mono-fonts \
@@ -34,9 +33,7 @@ sudo dnf install -y \
   google-noto-sans-math-fonts
 
 log "Rebuilding font cache"
-# fontconfig is now installed explicitly above; earlier AMI baselines apparently shipped it
-# transitively. Tolerate fc-cache failure so a font-cache hiccup doesn't abort the entire boot.
-sudo fc-cache -fv || log "fc-cache failed; continuing"
+sudo fc-cache -fv
 
 log "Installing Node.js, Playwright and Chromium dependencies"
 
@@ -89,33 +86,21 @@ else
     sudo -u "$APP_USER" git clone -b ${repo_branch} ${repo_url} .
 fi
 
-# Create .env file in application directory for godotenv (after git clone).
-# Bumping a marker comment here also bumps the rendered user_data hash, which forces an instance
-# replacement under user_data_replace_on_change=true. Use this to redeploy env-var changes:
-# env-rev=2026-05-22-3
+# Create .env file in application directory for godotenv (after git clone)
 log "Creating .env file for application"
 cat > "$APP_DIR/.env" << 'EOF'
 DB_SERVICE_ENDPOINT=${db_service_endpoint}
 DB_SERVICE_TOKEN=${db_service_token}
-DATABASE_URL=${database_url}
-SESSION_SECRET=${session_secret}
-GOOGLE_CLIENT_ID=${google_client_id}
-GOOGLE_CLIENT_SECRET=${google_client_secret}
-OAUTH_REDIRECT_URL=${oauth_redirect_url}
-APP_ENV=${app_env}
+CMS_USERNAME=${cms_username}
+CMS_PASSWORD=${cms_password}
 EOF
 chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
 chmod 600 "$APP_DIR/.env"
 
 # Build the application
 log "Building application"
-# Amazon Linux 2023 ships go 1.24.x; our go.mod requires 1.25. GOTOOLCHAIN=auto lets the toolchain
-# fetch the matching version on demand. AL2023 also defaults GOSUMDB=off (for air-gapped builds),
-# which blocks the toolchain download with "checksum database disabled"; force GOSUMDB back to the
-# public sum DB so verification works.
-GO_ENV="GOTOOLCHAIN=auto GOSUMDB=sum.golang.org"
-sudo -u "$APP_USER" env $GO_ENV go mod download
-sudo -u "$APP_USER" env $GO_ENV go build -o "$APP_DIR/nex-gen-cms" ./cmd
+sudo -u "$APP_USER" go mod download
+sudo -u "$APP_USER" go build -o "$APP_DIR/nex-gen-cms" ./cmd
 
 # Create systemd service file
 log "Creating systemd service"

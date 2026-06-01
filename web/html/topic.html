@@ -1,12 +1,12 @@
 {{ define "content" }}
-<div id="topic-div" class="card card-pad mb-4">
-    <div class="flex items-center mb-4">
-        <button class="btn-ghost btn-sm" onclick="window.history.back()">
+<div id="topic-div" class="bg-white mb-4">
+    <div class="flex items-center">
+        <button class="action-button" onclick="window.history.back()">
             <i class="fa-solid fa-chevron-left"></i> Back
         </button>
-        <h3 class="ml-4 text-lg font-bold uppercase tracking-wide text-ink">{{ getName .TopicPtr "en" }}</h3>
+        <h3 class="text-base font-semibold ml-4">{{ getName .TopicPtr "en" }}</h3>
     </div>
-    <div class="flex flex-wrap gap-3 py-2 border-b border-border">
+    <div class="flex space-x-4 py-4">
         <button id="topic-concepts-tab" data-toggle="sub-tab" class="sub-tab active" onclick="onTopicTabClick(this)"
             hx-trigger="click, load" hx-get="/concepts" hx-target="#subContent">Concepts</button>
         <button id="topic-problems-tab" data-toggle="sub-tab" class="sub-tab" onclick="onTopicTabClick(this)"
@@ -14,9 +14,9 @@
         <button id="resources-tab" data-toggle="sub-tab" class="sub-tab" onclick="onTopicTabClick(this)"
             hx-get="/topic/resources?topicId={{.TopicPtr.ID}}&chapterId={{.TopicPtr.ChapterID}}" hx-target="#subContent">Resources</button>
     </div>
-    <div id="sub-tabContent" class="pt-4">
+    <div id="sub-tabContent">
         <div id="subContent">
-            <p class="text-ink-muted">Select a tab to load content.</p>
+            <p>Select a tab to load content.</p>
         </div>
     </div>
 </div>

@@ -3,14 +3,13 @@ package models
 import "html/template"
 
 type Problem struct {
-	ID              int               `json:"id,omitempty"`
-	Code            string            `json:"code,omitempty"`
-	Type            string            `json:"type"`
-	Subtype         string            `json:"subtype"`
-	Paragraph       *ProblemParagraph `json:"paragraph,omitempty"`
-	TypeParams      ProbTypeParams    `json:"type_params"`
-	MetaData        ProbMetaData      `json:"meta_data"`
-	SkillIDs        []int16           `json:"skill_ids"`
+	ID              int            `json:"id,omitempty"`
+	Code            string         `json:"code,omitempty"`
+	Type            string         `json:"type"`
+	Subtype         string         `json:"subtype"`
+	TypeParams      ProbTypeParams `json:"type_params"`
+	MetaData        ProbMetaData   `json:"meta_data"`
+	SkillIDs        []int16        `json:"skill_ids"`
 	Skills          []Skill
 	CurriculumID    int16 `json:"curriculum_id"` // used with only get call
 	GradeID         int8  `json:"grade_id"`      // used with only get call
@@ -40,11 +39,6 @@ type ProbMetaData struct {
 type Solution struct {
 	Type  string        `json:"type"`
 	Value template.HTML `json:"value"`
-}
-
-type ProblemParagraph struct {
-	ID   int           `json:"id"`
-	Body template.HTML `json:"body"`
 }
 
 func (p Problem) DisplayDifficulty() int8 {

@@ -42,12 +42,6 @@ func TestGetSectionName(t *testing.T) {
 			expected:    "Integer Type",
 		},
 		{
-			name:        "Comprehension type default",
-			defaultType: "comprehension",
-			customName:  "",
-			expected:    "Comprehension Type",
-		},
-		{
 			name:        "Unknown type fallback",
 			defaultType: "some_random_type",
 			customName:  "",

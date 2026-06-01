@@ -21,8 +21,6 @@ func GetSectionName(defaultType string, customName string) string {
 		return "Integer Type"
 	case "matrix_match":
 		return "Matrix Match"
-	case "comprehension":
-		return "Comprehension Type"
 	default:
 		return "Unknown"
 	}
