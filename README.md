@@ -53,12 +53,23 @@ To run the CMS locally, follow these steps:
    ```
    go mod tidy
    ```
-6. Run the application by running:
+6. Build the CSS bundle. `web/static/css/output.css` is generated (not committed), so a
+   fresh clone has no styles until you build it once:
 
    ```
-   go run cmd/main.go
+   npm install        # first time only
+   npm run build:css
    ```
-7. Open your browser and go to http://localhost:8080 to view the application.
+7. Run the application by running:
+
+   ```
+   go run ./cmd
+   ```
+
+   Or do steps 6–7 in one go with `make run` (builds CSS, then starts the server). While
+   editing templates/styles, run `make css-watch` (or `npm run dev:css`) in a second terminal
+   to rebuild CSS automatically.
+8. Open your browser and go to http://localhost:8080 to view the application.
 
 ### Temporary Branches to use until it gets merged to main:
 1. **nex-gen-cms:** [feat/tests](https://github.com/avantifellows/nex-gen-cms/tree/feat/tests)
@@ -69,14 +80,26 @@ To run the CMS locally, follow these steps:
 The CMS follows the **Warm Professional** design language shared with the rest of the AF product family (af_lms, hr-feedback.avantifellows.org). Brand tokens, typography rules, component conventions and HTML snippets are documented in [`docs/UI-Style-Guide.md`](docs/UI-Style-Guide.md). Read that before adding new screens or editing existing ones so the look stays consistent.
 
 ### Tailwind Setup:
-#### ✅ Only Running the App?
 
-You do **not** need to install Tailwind if you only want to run the app. The compiled Tailwind CSS (`output.css`) is already included and used in the HTML templates. Just run the Go server as usual and the styles will work out of the box.
+`web/static/css/output.css` is a **generated** artifact and is **not committed** (it's
+`.gitignore`d). It is built from `input.css` by Tailwind — at deploy time (`terraform/user-data.sh`),
+in CI (`playwright.yml`), and locally. This keeps the giant generated file out of diffs and merges.
 
-#### 🛠️ Rebuilding Styles (Only if modifying Tailwind)?
+#### ✅ Running the App
 
-If you make changes to `input.css` or `tailwind.config.js`, follow these steps:
+Build the CSS once after cloning (and whenever you pull template/style changes):
 
 ```bash
-npm install        # Install Tailwind and dependencies
-npm run build:css  # Rebuild CSS
+npm install        # first time only
+npm run build:css
+```
+
+`make run` does this for you (builds CSS, then runs the server).
+
+#### 🛠️ Editing Styles
+
+While changing `input.css` or template classes, run a watcher so CSS rebuilds on save:
+
+```bash
+npm run dev:css    # or: make css-watch
+```

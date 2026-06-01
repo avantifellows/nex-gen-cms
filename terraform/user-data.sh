@@ -107,6 +107,15 @@ EOF
 chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
 chmod 600 "$APP_DIR/.env"
 
+# Build CSS assets (Tailwind). output.css is generated, not committed — see .gitignore.
+log "Building CSS assets"
+# Node + npm are installed above for Playwright, but guard here in case that step ever changes,
+# so a missing Node never silently leaves the app without styles.
+command -v npm >/dev/null 2>&1 || sudo dnf install -y nodejs npm
+# Pin HOME to the app user's home so npm's cache lands in a writable dir (independent of sudoers).
+sudo -u "$APP_USER" env HOME="$APP_DIR" npm ci
+sudo -u "$APP_USER" env HOME="$APP_DIR" npm run build:css
+
 # Build the application
 log "Building application"
 # Amazon Linux 2023 ships go 1.24.x; our go.mod requires 1.25. GOTOOLCHAIN=auto lets the toolchain

@@ -6,7 +6,8 @@
     "tailwindcss": "^4.3.0"
   },
   "scripts": {
-    "build:css": "tailwindcss -i ./input.css -o ./web/static/css/output.css"
+    "build:css": "tailwindcss -i ./input.css -o ./web/static/css/output.css",
+    "dev:css": "tailwindcss -i ./input.css -o ./web/static/css/output.css --watch"
   },
   "dependencies": {
     "dotenv": "^17.2.3"
