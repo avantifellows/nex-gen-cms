@@ -197,7 +197,7 @@
         const selectedIds = getSelectedChipIds();
         if (!validateConceptSelection(selectedIds)) return;
 
-        const backConceptsDropdown = document.querySelector("#concepts-dropdown");
+        const backConceptsDropdown = getTargetConceptsDropdown();
 
         selectedIds.forEach(id => {
             const concept = allConcepts.find(c => c.id === id);
@@ -248,6 +248,14 @@
         }
 
         modal.remove();
+        window._conceptModalTargetDropdown = null;
+    }
+
+    // Returns the concepts dropdown of the problem block whose "Add Concept from other topic"
+    // link opened this modal. Falls back to the main problem's concepts dropdown for safety.
+    function getTargetConceptsDropdown() {
+        return window._conceptModalTargetDropdown
+            || document.getElementById("concepts-dropdown");
     }
 
     function beforeChaptersRequest() {
@@ -272,8 +280,8 @@
 
         if (!validateConceptSelection(selected)) return;
 
-        // Target dropdown in back screen
-        const backConceptsDropdown = document.querySelector("#concepts-dropdown");
+        // Target the concepts dropdown of the problem block whose link opened this modal
+        const backConceptsDropdown = getTargetConceptsDropdown();
 
         selected.forEach(opt => {
             const existing = backConceptsDropdown.querySelector(`option[value="${opt.value}"]`);
