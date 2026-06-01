@@ -1,117 +1,167 @@
 {{ define "input_tags" }}
-<div class="relative">
-    <div id="tagsInput" class="flex flex-wrap items-center w-full border p-2 gap-2 cursor-text">
-        <!-- chips will go here -->
-        <input id="tagTextInput" type="text" class="flex-1 min-w-[100px] border-none outline-hidden p-1"
-            placeholder="Assign Hashtags" hx-get="/api/tags" hx-target="#tagAutocomplete"
-            hx-trigger="input changed delay:300ms" hx-ext="tagInputExtension" />
-    </div>
-    <!-- Autocomplete dropdown -->
-    <div id="tagAutocomplete"
-        class="absolute top-full left-0 right-0 bg-bg-card border border-border border-t-0 rounded-b-md shadow-lg max-h-40 overflow-y-auto z-10">
-        <!-- suggestions will be inserted here -->
+<div class="problem-tags-section" data-initial-tags='{{ toJson . }}'>
+    <div class="relative">
+        <div class="tags-input-shell flex flex-wrap items-center w-full border p-2 gap-2 cursor-text">
+            <input type="text" class="tag-text-input flex-1 min-w-[100px] border-none outline-hidden p-1"
+                placeholder="Assign tags" hx-get="/api/tags" hx-swap="innerHTML"
+                hx-trigger="input changed delay:300ms" hx-ext="tagInputExtension" />
+        </div>
+        <div class="tag-autocomplete-dropdown hidden absolute top-full left-0 right-0 bg-bg-card border border-border border-t-0 rounded-b-md shadow-lg max-h-40 overflow-y-auto z-10"></div>
     </div>
 </div>
 <script>
-    (() => {
-        const container = document.getElementById('tagsInput');
-        const input = document.getElementById('tagTextInput');
-        const autocompleteDiv = document.getElementById('tagAutocomplete');
-        let tags = {{ toJson . }} || [];  // initialize with existing tags if any
+(function () {
+    // One WeakMap for the SPA session: htmx's tagInputExtension is registered once, but this
+    // partial's script can run again on navigation—new DOM roots must register on the same map.
+    // Keys are DOM nodes; when a node is removed and GC'd, its WeakMap entry disappears (no manual delete).
+    if (!window.__problemTagSectionState) {
+        window.__problemTagSectionState = new WeakMap();
+    }
+    const tagSectionState = window.__problemTagSectionState;
 
-        renderTags();  // show prefilled chips
+    function trimTagValue(raw) {
+        return (raw ?? '').toString().trim();
+    }
 
+    function ensureTagsAutocompleteDocClick() {
+        if (window.__tagsAutocompleteDocClick) return;
+        window.__tagsAutocompleteDocClick = true;
+        document.addEventListener('click', (e) => {
+            document.querySelectorAll('.problem-tags-section').forEach(root => {
+                const st = tagSectionState.get(root);
+                if (!st) return;
+                if (!st.container.contains(e.target) && !st.autocompleteDiv.contains(e.target)) {
+                    st.autocompleteDiv.classList.add('hidden');
+                }
+            });
+        });
+    }
+
+    if (!window.initProblemTagsSection) {
+        window.initProblemTagsSection = function (root) {
+            if (!root || tagSectionState.has(root)) return;
+
+            let initial = [];
+            try {
+                initial = JSON.parse(root.dataset.initialTags || '[]') || [];
+            } catch (_) {
+                initial = [];
+            }
+            if (!Array.isArray(initial)) initial = [];
+            const tags = initial.map(trimTagValue).filter(Boolean);
+
+            const container = root.querySelector('.tags-input-shell');
+            const input = root.querySelector('.tag-text-input');
+            const autocompleteDiv = root.querySelector('.tag-autocomplete-dropdown');
+            if (!container || !input || !autocompleteDiv) return;
+
+            const seq = (window.__tagAcSeq = (window.__tagAcSeq || 0) + 1);
+            const acId = 'tag-ac-' + seq;
+            autocompleteDiv.id = acId;
+            input.setAttribute('hx-target', '#' + acId);
+
+            const state = { tags, container, input, autocompleteDiv, root };
+            tagSectionState.set(root, state);
+
+            function hideSuggestions() {
+                autocompleteDiv.classList.add('hidden');
+            }
+
+            function renderTags() {
+                container.querySelectorAll('.chip').forEach(chip => chip.remove());
+                state.tags.forEach(tag => {
+                    const chip = document.createElement('span');
+                    chip.className = 'chip bg-brand-blue-bg text-accent-hover text-sm px-2 py-1 rounded-full flex items-center gap-1';
+                    chip.innerHTML = `
+                        ${tag}
+                        <button type="button" class="ml-1 text-accent-hover hover:text-accent-hover font-bold">&times;</button>
+                    `;
+                    chip.querySelector('button').addEventListener('click', () => {
+                        state.tags = state.tags.filter(t => t !== tag);
+                        renderTags();
+                    });
+                    container.insertBefore(chip, input);
+                });
+            }
+
+            function addTag(tag) {
+                hideSuggestions();
+                const t = trimTagValue(tag);
+                if (t && !state.tags.includes(t)) {
+                    state.tags.push(t);
+                    renderTags();
+                }
+                input.value = '';
+            }
+
+            state.addTag = addTag;
+
+            ensureTagsAutocompleteDocClick();
+            container.addEventListener('click', () => input.focus());
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    addTag(input.value);
+                } else if (e.key === 'Backspace' && input.value === '') {
+                    state.tags.pop();
+                    renderTags();
+                    hideSuggestions();
+                } else if (e.key === 'Escape') {
+                    hideSuggestions();
+                }
+            });
+
+            renderTags();
+
+            if (window.htmx) {
+                htmx.process(root);
+            }
+        };
+    }
+
+    if (!window.getTagsForSection) {
+        window.getTagsForSection = function (root) {
+            const st = root && tagSectionState.get(root);
+            return st ? [...st.tags] : [];
+        };
+    }
+
+    window.addTagFromAutocomplete = function (rowEl) {
+        const tag = rowEl.getAttribute('data-tag-name');
+        const dropdown = rowEl.closest('.tag-autocomplete-dropdown');
+        const sectionRoot = dropdown && dropdown.closest('.problem-tags-section');
+        const st = sectionRoot && tagSectionState.get(sectionRoot);
+        if (!st || !st.addTag) return;
+        st.addTag(tag);
+    };
+
+    if (window.htmx && !window.__tagInputExtensionDefined) {
+        window.__tagInputExtensionDefined = true;
         htmx.defineExtension('tagInputExtension', {
             onEvent: function (name, evt) {
-                if (name === 'htmx:configRequest') {
-                    const query = input.value;
-
-                    // Cancel request if query is too short
-                    if (query.length < 3) {
-                        evt.preventDefault();
-                        return;
-                    }
-
-                    // Append tags to query string
-                    const url = new URL(evt.detail.path, window.location.origin);
-                    url.searchParams.set("q", query);
-                    tags.forEach(tag => {
-                        url.searchParams.append("selected", tag);
-                    });
-
-                    evt.detail.path = url.pathname + url.search;
-
-                    // Show autocomplete
-                    autocompleteDiv.classList.remove('hidden');
+                if (name !== 'htmx:configRequest') return;
+                const inputEl = evt.detail.elt;
+                const root = inputEl.closest('.problem-tags-section');
+                const st = root && tagSectionState.get(root);
+                if (!st) return;
+                const query = inputEl.value;
+                if (query.length < 3) {
+                    evt.preventDefault();
+                    st.autocompleteDiv.innerHTML = '';
+                    st.autocompleteDiv.classList.add('hidden');
+                    return;
                 }
+                const url = new URL(evt.detail.path, window.location.origin);
+                url.searchParams.set('q', query);
+                st.tags.forEach(tag => {
+                    url.searchParams.append('selected', tag);
+                });
+                evt.detail.path = url.pathname + url.search;
+                st.autocompleteDiv.classList.remove('hidden');
             }
         });
-
-        container.addEventListener('click', () => input.focus());
-
-        window.addTag = function (tag) {
-            hideSuggestions();
-
-            tag = tag.trim();
-            if (tag && !tags.includes(tag)) {
-                tags.push(tag);
-                renderTags();
-            }
-            input.value = '';
-        };
-
-        function removeTag(tag) {
-            tags = tags.filter(t => t !== tag);
-            renderTags();
-        }
-
-        function renderTags() {
-            // Remove all existing chips
-            container.querySelectorAll('.chip').forEach(chip => chip.remove());
-
-            tags.forEach(tag => {
-                const chip = document.createElement('span');
-                chip.className = 'chip bg-brand-blue-bg text-accent-hover text-sm px-2 py-1 rounded-full flex items-center gap-1';
-                chip.innerHTML = `
-                    ${tag}
-                    <button type="button" class="ml-1 text-accent-hover hover:text-accent-hover font-bold">&times;</button>
-                `;
-                chip.querySelector('button').addEventListener('click', () => removeTag(tag));
-                container.insertBefore(chip, input);
-            });
-        }
-
-        function hideSuggestions() {
-            autocompleteDiv.classList.add('hidden');
-        }
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ',') {
-                e.preventDefault();
-                addTag(input.value);
-
-            } else if (e.key === 'Backspace' && input.value === '') {
-                // optional: remove last tag on backspace
-                tags.pop();
-                renderTags();
-                hideSuggestions();
-
-            } else if (e.key === 'Escape') {
-                hideSuggestions();
-            }
-        });
-
-        // Hide suggestions when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!container.contains(e.target) && !autocompleteDiv.contains(e.target)) {
-                hideSuggestions();
-            }
-        });
-
-        // Export tags array globally
-        window.getProblemTags = function () {
-            return tags;
-        };
-    })();
+    }
+})();
 </script>
 {{ end }}

@@ -105,4 +105,3 @@ func (r *CmsUserRepo) UpdateRole(ctx context.Context, id int64, role string) err
 		`UPDATE cms_user_permission SET role = $1, updated_at = NOW() WHERE id = $2`, role, id)
 	return err
 }
-

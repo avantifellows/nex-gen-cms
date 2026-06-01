@@ -40,7 +40,7 @@ func (h *TopicsHandler) LoadResources(responseWriter http.ResponseWriter, reques
 	chapterIdStr := request.URL.Query().Get("chapterId")
 	data := dto.ResourcesData{
 		ChapterId: chapterIdStr,
-		TopicId: topicIdStr,
+		TopicId:   topicIdStr,
 	}
 	views.ExecuteTemplate(resourcesTemplate, responseWriter, data, nil)
 }
