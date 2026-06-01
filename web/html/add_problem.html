@@ -1,6 +1,6 @@
 {{ define "content" }}
 {{ $isEdit := (ne .ProblemPtr nil) }}
-<form class="mx-auto px-4 bg-white shadow-md" onsubmit="createProblem(event,        
+<form class="card card-pad max-w-6xl mx-auto" onsubmit="createProblem(event,
         {{if .TopicPtr}}
         <!-- add problem -->
             {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}, null
@@ -9,15 +9,15 @@
             {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
         {{end}}
 );">
-    <h2 class="text-lg font-semibold mb-4">{{if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
+    <h2 class="page-title mb-6">{{if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
 
     <!-- type, skills, concepts -->
-    <div class="grid grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div>
-            <p class="font-semibold mb-2">Select Type:</p>
+            <label class="form-label" for="problem-type-dropdown">Type</label>
             <select id="problem-type-dropdown" name="problem-type-dropdown"
                 {{if .ProblemPtr}}disabled title="Problem type cannot be changed in edit mode"{{end}}
-                class="w-full border border-gray-300 rounded p-2 {{if .ProblemPtr}}bg-gray-100 text-gray-500 cursor-not-allowed{{end}}">
+                class="form-select {{if .ProblemPtr}}bg-bg-card-alt text-ink-muted cursor-not-allowed{{end}}">
                 {{if $isEdit}}
                 {{template "problem_type_options" .ProblemPtr.Subtype}}
                 {{else}}
@@ -26,17 +26,17 @@
             </select>
         </div>
         <div>
-            <p class="font-semibold mb-2">Select Skills:</p>
+            <label class="form-label" for="skills-dropdown">Skills</label>
             <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
-                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
+                class="form-select h-24 overflow-y-auto"
                 hx-get='/api/skills{{if $isEdit}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
                 <option disabled>Loading skills...</option>
             </select>
         </div>
         <div>
-            <p class="font-semibold mb-2">Select Concepts:</p>
+            <label class="form-label" for="concepts-dropdown">Concepts</label>
             <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
-                class="w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto"
+                class="form-select h-24 overflow-y-auto"
                 hx-swap="{{if $isEdit}}beforeend{{else}}innerHTML{{end}}"
                 hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if $isEdit}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
                     {{ if $isEdit }}
@@ -48,15 +48,15 @@
                         <option disabled>Loading concepts...</option>
                     {{ end }}
             </select>
-            <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog"
+            <a href="#" class="add-new-link mt-1 inline-block" hx-get="/topic/add-problem/add-concept-dialog"
                 hx-target="body" hx-swap="beforeend"
-                onclick="window._conceptModalTargetDropdown = document.getElementById('concepts-dropdown')">Add Concept from other topic</a>
+                onclick="window._conceptModalTargetDropdown = document.getElementById('concepts-dropdown')">+ Add concept from other topic</a>
         </div>
     </div>
 
     <!-- Paragraph editor for comprehension type -->
     <div id="paragraphDiv" class="mb-6 hidden">
-        <p class="font-semibold mb-2">Paragraph:</p>
+        <p class="form-label mb-2">Paragraph</p>
         {{ if and $isEdit .ProblemPtr.Paragraph }}
         {{ template "editor" .ProblemPtr.Paragraph.Body }}
         {{ else }}
@@ -66,18 +66,26 @@
 
     <!-- difficulty -->
     <div class="mb-6">
-        <p class="font-semibold mb-2">Difficulty Rating</p>
-        <label class="mr-4"><input type="radio" name="difficulty" value="easy" {{if and $isEdit (eq
-                .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}> 1</label>
-        <label class="mr-4"><input type="radio" name="difficulty" value="medium" {{if and $isEdit (eq
-                .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}> 2</label>
-        <label class="mr-4"><input type="radio" name="difficulty" value="hard" {{if and $isEdit (eq
-                .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}> 3</label>
+        <p class="form-label mb-2">Difficulty Rating</p>
+        <div class="flex gap-2 flex-wrap">
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                <input type="radio" name="difficulty" value="easy" class="accent-accent" {{if and $isEdit (eq .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}>
+                <span class="font-bold">1 — Easy</span>
+            </label>
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                <input type="radio" name="difficulty" value="medium" class="accent-accent" {{if and $isEdit (eq .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}>
+                <span class="font-bold">2 — Medium</span>
+            </label>
+            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                <input type="radio" name="difficulty" value="hard" class="accent-accent" {{if and $isEdit (eq .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}>
+                <span class="font-bold">3 — Hard</span>
+            </label>
+        </div>
     </div>
 
     <!-- Question editor -->
     <div id="questionDiv" class="mb-6">
-        <p class="font-semibold mb-2">Text:</p>
+        <p class="form-label mb-2">Text</p>
         {{ if $isEdit }}
         {{ template "editor" .ProblemPtr.MetaData.Question }}
         {{ else }}
@@ -87,7 +95,7 @@
 
     <!-- Options -->
     <div id="optionsDiv" class="mb-6">
-        <p class="font-semibold mb-2">Options:</p>
+        <p class="form-label mb-2">Options</p>
         <!-- MCQ Option Tabs -->
         <div id="optionTabs" class="flex items-center overflow-x-auto">
             <!-- Tabs will be inserted before this -->
@@ -103,7 +111,7 @@
 
     <!-- Answer -->
     <div class="mb-6" id="answerDiv">
-        <p class="font-semibold mb-2">Answer:</p>
+        <p class="form-label mb-2">Answer</p>
         <div id="answerContent">
             <!-- Either checkboxes or integer input will be inserted here -->
         </div>
@@ -111,7 +119,7 @@
 
     <!-- Solution -->
     <div class="mb-6" id="solutionDiv">
-        <p class="font-semibold mb-2">Solution:</p>
+        <p class="form-label mb-2">Solution</p>
         {{ if and $isEdit (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
         {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
         {{ else }}
@@ -121,7 +129,7 @@
 
     <!-- Tags -->
     <div class="mb-6" id="main-problem-tags">
-        <p class="font-semibold mb-2">Tags:</p>
+        <p class="form-label mb-2">Tags</p>
         {{ if $isEdit }}
             {{ template "input_tags" .ProblemPtr.TagNames }}
         {{ else }}
@@ -132,8 +140,8 @@
     <!-- SOURCE -->
     <!-- <div class="mb-6">
         <p class="font-semibold mb-2">SOURCE</p>
-        <table class="w-full text-left border border-gray-300">
-            <thead class="bg-gray-200">
+        <table class="w-full text-left border border-border">
+            <thead class="bg-bg-card-alt">
                 <tr>
                     <th class="px-4 py-2">Name</th>
                     <th class="px-4 py-2">Mode</th>
@@ -148,91 +156,98 @@
                 </tr>
             </tbody>
         </table>
-        <a href="#" class="text-blue-600 underline mt-2 inline-block">Add Source</a>
+        <a href="#" class="text-accent underline mt-2 inline-block">Add Source</a>
     </div> -->
 
     <div id="additionalProblemsContainer" class="space-y-6 mb-6"></div>
 
-    <div id="formActions" class="flex gap-4 pb-4">
-        <button id="addMoreProblemButton" type="button"
-            class="hidden w-1/2 bg-gray-100 text-gray-800 py-3 font-semibold rounded border border-gray-300 hover:bg-gray-200">
-            Add More Problem
-        </button>
-
-        <!-- Save button -->
-        <button id="saveButton" type="submit"
-            class="w-full bg-blue-500 text-white py-3 font-semibold rounded hover:bg-blue-600">Save</button>
+    <!-- Save button -->
+    <div id="formActions" class="flex gap-3 justify-end pt-2">
+        <button type="button" class="btn-secondary" onclick="window.history.back()">Cancel</button>
+        <button id="addMoreProblemButton" type="button" class="btn-secondary hidden">Add More Problem</button>
+        <button id="saveButton" type="submit" class="btn-primary btn-lg">Save Problem</button>
     </div>
 
 </form>
 
 <!-- Templates -->
 <template id="tmplAdditionalProblem">
-    <div class="additional-problem border border-gray-300 rounded p-4 bg-gray-50">
+    <div class="additional-problem card card-pad-sm bg-bg-card-alt">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold">Additional Problem</h3>
-            <button type="button" class="remove-additional-problem text-red-600 hover:text-red-800 font-semibold">
+            <h3 class="font-bold uppercase tracking-wide text-ink">Additional Problem</h3>
+            <button type="button" class="remove-additional-problem text-danger hover:text-accent-hover font-bold text-xl leading-none">
                 &times;
             </button>
         </div>
 
         <!-- topic, skills, concepts -->
-        <div class="grid grid-cols-3 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div>
-                <p class="font-semibold mb-2">Select Topic:</p>
+                <p class="form-label mb-2">Topic</p>
                 <select name="additional-topic-dropdown"
-                    class="additional-topic-dropdown w-full border border-gray-300 rounded p-2">
+                    class="additional-topic-dropdown form-select">
                     <option disabled selected>Loading topics...</option>
                 </select>
             </div>
             <div>
-                <p class="font-semibold mb-2">Select Skills:</p>
+                <p class="form-label mb-2">Skills</p>
                 <select name="additional-skills-dropdown" multiple
-                    class="additional-skills-dropdown w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto">
+                    class="additional-skills-dropdown form-select h-24 overflow-y-auto">
                     <option disabled>Loading skills...</option>
                 </select>
             </div>
             <div>
-                <p class="font-semibold mb-2">Select Concepts:</p>
+                <p class="form-label mb-2">Concepts</p>
                 <select name="additional-concepts-dropdown" multiple
-                    class="additional-concepts-dropdown w-full border border-gray-300 rounded p-2 h-20 overflow-y-auto">
+                    class="additional-concepts-dropdown form-select h-24 overflow-y-auto">
                     <option disabled>Select a topic first</option>
                 </select>
-                <a href="#" class="text-blue-600 underline" hx-get="/topic/add-problem/add-concept-dialog"
+                <a href="#" class="add-new-link mt-1 inline-block" hx-get="/topic/add-problem/add-concept-dialog"
                     hx-target="body" hx-swap="beforeend"
-                    onclick="window._conceptModalTargetDropdown = this.closest('.additional-problem').querySelector('.additional-concepts-dropdown')">Add Concept from other topic</a>
+                    onclick="window._conceptModalTargetDropdown = this.closest('.additional-problem').querySelector('.additional-concepts-dropdown')">+ Add concept from other topic</a>
             </div>
         </div>
 
         <!-- difficulty -->
         <div class="mb-6">
-            <p class="font-semibold mb-2">Difficulty Rating</p>
-            <label class="mr-4"><input type="radio" data-name="difficulty" value="easy"> 1</label>
-            <label class="mr-4"><input type="radio" data-name="difficulty" value="medium"> 2</label>
-            <label class="mr-4"><input type="radio" data-name="difficulty" value="hard"> 3</label>
+            <p class="form-label mb-2">Difficulty Rating</p>
+            <div class="flex gap-2 flex-wrap">
+                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                    <input type="radio" data-name="difficulty" value="easy" class="accent-accent">
+                    <span class="font-bold">1 — Easy</span>
+                </label>
+                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                    <input type="radio" data-name="difficulty" value="medium" class="accent-accent">
+                    <span class="font-bold">2 — Medium</span>
+                </label>
+                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                    <input type="radio" data-name="difficulty" value="hard" class="accent-accent">
+                    <span class="font-bold">3 — Hard</span>
+                </label>
+            </div>
         </div>
 
         <!-- Question editor -->
         <div class="additional-question mb-6">
-            <p class="font-semibold mb-2">Text:</p>
+            <p class="form-label mb-2">Text</p>
             {{ template "editor" }}
         </div>
 
         <!-- Answer -->
         <div class="additional-answer mb-6">
-            <p class="font-semibold mb-2">Answer:</p>
+            <p class="form-label mb-2">Answer</p>
             {{ template "problem_answer_numerical" (dict "Answers" nil) }}
         </div>
 
         <!-- Solution -->
         <div class="additional-solution mb-6">
-            <p class="font-semibold mb-2">Solution:</p>
+            <p class="form-label mb-2">Solution</p>
             {{ template "editor" }}
         </div>
 
         <!-- Tags -->
         <div class="mb-6">
-            <p class="font-semibold mb-2">Tags:</p>
+            <p class="form-label mb-2">Tags</p>
             {{ template "input_tags" (emptyStringSlice) }}
         </div>
     </div>
@@ -328,9 +343,6 @@
             additionalProblemsContainer.classList.toggle('hidden', !isComprehension);
             // "Add More Problem" is only for comprehension CREATE flow, not edit.
             addMoreProblemButton.classList.toggle('hidden', !isComprehension || isEditPage);
-            // Full width unless comprehension create (two buttons); edit comprehension uses full width too.
-            saveButton.classList.toggle('w-full', !isComprehension || isEditPage);
-            saveButton.classList.toggle('w-1/2', isComprehension && !isEditPage);
 
             updateAnswerInput(problemType);
         }
@@ -516,8 +528,8 @@
                     answer = '';
                 }
                 answerContent.innerHTML = `
-                    <input type="text" name="answer" id="answerInput" 
-                        class="w-full border border-gray-300 rounded p-2" 
+                    <input type="text" name="answer" id="answerInput"
+                        class="form-input font-mono"
                         inputmode="numeric" value="${answer}">
                 `;
 

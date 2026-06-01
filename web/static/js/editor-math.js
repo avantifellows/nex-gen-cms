@@ -2,7 +2,7 @@
 function insertMath(editor) {
     const mathfield = document.createElement('math-field');
 
-    mathfield.setAttribute('style', 'display:inline-block; min-width:9em; border: 1px solid #d1d5db;');
+    mathfield.setAttribute('style', 'display:inline-block; min-width:9em; border: 1px solid rgba(38, 20, 16, 0.15);');
     mathfield.setAttribute('virtual-keyboard-target', '#math-keyboard');
 
     // Insert at caret position

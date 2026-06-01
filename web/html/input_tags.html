@@ -2,11 +2,11 @@
 <div class="problem-tags-section" data-initial-tags='{{ toJson . }}'>
     <div class="relative">
         <div class="tags-input-shell flex flex-wrap items-center w-full border p-2 gap-2 cursor-text">
-            <input type="text" class="tag-text-input flex-1 min-w-[100px] border-none outline-none p-1"
+            <input type="text" class="tag-text-input flex-1 min-w-[100px] border-none outline-hidden p-1"
                 placeholder="Assign tags" hx-get="/api/tags" hx-swap="innerHTML"
                 hx-trigger="input changed delay:300ms" hx-ext="tagInputExtension" />
         </div>
-        <div class="tag-autocomplete-dropdown hidden absolute top-full left-0 right-0 bg-white border border-gray-300 border-t-0 rounded-b-md shadow-lg max-h-40 overflow-y-auto z-10"></div>
+        <div class="tag-autocomplete-dropdown hidden absolute top-full left-0 right-0 bg-bg-card border border-border border-t-0 rounded-b-md shadow-lg max-h-40 overflow-y-auto z-10"></div>
     </div>
 </div>
 <script>
@@ -71,10 +71,10 @@
                 container.querySelectorAll('.chip').forEach(chip => chip.remove());
                 state.tags.forEach(tag => {
                     const chip = document.createElement('span');
-                    chip.className = 'chip bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded-full flex items-center gap-1';
+                    chip.className = 'chip bg-brand-blue-bg text-accent-hover text-sm px-2 py-1 rounded-full flex items-center gap-1';
                     chip.innerHTML = `
                         ${tag}
-                        <button type="button" class="ml-1 text-blue-800 hover:text-blue-900 font-bold">&times;</button>
+                        <button type="button" class="ml-1 text-accent-hover hover:text-accent-hover font-bold">&times;</button>
                     `;
                     chip.querySelector('button').addEventListener('click', () => {
                         state.tags = state.tags.filter(t => t !== tag);

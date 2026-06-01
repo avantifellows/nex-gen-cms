@@ -162,7 +162,7 @@ window.initializeRichTextEditors = function (root = document) {
     // Create 10x10 grid cells
     for (let i = 1; i <= 100; i++) {
         const cell = document.createElement("div");
-        cell.className = "w-4 h-4 bg-gray-200 hover:bg-blue-400";
+        cell.className = "w-4 h-4 bg-bg-card-alt hover:bg-accent";
         cell.dataset.row = Math.ceil(i / 10);
         cell.dataset.col = i % 10 === 0 ? 10 : i % 10;
 
@@ -184,7 +184,7 @@ window.initializeRichTextEditors = function (root = document) {
             [...gridContainer.children].forEach(cell => {
                 const r = parseInt(cell.dataset.row);
                 const c = parseInt(cell.dataset.col);
-                cell.style.backgroundColor = (r <= selectedRows && c <= selectedCols) ? '#60a5fa' : '#e5e7eb';
+                cell.style.backgroundColor = (r <= selectedRows && c <= selectedCols) ? '#ad2f2f' : '#f3ece5';
             });
         }
     });
