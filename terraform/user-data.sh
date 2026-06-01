@@ -40,8 +40,19 @@ sudo fc-cache -fv || log "fc-cache failed; continuing"
 
 log "Installing Node.js, Playwright and Chromium dependencies"
 
-# Install Node + NPM
-sudo dnf install -y nodejs npm
+# Install Node.js 22 (pinned). Tailwind v4 / @tailwindcss/oxide require Node >= 20; AL2023's default
+# `nodejs` package is v18, which makes npm skip the native arm64 binary and breaks `npm run build:css`.
+# AL2023 keeps node majors side-by-side via `alternatives`, so install 22 and make it the active node.
+# Guarded so a reboot with node 22 already active is a no-op (no reinstall every boot).
+# NOTE: bare $VAR (no braces) — this file is rendered by Terraform templatefile(), which would try
+# to interpolate $${...}. Shell variables must avoid braces.
+NODE_MAJOR=22
+if [ "$(node -v 2>/dev/null | sed 's/v\([0-9]*\).*/\1/')" != "$NODE_MAJOR" ]; then
+    log "Installing Node.js $NODE_MAJOR"
+    sudo dnf install -y "nodejs$NODE_MAJOR" "nodejs$NODE_MAJOR-npm"
+    sudo alternatives --set node "/usr/bin/node-$NODE_MAJOR"
+fi
+log "Node $(node --version), npm $(npm --version)"
 
 # Install Playwright CLI globally
 sudo npm install -g playwright
@@ -108,11 +119,9 @@ chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
 chmod 600 "$APP_DIR/.env"
 
 # Build CSS assets (Tailwind). output.css is generated, not committed — see .gitignore.
-log "Building CSS assets"
-# Node + npm are installed above for Playwright, but guard here in case that step ever changes,
-# so a missing Node never silently leaves the app without styles.
-command -v npm >/dev/null 2>&1 || sudo dnf install -y nodejs npm
+# Requires Node >= 20 (installed/pinned above) so npm installs @tailwindcss/oxide's native arm64 binary.
 # Pin HOME to the app user's home so npm's cache lands in a writable dir (independent of sudoers).
+log "Building CSS assets"
 sudo -u "$APP_USER" env HOME="$APP_DIR" npm ci
 sudo -u "$APP_USER" env HOME="$APP_DIR" npm run build:css
 
