@@ -1,4 +1,8 @@
-document.querySelectorAll('.container').forEach(container => {
+window.initializeRichTextEditors = function (root = document) {
+    root.querySelectorAll('.container').forEach(container => {
+    if (container.dataset.editorInitialized === 'true') return;
+    container.dataset.editorInitialized = 'true';
+
     const editorWrapper = container.querySelector(".editor-wrapper");
     const output = container.querySelector('.output');
 
@@ -365,3 +369,6 @@ document.querySelectorAll('.container').forEach(container => {
         insertMath(editor, event);
     });
 });
+};
+
+window.initializeRichTextEditors();

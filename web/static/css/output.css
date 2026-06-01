@@ -6,7 +6,6 @@
     --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial,
                sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    --color-blue-400: oklch(70.7% 0.165 254.624);
     --color-blue-600: oklch(54.6% 0.245 262.881);
     --color-gray-50: oklch(98.5% 0.002 247.839);
     --color-gray-100: oklch(96.7% 0.003 264.542);
@@ -1367,6 +1366,11 @@
   .self-end {
     align-self: flex-end;
   }
+  .truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .overflow-auto {
     overflow: auto;
   }
@@ -1387,6 +1391,9 @@
     background-color: var(--color-bg-card);
     --tw-shadow: 0 1px 2px 0 var(--tw-shadow-color, rgba(38, 20, 16, 0.05)), 0 1px 3px 0 var(--tw-shadow-color, rgba(38, 20, 16, 0.08));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .rounded {
+    border-radius: 0.25rem;
   }
   .rounded-full {
     border-radius: calc(infinity * 1px);
@@ -1729,6 +1736,10 @@
   }
   .text-\[14px\] {
     font-size: 14px;
+  }
+  .leading-none {
+    --tw-leading: 1;
+    line-height: 1;
   }
   .font-bold {
     --tw-font-weight: var(--font-weight-bold);
@@ -2522,6 +2533,10 @@ mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
   inherits: false;
   initial-value: 0;
 }
+@property --tw-leading {
+  syntax: "*";
+  inherits: false;
+}
 @property --tw-blur {
   syntax: "*";
   inherits: false;
@@ -2628,6 +2643,7 @@ mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
       --tw-translate-z: 0;
       --tw-space-y-reverse: 0;
       --tw-space-x-reverse: 0;
+      --tw-leading: initial;
       --tw-blur: initial;
       --tw-brightness: initial;
       --tw-contrast: initial;

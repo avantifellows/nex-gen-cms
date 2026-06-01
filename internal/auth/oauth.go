@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	googleIssuer       = "https://accounts.google.com"
+	googleIssuer        = "https://accounts.google.com"
 	allowedHostedDomain = "avantifellows.org"
 	oauthStateCookie    = "cms_oauth_state"
 )
