@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"sort"
 	"strconv"
@@ -394,10 +395,7 @@ func (r *CurriculumConfigRepo) Create(ctx context.Context, input curriculumconfi
 	if err != nil {
 		return curriculumconfig.MutationResult{}, mapCreateError(err)
 	}
-	warnings, err := r.warningsForConfig(ctx, *row)
-	if err != nil {
-		return curriculumconfig.MutationResult{}, err
-	}
+	warnings := r.postMutationWarnings(ctx, *row)
 	impact, err := r.impactCounts(ctx, curriculumconfig.ImpactQuery{
 		ConfigID:          row.ID,
 		ChapterID:         row.ChapterID,
@@ -427,10 +425,7 @@ func (r *CurriculumConfigRepo) Edit(ctx context.Context, input curriculumconfig.
 	if err != nil {
 		return curriculumconfig.MutationResult{}, mapEditError(err)
 	}
-	warnings, err := r.warningsForConfig(ctx, *row)
-	if err != nil {
-		return curriculumconfig.MutationResult{}, err
-	}
+	warnings := r.postMutationWarnings(ctx, *row)
 	impact, err := r.impactCounts(ctx, curriculumconfig.ImpactQuery{
 		ConfigID:          row.ID,
 		ChapterID:         row.ChapterID,
@@ -463,10 +458,7 @@ func (r *CurriculumConfigRepo) RemoveFromSyllabus(ctx context.Context, input cur
 	if err != nil {
 		return curriculumconfig.MutationResult{}, mapEditError(err)
 	}
-	warnings, err := r.warningsForConfig(ctx, *row)
-	if err != nil {
-		return curriculumconfig.MutationResult{}, err
-	}
+	warnings := r.postMutationWarnings(ctx, *row)
 	impact, err := r.impactCounts(ctx, curriculumconfig.ImpactQuery{
 		ConfigID:          row.ID,
 		ChapterID:         row.ChapterID,
@@ -567,7 +559,9 @@ func (r *CurriculumConfigRepo) insertConfig(ctx context.Context, input curriculu
 				inserted_by_email,
 				updated_by_email
 			)
-			VALUES ($1, $2, $3, $4, $5, $6, $6)
+			SELECT ch.id, $2, $3, $4, $5, $6, $6
+			FROM chapter ch
+			WHERE ch.id = $1
 			RETURNING id, chapter_id, exam_track, is_in_syllabus, prescribed_minutes, coverage_sequence, updated_by_email, updated_at, xmin::text
 		)
 		SELECT
@@ -620,6 +614,15 @@ func (r *CurriculumConfigRepo) insertConfig(ctx context.Context, input curriculu
 	}
 	row.PrescribedHours = PrescribedHoursLabel(row.PrescribedMinutes)
 	return &row, nil
+}
+
+func (r *CurriculumConfigRepo) postMutationWarnings(ctx context.Context, row curriculumconfig.ListRow) []curriculumconfig.Warning {
+	warnings, err := r.warningsForConfig(ctx, row)
+	if err != nil {
+		log.Printf("curriculum config post-mutation warnings: %v", err)
+		return nil
+	}
+	return warnings
 }
 
 func (r *CurriculumConfigRepo) updateConfig(ctx context.Context, input curriculumconfig.EditInput) (*curriculumconfig.ListRow, error) {
@@ -873,6 +876,9 @@ func (r *CurriculumConfigRepo) previewWarnings(ctx context.Context, query curric
 }
 
 func mapCreateError(err error) error {
+	if err == sql.ErrNoRows {
+		return errors.New("chapter does not exist")
+	}
 	var pqErr *pq.Error
 	if errors.As(err, &pqErr) {
 		switch pqErr.Code {

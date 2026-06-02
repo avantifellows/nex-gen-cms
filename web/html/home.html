@@ -146,6 +146,19 @@
     </script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            document.body.addEventListener("htmx:beforeSwap", function (event) {
+                var xhr = event.detail.xhr;
+                var target = event.detail.target;
+                var response = xhr ? xhr.responseText || "" : "";
+                if (!xhr || xhr.status < 400 || !target || !target.id) {
+                    return;
+                }
+                if (target.id.indexOf("curriculum-config-") === 0 && response.indexOf("curriculum-config-") !== -1) {
+                    event.detail.shouldSwap = true;
+                    event.detail.isError = false;
+                }
+            });
+
             // Reveal Admin tab only for admins. Server still enforces access on /admin/* routes;
             // this just controls the nav affordance via the non-HttpOnly cms_role companion cookie.
             var roleMatch = document.cookie.match(/(?:^|;\s*)cms_role=([^;]+)/);

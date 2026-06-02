@@ -659,15 +659,15 @@ func writeAddPanel(w http.ResponseWriter, query curriculumconfig.ListQuery, warn
 	fmt.Fprint(w, `<form id="curriculum-config-create-form" hx-post="/admin/curriculum-config/create" hx-target="#curriculum-config-add-panel" hx-swap="outerHTML" class="space-y-3">`)
 	writeAppliedFilterHiddenFields(w, query)
 	fmt.Fprintf(w, `<input type="hidden" name="exam_track" value="%s">`, html.EscapeString(query.ExamTrack))
-	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-new-chapter">Chapter ID</label>`)
-	fmt.Fprint(w, `<input id="curriculum-config-new-chapter" class="form-control w-full" name="chapter_id" inputmode="numeric" hx-get="/admin/curriculum-config/chapter-options" hx-target="#curriculum-config-chapter-options" hx-swap="innerHTML">`)
+	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-new-chapter">Chapter</label>`)
+	fmt.Fprint(w, `<input id="curriculum-config-new-chapter" class="form-control w-full" name="search" hx-get="/admin/curriculum-config/chapter-options" hx-target="#curriculum-config-chapter-options" hx-swap="innerHTML" hx-include="#curriculum-config-create-form">`)
 	fmt.Fprint(w, `<div id="curriculum-config-chapter-options" class="text-sm text-ink-muted"></div>`)
 	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-new-syllabus-status">Syllabus status</label>`)
-	fmt.Fprint(w, `<select id="curriculum-config-new-syllabus-status" class="form-select w-full" name="syllabus_status"><option value="in_syllabus" selected>In syllabus</option><option value="out_of_syllabus">Out of syllabus</option></select>`)
+	fmt.Fprint(w, `<select id="curriculum-config-new-syllabus-status" class="form-select w-full" name="syllabus_status" hx-get="/admin/curriculum-config/impact" hx-target="#curriculum-config-impact-preview" hx-swap="innerHTML" hx-include="#curriculum-config-create-form"><option value="in_syllabus" selected>In syllabus</option><option value="out_of_syllabus">Out of syllabus</option></select>`)
 	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-new-minutes">Prescribed minutes</label>`)
-	fmt.Fprint(w, `<input id="curriculum-config-new-minutes" class="form-control w-full" name="prescribed_minutes" inputmode="numeric" value="0">`)
+	fmt.Fprint(w, `<input id="curriculum-config-new-minutes" class="form-control w-full" name="prescribed_minutes" inputmode="numeric" value="0" hx-get="/admin/curriculum-config/impact" hx-target="#curriculum-config-impact-preview" hx-swap="innerHTML" hx-include="#curriculum-config-create-form">`)
 	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-new-coverage">Coverage order</label>`)
-	fmt.Fprint(w, `<input id="curriculum-config-new-coverage" class="form-control w-full" name="coverage_sequence" inputmode="numeric" hx-get="/admin/curriculum-config/impact" hx-target="#curriculum-config-impact-preview" hx-swap="innerHTML">`)
+	fmt.Fprint(w, `<input id="curriculum-config-new-coverage" class="form-control w-full" name="coverage_sequence" inputmode="numeric" hx-get="/admin/curriculum-config/impact" hx-target="#curriculum-config-impact-preview" hx-swap="innerHTML" hx-include="#curriculum-config-create-form">`)
 	fmt.Fprint(w, `<div id="curriculum-config-impact-preview"></div>`)
 	fmt.Fprint(w, `<div class="flex justify-end"><button type="submit" class="btn-primary btn-sm">Create config</button></div>`)
 	fmt.Fprint(w, `</form></section>`)
@@ -780,7 +780,7 @@ func writeChapterOptions(w http.ResponseWriter, options []curriculumconfig.Chapt
 	}
 	fmt.Fprint(w, `<div class="space-y-2">`)
 	for _, option := range options {
-		fmt.Fprintf(w, `<label class="block rounded-md border border-border p-3"><input type="radio" name="chapter_option" value="%d"> <span class="font-medium">%s</span> <span>%s</span> <span>Grade %s</span> <span>%s</span> <span>%d topics</span>`, option.ChapterID, html.EscapeString(option.ChapterCode), html.EscapeString(option.ChapterName), html.EscapeString(option.Grade), html.EscapeString(option.Subject), option.TopicCount)
+		fmt.Fprintf(w, `<label class="block rounded-md border border-border p-3"><input type="radio" name="chapter_id" value="%d" hx-get="/admin/curriculum-config/impact" hx-target="#curriculum-config-impact-preview" hx-swap="innerHTML" hx-include="#curriculum-config-create-form"> <span class="font-medium">%s</span> <span>%s</span> <span>Grade %s</span> <span>%s</span> <span>%d topics</span>`, option.ChapterID, html.EscapeString(option.ChapterCode), html.EscapeString(option.ChapterName), html.EscapeString(option.Grade), html.EscapeString(option.Subject), option.TopicCount)
 		if option.HasDuplicateConfig {
 			fmt.Fprintf(w, `<div class="text-sm text-warning">Chapter already has a %s config.</div>`, html.EscapeString(examTrackLabelForView(option.ExistingExamTrack)))
 		}
@@ -809,27 +809,30 @@ func writeCreateSuccess(w http.ResponseWriter, result curriculumconfig.MutationR
 	fmt.Fprint(w, `<section id="curriculum-config-create-result" class="space-y-3">`)
 	fmt.Fprint(w, `<div role="status" class="rounded-md border border-success bg-success-subtle p-3">Created LMS Chapter Exam Config.</div>`)
 	writeWarningAndImpact(w, result.Warnings, result.Impact)
-	fmt.Fprint(w, `<div id="curriculum-config-table" class="rounded-md border border-border bg-bg-card p-4">`)
+	fmt.Fprint(w, `</section>`)
+	fmt.Fprint(w, `<div id="curriculum-config-table" hx-swap-oob="true" class="rounded-md border border-border bg-bg-card p-4">`)
 	views.ExecuteTemplate(curriculumConfigTableTemplate, w, table, curriculumConfigFuncMap())
-	fmt.Fprint(w, `</div></section>`)
+	fmt.Fprint(w, `</div>`)
 }
 
 func writeUpdateSuccess(w http.ResponseWriter, result curriculumconfig.MutationResult, table tableViewData) {
 	fmt.Fprint(w, `<section id="curriculum-config-update-result" class="space-y-3">`)
 	fmt.Fprint(w, `<div role="status" class="rounded-md border border-success bg-success-subtle p-3">Updated LMS Chapter Exam Config.</div>`)
 	writeWarningAndImpact(w, result.Warnings, result.Impact)
-	fmt.Fprint(w, `<div id="curriculum-config-table" class="rounded-md border border-border bg-bg-card p-4">`)
+	fmt.Fprint(w, `</section>`)
+	fmt.Fprint(w, `<div id="curriculum-config-table" hx-swap-oob="true" class="rounded-md border border-border bg-bg-card p-4">`)
 	views.ExecuteTemplate(curriculumConfigTableTemplate, w, table, curriculumConfigFuncMap())
-	fmt.Fprint(w, `</div></section>`)
+	fmt.Fprint(w, `</div>`)
 }
 
 func writeRemoveSuccess(w http.ResponseWriter, result curriculumconfig.MutationResult, table tableViewData) {
 	fmt.Fprint(w, `<section id="curriculum-config-remove-result" class="space-y-3">`)
 	fmt.Fprint(w, `<div role="status" class="rounded-md border border-success bg-success-subtle p-3">Removed LMS Chapter Exam Config from syllabus.</div>`)
 	writeWarningAndImpact(w, result.Warnings, result.Impact)
-	fmt.Fprint(w, `<div id="curriculum-config-table" class="rounded-md border border-border bg-bg-card p-4">`)
+	fmt.Fprint(w, `</section>`)
+	fmt.Fprint(w, `<div id="curriculum-config-table" hx-swap-oob="true" class="rounded-md border border-border bg-bg-card p-4">`)
 	views.ExecuteTemplate(curriculumConfigTableTemplate, w, table, curriculumConfigFuncMap())
-	fmt.Fprint(w, `</div></section>`)
+	fmt.Fprint(w, `</div>`)
 }
 
 func writeMutationError(w http.ResponseWriter, err error) {
