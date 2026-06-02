@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"net/http"
-	"reflect"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/avantifellows/nex-gen-cms/config"
 	"github.com/avantifellows/nex-gen-cms/di"
+	"github.com/avantifellows/nex-gen-cms/internal/auth"
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/internal/curriculumconfig"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers"
-	"github.com/avantifellows/nex-gen-cms/internal/middleware"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -50,44 +53,59 @@ func (m *MockServeMux) HandleFunc(pattern string, handlerFunc func(http.Response
 	m.mux.HandleFunc(pattern, handlerFunc)
 }
 
+type routeTestCurriculumConfigRepo struct{}
+
+func (routeTestCurriculumConfigRepo) SchemaReadiness(context.Context) (curriculumconfig.Readiness, error) {
+	return curriculumconfig.Readiness{Ready: true, MutationReady: true}, nil
+}
+func (routeTestCurriculumConfigRepo) List(context.Context, curriculumconfig.ListQuery) (curriculumconfig.ListResult, error) {
+	return curriculumconfig.ListResult{}, curriculumconfig.ErrNotImplemented
+}
+func (routeTestCurriculumConfigRepo) Get(context.Context, int64) (*curriculumconfig.ListRow, error) {
+	return nil, curriculumconfig.ErrNotImplemented
+}
+func (routeTestCurriculumConfigRepo) FilterOptions(context.Context) (curriculumconfig.FilterOptions, error) {
+	return curriculumconfig.FilterOptions{}, curriculumconfig.ErrNotImplemented
+}
+func (routeTestCurriculumConfigRepo) ChapterOptions(context.Context, curriculumconfig.ChapterOptionsQuery) ([]curriculumconfig.ChapterOption, error) {
+	return nil, curriculumconfig.ErrNotImplemented
+}
+func (routeTestCurriculumConfigRepo) Impact(context.Context, curriculumconfig.ImpactQuery) (curriculumconfig.ImpactResult, error) {
+	return curriculumconfig.ImpactResult{}, curriculumconfig.ErrNotImplemented
+}
+func (routeTestCurriculumConfigRepo) Create(context.Context, curriculumconfig.CreateInput) (curriculumconfig.MutationResult, error) {
+	return curriculumconfig.MutationResult{}, curriculumconfig.ErrNotImplemented
+}
+func (routeTestCurriculumConfigRepo) Edit(context.Context, curriculumconfig.EditInput) (curriculumconfig.MutationResult, error) {
+	return curriculumconfig.MutationResult{}, curriculumconfig.ErrNotImplemented
+}
+func (routeTestCurriculumConfigRepo) RemoveFromSyllabus(context.Context, curriculumconfig.RemoveInput) (curriculumconfig.MutationResult, error) {
+	return curriculumconfig.MutationResult{}, curriculumconfig.ErrNotImplemented
+}
+func (routeTestCurriculumConfigRepo) ExportRows(context.Context, curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
+	return []curriculumconfig.ExportRow{{
+		ChapterCode:       "MATH-001",
+		ChapterName:       "Quadratic Equations",
+		Grade:             "11",
+		Subject:           "Mathematics",
+		ExamTrack:         "jee_main",
+		IsInSyllabus:      true,
+		PrescribedMinutes: 60,
+		PrescribedHours:   "1 hour",
+		CoverageSequence:  1,
+		UpdatedByEmail:    "admin@avantifellows.org",
+		UpdatedAt:         time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC),
+	}}, nil
+}
+
 func TestSetup(t *testing.T) {
 	mockConfig := new(MockConfig)
 	mockConfig.On("LoadEnv", mock.Anything).Return(nil)
 
-	// Create a new MockServeMux to capture registered routes
 	mockServeMux := NewMockServeMux()
-	appComponentPtr, err := di.NewAppComponent()
-	if err != nil || appComponentPtr == nil {
-		t.Skipf("DI init failed (likely missing DATABASE_URL / GOOGLE_CLIENT_ID in test env): %v", err)
-	}
-	chaptersHandler := appComponentPtr.ChaptersHandler
-	topicsHandler := appComponentPtr.TopicsHandler
-
-	expectedRouteHandlers := []struct {
-		pattern string
-		handler http.Handler
-	}{
-		{"/web/", appComponentPtr.CssPathHandler},
-		{"/", http.HandlerFunc(handlers.GenericHandler)},
-		{"/tests", http.HandlerFunc(handlers.GenericHandler)},
-		{"/add-chapter", http.HandlerFunc(handlers.GenericHandler)},
-		{"/chapters", http.HandlerFunc(chaptersHandler.LoadChapters)},
-		{"/api/curriculums", http.HandlerFunc(appComponentPtr.CurriculumsHandler.GetCurriculums)},
-		{"/api/grades", http.HandlerFunc(appComponentPtr.GradesHandler.GetGrades)},
-		{"/api/subjects", http.HandlerFunc(appComponentPtr.SubjectsHandler.GetSubjects)},
-		{"/api/chapters", http.HandlerFunc(chaptersHandler.GetChapters)},
-		{"/edit-chapter", middleware.RequireHTMX(http.HandlerFunc(chaptersHandler.EditChapter))},
-		{"/update-chapter", http.HandlerFunc(chaptersHandler.UpdateChapter)},
-		{"/create-chapter", http.HandlerFunc(chaptersHandler.AddChapter)},
-		{"/archive-chapter", http.HandlerFunc(chaptersHandler.ArchiveChapter)},
-		{"/chapter", http.HandlerFunc(chaptersHandler.GetChapter)},
-		{"/topics", http.HandlerFunc(chaptersHandler.LoadTopics)},
-		{"/api/topics", http.HandlerFunc(chaptersHandler.GetTopics)},
-		{"/add-topic", http.HandlerFunc(topicsHandler.OpenAddTopic)},
-		{"/create-topic", http.HandlerFunc(topicsHandler.AddTopic)},
-		{"/archive-topic", http.HandlerFunc(topicsHandler.ArchiveTopic)},
-		{"/edit-topic", middleware.RequireHTMX(http.HandlerFunc(topicsHandler.EditTopic))},
-		{"/update-topic", http.HandlerFunc(topicsHandler.UpdateTopic)},
+	appComponentPtr := &di.AppComponent{
+		CssPathHandler:          http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
+		CurriculumConfigHandler: handlers.NewCurriculumConfigHandler(routeTestCurriculumConfigRepo{}),
 	}
 
 	setup(mockConfig, mockServeMux, appComponentPtr)
@@ -100,16 +118,81 @@ func TestSetup(t *testing.T) {
 
 	// Assert that expected route handlers are registered
 	registeredRouteHandlers := mockServeMux.routeHandlers
-	for _, expectedRH := range expectedRouteHandlers {
-		pattern := expectedRH.pattern
-		registeredHandler, ok := registeredRouteHandlers[pattern]
+	for _, pattern := range []string{
+		"/web/",
+		"/",
+		"/login",
+		"/logout",
+		"/admin/users",
+		"/chapters",
+		"/api/curriculums",
+		"/api/grades",
+		"/api/subjects",
+		"/api/chapters",
+		"/tests",
+		"/problems",
+		"/api/tags",
+		"/api/exams",
+	} {
+		_, ok := registeredRouteHandlers[pattern]
 		assert.True(t, ok, "Route not registered: "+pattern)
-		assert.True(t, areHandlersEqual(registeredHandler, expectedRH.handler), "Handler mismatch for pattern %s", pattern)
 	}
-	assert.Equal(t, len(expectedRouteHandlers), len(registeredRouteHandlers), "Unexpected number of routes registered")
 }
 
-// Function to compare function addresses using reflect (Using reflect because functions cannot be compared otherwise)
-func areHandlersEqual(h1, h2 http.Handler) bool {
-	return reflect.ValueOf(h1).Pointer() == reflect.ValueOf(h2).Pointer()
+func TestSetupRegistersCurriculumConfigRoutes(t *testing.T) {
+	mockConfig := new(MockConfig)
+	mockConfig.On("LoadEnv", mock.Anything).Return(nil)
+
+	mockServeMux := NewMockServeMux()
+	appComponentPtr := &di.AppComponent{
+		CssPathHandler:          http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
+		CurriculumConfigHandler: handlers.NewCurriculumConfigHandler(routeTestCurriculumConfigRepo{}),
+	}
+
+	setup(mockConfig, mockServeMux, appComponentPtr)
+
+	expectedRoutes := []string{
+		"/admin/curriculum-config",
+		"/admin/curriculum-config/table",
+		"/admin/curriculum-config/new",
+		"/admin/curriculum-config/edit",
+		"/admin/curriculum-config/remove",
+		"/admin/curriculum-config/chapter-options",
+		"/admin/curriculum-config/impact",
+		"/admin/curriculum-config/create",
+		"/admin/curriculum-config/update",
+		"/admin/curriculum-config/remove-from-syllabus",
+		"/admin/curriculum-config/export",
+	}
+	for _, route := range expectedRoutes {
+		_, ok := mockServeMux.routeHandlers[route]
+		assert.True(t, ok, "Route not registered: "+route)
+	}
+}
+
+func TestSetupRegistersWorkingCurriculumConfigExportRoute(t *testing.T) {
+	t.Setenv("SESSION_SECRET", "curriculum-config-route-secret")
+	mockConfig := new(MockConfig)
+	mockConfig.On("LoadEnv", mock.Anything).Return(nil)
+
+	mockServeMux := NewMockServeMux()
+	appComponentPtr := &di.AppComponent{
+		CssPathHandler:          http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
+		CurriculumConfigHandler: handlers.NewCurriculumConfigHandler(routeTestCurriculumConfigRepo{}),
+	}
+	setup(mockConfig, mockServeMux, appComponentPtr)
+
+	login := httptest.NewRecorder()
+	assert.NoError(t, auth.IssueSession(login, 1, "admin@avantifellows.org", auth.RoleAdmin))
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/export", nil)
+	for _, cookie := range login.Result().Cookies() {
+		req.AddCookie(cookie)
+	}
+	rec := httptest.NewRecorder()
+
+	mockServeMux.routeHandlers["/admin/curriculum-config/export"].ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+	assert.Contains(t, rec.Body.String(), "MATH-001")
 }

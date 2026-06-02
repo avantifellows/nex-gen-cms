@@ -84,8 +84,13 @@
                             hx-on::before-request="sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false')">Tests</button>
                         <button class="nav-link" id="problems-tab" hx-get="/problems" hx-push-url="true" hx-target="body"
                             data-toggle="tab">Problems</button>
-                        <button class="nav-link hidden" id="admin-tab" hx-get="/admin/users" hx-push-url="true" hx-target="body"
-                            data-toggle="tab">Admin</button>
+                        <div class="hidden items-center gap-1" id="admin-group">
+                            <span class="px-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">Admin</span>
+                            <button class="nav-link" id="admin-users-tab" hx-get="/admin/users" hx-push-url="true" hx-target="body"
+                                data-toggle="tab">Users</button>
+                            <button class="nav-link" id="curriculum-config-tab" hx-get="/admin/curriculum-config" hx-push-url="true" hx-target="body"
+                                data-toggle="tab">Curriculum Config</button>
+                        </div>
 
                         <!-- name attribute is used, because query parameters passed via http request can be
                          identified by element names only. It is used in chapter_handler.go -->
@@ -141,12 +146,28 @@
     </script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            document.body.addEventListener("htmx:beforeSwap", function (event) {
+                var xhr = event.detail.xhr;
+                var target = event.detail.target;
+                var response = xhr ? xhr.responseText || "" : "";
+                if (!xhr || xhr.status < 400 || !target || !target.id) {
+                    return;
+                }
+                if (target.id.indexOf("curriculum-config-") === 0 && response.indexOf("curriculum-config-") !== -1) {
+                    event.detail.shouldSwap = true;
+                    event.detail.isError = false;
+                }
+            });
+
             // Reveal Admin tab only for admins. Server still enforces access on /admin/* routes;
             // this just controls the nav affordance via the non-HttpOnly cms_role companion cookie.
             var roleMatch = document.cookie.match(/(?:^|;\s*)cms_role=([^;]+)/);
             if (roleMatch && roleMatch[1] === "admin") {
-                var adminBtn = document.getElementById("admin-tab");
-                if (adminBtn) adminBtn.classList.remove("hidden");
+                var adminGroup = document.getElementById("admin-group");
+                if (adminGroup) {
+                    adminGroup.classList.remove("hidden");
+                    adminGroup.classList.add("flex");
+                }
             }
 
             let debounceTimeout;
@@ -156,6 +177,8 @@
                 if (path.startsWith("/chapter")) return "chapters-tab";
                 if (path.startsWith("/test")) return "tests-tab";
                 if (path.startsWith("/problem")) return "problems-tab";
+                if (path.startsWith("/admin/curriculum-config")) return "curriculum-config-tab";
+                if (path.startsWith("/admin/users")) return "admin-users-tab";
                 return null;
             }
 
@@ -179,8 +202,21 @@
                     if (activeTab) activeTab.classList.add("active");
                 }
                 
-                // Hide subject dropdown when "Tests" tab is active
+                const curriculumDropdown = document.getElementById("curriculum-dropdown");
+                const gradeDropdown = document.getElementById("grade-dropdown");
                 const subjectDropdown = document.getElementById("subject-dropdown");
+                [curriculumDropdown, gradeDropdown, subjectDropdown].forEach(el => {
+                    if (el) el.style.display = "";
+                });
+
+                const hideGlobalFilters = document.querySelector("[data-hide-global-filters='true']");
+                if (hideGlobalFilters || activeTabId === "admin-users-tab" || activeTabId === "curriculum-config-tab") {
+                    [curriculumDropdown, gradeDropdown, subjectDropdown].forEach(el => {
+                        if (el) el.style.display = "none";
+                    });
+                }
+
+                // Hide subject dropdown when "Tests" tab is active
                 if (activeTabId === "tests-tab") { 
                     if (!(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test") 
                             || currentPath.endsWith("/copy-test"))) {
@@ -189,9 +225,7 @@
 
                 } else if (activeTabId === "problems-tab") {
                     if (currentPath.endsWith("/problems")) {
-                        const curriculumDropdown = document.getElementById("curriculum-dropdown");
                         curriculumDropdown.style.display = "none";
-                        const gradeDropdown = document.getElementById("grade-dropdown");
                         gradeDropdown.style.display = "none";
                         subjectDropdown.style.display = "none";
                     }
@@ -237,6 +271,7 @@
             }
 
             document.body.addEventListener("htmx:afterSettle", debounceUpdate);
+            updateActiveTabFromURL();
         });
 
         // Function to go back after delay

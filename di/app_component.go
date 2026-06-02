@@ -9,29 +9,30 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/auth"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
+	pgrepo "github.com/avantifellows/nex-gen-cms/internal/repositories/db"
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	remote_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/remote"
-	pgrepo "github.com/avantifellows/nex-gen-cms/internal/repositories/db"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 )
 
 type AppComponent struct {
-	DB                 *sql.DB
-	CssPathHandler     http.Handler
-	LoginHandler       *handlers.LoginHandler
-	AdminUsersHandler  *handlers.AdminUsersHandler
-	ChaptersHandler    *handlers.ChaptersHandler
-	ResourcesHandler   *handlers.ResourcesHandler
-	TopicsHandler      *handlers.TopicsHandler
-	ConceptsHandler    *handlers.ConceptsHandler
-	CurriculumsHandler *handlers.CurriculumsHandler
-	GradesHandler      *handlers.GradesHandler
-	SubjectsHandler    *handlers.SubjectsHandler
-	SkillsHandler      *handlers.SkillsHandler
-	TestsHandler       *handlers.TestsHandler
-	ProblemsHandler    *handlers.ProblemsHandler
-	TagsHandler        *handlers.TagsHandler
-	ExamsHandler       *handlers.ExamsHandler
+	DB                      *sql.DB
+	CssPathHandler          http.Handler
+	LoginHandler            *handlers.LoginHandler
+	AdminUsersHandler       *handlers.AdminUsersHandler
+	CurriculumConfigHandler *handlers.CurriculumConfigHandler
+	ChaptersHandler         *handlers.ChaptersHandler
+	ResourcesHandler        *handlers.ResourcesHandler
+	TopicsHandler           *handlers.TopicsHandler
+	ConceptsHandler         *handlers.ConceptsHandler
+	CurriculumsHandler      *handlers.CurriculumsHandler
+	GradesHandler           *handlers.GradesHandler
+	SubjectsHandler         *handlers.SubjectsHandler
+	SkillsHandler           *handlers.SkillsHandler
+	TestsHandler            *handlers.TestsHandler
+	ProblemsHandler         *handlers.ProblemsHandler
+	TagsHandler             *handlers.TagsHandler
+	ExamsHandler            *handlers.ExamsHandler
 }
 
 func NewAppComponent() (*AppComponent, error) {
@@ -71,6 +72,8 @@ func NewAppComponent() (*AppComponent, error) {
 	cssPathHandler := http.StripPrefix("/web/", http.FileServer(http.Dir("./web")))
 	loginHandler := handlers.NewLoginHandler(googleAuth, usersRepo)
 	adminUsersHandler := handlers.NewAdminUsersHandler(usersRepo)
+	curriculumConfigRepo := pgrepo.NewCurriculumConfigRepo(database)
+	curriculumConfigHandler := handlers.NewCurriculumConfigHandler(curriculumConfigRepo)
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
 	resourcesHandler := handlers.NewResourcesHandler(resourcesService)
 	topicsHandler := handlers.NewTopicsHandler(topicsService)
@@ -87,21 +90,22 @@ func NewAppComponent() (*AppComponent, error) {
 	examsHandler := handlers.NewExamsHandler(examsService)
 
 	return &AppComponent{
-		DB:                 database,
-		CssPathHandler:     cssPathHandler,
-		LoginHandler:       loginHandler,
-		AdminUsersHandler:  adminUsersHandler,
-		ChaptersHandler:    chaptersHandler,
-		ResourcesHandler:   resourcesHandler,
-		TopicsHandler:      topicsHandler,
-		ConceptsHandler:    conceptsHandler,
-		CurriculumsHandler: curriculumsHandler,
-		GradesHandler:      gradesHandler,
-		SubjectsHandler:    subjectsHandler,
-		SkillsHandler:      skillsHandler,
-		TestsHandler:       testsHandler,
-		ProblemsHandler:    problemsHandler,
-		TagsHandler:        tagsHandler,
-		ExamsHandler:       examsHandler,
+		DB:                      database,
+		CssPathHandler:          cssPathHandler,
+		LoginHandler:            loginHandler,
+		AdminUsersHandler:       adminUsersHandler,
+		CurriculumConfigHandler: curriculumConfigHandler,
+		ChaptersHandler:         chaptersHandler,
+		ResourcesHandler:        resourcesHandler,
+		TopicsHandler:           topicsHandler,
+		ConceptsHandler:         conceptsHandler,
+		CurriculumsHandler:      curriculumsHandler,
+		GradesHandler:           gradesHandler,
+		SubjectsHandler:         subjectsHandler,
+		SkillsHandler:           skillsHandler,
+		TestsHandler:            testsHandler,
+		ProblemsHandler:         problemsHandler,
+		TagsHandler:             tagsHandler,
+		ExamsHandler:            examsHandler,
 	}, nil
 }

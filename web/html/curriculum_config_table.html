@@ -1,0 +1,109 @@
+<div class="space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="text-sm text-ink-muted">
+            Showing page {{ .Result.Page }} of {{ if gt .Result.TotalPages 0 }}{{ .Result.TotalPages }}{{ else }}1{{ end }} · {{ .Result.TotalRows }} rows
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="curriculum-config-refresh" type="button" class="btn-secondary btn-sm" hx-get="{{ curriculumConfigPageURL .Query .Result.Page }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Refresh</button>
+            <form id="curriculum-config-page-size-form"
+                  class="flex items-center gap-2 text-sm"
+                  hx-get="/admin/curriculum-config/table"
+                  hx-target="#curriculum-config-table"
+                  hx-swap="innerHTML">
+                <input type="hidden" name="exam_track" value="{{ .Query.ExamTrack }}">
+                <input type="hidden" name="grade" value="{{ .Query.Grade }}">
+                <input type="hidden" name="subject" value="{{ .Query.Subject }}">
+                <input type="hidden" name="search" value="{{ .Query.Search }}">
+                <input type="hidden" name="chapter_id" value="{{ .Query.ChapterID }}">
+                <input type="hidden" name="syllabus_status" value="{{ .Query.SyllabusStatus }}">
+                <input type="hidden" name="page" value="1">
+                <input type="hidden" name="sort" value="{{ .Query.Sort }}">
+                <input type="hidden" name="dir" value="{{ .Query.Direction }}">
+                <label class="text-ink-muted" for="curriculum-config-table-limit">Rows</label>
+                <select id="curriculum-config-table-limit" name="limit" class="form-select-compact w-auto" onchange="htmx.trigger(this.form, 'submit')">
+                    <option value="10" {{ if eq .Query.Limit 10 }}selected{{ end }}>10 rows</option>
+                    <option value="20" {{ if eq .Query.Limit 20 }}selected{{ end }}>20 rows</option>
+                    <option value="50" {{ if eq .Query.Limit 50 }}selected{{ end }}>50 rows</option>
+                    <option value="100" {{ if eq .Query.Limit 100 }}selected{{ end }}>100 rows</option>
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <form id="curriculum-config-applied-filters" class="hidden" aria-hidden="true">
+        <input type="hidden" name="exam_track" value="{{ .Query.ExamTrack }}">
+        <input type="hidden" name="grade" value="{{ .Query.Grade }}">
+        <input type="hidden" name="subject" value="{{ .Query.Subject }}">
+        <input type="hidden" name="search" value="{{ .Query.Search }}">
+        <input type="hidden" name="chapter_id" value="{{ .Query.ChapterID }}">
+        <input type="hidden" name="syllabus_status" value="{{ .Query.SyllabusStatus }}">
+        <input type="hidden" name="page" value="{{ .Query.Page }}">
+        <input type="hidden" name="limit" value="{{ .Query.Limit }}">
+        <input type="hidden" name="sort" value="{{ .Query.Sort }}">
+        <input type="hidden" name="dir" value="{{ .Query.Direction }}">
+    </form>
+
+    {{ if .Result.Rows }}
+    <div class="overflow-x-auto">
+        <table class="app-table min-w-[1180px]">
+            <thead>
+                <tr>
+                    <th><button type="button" class="font-semibold" hx-get="{{ curriculumConfigSortURL .Query "chapter_code" }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Chapter code</button></th>
+                    <th><button type="button" class="font-semibold" hx-get="{{ curriculumConfigSortURL .Query "chapter_name" }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Chapter name</button></th>
+                    <th>Chapter ID</th>
+                    <th><button type="button" class="font-semibold" hx-get="{{ curriculumConfigSortURL .Query "grade" }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Grade</button></th>
+                    <th><button type="button" class="font-semibold" hx-get="{{ curriculumConfigSortURL .Query "subject" }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Subject</button></th>
+                    <th><button type="button" class="font-semibold" hx-get="{{ curriculumConfigSortURL .Query "exam_track" }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Exam track</button></th>
+                    <th>Syllabus status</th>
+                    <th>Prescribed time</th>
+                    <th><button type="button" class="font-semibold" hx-get="{{ curriculumConfigSortURL .Query "coverage_sequence" }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Coverage order</button></th>
+                    <th>Updated by</th>
+                    <th><button type="button" class="font-semibold" hx-get="{{ curriculumConfigSortURL .Query "updated_at" }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Updated at</button></th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Result.Rows }}
+                <tr id="curriculum-config-row-{{ .ID }}" class="border-b">
+                    <td class="py-2 px-4 font-medium">{{ .ChapterCode }}</td>
+                    <td class="py-2 px-4">{{ .ChapterName }}</td>
+                    <td class="py-2 px-4 text-ink-muted">{{ .ChapterID }}</td>
+                    <td class="py-2 px-4">{{ .Grade }}</td>
+                    <td class="py-2 px-4">{{ .Subject }}</td>
+                    <td class="py-2 px-4">{{ examTrackLabel .ExamTrack }}</td>
+                    <td class="py-2 px-4">{{ syllabusStatusLabel .IsInSyllabus }}</td>
+                    <td class="py-2 px-4">{{ .PrescribedMinutes }} min <span class="text-ink-muted">({{ .PrescribedHours }})</span></td>
+                    <td class="py-2 px-4">{{ .CoverageSequence }}</td>
+                    <td class="py-2 px-4">{{ .UpdatedByEmail }}</td>
+                    <td class="py-2 px-4 text-ink-muted">{{ .UpdatedAt.Format "2006-01-02 15:04" }}</td>
+                    <td class="py-2 px-4">
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="btn-secondary btn-sm" hx-get="{{ curriculumConfigEditURL $.Query .ID }}" hx-target="#curriculum-config-side-panel" hx-swap="innerHTML">Edit</button>
+                            {{ if .IsInSyllabus }}
+                            <button type="button" class="btn-secondary btn-sm" hx-get="{{ curriculumConfigRemoveURL $.Query .ID }}" hx-target="#curriculum-config-side-panel" hx-swap="innerHTML">Remove</button>
+                            {{ end }}
+                        </div>
+                    </td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+    {{ else }}
+    <div class="rounded-md border border-border bg-bg-card-alt p-6 text-center" role="status">
+        <h2 class="text-base font-semibold text-ink">No LMS Chapter Exam Config rows found</h2>
+        <p class="mt-1 text-sm text-ink-muted">No in-syllabus JEE Main rows match the current filters.</p>
+    </div>
+    {{ end }}
+
+    {{ if gt .Result.TotalPages 1 }}
+    <nav class="flex items-center justify-end gap-2 text-sm" aria-label="Curriculum Config pagination">
+        {{ if gt .Result.Page 1 }}
+        <button type="button" class="btn-secondary btn-sm" hx-get="{{ curriculumConfigPageURL .Query (minus .Result.Page 1) }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Previous</button>
+        {{ end }}
+        {{ if lt .Result.Page .Result.TotalPages }}
+        <button type="button" class="btn-secondary btn-sm" hx-get="{{ curriculumConfigPageURL .Query (plus .Result.Page 1) }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Next</button>
+        {{ end }}
+    </nav>
+    {{ end }}
+</div>

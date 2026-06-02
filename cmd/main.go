@@ -101,6 +101,19 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/admin/users/active", admin(adminUsers.SetActive))
 	muxHandler.HandleFunc("/admin/users/role", admin(adminUsers.UpdateRole))
 
+	curriculumConfig := appComponentPtr.CurriculumConfigHandler
+	muxHandler.HandleFunc("/admin/curriculum-config", admin(curriculumConfig.Page))
+	muxHandler.HandleFunc("/admin/curriculum-config/table", admin(curriculumConfig.Table))
+	muxHandler.HandleFunc("/admin/curriculum-config/new", admin(curriculumConfig.New))
+	muxHandler.HandleFunc("/admin/curriculum-config/edit", admin(curriculumConfig.Edit))
+	muxHandler.HandleFunc("/admin/curriculum-config/remove", admin(curriculumConfig.Remove))
+	muxHandler.HandleFunc("/admin/curriculum-config/chapter-options", admin(curriculumConfig.ChapterOptions))
+	muxHandler.HandleFunc("/admin/curriculum-config/impact", admin(curriculumConfig.Impact))
+	muxHandler.HandleFunc("/admin/curriculum-config/create", admin(curriculumConfig.Create))
+	muxHandler.HandleFunc("/admin/curriculum-config/update", admin(curriculumConfig.Update))
+	muxHandler.HandleFunc("/admin/curriculum-config/remove-from-syllabus", admin(curriculumConfig.RemoveFromSyllabus))
+	muxHandler.HandleFunc("/admin/curriculum-config/export", admin(curriculumConfig.Export))
+
 	chaptersHandler := appComponentPtr.ChaptersHandler
 	muxHandler.HandleFunc("/chapters", chaptersHandler.LoadChapters)
 	muxHandler.HandleFunc("/api/curriculums", appComponentPtr.CurriculumsHandler.GetCurriculums)
