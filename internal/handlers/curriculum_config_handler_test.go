@@ -24,6 +24,7 @@ func init() {
 type fakeCurriculumConfigRepository struct {
 	readiness   curriculumconfig.Readiness
 	listResult  curriculumconfig.ListResult
+	options     curriculumconfig.FilterOptions
 	listQueries []curriculumconfig.ListQuery
 }
 
@@ -37,7 +38,7 @@ func (f *fakeCurriculumConfigRepository) List(_ context.Context, query curriculu
 }
 
 func (f *fakeCurriculumConfigRepository) FilterOptions(context.Context) (curriculumconfig.FilterOptions, error) {
-	return curriculumconfig.FilterOptions{}, curriculumconfig.ErrNotImplemented
+	return f.options, nil
 }
 
 func (f *fakeCurriculumConfigRepository) ChapterOptions(context.Context, curriculumconfig.ChapterOptionsQuery) ([]curriculumconfig.ChapterOption, error) {
@@ -166,6 +167,139 @@ func TestCurriculumConfigHTMXTableRendersDefaultRowsAsPartial(t *testing.T) {
 	assert.Contains(t, body, "admin@avantifellows.org")
 	assert.NotContains(t, body, "14983")
 	assert.False(t, strings.Contains(body, "<html"))
+}
+
+func TestCurriculumConfigTableNormalizesInvalidAppliedQueryBeforeListing(t *testing.T) {
+	constants.InitRuntimeConstant()
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		listResult: curriculumconfig.ListResult{
+			Rows:       nil,
+			TotalRows:  0,
+			Page:       1,
+			Limit:      50,
+			TotalPages: 0,
+		},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/table?exam_track=bad&syllabus_status=bad&page=-3&limit=999&sort=drop_table&dir=sideways&grade=-1&chapter_id=abc", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.Table(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, repo.listQueries, 1)
+	assert.Equal(t, curriculumconfig.ListQuery{
+		ExamTrack:      "jee_main",
+		SyllabusStatus: "in_syllabus",
+		Page:           1,
+		Limit:          50,
+		Sort:           "curriculum",
+		Direction:      "asc",
+	}, repo.listQueries[0])
+}
+
+func TestCurriculumConfigPageRendersExplicitApplyFiltersFromOptions(t *testing.T) {
+	constants.InitRuntimeConstant()
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		options: curriculumconfig.FilterOptions{
+			ExamTracks: []curriculumconfig.Option{{Value: "jee_main", Label: "JEE Main"}, {Value: "neet", Label: "NEET"}},
+			Grades:     []curriculumconfig.Option{{Value: "11", Label: "Grade 11"}, {Value: "12", Label: "Grade 12"}},
+			Subjects:   []curriculumconfig.Option{{Value: "2", Label: "Chemistry"}},
+		},
+		listResult: curriculumconfig.ListResult{Rows: nil, TotalRows: 0, Page: 1, Limit: 20, TotalPages: 0},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config?exam_track=neet&grade=12&subject=2&search=organic&chapter_id=77&syllabus_status=all&limit=20&sort=updated_at&dir=desc", nil)
+	rec := httptest.NewRecorder()
+
+	handler.Page(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, repo.listQueries, 1)
+	assert.Equal(t, curriculumconfig.ListQuery{
+		ExamTrack:      "neet",
+		Grade:          "12",
+		Subject:        "2",
+		Search:         "organic",
+		ChapterID:      "77",
+		SyllabusStatus: "all",
+		Page:           1,
+		Limit:          20,
+		Sort:           "updated_at",
+		Direction:      "desc",
+	}, repo.listQueries[0])
+	body := rec.Body.String()
+	assert.Contains(t, body, `id="curriculum-config-filter-form"`)
+	assert.Contains(t, body, `hx-get="/admin/curriculum-config/table"`)
+	assert.Contains(t, body, `hx-target="#curriculum-config-table"`)
+	assert.Contains(t, body, `<button type="submit"`)
+	assert.Contains(t, body, `<option value="neet" selected>NEET</option>`)
+	assert.Contains(t, body, `<option value="12" selected>Grade 12</option>`)
+	assert.Contains(t, body, `<option value="2" selected>Chemistry</option>`)
+	assert.Contains(t, body, `name="search" value="organic"`)
+	assert.Contains(t, body, `name="chapter_id" value="77"`)
+	assert.NotContains(t, body, `select id="curriculum-config-exam-track" name="exam_track" hx-get`)
+	assert.NotContains(t, body, `input id="curriculum-config-search" name="search" hx-get`)
+}
+
+func TestCurriculumConfigTablePreservesAppliedFiltersForPaginationPageSizeAndSorting(t *testing.T) {
+	constants.InitRuntimeConstant()
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		listResult: curriculumconfig.ListResult{
+			Rows: []curriculumconfig.ListRow{{
+				ID:                12,
+				ChapterID:         77,
+				ChapterCode:       "CHEM-001",
+				ChapterName:       "Organic Chemistry",
+				Grade:             "12",
+				Subject:           "Chemistry",
+				ExamTrack:         "neet",
+				IsInSyllabus:      true,
+				PrescribedMinutes: 60,
+				PrescribedHours:   "1 hour",
+				CoverageSequence:  1,
+				UpdatedByEmail:    "admin@avantifellows.org",
+				UpdatedAt:         time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC),
+			}},
+			TotalRows:  42,
+			Page:       2,
+			Limit:      20,
+			TotalPages: 3,
+		},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/table?exam_track=neet&grade=12&subject=Chemistry&search=organic&chapter_id=77&syllabus_status=all&page=2&limit=20&sort=updated_at&dir=desc", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.Table(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, `id="curriculum-config-applied-filters"`)
+	assert.Contains(t, body, `name="exam_track" value="neet"`)
+	assert.Contains(t, body, `name="grade" value="12"`)
+	assert.Contains(t, body, `name="subject" value="Chemistry"`)
+	assert.Contains(t, body, `name="search" value="organic"`)
+	assert.Contains(t, body, `name="chapter_id" value="77"`)
+	assert.Contains(t, body, `name="syllabus_status" value="all"`)
+	assert.Contains(t, body, `name="page" value="2"`)
+	assert.Contains(t, body, `name="limit" value="20"`)
+	assert.Contains(t, body, `name="sort" value="updated_at"`)
+	assert.Contains(t, body, `name="dir" value="desc"`)
+	assert.Contains(t, body, `hx-get="/admin/curriculum-config/table?exam_track=neet&amp;grade=12&amp;subject=Chemistry&amp;search=organic&amp;chapter_id=77&amp;syllabus_status=all&amp;page=1&amp;limit=20&amp;sort=updated_at&amp;dir=desc"`)
+	assert.Contains(t, body, `hx-get="/admin/curriculum-config/table?exam_track=neet&amp;grade=12&amp;subject=Chemistry&amp;search=organic&amp;chapter_id=77&amp;syllabus_status=all&amp;page=3&amp;limit=20&amp;sort=updated_at&amp;dir=desc"`)
+	assert.Contains(t, body, `hx-get="/admin/curriculum-config/table?exam_track=neet&amp;grade=12&amp;subject=Chemistry&amp;search=organic&amp;chapter_id=77&amp;syllabus_status=all&amp;page=1&amp;limit=20&amp;sort=chapter_code&amp;dir=asc"`)
+	assert.Contains(t, body, `id="curriculum-config-refresh"`)
+	assert.Contains(t, body, `id="curriculum-config-page-size-form"`)
+	assert.Contains(t, body, `<option value="20" selected>20 rows</option>`)
 }
 
 func TestCurriculumConfigHTMXTableRendersUsefulEmptyState(t *testing.T) {

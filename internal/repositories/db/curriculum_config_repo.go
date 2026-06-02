@@ -48,7 +48,7 @@ func (r *CurriculumConfigRepo) SchemaReadiness(ctx context.Context) (curriculumc
 }
 
 func (r *CurriculumConfigRepo) List(ctx context.Context, query curriculumconfig.ListQuery) (curriculumconfig.ListResult, error) {
-	query = normalizeListQuery(query)
+	query = curriculumconfig.NormalizeListQuery(query)
 	whereSQL, args := buildListWhere(query)
 
 	var totalRows int
@@ -129,8 +129,58 @@ func (r *CurriculumConfigRepo) List(ctx context.Context, query curriculumconfig.
 	}, nil
 }
 
-func (r *CurriculumConfigRepo) FilterOptions(context.Context) (curriculumconfig.FilterOptions, error) {
-	return curriculumconfig.FilterOptions{}, curriculumconfig.ErrNotImplemented
+func (r *CurriculumConfigRepo) FilterOptions(ctx context.Context) (curriculumconfig.FilterOptions, error) {
+	grades, err := r.optionRows(ctx, `
+		SELECT value, label
+		FROM (
+			SELECT DISTINCT g.number::text AS value, 'Grade ' || g.number::text AS label, g.number AS sort_number
+			FROM lms_chapter_exam_configs c
+			`+listDisplayJoins()+`
+		) grade_options
+		ORDER BY sort_number
+	`)
+	if err != nil {
+		return curriculumconfig.FilterOptions{}, err
+	}
+	subjects, err := r.optionRows(ctx, `
+		SELECT DISTINCT s.id::text AS value, COALESCE(sn.name, '') AS label
+		FROM lms_chapter_exam_configs c
+		`+listDisplayJoins()+`
+		ORDER BY COALESCE(sn.name, '')
+	`)
+	if err != nil {
+		return curriculumconfig.FilterOptions{}, err
+	}
+	return curriculumconfig.FilterOptions{
+		ExamTracks: []curriculumconfig.Option{
+			{Value: "jee_main", Label: "JEE Main"},
+			{Value: "jee_advanced", Label: "JEE Advanced"},
+			{Value: "neet", Label: "NEET"},
+		},
+		Grades:   grades,
+		Subjects: subjects,
+	}, nil
+}
+
+func (r *CurriculumConfigRepo) optionRows(ctx context.Context, sql string) ([]curriculumconfig.Option, error) {
+	rows, err := r.db.QueryContext(ctx, sql)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var options []curriculumconfig.Option
+	for rows.Next() {
+		var option curriculumconfig.Option
+		if err := rows.Scan(&option.Value, &option.Label); err != nil {
+			return nil, err
+		}
+		options = append(options, option)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return options, nil
 }
 
 func (r *CurriculumConfigRepo) ChapterOptions(context.Context, curriculumconfig.ChapterOptionsQuery) ([]curriculumconfig.ChapterOption, error) {
@@ -155,55 +205,6 @@ func (r *CurriculumConfigRepo) RemoveFromSyllabus(context.Context, curriculumcon
 
 func (r *CurriculumConfigRepo) ExportRows(context.Context, curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
 	return nil, curriculumconfig.ErrNotImplemented
-}
-
-func normalizeListQuery(query curriculumconfig.ListQuery) curriculumconfig.ListQuery {
-	query.ExamTrack = normalizeChoice(query.ExamTrack, "jee_main", map[string]struct{}{
-		"jee_main":     {},
-		"jee_advanced": {},
-		"neet":         {},
-	})
-	query.SyllabusStatus = normalizeChoice(query.SyllabusStatus, "in_syllabus", map[string]struct{}{
-		"in_syllabus":     {},
-		"out_of_syllabus": {},
-		"all":             {},
-	})
-	if query.Page < 1 {
-		query.Page = 1
-	}
-	switch query.Limit {
-	case 10, 20, 50, 100:
-	default:
-		query.Limit = 50
-	}
-	query.Sort = normalizeChoice(query.Sort, "curriculum", map[string]struct{}{
-		"curriculum":        {},
-		"exam_track":        {},
-		"grade":             {},
-		"subject":           {},
-		"coverage_sequence": {},
-		"chapter_code":      {},
-		"chapter_name":      {},
-		"updated_at":        {},
-	})
-	if strings.EqualFold(query.Direction, "desc") {
-		query.Direction = "desc"
-	} else {
-		query.Direction = "asc"
-	}
-	query.Grade = strings.TrimSpace(query.Grade)
-	query.Subject = strings.TrimSpace(query.Subject)
-	query.Search = strings.TrimSpace(query.Search)
-	query.ChapterID = strings.TrimSpace(query.ChapterID)
-	return query
-}
-
-func normalizeChoice(value, fallback string, allowed map[string]struct{}) string {
-	value = strings.TrimSpace(strings.ToLower(value))
-	if _, ok := allowed[value]; ok {
-		return value
-	}
-	return fallback
 }
 
 func buildListWhere(query curriculumconfig.ListQuery) (string, []any) {
@@ -259,7 +260,8 @@ func listDisplayJoins() string {
 
 func listOrderBy(query curriculumconfig.ListQuery) string {
 	if query.Sort == "curriculum" {
-		return "c.exam_track ASC, g.number ASC, COALESCE(sn.name, '') ASC, c.coverage_sequence ASC, ch.code ASC, COALESCE(chn.name, '') ASC, c.id ASC"
+		direction := strings.ToUpper(query.Direction)
+		return "c.exam_track " + direction + ", g.number " + direction + ", COALESCE(sn.name, '') " + direction + ", c.coverage_sequence " + direction + ", ch.code " + direction + ", COALESCE(chn.name, '') " + direction + ", c.id ASC"
 	}
 
 	sortColumns := map[string]string{

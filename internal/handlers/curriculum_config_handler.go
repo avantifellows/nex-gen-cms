@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -34,7 +35,14 @@ func (h *CurriculumConfigHandler) Page(w http.ResponseWriter, r *http.Request) {
 	if !ok && !readiness.Ready {
 		return
 	}
-	result, err := h.repo.List(r.Context(), listQueryFromRequest(r))
+	query := listQueryFromRequest(r)
+	options, err := h.repo.FilterOptions(r.Context())
+	if err != nil {
+		log.Printf("curriculum config filter options: %v", err)
+		http.Error(w, "Could not load Curriculum Config filters", http.StatusInternalServerError)
+		return
+	}
+	result, err := h.repo.List(r.Context(), query)
 	if err != nil {
 		log.Printf("curriculum config list: %v", err)
 		http.Error(w, "Could not load Curriculum Config", http.StatusInternalServerError)
@@ -43,6 +51,8 @@ func (h *CurriculumConfigHandler) Page(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"Readiness": readiness,
 		"Result":    result,
+		"Options":   options,
+		"Query":     query,
 	}
 	views.ExecuteTemplates(w, data, curriculumConfigFuncMap(), baseTemplate, curriculumConfigTemplate, curriculumConfigTableTemplate)
 }
@@ -54,13 +64,14 @@ func (h *CurriculumConfigHandler) Table(w http.ResponseWriter, r *http.Request) 
 	if _, ok := h.ensureReady(w, r, false); !ok {
 		return
 	}
-	result, err := h.repo.List(r.Context(), listQueryFromRequest(r))
+	query := listQueryFromRequest(r)
+	result, err := h.repo.List(r.Context(), query)
 	if err != nil {
 		log.Printf("curriculum config list: %v", err)
 		http.Error(w, "Could not load Curriculum Config", http.StatusInternalServerError)
 		return
 	}
-	views.ExecuteTemplate(curriculumConfigTableTemplate, w, tableViewData{Result: result}, curriculumConfigFuncMap())
+	views.ExecuteTemplate(curriculumConfigTableTemplate, w, tableViewData{Result: result, Query: query}, curriculumConfigFuncMap())
 }
 
 func (h *CurriculumConfigHandler) New(w http.ResponseWriter, r *http.Request) {
@@ -221,11 +232,12 @@ func allowMethod(w http.ResponseWriter, r *http.Request, method string) bool {
 
 type tableViewData struct {
 	Result curriculumconfig.ListResult
+	Query  curriculumconfig.ListQuery
 }
 
 func listQueryFromRequest(r *http.Request) curriculumconfig.ListQuery {
 	values := r.URL.Query()
-	return curriculumconfig.ListQuery{
+	return curriculumconfig.NormalizeListQuery(curriculumconfig.ListQuery{
 		ExamTrack:      queryValue(values.Get("exam_track"), "jee_main"),
 		Grade:          strings.TrimSpace(values.Get("grade")),
 		Subject:        strings.TrimSpace(values.Get("subject")),
@@ -236,7 +248,7 @@ func listQueryFromRequest(r *http.Request) curriculumconfig.ListQuery {
 		Limit:          positiveInt(values.Get("limit"), 50),
 		Sort:           queryValue(values.Get("sort"), "curriculum"),
 		Direction:      queryValue(values.Get("dir"), "asc"),
-	}
+	})
 }
 
 func queryValue(value, fallback string) string {
@@ -257,6 +269,26 @@ func positiveInt(value string, fallback int) int {
 
 func curriculumConfigFuncMap() template.FuncMap {
 	return template.FuncMap{
+		"curriculumConfigPageURL": func(query curriculumconfig.ListQuery, page int) string {
+			query.Page = page
+			return "/admin/curriculum-config/table?" + encodeListQuery(query)
+		},
+		"curriculumConfigSortURL": func(query curriculumconfig.ListQuery, sort string) string {
+			if query.Sort == sort && query.Direction == "asc" {
+				query.Direction = "desc"
+			} else {
+				query.Direction = "asc"
+			}
+			query.Sort = sort
+			query.Page = 1
+			return "/admin/curriculum-config/table?" + encodeListQuery(query)
+		},
+		"minus": func(left, right int) int {
+			return left - right
+		},
+		"plus": func(left, right int) int {
+			return left + right
+		},
 		"examTrackLabel": func(value string) string {
 			switch value {
 			case "jee_main":
@@ -276,4 +308,26 @@ func curriculumConfigFuncMap() template.FuncMap {
 			return "Out of syllabus"
 		},
 	}
+}
+
+func encodeListQuery(query curriculumconfig.ListQuery) string {
+	query = curriculumconfig.NormalizeListQuery(query)
+	values := url.Values{}
+	values.Set("exam_track", query.ExamTrack)
+	values.Set("grade", query.Grade)
+	values.Set("subject", query.Subject)
+	values.Set("search", query.Search)
+	values.Set("chapter_id", query.ChapterID)
+	values.Set("syllabus_status", query.SyllabusStatus)
+	values.Set("page", strconv.Itoa(query.Page))
+	values.Set("limit", strconv.Itoa(query.Limit))
+	values.Set("sort", query.Sort)
+	values.Set("dir", query.Direction)
+
+	order := []string{"exam_track", "grade", "subject", "search", "chapter_id", "syllabus_status", "page", "limit", "sort", "dir"}
+	parts := make([]string, 0, len(order))
+	for _, key := range order {
+		parts = append(parts, url.QueryEscape(key)+"="+url.QueryEscape(values.Get(key)))
+	}
+	return strings.Join(parts, "&")
 }

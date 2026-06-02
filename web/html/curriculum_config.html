@@ -28,10 +28,73 @@
     </div>
     {{ end }}
 
+    <form id="curriculum-config-filter-form"
+          class="rounded-md border border-border bg-bg-card p-4"
+          hx-get="/admin/curriculum-config/table"
+          hx-target="#curriculum-config-table"
+          hx-swap="innerHTML">
+        <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <label class="space-y-1 text-sm font-medium text-ink" for="curriculum-config-exam-track">
+                <span>Exam track</span>
+                <select id="curriculum-config-exam-track" name="exam_track" class="form-select w-full">
+                    {{ range .Options.ExamTracks }}
+                    <option value="{{ .Value }}" {{ if eq $.Query.ExamTrack .Value }}selected{{ end }}>{{ .Label }}</option>
+                    {{ end }}
+                </select>
+            </label>
+            <label class="space-y-1 text-sm font-medium text-ink" for="curriculum-config-grade">
+                <span>Grade</span>
+                <select id="curriculum-config-grade" name="grade" class="form-select w-full">
+                    <option value="" {{ if eq .Query.Grade "" }}selected{{ end }}>All grades</option>
+                    {{ range .Options.Grades }}
+                    <option value="{{ .Value }}" {{ if eq $.Query.Grade .Value }}selected{{ end }}>{{ .Label }}</option>
+                    {{ end }}
+                </select>
+            </label>
+            <label class="space-y-1 text-sm font-medium text-ink" for="curriculum-config-subject">
+                <span>Subject</span>
+                <select id="curriculum-config-subject" name="subject" class="form-select w-full">
+                    <option value="" {{ if eq .Query.Subject "" }}selected{{ end }}>All subjects</option>
+                    {{ range .Options.Subjects }}
+                    <option value="{{ .Value }}" {{ if eq $.Query.Subject .Value }}selected{{ end }}>{{ .Label }}</option>
+                    {{ end }}
+                </select>
+            </label>
+            <label class="space-y-1 text-sm font-medium text-ink" for="curriculum-config-syllabus-status">
+                <span>Syllabus status</span>
+                <select id="curriculum-config-syllabus-status" name="syllabus_status" class="form-select w-full">
+                    <option value="in_syllabus" {{ if eq .Query.SyllabusStatus "in_syllabus" }}selected{{ end }}>In syllabus</option>
+                    <option value="out_of_syllabus" {{ if eq .Query.SyllabusStatus "out_of_syllabus" }}selected{{ end }}>Out of syllabus</option>
+                    <option value="all" {{ if eq .Query.SyllabusStatus "all" }}selected{{ end }}>All statuses</option>
+                </select>
+            </label>
+            <label class="space-y-1 text-sm font-medium text-ink md:col-span-2" for="curriculum-config-search">
+                <span>Chapter search</span>
+                <input id="curriculum-config-search" name="search" value="{{ .Query.Search }}" class="form-control w-full" type="search">
+            </label>
+            <label class="space-y-1 text-sm font-medium text-ink" for="curriculum-config-chapter-id">
+                <span>Chapter ID</span>
+                <input id="curriculum-config-chapter-id" name="chapter_id" value="{{ .Query.ChapterID }}" class="form-control w-full" inputmode="numeric">
+            </label>
+            <label class="space-y-1 text-sm font-medium text-ink" for="curriculum-config-limit">
+                <span>Page size</span>
+                <select id="curriculum-config-limit" name="limit" class="form-select w-full">
+                    <option value="10" {{ if eq .Query.Limit 10 }}selected{{ end }}>10 rows</option>
+                    <option value="20" {{ if eq .Query.Limit 20 }}selected{{ end }}>20 rows</option>
+                    <option value="50" {{ if eq .Query.Limit 50 }}selected{{ end }}>50 rows</option>
+                    <option value="100" {{ if eq .Query.Limit 100 }}selected{{ end }}>100 rows</option>
+                </select>
+            </label>
+        </div>
+        <input type="hidden" name="page" value="1">
+        <input type="hidden" name="sort" value="{{ .Query.Sort }}">
+        <input type="hidden" name="dir" value="{{ .Query.Direction }}">
+        <div class="mt-4 flex justify-end">
+            <button type="submit" class="btn-primary btn-sm">Apply filters</button>
+        </div>
+    </form>
+
     <div id="curriculum-config-table"
-         hx-get="/admin/curriculum-config/table"
-         hx-target="this"
-         hx-swap="innerHTML"
          class="rounded-md border border-border bg-bg-card p-4">
         {{ template "curriculum_config_table.html" . }}
     </div>

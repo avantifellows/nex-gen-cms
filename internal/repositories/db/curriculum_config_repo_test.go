@@ -171,6 +171,152 @@ func TestCurriculumConfigListReturnsEmptyFirstPageWhenNoRowsMatch(t *testing.T) 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestCurriculumConfigListAppliesFiltersPaginationAndTotals(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*)")).
+		WithArgs("neet", "12", "Chemistry", "77", "%organic%").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(42))
+	mock.ExpectQuery(regexp.QuoteMeta("(ch.code ILIKE $5 OR COALESCE(chn.name, '') ILIKE $5)")).
+		WithArgs("neet", "12", "Chemistry", "77", "%organic%", 10, 20).
+		WillReturnRows(emptyCurriculumConfigListRows())
+
+	result, err := NewCurriculumConfigRepo(database).List(context.Background(), curriculumconfig.ListQuery{
+		ExamTrack:      "neet",
+		Grade:          "12",
+		Subject:        "Chemistry",
+		Search:         "organic",
+		ChapterID:      "77",
+		SyllabusStatus: "all",
+		Page:           3,
+		Limit:          10,
+		Sort:           "chapter_name",
+		Direction:      "desc",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 42, result.TotalRows)
+	assert.Equal(t, 3, result.Page)
+	assert.Equal(t, 10, result.Limit)
+	assert.Equal(t, 5, result.TotalPages)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigListNormalizesInvalidQueryBeforeSQL(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*)")).
+		WithArgs("jee_main", true).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	mock.ExpectQuery(regexp.QuoteMeta("ORDER BY c.exam_track ASC, g.number ASC, COALESCE(sn.name, '') ASC, c.coverage_sequence ASC, ch.code ASC, COALESCE(chn.name, '') ASC, c.id ASC")).
+		WithArgs("jee_main", true, 50, 0).
+		WillReturnRows(emptyCurriculumConfigListRows())
+
+	result, err := NewCurriculumConfigRepo(database).List(context.Background(), curriculumconfig.ListQuery{
+		ExamTrack:      "bad",
+		Grade:          "-1",
+		Subject:        "all",
+		ChapterID:      "abc",
+		SyllabusStatus: "bad",
+		Page:           -4,
+		Limit:          999,
+		Sort:           "unsafe",
+		Direction:      "sideways",
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, result.Page)
+	assert.Equal(t, 50, result.Limit)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigListSupportsDescendingCurriculumSortWithTieBreakers(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*)")).
+		WithArgs("neet", true).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	mock.ExpectQuery(regexp.QuoteMeta("ORDER BY c.exam_track DESC, g.number DESC, COALESCE(sn.name, '') DESC, c.coverage_sequence DESC, ch.code DESC, COALESCE(chn.name, '') DESC, c.id ASC")).
+		WithArgs("neet", true, 50, 0).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "chapter_id", "chapter_code", "chapter_name", "grade", "subject", "exam_track",
+			"is_in_syllabus", "prescribed_minutes", "coverage_sequence", "updated_by_email", "updated_at", "lock_token",
+		}))
+
+	_, err := NewCurriculumConfigRepo(database).List(context.Background(), curriculumconfig.ListQuery{
+		ExamTrack: "neet",
+		Sort:      "curriculum",
+		Direction: "desc",
+	})
+
+	require.NoError(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigListSortsWhitelistedColumnWithDeterministicTieBreakers(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*)")).
+		WithArgs("jee_advanced", true).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
+	mock.ExpectQuery(regexp.QuoteMeta("ORDER BY c.updated_at DESC, c.exam_track ASC, g.number ASC, COALESCE(sn.name, '') ASC, c.coverage_sequence ASC, ch.code ASC, COALESCE(chn.name, '') ASC, c.id ASC")).
+		WithArgs("jee_advanced", true, 100, 0).
+		WillReturnRows(emptyCurriculumConfigListRows())
+
+	_, err := NewCurriculumConfigRepo(database).List(context.Background(), curriculumconfig.ListQuery{
+		ExamTrack: "jee_advanced",
+		Limit:     100,
+		Sort:      "updated_at",
+		Direction: "desc",
+	})
+
+	require.NoError(t, err)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigFilterOptionsComeFromDirectPostgresReads(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT value, label")).
+		WillReturnRows(sqlmock.NewRows([]string{"value", "label"}).
+			AddRow("11", "Grade 11").
+			AddRow("12", "Grade 12"))
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT DISTINCT s.id::text AS value")).
+		WillReturnRows(sqlmock.NewRows([]string{"value", "label"}).
+			AddRow("2", "Chemistry").
+			AddRow("3", "Physics"))
+
+	options, err := NewCurriculumConfigRepo(database).FilterOptions(context.Background())
+
+	require.NoError(t, err)
+	assert.Equal(t, []curriculumconfig.Option{
+		{Value: "jee_main", Label: "JEE Main"},
+		{Value: "jee_advanced", Label: "JEE Advanced"},
+		{Value: "neet", Label: "NEET"},
+	}, options.ExamTracks)
+	assert.Equal(t, []curriculumconfig.Option{
+		{Value: "11", Label: "Grade 11"},
+		{Value: "12", Label: "Grade 12"},
+	}, options.Grades)
+	assert.Equal(t, []curriculumconfig.Option{
+		{Value: "2", Label: "Chemistry"},
+		{Value: "3", Label: "Physics"},
+	}, options.Subjects)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func emptyCurriculumConfigListRows() *sqlmock.Rows {
+	return sqlmock.NewRows([]string{
+		"id", "chapter_id", "chapter_code", "chapter_name", "grade", "subject", "exam_track",
+		"is_in_syllabus", "prescribed_minutes", "coverage_sequence", "updated_by_email", "updated_at", "lock_token",
+	})
+}
+
 func newCurriculumConfigReadinessMock(t *testing.T) (*sql.DB, sqlmock.Sqlmock, func()) {
 	t.Helper()
 	database, mock, err := sqlmock.New()
