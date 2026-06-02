@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -22,10 +23,16 @@ func init() {
 }
 
 type fakeCurriculumConfigRepository struct {
-	readiness   curriculumconfig.Readiness
-	listResult  curriculumconfig.ListResult
-	options     curriculumconfig.FilterOptions
-	listQueries []curriculumconfig.ListQuery
+	readiness            curriculumconfig.Readiness
+	listResult           curriculumconfig.ListResult
+	options              curriculumconfig.FilterOptions
+	chapterOptions       []curriculumconfig.ChapterOption
+	impactResult         curriculumconfig.ImpactResult
+	mutationResult       curriculumconfig.MutationResult
+	listQueries          []curriculumconfig.ListQuery
+	chapterOptionQueries []curriculumconfig.ChapterOptionsQuery
+	impactQueries        []curriculumconfig.ImpactQuery
+	createInputs         []curriculumconfig.CreateInput
 }
 
 func (f *fakeCurriculumConfigRepository) SchemaReadiness(context.Context) (curriculumconfig.Readiness, error) {
@@ -41,16 +48,19 @@ func (f *fakeCurriculumConfigRepository) FilterOptions(context.Context) (curricu
 	return f.options, nil
 }
 
-func (f *fakeCurriculumConfigRepository) ChapterOptions(context.Context, curriculumconfig.ChapterOptionsQuery) ([]curriculumconfig.ChapterOption, error) {
-	return nil, curriculumconfig.ErrNotImplemented
+func (f *fakeCurriculumConfigRepository) ChapterOptions(_ context.Context, query curriculumconfig.ChapterOptionsQuery) ([]curriculumconfig.ChapterOption, error) {
+	f.chapterOptionQueries = append(f.chapterOptionQueries, query)
+	return f.chapterOptions, nil
 }
 
-func (f *fakeCurriculumConfigRepository) Impact(context.Context, curriculumconfig.ImpactQuery) (curriculumconfig.ImpactResult, error) {
-	return curriculumconfig.ImpactResult{}, curriculumconfig.ErrNotImplemented
+func (f *fakeCurriculumConfigRepository) Impact(_ context.Context, query curriculumconfig.ImpactQuery) (curriculumconfig.ImpactResult, error) {
+	f.impactQueries = append(f.impactQueries, query)
+	return f.impactResult, nil
 }
 
-func (f *fakeCurriculumConfigRepository) Create(context.Context, curriculumconfig.CreateInput) (curriculumconfig.MutationResult, error) {
-	return curriculumconfig.MutationResult{}, curriculumconfig.ErrNotImplemented
+func (f *fakeCurriculumConfigRepository) Create(_ context.Context, input curriculumconfig.CreateInput) (curriculumconfig.MutationResult, error) {
+	f.createInputs = append(f.createInputs, input)
+	return f.mutationResult, nil
 }
 
 func (f *fakeCurriculumConfigRepository) Edit(context.Context, curriculumconfig.EditInput) (curriculumconfig.MutationResult, error) {
@@ -106,6 +116,8 @@ func TestCurriculumConfigPageRendersThroughBaseTemplateWhenReady(t *testing.T) {
 	assert.Contains(t, body, `data-hide-global-filters="true"`)
 	assert.Contains(t, body, "MATH-001")
 	assert.Contains(t, body, "Quadratic Equations")
+	assert.Contains(t, body, `hx-get="/admin/curriculum-config/new?exam_track=jee_main`)
+	assert.Contains(t, body, `hx-target="#curriculum-config-side-panel"`)
 	assert.NotContains(t, body, "14983")
 }
 
@@ -326,6 +338,204 @@ func TestCurriculumConfigHTMXTableRendersUsefulEmptyState(t *testing.T) {
 	assert.Contains(t, body, "No LMS Chapter Exam Config rows found")
 	assert.Contains(t, body, "No in-syllabus JEE Main rows match the current filters.")
 	assert.NotContains(t, body, "<html")
+}
+
+func TestCurriculumConfigNewRendersAddPanelWithAppliedFiltersPreserved(t *testing.T) {
+	handler := NewCurriculumConfigHandler(&fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/new?exam_track=neet&grade=12&subject=Chemistry&search=organic&chapter_id=77&syllabus_status=all&page=2&limit=20&sort=updated_at&dir=desc", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.New(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, `id="curriculum-config-add-panel"`)
+	assert.Contains(t, body, `hx-post="/admin/curriculum-config/create"`)
+	assert.Contains(t, body, `hx-get="/admin/curriculum-config/chapter-options"`)
+	assert.Contains(t, body, `hx-get="/admin/curriculum-config/impact"`)
+	assert.Contains(t, body, `name="exam_track" value="neet"`)
+	assert.Contains(t, body, `name="grade" value="12"`)
+	assert.Contains(t, body, `name="subject" value="Chemistry"`)
+	assert.Contains(t, body, `name="search" value="organic"`)
+	assert.Contains(t, body, `name="page" value="2"`)
+	assert.NotContains(t, body, "<html")
+}
+
+func TestCurriculumConfigChapterOptionsRendersMetadataWarnings(t *testing.T) {
+	existingID := int64(12)
+	existingInSyllabus := true
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		chapterOptions: []curriculumconfig.ChapterOption{{
+			ChapterID:           44,
+			ChapterCode:         "MATH-001",
+			ChapterName:         "Quadratic Equations",
+			Grade:               "11",
+			Subject:             "Mathematics",
+			TopicCount:          0,
+			ExistingConfigID:    &existingID,
+			ExistingInSyllabus:  &existingInSyllabus,
+			ExistingExamTrack:   "jee_main",
+			HasZeroTopicWarning: true,
+			HasDuplicateConfig:  true,
+		}},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/chapter-options?exam_track=jee_main&grade=11&subject=Mathematics&search=quad", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.ChapterOptions(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, repo.chapterOptionQueries, 1)
+	assert.Equal(t, curriculumconfig.ChapterOptionsQuery{ExamTrack: "jee_main", Grade: "11", Subject: "Mathematics", Search: "quad"}, repo.chapterOptionQueries[0])
+	body := rec.Body.String()
+	assert.Contains(t, body, "MATH-001")
+	assert.Contains(t, body, "Quadratic Equations")
+	assert.Contains(t, body, "0 topics")
+	assert.Contains(t, body, "already has a JEE Main config")
+	assert.Contains(t, body, "no topics")
+}
+
+func TestCurriculumConfigImpactRendersWarningsCountsAndUnavailableState(t *testing.T) {
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		impactResult: curriculumconfig.ImpactResult{
+			SummaryRows:        6,
+			ActiveLogs:         2,
+			ChapterCompletions: 4,
+			Warnings: []curriculumconfig.Warning{{
+				Code:    "zero_minutes_in_syllabus",
+				Message: "This in-syllabus row has zero prescribed minutes.",
+			}},
+		},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/impact?chapter_id=44&exam_track=neet&is_in_syllabus=true&prescribed_minutes=0&coverage_sequence=7", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.Impact(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, repo.impactQueries, 1)
+	assert.Equal(t, curriculumconfig.ImpactQuery{ChapterID: 44, ExamTrack: "neet", IsInSyllabus: true, PrescribedMinutes: 0, CoverageSequence: 7}, repo.impactQueries[0])
+	body := rec.Body.String()
+	assert.Contains(t, body, "zero prescribed minutes")
+	assert.Contains(t, body, "Summary rows: 6")
+	assert.Contains(t, body, "Active logs: 2")
+	assert.Contains(t, body, "Chapter completions: 4")
+}
+
+func TestCurriculumConfigCreateParsesFormStampsAdminAndRefreshesAppliedFilters(t *testing.T) {
+	constants.InitRuntimeConstant()
+	createdAt := time.Date(2026, 6, 3, 10, 15, 0, 0, time.UTC)
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		mutationResult: curriculumconfig.MutationResult{
+			Row: &curriculumconfig.ListRow{
+				ID:                99,
+				ChapterID:         44,
+				ChapterCode:       "MATH-001",
+				ChapterName:       "Quadratic Equations",
+				Grade:             "11",
+				Subject:           "Mathematics",
+				ExamTrack:         "jee_main",
+				IsInSyllabus:      true,
+				PrescribedMinutes: 0,
+				PrescribedHours:   "0 hours",
+				CoverageSequence:  7,
+				UpdatedByEmail:    "admin@avantifellows.org",
+				UpdatedAt:         createdAt,
+			},
+			Warnings: []curriculumconfig.Warning{{Code: "zero_minutes_in_syllabus", Message: "This in-syllabus row has zero prescribed minutes."}},
+			Impact:   curriculumconfig.ImpactResult{SummaryRows: 6, ActiveLogs: 2, ChapterCompletions: 4},
+		},
+		listResult: curriculumconfig.ListResult{
+			Rows: []curriculumconfig.ListRow{{
+				ID:                99,
+				ChapterID:         44,
+				ChapterCode:       "MATH-001",
+				ChapterName:       "Quadratic Equations",
+				Grade:             "11",
+				Subject:           "Mathematics",
+				ExamTrack:         "jee_main",
+				IsInSyllabus:      true,
+				PrescribedMinutes: 0,
+				PrescribedHours:   "0 hours",
+				CoverageSequence:  7,
+				UpdatedByEmail:    "admin@avantifellows.org",
+				UpdatedAt:         createdAt,
+			}},
+			TotalRows:  1,
+			Page:       2,
+			Limit:      20,
+			TotalPages: 3,
+		},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+	form := url.Values{
+		"chapter_id":             {"44"},
+		"exam_track":             {"jee_main"},
+		"is_in_syllabus":         {"true"},
+		"prescribed_minutes":     {"0"},
+		"coverage_sequence":      {"7"},
+		"filter_exam_track":      {"neet"},
+		"filter_grade":           {"12"},
+		"filter_subject":         {"Chemistry"},
+		"filter_search":          {"organic"},
+		"filter_chapter_id":      {"77"},
+		"filter_syllabus_status": {"all"},
+		"filter_page":            {"2"},
+		"filter_limit":           {"20"},
+		"filter_sort":            {"updated_at"},
+		"filter_dir":             {"desc"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/admin/curriculum-config/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req = req.WithContext(auth.WithSession(req.Context(), &auth.SessionClaims{Email: "admin@avantifellows.org", Role: auth.RoleAdmin}))
+	rec := httptest.NewRecorder()
+
+	handler.Create(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, repo.createInputs, 1)
+	assert.Equal(t, curriculumconfig.CreateInput{
+		ChapterID:         44,
+		ExamTrack:         "jee_main",
+		IsInSyllabus:      true,
+		PrescribedMinutes: 0,
+		CoverageSequence:  7,
+		AdminEmail:        "admin@avantifellows.org",
+	}, repo.createInputs[0])
+	require.Len(t, repo.listQueries, 1)
+	assert.Equal(t, curriculumconfig.ListQuery{
+		ExamTrack:      "neet",
+		Grade:          "12",
+		Subject:        "Chemistry",
+		Search:         "organic",
+		ChapterID:      "77",
+		SyllabusStatus: "all",
+		Page:           2,
+		Limit:          20,
+		Sort:           "updated_at",
+		Direction:      "desc",
+	}, repo.listQueries[0])
+	body := rec.Body.String()
+	assert.Contains(t, body, "Created LMS Chapter Exam Config")
+	assert.Contains(t, body, "zero prescribed minutes")
+	assert.Contains(t, body, "Summary rows: 6")
+	assert.Contains(t, body, `id="curriculum-config-row-99"`)
+	assert.Contains(t, body, `name="exam_track" value="neet"`)
+	assert.Contains(t, body, `name="page" value="2"`)
 }
 
 func TestCurriculumConfigPageShowsControlledUnavailableStateWhenSchemaIsNotReady(t *testing.T) {

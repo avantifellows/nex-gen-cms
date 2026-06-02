@@ -111,6 +111,7 @@ type ImpactResult struct {
 	ActiveLogs         int
 	ChapterCompletions int
 	Unavailable        bool
+	Warnings           []Warning
 }
 
 type CreateInput struct {

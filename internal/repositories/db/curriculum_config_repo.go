@@ -3,12 +3,14 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/avantifellows/nex-gen-cms/internal/curriculumconfig"
 	"github.com/lib/pq"
@@ -183,16 +185,181 @@ func (r *CurriculumConfigRepo) optionRows(ctx context.Context, sql string) ([]cu
 	return options, nil
 }
 
-func (r *CurriculumConfigRepo) ChapterOptions(context.Context, curriculumconfig.ChapterOptionsQuery) ([]curriculumconfig.ChapterOption, error) {
-	return nil, curriculumconfig.ErrNotImplemented
+func (r *CurriculumConfigRepo) ChapterOptions(ctx context.Context, query curriculumconfig.ChapterOptionsQuery) ([]curriculumconfig.ChapterOption, error) {
+	query.ExamTrack = normalizeExamTrack(query.ExamTrack)
+	query.Grade = strings.TrimSpace(query.Grade)
+	query.Subject = strings.TrimSpace(query.Subject)
+	query.Search = strings.TrimSpace(query.Search)
+
+	clauses := []string{"TRUE"}
+	args := []any{query.ExamTrack}
+	nextArg := 2
+	if query.Grade != "" {
+		clauses = append(clauses, fmt.Sprintf("g.number::text = $%d", nextArg))
+		args = append(args, query.Grade)
+		nextArg++
+	}
+	if query.Subject != "" {
+		clauses = append(clauses, fmt.Sprintf("(s.id::text = $%d OR COALESCE(sn.name, '') = $%d)", nextArg, nextArg))
+		args = append(args, query.Subject)
+		nextArg++
+	}
+	if query.Search != "" {
+		clauses = append(clauses, fmt.Sprintf("(ch.code ILIKE $%d OR COALESCE(chn.name, '') ILIKE $%d)", nextArg, nextArg))
+		args = append(args, "%"+query.Search+"%")
+	}
+
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT
+			ch.id AS chapter_id,
+			ch.code AS chapter_code,
+			COALESCE(chn.name, '') AS chapter_name,
+			g.number::text AS grade,
+			COALESCE(sn.name, '') AS subject,
+			COUNT(t.id)::int AS topic_count,
+			existing.id AS existing_config_id,
+			existing.is_in_syllabus AS existing_in_syllabus,
+			existing.exam_track AS existing_exam_track
+		FROM chapter ch
+		JOIN grade g ON g.id = ch.grade_id
+		JOIN subject s ON s.id = ch.subject_id
+		LEFT JOIN topic t ON t.chapter_id = ch.id
+		LEFT JOIN lms_chapter_exam_configs existing
+			ON existing.chapter_id = ch.id
+		   AND existing.exam_track = $1
+		LEFT JOIN LATERAL (
+			SELECT elem->>'chapter' AS name
+			FROM jsonb_array_elements(ch.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) chn ON true
+		LEFT JOIN LATERAL (
+			SELECT elem->>'subject' AS name
+			FROM jsonb_array_elements(s.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) sn ON true
+		WHERE `+strings.Join(clauses, " AND ")+`
+		GROUP BY ch.id, ch.code, chn.name, g.number, sn.name, existing.id, existing.is_in_syllabus, existing.exam_track
+		ORDER BY g.number ASC, COALESCE(sn.name, '') ASC, ch.code ASC, COALESCE(chn.name, '') ASC, ch.id ASC
+		LIMIT 50
+	`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var options []curriculumconfig.ChapterOption
+	for rows.Next() {
+		var option curriculumconfig.ChapterOption
+		var existingID sql.NullInt64
+		var existingInSyllabus sql.NullBool
+		var existingExamTrack sql.NullString
+		if err := rows.Scan(
+			&option.ChapterID,
+			&option.ChapterCode,
+			&option.ChapterName,
+			&option.Grade,
+			&option.Subject,
+			&option.TopicCount,
+			&existingID,
+			&existingInSyllabus,
+			&existingExamTrack,
+		); err != nil {
+			return nil, err
+		}
+		if existingID.Valid {
+			option.ExistingConfigID = &existingID.Int64
+			option.HasDuplicateConfig = true
+		}
+		if existingInSyllabus.Valid {
+			option.ExistingInSyllabus = &existingInSyllabus.Bool
+		}
+		if existingExamTrack.Valid {
+			option.ExistingExamTrack = existingExamTrack.String
+		}
+		option.HasZeroTopicWarning = option.TopicCount == 0
+		options = append(options, option)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return options, nil
 }
 
-func (r *CurriculumConfigRepo) Impact(context.Context, curriculumconfig.ImpactQuery) (curriculumconfig.ImpactResult, error) {
-	return curriculumconfig.ImpactResult{}, curriculumconfig.ErrNotImplemented
+func (r *CurriculumConfigRepo) Impact(ctx context.Context, query curriculumconfig.ImpactQuery) (curriculumconfig.ImpactResult, error) {
+	warnings, err := r.previewWarnings(ctx, query)
+	if err != nil {
+		return curriculumconfig.ImpactResult{}, err
+	}
+	result, err := r.impactCounts(ctx, query)
+	result.Warnings = warnings
+	return result, err
 }
 
-func (r *CurriculumConfigRepo) Create(context.Context, curriculumconfig.CreateInput) (curriculumconfig.MutationResult, error) {
-	return curriculumconfig.MutationResult{}, curriculumconfig.ErrNotImplemented
+func (r *CurriculumConfigRepo) impactCounts(ctx context.Context, query curriculumconfig.ImpactQuery) (curriculumconfig.ImpactResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	var result curriculumconfig.ImpactResult
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM school sc
+		JOIN program p ON p.id = ANY(sc.program_ids)
+		WHERE COALESCE(sc.code, '') <> ''
+		  AND UPPER(COALESCE(p.name, '')) IN ('COE', 'NODAL')
+	`).Scan(&result.SummaryRows); err != nil {
+		result.Unavailable = true
+		return result, nil
+	}
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT log.id) FROM lms_curriculum_logs log
+		JOIN lms_curriculum_log_topics log_topic ON log_topic.curriculum_log_id = log.id
+		JOIN topic t ON t.id = log_topic.topic_id
+		WHERE t.chapter_id = $1
+		  AND log.exam_track = $2
+		  AND log.deleted_at IS NULL
+	`, query.ChapterID, query.ExamTrack).Scan(&result.ActiveLogs); err != nil {
+		result.Unavailable = true
+		return result, nil
+	}
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM lms_curriculum_chapter_completions completion
+		WHERE completion.chapter_id = $1
+		  AND completion.exam_track = $2
+		  AND completion.deleted_at IS NULL
+	`, query.ChapterID, query.ExamTrack).Scan(&result.ChapterCompletions); err != nil {
+		result.Unavailable = true
+		return result, nil
+	}
+	return result, nil
+}
+
+func (r *CurriculumConfigRepo) Create(ctx context.Context, input curriculumconfig.CreateInput) (curriculumconfig.MutationResult, error) {
+	if err := validateCreateInput(input); err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	if err := r.ensureNoExistingConfig(ctx, input.ChapterID, input.ExamTrack); err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	row, err := r.insertConfig(ctx, input)
+	if err != nil {
+		return curriculumconfig.MutationResult{}, mapCreateError(err)
+	}
+	warnings, err := r.warningsForConfig(ctx, *row)
+	if err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	impact, err := r.impactCounts(ctx, curriculumconfig.ImpactQuery{
+		ConfigID:          row.ID,
+		ChapterID:         row.ChapterID,
+		ExamTrack:         row.ExamTrack,
+		IsInSyllabus:      row.IsInSyllabus,
+		PrescribedMinutes: row.PrescribedMinutes,
+		CoverageSequence:  row.CoverageSequence,
+	})
+	if err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	return curriculumconfig.MutationResult{Row: row, Warnings: warnings, Impact: impact}, nil
 }
 
 func (r *CurriculumConfigRepo) Edit(context.Context, curriculumconfig.EditInput) (curriculumconfig.MutationResult, error) {
@@ -205,6 +372,253 @@ func (r *CurriculumConfigRepo) RemoveFromSyllabus(context.Context, curriculumcon
 
 func (r *CurriculumConfigRepo) ExportRows(context.Context, curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
 	return nil, curriculumconfig.ErrNotImplemented
+}
+
+func (r *CurriculumConfigRepo) ensureNoExistingConfig(ctx context.Context, chapterID int64, examTrack string) error {
+	var id int64
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id FROM lms_chapter_exam_configs
+		WHERE chapter_id = $1 AND exam_track = $2
+		LIMIT 1
+	`, chapterID, examTrack).Scan(&id)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return errors.New("duplicate LMS Chapter Exam Config already exists for this chapter and exam track")
+}
+
+func (r *CurriculumConfigRepo) insertConfig(ctx context.Context, input curriculumconfig.CreateInput) (*curriculumconfig.ListRow, error) {
+	row := curriculumconfig.ListRow{}
+	err := r.db.QueryRowContext(ctx, `
+		WITH inserted AS (
+			INSERT INTO lms_chapter_exam_configs (
+				chapter_id,
+				exam_track,
+				is_in_syllabus,
+				prescribed_minutes,
+				coverage_sequence,
+				inserted_by_email,
+				updated_by_email
+			)
+			VALUES ($1, $2, $3, $4, $5, $6, $6)
+			RETURNING id, chapter_id, exam_track, is_in_syllabus, prescribed_minutes, coverage_sequence, updated_by_email, updated_at, xmin::text
+		)
+		SELECT
+			c.id,
+			c.chapter_id,
+			ch.code AS chapter_code,
+			COALESCE(chn.name, '') AS chapter_name,
+			g.number::text AS grade,
+			COALESCE(sn.name, '') AS subject,
+			c.exam_track,
+			c.is_in_syllabus,
+			c.prescribed_minutes,
+			c.coverage_sequence,
+			c.updated_by_email,
+			c.updated_at,
+			c.xmin::text AS lock_token
+		FROM inserted c
+		JOIN chapter ch ON ch.id = c.chapter_id
+		JOIN grade g ON g.id = ch.grade_id
+		JOIN subject s ON s.id = ch.subject_id
+		LEFT JOIN LATERAL (
+			SELECT elem->>'chapter' AS name
+			FROM jsonb_array_elements(ch.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) chn ON true
+		LEFT JOIN LATERAL (
+			SELECT elem->>'subject' AS name
+			FROM jsonb_array_elements(s.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) sn ON true
+	`, input.ChapterID, input.ExamTrack, input.IsInSyllabus, input.PrescribedMinutes, input.CoverageSequence, strings.TrimSpace(input.AdminEmail)).Scan(
+		&row.ID,
+		&row.ChapterID,
+		&row.ChapterCode,
+		&row.ChapterName,
+		&row.Grade,
+		&row.Subject,
+		&row.ExamTrack,
+		&row.IsInSyllabus,
+		&row.PrescribedMinutes,
+		&row.CoverageSequence,
+		&row.UpdatedByEmail,
+		&row.UpdatedAt,
+		&row.LockToken,
+	)
+	if err != nil {
+		return nil, err
+	}
+	row.PrescribedHours = PrescribedHoursLabel(row.PrescribedMinutes)
+	return &row, nil
+}
+
+func (r *CurriculumConfigRepo) warningsForConfig(ctx context.Context, row curriculumconfig.ListRow) ([]curriculumconfig.Warning, error) {
+	var warnings []curriculumconfig.Warning
+	if row.IsInSyllabus {
+		var duplicateCoverageCount int
+		if err := r.db.QueryRowContext(ctx, `
+			SELECT COUNT(*) FROM lms_chapter_exam_configs other
+			JOIN chapter other_chapter ON other_chapter.id = other.chapter_id
+			JOIN grade other_grade ON other_grade.id = other_chapter.grade_id
+			JOIN subject other_subject ON other_subject.id = other_chapter.subject_id
+			LEFT JOIN LATERAL (
+				SELECT elem->>'subject' AS name
+				FROM jsonb_array_elements(other_subject.name) elem
+				WHERE elem->>'lang_code' = 'en'
+				LIMIT 1
+			) other_subject_name ON true
+			WHERE other.id <> $1
+			  AND other.exam_track = $2
+			  AND other.is_in_syllabus = true
+			  AND other_grade.number::text = $3
+			  AND COALESCE(other_subject_name.name, '') = $4
+			  AND other.coverage_sequence = $5
+		`, row.ID, row.ExamTrack, row.Grade, row.Subject, row.CoverageSequence).Scan(&duplicateCoverageCount); err != nil {
+			return nil, err
+		}
+		if duplicateCoverageCount > 0 {
+			warnings = append(warnings, curriculumconfig.Warning{
+				Code:    "duplicate_coverage_order",
+				Message: fmt.Sprintf("Another in-syllabus LMS Chapter Exam Config uses coverage order %d for %s Grade %s %s.", row.CoverageSequence, examTrackLabel(row.ExamTrack), row.Grade, row.Subject),
+			})
+		}
+		if row.PrescribedMinutes == 0 {
+			warnings = append(warnings, curriculumconfig.Warning{
+				Code:    "zero_minutes_in_syllabus",
+				Message: "This in-syllabus row has zero prescribed minutes.",
+			})
+		}
+	}
+	var topicCount int
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(t.id)::int AS topic_count
+		FROM chapter ch
+		LEFT JOIN topic t ON t.chapter_id = ch.id
+		WHERE ch.id = $1
+	`, row.ChapterID).Scan(&topicCount); err != nil {
+		return nil, err
+	}
+	if topicCount == 0 {
+		warnings = append(warnings, curriculumconfig.Warning{
+			Code:    "zero_topic_chapter",
+			Message: "This chapter has no topics.",
+		})
+	}
+	return warnings, nil
+}
+
+func (r *CurriculumConfigRepo) previewWarnings(ctx context.Context, query curriculumconfig.ImpactQuery) ([]curriculumconfig.Warning, error) {
+	var warnings []curriculumconfig.Warning
+	if query.IsInSyllabus {
+		var duplicateCoverageCount int
+		var grade, subject string
+		if err := r.db.QueryRowContext(ctx, `
+			SELECT COUNT(*), selected.grade, selected.subject
+			FROM (
+				SELECT selected_grade.number::text AS grade, COALESCE(selected_subject_name.name, '') AS subject
+				FROM chapter selected_chapter
+				JOIN grade selected_grade ON selected_grade.id = selected_chapter.grade_id
+				JOIN subject selected_subject ON selected_subject.id = selected_chapter.subject_id
+				LEFT JOIN LATERAL (
+					SELECT elem->>'subject' AS name
+					FROM jsonb_array_elements(selected_subject.name) elem
+					WHERE elem->>'lang_code' = 'en'
+					LIMIT 1
+				) selected_subject_name ON true
+				WHERE selected_chapter.id = $1
+			) selected,
+			lms_chapter_exam_configs other
+			JOIN chapter other_chapter ON other_chapter.id = other.chapter_id
+			JOIN grade other_grade ON other_grade.id = other_chapter.grade_id
+			JOIN subject other_subject ON other_subject.id = other_chapter.subject_id
+			LEFT JOIN LATERAL (
+				SELECT elem->>'subject' AS name
+				FROM jsonb_array_elements(other_subject.name) elem
+				WHERE elem->>'lang_code' = 'en'
+				LIMIT 1
+			) other_subject_name ON true
+			WHERE other.exam_track = $2
+			  AND other.is_in_syllabus = true
+			  AND other_grade.number::text = selected.grade
+			  AND COALESCE(other_subject_name.name, '') = selected.subject
+			  AND other.coverage_sequence = $3
+			  AND ($4::bigint = 0 OR other.id <> $4)
+			GROUP BY selected.grade, selected.subject
+		`, query.ChapterID, query.ExamTrack, query.CoverageSequence, query.ConfigID).Scan(&duplicateCoverageCount, &grade, &subject); err != nil && err != sql.ErrNoRows {
+			return nil, err
+		}
+		if duplicateCoverageCount > 0 {
+			warnings = append(warnings, curriculumconfig.Warning{
+				Code:    "duplicate_coverage_order",
+				Message: fmt.Sprintf("Another in-syllabus LMS Chapter Exam Config uses coverage order %d for %s Grade %s %s.", query.CoverageSequence, examTrackLabel(query.ExamTrack), grade, subject),
+			})
+		}
+		if query.PrescribedMinutes == 0 {
+			warnings = append(warnings, curriculumconfig.Warning{
+				Code:    "zero_minutes_in_syllabus",
+				Message: "This in-syllabus row has zero prescribed minutes.",
+			})
+		}
+	}
+	var topicCount int
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(t.id)::int AS topic_count
+		FROM chapter ch
+		LEFT JOIN topic t ON t.chapter_id = ch.id
+		WHERE ch.id = $1
+	`, query.ChapterID).Scan(&topicCount); err != nil {
+		return nil, err
+	}
+	if topicCount == 0 {
+		warnings = append(warnings, curriculumconfig.Warning{
+			Code:    "zero_topic_chapter",
+			Message: "This chapter has no topics.",
+		})
+	}
+	return warnings, nil
+}
+
+func mapCreateError(err error) error {
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		switch pqErr.Code {
+		case "23505":
+			return errors.New("duplicate LMS Chapter Exam Config already exists for this chapter and exam track")
+		case "23503":
+			return errors.New("chapter does not exist")
+		case "23514":
+			switch pqErr.Constraint {
+			case "lms_chapter_exam_configs_exam_track_check":
+				return errors.New("exam track is invalid")
+			case "lms_chapter_exam_configs_prescribed_minutes_check":
+				return errors.New("prescribed minutes must be non-negative")
+			case "lms_chapter_exam_configs_coverage_sequence_check":
+				return errors.New("coverage order must be positive")
+			case "lms_chapter_exam_configs_out_of_syllabus_minutes_check":
+				return errors.New("out-of-syllabus rows must have zero prescribed minutes")
+			}
+		}
+	}
+	return err
+}
+
+func examTrackLabel(value string) string {
+	switch value {
+	case "jee_main":
+		return "JEE Main"
+	case "jee_advanced":
+		return "JEE Advanced"
+	case "neet":
+		return "NEET"
+	default:
+		return value
+	}
 }
 
 func buildListWhere(query curriculumconfig.ListQuery) (string, []any) {
@@ -286,6 +700,52 @@ func PrescribedHoursLabel(minutes int) string {
 		return fmt.Sprintf("%d hours", minutes/60)
 	}
 	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", hours), "0"), ".") + " hours"
+}
+
+func normalizeExamTrack(value string) string {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case "jee_advanced":
+		return "jee_advanced"
+	case "neet":
+		return "neet"
+	default:
+		return "jee_main"
+	}
+}
+
+func validateCreateInput(input curriculumconfig.CreateInput) error {
+	var problems []string
+	if input.ChapterID < 1 {
+		problems = append(problems, "chapter id must be positive")
+	}
+	if !isAllowedExamTrack(input.ExamTrack) {
+		problems = append(problems, "exam track is invalid")
+	}
+	if input.PrescribedMinutes < 0 {
+		problems = append(problems, "prescribed minutes must be non-negative")
+	}
+	if input.CoverageSequence < 1 {
+		problems = append(problems, "coverage order must be positive")
+	}
+	if !input.IsInSyllabus && input.PrescribedMinutes != 0 {
+		problems = append(problems, "out-of-syllabus rows must have zero prescribed minutes")
+	}
+	if strings.TrimSpace(input.AdminEmail) == "" {
+		problems = append(problems, "admin email is required")
+	}
+	if len(problems) > 0 {
+		return errors.New(strings.Join(problems, "; "))
+	}
+	return nil
+}
+
+func isAllowedExamTrack(value string) bool {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case "jee_main", "jee_advanced", "neet":
+		return true
+	default:
+		return false
+	}
 }
 
 func (r *CurriculumConfigRepo) checkSchemaReadiness(ctx context.Context) (curriculumconfig.Readiness, error) {

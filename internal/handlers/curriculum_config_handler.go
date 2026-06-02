@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/avantifellows/nex-gen-cms/internal/auth"
 	"github.com/avantifellows/nex-gen-cms/internal/curriculumconfig"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
@@ -81,7 +82,7 @@ func (h *CurriculumConfigHandler) New(w http.ResponseWriter, r *http.Request) {
 	if _, ok := h.ensureReady(w, r, false); !ok {
 		return
 	}
-	h.placeholder(w, "Add LMS Chapter Exam Config is not available in this slice")
+	writeAddPanel(w, listQueryFromRequest(r), nil, curriculumconfig.ImpactResult{})
 }
 
 func (h *CurriculumConfigHandler) Edit(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +112,19 @@ func (h *CurriculumConfigHandler) ChapterOptions(w http.ResponseWriter, r *http.
 	if _, ok := h.ensureReady(w, r, false); !ok {
 		return
 	}
-	h.placeholder(w, "Chapter options are not available in this slice")
+	values := r.URL.Query()
+	options, err := h.repo.ChapterOptions(r.Context(), curriculumconfig.ChapterOptionsQuery{
+		ExamTrack: queryValue(values.Get("exam_track"), curriculumconfig.DefaultExamTrack),
+		Grade:     queryValue(values.Get("grade"), values.Get("filter_grade")),
+		Subject:   queryValue(values.Get("subject"), values.Get("filter_subject")),
+		Search:    queryValue(values.Get("search"), values.Get("filter_search")),
+	})
+	if err != nil {
+		log.Printf("curriculum config chapter options: %v", err)
+		http.Error(w, "Could not load chapter options", http.StatusInternalServerError)
+		return
+	}
+	writeChapterOptions(w, options)
 }
 
 func (h *CurriculumConfigHandler) Impact(w http.ResponseWriter, r *http.Request) {
@@ -121,7 +134,14 @@ func (h *CurriculumConfigHandler) Impact(w http.ResponseWriter, r *http.Request)
 	if _, ok := h.ensureReady(w, r, false); !ok {
 		return
 	}
-	h.placeholder(w, "Impact preview is not available in this slice")
+	query := impactQueryFromValues(r.URL.Query())
+	impact, err := h.repo.Impact(r.Context(), query)
+	if err != nil {
+		log.Printf("curriculum config impact: %v", err)
+		http.Error(w, "Could not load impact preview", http.StatusInternalServerError)
+		return
+	}
+	writeWarningAndImpact(w, impact.Warnings, impact)
 }
 
 func (h *CurriculumConfigHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +151,29 @@ func (h *CurriculumConfigHandler) Create(w http.ResponseWriter, r *http.Request)
 	if _, ok := h.ensureMutationReady(w, r); !ok {
 		return
 	}
-	h.placeholder(w, "Create LMS Chapter Exam Config is not available in this slice")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid create form", http.StatusBadRequest)
+		return
+	}
+	claims := auth.FromContext(r.Context())
+	adminEmail := ""
+	if claims != nil {
+		adminEmail = claims.Email
+	}
+	input := createInputFromForm(r.PostForm, adminEmail)
+	result, err := h.repo.Create(r.Context(), input)
+	if err != nil {
+		writeMutationError(w, err)
+		return
+	}
+	query := listQueryFromForm(r.PostForm)
+	listResult, err := h.repo.List(r.Context(), query)
+	if err != nil {
+		log.Printf("curriculum config list after create: %v", err)
+		http.Error(w, "Created config but could not refresh table", http.StatusInternalServerError)
+		return
+	}
+	writeCreateSuccess(w, result, tableViewData{Result: listResult, Query: query})
 }
 
 func (h *CurriculumConfigHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -251,6 +293,65 @@ func listQueryFromRequest(r *http.Request) curriculumconfig.ListQuery {
 	})
 }
 
+func listQueryFromForm(values url.Values) curriculumconfig.ListQuery {
+	return curriculumconfig.NormalizeListQuery(curriculumconfig.ListQuery{
+		ExamTrack:      queryValue(values.Get("filter_exam_track"), curriculumconfig.DefaultExamTrack),
+		Grade:          strings.TrimSpace(values.Get("filter_grade")),
+		Subject:        strings.TrimSpace(values.Get("filter_subject")),
+		Search:         strings.TrimSpace(values.Get("filter_search")),
+		ChapterID:      strings.TrimSpace(values.Get("filter_chapter_id")),
+		SyllabusStatus: queryValue(values.Get("filter_syllabus_status"), curriculumconfig.DefaultSyllabusStatus),
+		Page:           positiveInt(values.Get("filter_page"), curriculumconfig.DefaultPage),
+		Limit:          positiveInt(values.Get("filter_limit"), curriculumconfig.DefaultLimit),
+		Sort:           queryValue(values.Get("filter_sort"), curriculumconfig.DefaultSort),
+		Direction:      queryValue(values.Get("filter_dir"), curriculumconfig.DefaultDirection),
+	})
+}
+
+func createInputFromForm(values url.Values, adminEmail string) curriculumconfig.CreateInput {
+	return curriculumconfig.CreateInput{
+		ChapterID:         int64(positiveInt(values.Get("chapter_id"), 0)),
+		ExamTrack:         queryValue(values.Get("exam_track"), curriculumconfig.DefaultExamTrack),
+		IsInSyllabus:      syllabusStatusFromForm(values),
+		PrescribedMinutes: nonNegativeInt(values.Get("prescribed_minutes"), 0),
+		CoverageSequence:  positiveInt(values.Get("coverage_sequence"), 0),
+		AdminEmail:        adminEmail,
+	}
+}
+
+func boolFormValue(value string, fallback bool) bool {
+	switch strings.TrimSpace(strings.ToLower(value)) {
+	case "true", "on", "1", "yes":
+		return true
+	case "false", "off", "0", "no":
+		return false
+	default:
+		return fallback
+	}
+}
+
+func syllabusStatusFromForm(values url.Values) bool {
+	switch strings.TrimSpace(strings.ToLower(values.Get("syllabus_status"))) {
+	case "in_syllabus":
+		return true
+	case "out_of_syllabus":
+		return false
+	default:
+		return boolFormValue(values.Get("is_in_syllabus"), false)
+	}
+}
+
+func impactQueryFromValues(values url.Values) curriculumconfig.ImpactQuery {
+	return curriculumconfig.ImpactQuery{
+		ConfigID:          int64(positiveInt(values.Get("config_id"), 0)),
+		ChapterID:         int64(positiveInt(values.Get("chapter_id"), 0)),
+		ExamTrack:         queryValue(values.Get("exam_track"), curriculumconfig.DefaultExamTrack),
+		IsInSyllabus:      values.Get("is_in_syllabus") != "false",
+		PrescribedMinutes: nonNegativeInt(values.Get("prescribed_minutes"), 0),
+		CoverageSequence:  positiveInt(values.Get("coverage_sequence"), 0),
+	}
+}
+
 func queryValue(value, fallback string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -262,6 +363,14 @@ func queryValue(value, fallback string) string {
 func positiveInt(value string, fallback int) int {
 	parsed, err := strconv.Atoi(strings.TrimSpace(value))
 	if err != nil || parsed < 1 {
+		return fallback
+	}
+	return parsed
+}
+
+func nonNegativeInt(value string, fallback int) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || parsed < 0 {
 		return fallback
 	}
 	return parsed
@@ -282,6 +391,9 @@ func curriculumConfigFuncMap() template.FuncMap {
 			query.Sort = sort
 			query.Page = 1
 			return "/admin/curriculum-config/table?" + encodeListQuery(query)
+		},
+		"curriculumConfigNewURL": func(query curriculumconfig.ListQuery) string {
+			return "/admin/curriculum-config/new?" + encodeListQuery(query)
 		},
 		"minus": func(left, right int) int {
 			return left - right
@@ -330,4 +442,127 @@ func encodeListQuery(query curriculumconfig.ListQuery) string {
 		parts = append(parts, url.QueryEscape(key)+"="+url.QueryEscape(values.Get(key)))
 	}
 	return strings.Join(parts, "&")
+}
+
+func writeAddPanel(w http.ResponseWriter, query curriculumconfig.ListQuery, warnings []curriculumconfig.Warning, impact curriculumconfig.ImpactResult) {
+	query = curriculumconfig.NormalizeListQuery(query)
+	fmt.Fprint(w, `<section id="curriculum-config-add-panel" class="space-y-4">`)
+	fmt.Fprint(w, `<header><h2 class="text-lg font-semibold text-ink">Add LMS Chapter Exam Config</h2></header>`)
+	writeAppliedFilterMirror(w, query)
+	writeWarningAndImpact(w, warnings, impact)
+	fmt.Fprint(w, `<form id="curriculum-config-create-form" hx-post="/admin/curriculum-config/create" hx-target="#curriculum-config-add-panel" hx-swap="outerHTML" class="space-y-3">`)
+	writeAppliedFilterHiddenFields(w, query)
+	fmt.Fprintf(w, `<input type="hidden" name="exam_track" value="%s">`, html.EscapeString(query.ExamTrack))
+	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-new-chapter">Chapter ID</label>`)
+	fmt.Fprint(w, `<input id="curriculum-config-new-chapter" class="form-control w-full" name="chapter_id" inputmode="numeric" hx-get="/admin/curriculum-config/chapter-options" hx-target="#curriculum-config-chapter-options" hx-swap="innerHTML">`)
+	fmt.Fprint(w, `<div id="curriculum-config-chapter-options" class="text-sm text-ink-muted"></div>`)
+	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-new-syllabus-status">Syllabus status</label>`)
+	fmt.Fprint(w, `<select id="curriculum-config-new-syllabus-status" class="form-select w-full" name="syllabus_status"><option value="in_syllabus" selected>In syllabus</option><option value="out_of_syllabus">Out of syllabus</option></select>`)
+	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-new-minutes">Prescribed minutes</label>`)
+	fmt.Fprint(w, `<input id="curriculum-config-new-minutes" class="form-control w-full" name="prescribed_minutes" inputmode="numeric" value="0">`)
+	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-new-coverage">Coverage order</label>`)
+	fmt.Fprint(w, `<input id="curriculum-config-new-coverage" class="form-control w-full" name="coverage_sequence" inputmode="numeric" hx-get="/admin/curriculum-config/impact" hx-target="#curriculum-config-impact-preview" hx-swap="innerHTML">`)
+	fmt.Fprint(w, `<div id="curriculum-config-impact-preview"></div>`)
+	fmt.Fprint(w, `<div class="flex justify-end"><button type="submit" class="btn-primary btn-sm">Create config</button></div>`)
+	fmt.Fprint(w, `</form></section>`)
+}
+
+func writeAppliedFilterMirror(w http.ResponseWriter, query curriculumconfig.ListQuery) {
+	fmt.Fprint(w, `<form id="curriculum-config-add-applied-filters" class="hidden" aria-hidden="true">`)
+	fmt.Fprintf(w, `<input type="hidden" name="exam_track" value="%s">`, html.EscapeString(query.ExamTrack))
+	fmt.Fprintf(w, `<input type="hidden" name="grade" value="%s">`, html.EscapeString(query.Grade))
+	fmt.Fprintf(w, `<input type="hidden" name="subject" value="%s">`, html.EscapeString(query.Subject))
+	fmt.Fprintf(w, `<input type="hidden" name="search" value="%s">`, html.EscapeString(query.Search))
+	fmt.Fprintf(w, `<input type="hidden" name="chapter_id" value="%s">`, html.EscapeString(query.ChapterID))
+	fmt.Fprintf(w, `<input type="hidden" name="syllabus_status" value="%s">`, html.EscapeString(query.SyllabusStatus))
+	fmt.Fprintf(w, `<input type="hidden" name="page" value="%d">`, query.Page)
+	fmt.Fprintf(w, `<input type="hidden" name="limit" value="%d">`, query.Limit)
+	fmt.Fprintf(w, `<input type="hidden" name="sort" value="%s">`, html.EscapeString(query.Sort))
+	fmt.Fprintf(w, `<input type="hidden" name="dir" value="%s">`, html.EscapeString(query.Direction))
+	fmt.Fprint(w, `</form>`)
+}
+
+func writeAppliedFilterHiddenFields(w http.ResponseWriter, query curriculumconfig.ListQuery) {
+	query = curriculumconfig.NormalizeListQuery(query)
+	fmt.Fprintf(w, `<input type="hidden" name="filter_exam_track" value="%s">`, html.EscapeString(query.ExamTrack))
+	fmt.Fprintf(w, `<input type="hidden" name="filter_grade" value="%s">`, html.EscapeString(query.Grade))
+	fmt.Fprintf(w, `<input type="hidden" name="filter_subject" value="%s">`, html.EscapeString(query.Subject))
+	fmt.Fprintf(w, `<input type="hidden" name="filter_search" value="%s">`, html.EscapeString(query.Search))
+	fmt.Fprintf(w, `<input type="hidden" name="filter_chapter_id" value="%s">`, html.EscapeString(query.ChapterID))
+	fmt.Fprintf(w, `<input type="hidden" name="filter_syllabus_status" value="%s">`, html.EscapeString(query.SyllabusStatus))
+	fmt.Fprintf(w, `<input type="hidden" name="filter_page" value="%d">`, query.Page)
+	fmt.Fprintf(w, `<input type="hidden" name="filter_limit" value="%d">`, query.Limit)
+	fmt.Fprintf(w, `<input type="hidden" name="filter_sort" value="%s">`, html.EscapeString(query.Sort))
+	fmt.Fprintf(w, `<input type="hidden" name="filter_dir" value="%s">`, html.EscapeString(query.Direction))
+}
+
+func writeWarningAndImpact(w http.ResponseWriter, warnings []curriculumconfig.Warning, impact curriculumconfig.ImpactResult) {
+	if len(warnings) > 0 {
+		fmt.Fprint(w, `<div id="curriculum-config-warnings" class="rounded-md border border-warning bg-warning-subtle p-3"><ul class="list-disc pl-5 text-sm">`)
+		for _, warning := range warnings {
+			fmt.Fprintf(w, `<li data-warning-code="%s">%s</li>`, html.EscapeString(warning.Code), html.EscapeString(warning.Message))
+		}
+		fmt.Fprint(w, `</ul></div>`)
+	}
+	if impact.Unavailable {
+		fmt.Fprint(w, `<div id="curriculum-config-impact" role="status">Impact counts unavailable</div>`)
+		return
+	}
+	if impact.SummaryRows != 0 || impact.ActiveLogs != 0 || impact.ChapterCompletions != 0 {
+		fmt.Fprintf(w, `<div id="curriculum-config-impact" role="status"><span>Summary rows: %d</span><span>Active logs: %d</span><span>Chapter completions: %d</span></div>`, impact.SummaryRows, impact.ActiveLogs, impact.ChapterCompletions)
+	}
+}
+
+func writeChapterOptions(w http.ResponseWriter, options []curriculumconfig.ChapterOption) {
+	if len(options) == 0 {
+		fmt.Fprint(w, `<div role="status">No chapters match the current search.</div>`)
+		return
+	}
+	fmt.Fprint(w, `<div class="space-y-2">`)
+	for _, option := range options {
+		fmt.Fprintf(w, `<label class="block rounded-md border border-border p-3"><input type="radio" name="chapter_option" value="%d"> <span class="font-medium">%s</span> <span>%s</span> <span>Grade %s</span> <span>%s</span> <span>%d topics</span>`, option.ChapterID, html.EscapeString(option.ChapterCode), html.EscapeString(option.ChapterName), html.EscapeString(option.Grade), html.EscapeString(option.Subject), option.TopicCount)
+		if option.HasDuplicateConfig {
+			fmt.Fprintf(w, `<div class="text-sm text-warning">Chapter already has a %s config.</div>`, html.EscapeString(examTrackLabelForView(option.ExistingExamTrack)))
+		}
+		if option.HasZeroTopicWarning {
+			fmt.Fprint(w, `<div class="text-sm text-warning">This chapter has no topics.</div>`)
+		}
+		fmt.Fprint(w, `</label>`)
+	}
+	fmt.Fprint(w, `</div>`)
+}
+
+func examTrackLabelForView(value string) string {
+	switch value {
+	case "jee_main":
+		return "JEE Main"
+	case "jee_advanced":
+		return "JEE Advanced"
+	case "neet":
+		return "NEET"
+	default:
+		return value
+	}
+}
+
+func writeCreateSuccess(w http.ResponseWriter, result curriculumconfig.MutationResult, table tableViewData) {
+	fmt.Fprint(w, `<section id="curriculum-config-create-result" class="space-y-3">`)
+	fmt.Fprint(w, `<div role="status" class="rounded-md border border-success bg-success-subtle p-3">Created LMS Chapter Exam Config.</div>`)
+	writeWarningAndImpact(w, result.Warnings, result.Impact)
+	fmt.Fprint(w, `<div id="curriculum-config-table" class="rounded-md border border-border bg-bg-card p-4">`)
+	views.ExecuteTemplate(curriculumConfigTableTemplate, w, table, curriculumConfigFuncMap())
+	fmt.Fprint(w, `</div></section>`)
+}
+
+func writeMutationError(w http.ResponseWriter, err error) {
+	message := err.Error()
+	status := http.StatusUnprocessableEntity
+	switch {
+	case strings.Contains(message, "duplicate LMS Chapter Exam Config"):
+		status = http.StatusConflict
+	case strings.Contains(message, "does not exist"):
+		status = http.StatusUnprocessableEntity
+	}
+	w.WriteHeader(status)
+	fmt.Fprintf(w, `<section id="curriculum-config-add-panel" role="alert"><h2>Could not create LMS Chapter Exam Config</h2><p>%s</p></section>`, html.EscapeString(message))
 }

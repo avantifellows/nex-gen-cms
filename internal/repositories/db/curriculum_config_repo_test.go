@@ -9,6 +9,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/avantifellows/nex-gen-cms/internal/curriculumconfig"
+	"github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -310,11 +311,215 @@ func TestCurriculumConfigFilterOptionsComeFromDirectPostgresReads(t *testing.T) 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestCurriculumConfigChapterOptionsIncludeDisplayTopicAndDuplicateMetadata(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta("existing.id AS existing_config_id")).
+		WithArgs("jee_main", "11", "Mathematics", "%quadratic%").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"chapter_id", "chapter_code", "chapter_name", "grade", "subject", "topic_count",
+			"existing_config_id", "existing_in_syllabus", "existing_exam_track",
+		}).
+			AddRow(int64(44), "MATH-001", "Quadratic Equations", "11", "Mathematics", 0, int64(12), true, "jee_main").
+			AddRow(int64(45), "MATH-002", "Sequences", "11", "Mathematics", 3, nil, nil, nil))
+
+	options, err := NewCurriculumConfigRepo(database).ChapterOptions(context.Background(), curriculumconfig.ChapterOptionsQuery{
+		ExamTrack: "jee_main",
+		Grade:     "11",
+		Subject:   "Mathematics",
+		Search:    "quadratic",
+	})
+
+	require.NoError(t, err)
+	require.Len(t, options, 2)
+	assert.Equal(t, curriculumconfig.ChapterOption{
+		ChapterID:           44,
+		ChapterCode:         "MATH-001",
+		ChapterName:         "Quadratic Equations",
+		Grade:               "11",
+		Subject:             "Mathematics",
+		TopicCount:          0,
+		ExistingConfigID:    int64Ptr(12),
+		ExistingInSyllabus:  boolPtr(true),
+		ExistingExamTrack:   "jee_main",
+		HasZeroTopicWarning: true,
+		HasDuplicateConfig:  true,
+	}, options[0])
+	assert.Equal(t, curriculumconfig.ChapterOption{
+		ChapterID:   45,
+		ChapterCode: "MATH-002",
+		ChapterName: "Sequences",
+		Grade:       "11",
+		Subject:     "Mathematics",
+		TopicCount:  3,
+	}, options[1])
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigCreateValidatesPositiveAndOutOfSyllabusInputs(t *testing.T) {
+	database, _, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	_, err := NewCurriculumConfigRepo(database).Create(context.Background(), curriculumconfig.CreateInput{
+		ChapterID:         0,
+		ExamTrack:         "bad",
+		IsInSyllabus:      false,
+		PrescribedMinutes: 30,
+		CoverageSequence:  0,
+		AdminEmail:        "",
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "chapter id must be positive")
+	assert.Contains(t, err.Error(), "exam track is invalid")
+	assert.Contains(t, err.Error(), "coverage order must be positive")
+	assert.Contains(t, err.Error(), "out-of-syllabus rows must have zero prescribed minutes")
+	assert.Contains(t, err.Error(), "admin email is required")
+}
+
+func TestCurriculumConfigCreateInsertsAuditFieldsAndReturnsWarningsAndImpact(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	updatedAt := time.Date(2026, 6, 3, 10, 15, 0, 0, time.UTC)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id FROM lms_chapter_exam_configs")).
+		WithArgs(int64(44), "jee_main").
+		WillReturnRows(sqlmock.NewRows([]string{"id"}))
+	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO lms_chapter_exam_configs")).
+		WithArgs(int64(44), "jee_main", true, 0, 7, "admin@avantifellows.org").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "chapter_id", "chapter_code", "chapter_name", "grade", "subject", "exam_track",
+			"is_in_syllabus", "prescribed_minutes", "coverage_sequence", "updated_by_email", "updated_at", "lock_token",
+		}).AddRow(int64(99), int64(44), "MATH-001", "Quadratic Equations", "11", "Mathematics", "jee_main", true, 0, 7, "admin@avantifellows.org", updatedAt, "15001"))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*) FROM lms_chapter_exam_configs other")).
+		WithArgs(int64(99), "jee_main", "11", "Mathematics", 7).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(t.id)::int AS topic_count")).
+		WithArgs(int64(44)).
+		WillReturnRows(sqlmock.NewRows([]string{"topic_count"}).AddRow(0))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*) FROM school sc")).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(6))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(DISTINCT log.id) FROM lms_curriculum_logs log")).
+		WithArgs(int64(44), "jee_main").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*) FROM lms_curriculum_chapter_completions completion")).
+		WithArgs(int64(44), "jee_main").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(4))
+
+	result, err := NewCurriculumConfigRepo(database).Create(context.Background(), curriculumconfig.CreateInput{
+		ChapterID:         44,
+		ExamTrack:         "jee_main",
+		IsInSyllabus:      true,
+		PrescribedMinutes: 0,
+		CoverageSequence:  7,
+		AdminEmail:        "admin@avantifellows.org",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result.Row)
+	assert.Equal(t, int64(99), result.Row.ID)
+	assert.Equal(t, "admin@avantifellows.org", result.Row.UpdatedByEmail)
+	assert.Equal(t, "0 hours", result.Row.PrescribedHours)
+	assert.Equal(t, curriculumconfig.ImpactResult{SummaryRows: 6, ActiveLogs: 2, ChapterCompletions: 4}, result.Impact)
+	assert.Equal(t, []curriculumconfig.Warning{
+		{Code: "duplicate_coverage_order", Message: "Another in-syllabus LMS Chapter Exam Config uses coverage order 7 for JEE Main Grade 11 Mathematics."},
+		{Code: "zero_minutes_in_syllabus", Message: "This in-syllabus row has zero prescribed minutes."},
+		{Code: "zero_topic_chapter", Message: "This chapter has no topics."},
+	}, result.Warnings)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigCreateMapsPreDetectedAndConcurrentDuplicatesToSameError(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		expect func(sqlmock.Sqlmock)
+	}{
+		{
+			name: "pre-detected",
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT id FROM lms_chapter_exam_configs")).
+					WithArgs(int64(44), "jee_main").
+					WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(int64(12)))
+			},
+		},
+		{
+			name: "concurrent unique violation",
+			expect: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta("SELECT id FROM lms_chapter_exam_configs")).
+					WithArgs(int64(44), "jee_main").
+					WillReturnRows(sqlmock.NewRows([]string{"id"}))
+				mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO lms_chapter_exam_configs")).
+					WithArgs(int64(44), "jee_main", true, 60, 7, "admin@avantifellows.org").
+					WillReturnError(&pq.Error{Code: "23505", Constraint: "lms_chapter_exam_configs_chapter_track_unique"})
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+			defer cleanup()
+			tc.expect(mock)
+
+			_, err := NewCurriculumConfigRepo(database).Create(context.Background(), curriculumconfig.CreateInput{
+				ChapterID:         44,
+				ExamTrack:         "jee_main",
+				IsInSyllabus:      true,
+				PrescribedMinutes: 60,
+				CoverageSequence:  7,
+				AdminEmail:        "admin@avantifellows.org",
+			})
+
+			require.Error(t, err)
+			assert.EqualError(t, err, "duplicate LMS Chapter Exam Config already exists for this chapter and exam track")
+			require.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
+
+func TestCurriculumConfigImpactReturnsWarningsAndUnavailableStateDoesNotBlock(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta("selected.grade, selected.subject")).
+		WithArgs(int64(44), "jee_main", 7, int64(0)).
+		WillReturnRows(sqlmock.NewRows([]string{"count", "grade", "subject"}).AddRow(1, "11", "Mathematics"))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(t.id)::int AS topic_count")).
+		WithArgs(int64(44)).
+		WillReturnRows(sqlmock.NewRows([]string{"topic_count"}).AddRow(0))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*) FROM school sc")).
+		WillReturnError(context.DeadlineExceeded)
+
+	result, err := NewCurriculumConfigRepo(database).Impact(context.Background(), curriculumconfig.ImpactQuery{
+		ChapterID:         44,
+		ExamTrack:         "jee_main",
+		IsInSyllabus:      true,
+		PrescribedMinutes: 0,
+		CoverageSequence:  7,
+	})
+
+	require.NoError(t, err)
+	assert.True(t, result.Unavailable)
+	assert.Equal(t, []curriculumconfig.Warning{
+		{Code: "duplicate_coverage_order", Message: "Another in-syllabus LMS Chapter Exam Config uses coverage order 7 for JEE Main Grade 11 Mathematics."},
+		{Code: "zero_minutes_in_syllabus", Message: "This in-syllabus row has zero prescribed minutes."},
+		{Code: "zero_topic_chapter", Message: "This chapter has no topics."},
+	}, result.Warnings)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func emptyCurriculumConfigListRows() *sqlmock.Rows {
 	return sqlmock.NewRows([]string{
 		"id", "chapter_id", "chapter_code", "chapter_name", "grade", "subject", "exam_track",
 		"is_in_syllabus", "prescribed_minutes", "coverage_sequence", "updated_by_email", "updated_at", "lock_token",
 	})
+}
+
+func int64Ptr(value int64) *int64 {
+	return &value
+}
+
+func boolPtr(value bool) *bool {
+	return &value
 }
 
 func newCurriculumConfigReadinessMock(t *testing.T) (*sql.DB, sqlmock.Sqlmock, func()) {
