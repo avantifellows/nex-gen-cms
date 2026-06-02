@@ -59,6 +59,7 @@
                     <th><button type="button" class="font-semibold" hx-get="{{ curriculumConfigSortURL .Query "coverage_sequence" }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Coverage order</button></th>
                     <th>Updated by</th>
                     <th><button type="button" class="font-semibold" hx-get="{{ curriculumConfigSortURL .Query "updated_at" }}" hx-target="#curriculum-config-table" hx-swap="innerHTML">Updated at</button></th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -75,6 +76,7 @@
                     <td class="py-2 px-4">{{ .CoverageSequence }}</td>
                     <td class="py-2 px-4">{{ .UpdatedByEmail }}</td>
                     <td class="py-2 px-4 text-ink-muted">{{ .UpdatedAt.Format "2006-01-02 15:04" }}</td>
+                    <td class="py-2 px-4"><button type="button" class="btn-secondary btn-sm" hx-get="{{ curriculumConfigEditURL $.Query .ID }}" hx-target="#curriculum-config-side-panel" hx-swap="innerHTML">Edit</button></td>
                 </tr>
                 {{ end }}
             </tbody>

@@ -7,10 +7,12 @@ import (
 )
 
 var ErrNotImplemented = errors.New("curriculum config endpoint is not available in this slice")
+var ErrStaleLock = errors.New("stale LMS Chapter Exam Config lock token")
 
 type Repository interface {
 	SchemaReadiness(ctx context.Context) (Readiness, error)
 	List(ctx context.Context, query ListQuery) (ListResult, error)
+	Get(ctx context.Context, id int64) (*ListRow, error)
 	FilterOptions(ctx context.Context) (FilterOptions, error)
 	ChapterOptions(ctx context.Context, query ChapterOptionsQuery) ([]ChapterOption, error)
 	Impact(ctx context.Context, query ImpactQuery) (ImpactResult, error)

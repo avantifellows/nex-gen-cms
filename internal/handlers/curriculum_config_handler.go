@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"html"
 	"html/template"
@@ -92,7 +93,17 @@ func (h *CurriculumConfigHandler) Edit(w http.ResponseWriter, r *http.Request) {
 	if _, ok := h.ensureReady(w, r, false); !ok {
 		return
 	}
-	h.placeholder(w, "Edit LMS Chapter Exam Config is not available in this slice")
+	id := int64(positiveInt(r.URL.Query().Get("id"), 0))
+	if id < 1 {
+		http.Error(w, "Config id is required", http.StatusUnprocessableEntity)
+		return
+	}
+	row, err := h.repo.Get(r.Context(), id)
+	if err != nil {
+		writeUpdateError(w, http.StatusNotFound, "Could not load LMS Chapter Exam Config", err.Error())
+		return
+	}
+	writeEditPanel(w, listQueryFromRequest(r), row, nil, curriculumconfig.ImpactResult{})
 }
 
 func (h *CurriculumConfigHandler) Remove(w http.ResponseWriter, r *http.Request) {
@@ -183,7 +194,33 @@ func (h *CurriculumConfigHandler) Update(w http.ResponseWriter, r *http.Request)
 	if _, ok := h.ensureMutationReady(w, r); !ok {
 		return
 	}
-	h.placeholder(w, "Update LMS Chapter Exam Config is not available in this slice")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid update form", http.StatusBadRequest)
+		return
+	}
+	claims := auth.FromContext(r.Context())
+	adminEmail := ""
+	if claims != nil {
+		adminEmail = claims.Email
+	}
+	input, err := editInputFromForm(r.PostForm, adminEmail)
+	if err != nil {
+		writeUpdateError(w, http.StatusUnprocessableEntity, "Could not update LMS Chapter Exam Config", err.Error())
+		return
+	}
+	result, err := h.repo.Edit(r.Context(), input)
+	if err != nil {
+		writeEditMutationError(w, err)
+		return
+	}
+	query := listQueryFromForm(r.PostForm)
+	listResult, err := h.repo.List(r.Context(), query)
+	if err != nil {
+		log.Printf("curriculum config list after update: %v", err)
+		http.Error(w, "Updated config but could not refresh table", http.StatusInternalServerError)
+		return
+	}
+	writeUpdateSuccess(w, result, tableViewData{Result: listResult, Query: query})
 }
 
 func (h *CurriculumConfigHandler) RemoveFromSyllabus(w http.ResponseWriter, r *http.Request) {
@@ -319,6 +356,20 @@ func createInputFromForm(values url.Values, adminEmail string) curriculumconfig.
 	}
 }
 
+func editInputFromForm(values url.Values, adminEmail string) (curriculumconfig.EditInput, error) {
+	if strings.TrimSpace(values.Get("chapter_id")) != "" || strings.TrimSpace(values.Get("exam_track")) != "" {
+		return curriculumconfig.EditInput{}, errors.New("Chapter and exam-track identity cannot be changed from the edit form")
+	}
+	return curriculumconfig.EditInput{
+		ID:                int64(positiveInt(values.Get("id"), 0)),
+		IsInSyllabus:      syllabusStatusFromForm(values),
+		PrescribedMinutes: nonNegativeInt(values.Get("prescribed_minutes"), 0),
+		CoverageSequence:  positiveInt(values.Get("coverage_sequence"), 0),
+		LockToken:         strings.TrimSpace(values.Get("lock_token")),
+		AdminEmail:        adminEmail,
+	}, nil
+}
+
 func boolFormValue(value string, fallback bool) bool {
 	switch strings.TrimSpace(strings.ToLower(value)) {
 	case "true", "on", "1", "yes":
@@ -346,9 +397,20 @@ func impactQueryFromValues(values url.Values) curriculumconfig.ImpactQuery {
 		ConfigID:          int64(positiveInt(values.Get("config_id"), 0)),
 		ChapterID:         int64(positiveInt(values.Get("chapter_id"), 0)),
 		ExamTrack:         queryValue(values.Get("exam_track"), curriculumconfig.DefaultExamTrack),
-		IsInSyllabus:      values.Get("is_in_syllabus") != "false",
+		IsInSyllabus:      impactInSyllabusFromValues(values),
 		PrescribedMinutes: nonNegativeInt(values.Get("prescribed_minutes"), 0),
 		CoverageSequence:  positiveInt(values.Get("coverage_sequence"), 0),
+	}
+}
+
+func impactInSyllabusFromValues(values url.Values) bool {
+	switch strings.TrimSpace(strings.ToLower(values.Get("syllabus_status"))) {
+	case "in_syllabus":
+		return true
+	case "out_of_syllabus":
+		return false
+	default:
+		return values.Get("is_in_syllabus") != "false"
 	}
 }
 
@@ -394,6 +456,9 @@ func curriculumConfigFuncMap() template.FuncMap {
 		},
 		"curriculumConfigNewURL": func(query curriculumconfig.ListQuery) string {
 			return "/admin/curriculum-config/new?" + encodeListQuery(query)
+		},
+		"curriculumConfigEditURL": func(query curriculumconfig.ListQuery, id int64) string {
+			return "/admin/curriculum-config/edit?id=" + strconv.FormatInt(id, 10) + "&" + encodeListQuery(query)
 		},
 		"minus": func(left, right int) int {
 			return left - right
@@ -465,6 +530,41 @@ func writeAddPanel(w http.ResponseWriter, query curriculumconfig.ListQuery, warn
 	fmt.Fprint(w, `<div id="curriculum-config-impact-preview"></div>`)
 	fmt.Fprint(w, `<div class="flex justify-end"><button type="submit" class="btn-primary btn-sm">Create config</button></div>`)
 	fmt.Fprint(w, `</form></section>`)
+}
+
+func writeEditPanel(w http.ResponseWriter, query curriculumconfig.ListQuery, row *curriculumconfig.ListRow, warnings []curriculumconfig.Warning, impact curriculumconfig.ImpactResult) {
+	query = curriculumconfig.NormalizeListQuery(query)
+	if row == nil {
+		writeUpdateError(w, http.StatusNotFound, "Could not load LMS Chapter Exam Config", "LMS Chapter Exam Config does not exist")
+		return
+	}
+	fmt.Fprint(w, `<section id="curriculum-config-edit-panel" class="space-y-4">`)
+	fmt.Fprint(w, `<header><h2 class="text-lg font-semibold text-ink">Edit LMS Chapter Exam Config</h2></header>`)
+	fmt.Fprintf(w, `<div class="rounded-md border border-border bg-bg-card-alt p-3 text-sm"><div class="font-medium">%s</div><div>%s</div><div>Chapter ID %d</div><div>Grade %s · %s</div><div>%s</div></div>`, html.EscapeString(row.ChapterCode), html.EscapeString(row.ChapterName), row.ChapterID, html.EscapeString(row.Grade), html.EscapeString(row.Subject), html.EscapeString(examTrackLabelForView(row.ExamTrack)))
+	writeWarningAndImpact(w, warnings, impact)
+	fmt.Fprint(w, `<form id="curriculum-config-edit-form" hx-post="/admin/curriculum-config/update" hx-target="#curriculum-config-edit-panel" hx-swap="outerHTML" class="space-y-3">`)
+	writeAppliedFilterHiddenFields(w, query)
+	fmt.Fprintf(w, `<input type="hidden" name="id" value="%d">`, row.ID)
+	fmt.Fprintf(w, `<input type="hidden" name="lock_token" value="%s">`, html.EscapeString(row.LockToken))
+	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-edit-syllabus-status">Syllabus status</label>`)
+	fmt.Fprint(w, `<select id="curriculum-config-edit-syllabus-status" class="form-select w-full" name="syllabus_status">`)
+	fmt.Fprintf(w, `<option value="in_syllabus" %s>In syllabus</option>`, selectedAttr(row.IsInSyllabus))
+	fmt.Fprintf(w, `<option value="out_of_syllabus" %s>Out of syllabus</option>`, selectedAttr(!row.IsInSyllabus))
+	fmt.Fprint(w, `</select>`)
+	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-edit-minutes">Prescribed minutes</label>`)
+	fmt.Fprintf(w, `<input id="curriculum-config-edit-minutes" class="form-control w-full" name="prescribed_minutes" inputmode="numeric" value="%d">`, row.PrescribedMinutes)
+	fmt.Fprint(w, `<label class="block text-sm font-medium text-ink" for="curriculum-config-edit-coverage">Coverage order</label>`)
+	fmt.Fprintf(w, `<input id="curriculum-config-edit-coverage" class="form-control w-full" name="coverage_sequence" inputmode="numeric" value="%d" hx-get="/admin/curriculum-config/impact" hx-target="#curriculum-config-impact-preview" hx-swap="innerHTML" hx-include="#curriculum-config-edit-form" hx-vals='{"config_id":%d,"chapter_id":%d,"exam_track":"%s"}'>`, row.CoverageSequence, row.ID, row.ChapterID, html.EscapeString(row.ExamTrack))
+	fmt.Fprint(w, `<div id="curriculum-config-impact-preview"></div>`)
+	fmt.Fprint(w, `<div class="flex justify-end"><button type="submit" class="btn-primary btn-sm">Update config</button></div>`)
+	fmt.Fprint(w, `</form></section>`)
+}
+
+func selectedAttr(selected bool) string {
+	if selected {
+		return "selected"
+	}
+	return ""
 }
 
 func writeAppliedFilterMirror(w http.ResponseWriter, query curriculumconfig.ListQuery) {
@@ -554,6 +654,15 @@ func writeCreateSuccess(w http.ResponseWriter, result curriculumconfig.MutationR
 	fmt.Fprint(w, `</div></section>`)
 }
 
+func writeUpdateSuccess(w http.ResponseWriter, result curriculumconfig.MutationResult, table tableViewData) {
+	fmt.Fprint(w, `<section id="curriculum-config-update-result" class="space-y-3">`)
+	fmt.Fprint(w, `<div role="status" class="rounded-md border border-success bg-success-subtle p-3">Updated LMS Chapter Exam Config.</div>`)
+	writeWarningAndImpact(w, result.Warnings, result.Impact)
+	fmt.Fprint(w, `<div id="curriculum-config-table" class="rounded-md border border-border bg-bg-card p-4">`)
+	views.ExecuteTemplate(curriculumConfigTableTemplate, w, table, curriculumConfigFuncMap())
+	fmt.Fprint(w, `</div></section>`)
+}
+
 func writeMutationError(w http.ResponseWriter, err error) {
 	message := err.Error()
 	status := http.StatusUnprocessableEntity
@@ -565,4 +674,17 @@ func writeMutationError(w http.ResponseWriter, err error) {
 	}
 	w.WriteHeader(status)
 	fmt.Fprintf(w, `<section id="curriculum-config-add-panel" role="alert"><h2>Could not create LMS Chapter Exam Config</h2><p>%s</p></section>`, html.EscapeString(message))
+}
+
+func writeEditMutationError(w http.ResponseWriter, err error) {
+	if errors.Is(err, curriculumconfig.ErrStaleLock) || strings.Contains(err.Error(), "lock token") {
+		writeUpdateError(w, http.StatusConflict, "Could not update LMS Chapter Exam Config", "This LMS Chapter Exam Config changed while you were editing. Reload the row and try again.")
+		return
+	}
+	writeUpdateError(w, http.StatusUnprocessableEntity, "Could not update LMS Chapter Exam Config", err.Error())
+}
+
+func writeUpdateError(w http.ResponseWriter, status int, title string, message string) {
+	w.WriteHeader(status)
+	fmt.Fprintf(w, `<section id="curriculum-config-edit-panel" role="alert"><h2>%s</h2><p>%s</p></section>`, html.EscapeString(title), html.EscapeString(message))
 }

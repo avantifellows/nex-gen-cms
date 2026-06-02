@@ -58,6 +58,9 @@ func (routeTestCurriculumConfigRepo) SchemaReadiness(context.Context) (curriculu
 func (routeTestCurriculumConfigRepo) List(context.Context, curriculumconfig.ListQuery) (curriculumconfig.ListResult, error) {
 	return curriculumconfig.ListResult{}, curriculumconfig.ErrNotImplemented
 }
+func (routeTestCurriculumConfigRepo) Get(context.Context, int64) (*curriculumconfig.ListRow, error) {
+	return nil, curriculumconfig.ErrNotImplemented
+}
 func (routeTestCurriculumConfigRepo) FilterOptions(context.Context) (curriculumconfig.FilterOptions, error) {
 	return curriculumconfig.FilterOptions{}, curriculumconfig.ErrNotImplemented
 }

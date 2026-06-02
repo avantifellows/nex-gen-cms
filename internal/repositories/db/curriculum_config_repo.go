@@ -164,6 +164,54 @@ func (r *CurriculumConfigRepo) FilterOptions(ctx context.Context) (curriculumcon
 	}, nil
 }
 
+func (r *CurriculumConfigRepo) Get(ctx context.Context, id int64) (*curriculumconfig.ListRow, error) {
+	if id < 1 {
+		return nil, errors.New("config id must be positive")
+	}
+	row := curriculumconfig.ListRow{}
+	err := r.db.QueryRowContext(ctx, `
+		SELECT
+			c.id,
+			c.chapter_id,
+			ch.code AS chapter_code,
+			COALESCE(chn.name, '') AS chapter_name,
+			g.number::text AS grade,
+			COALESCE(sn.name, '') AS subject,
+			c.exam_track,
+			c.is_in_syllabus,
+			c.prescribed_minutes,
+			c.coverage_sequence,
+			c.updated_by_email,
+			c.updated_at,
+			c.xmin::text AS lock_token
+		FROM lms_chapter_exam_configs c
+		`+listDisplayJoins()+`
+		WHERE c.id = $1
+	`, id).Scan(
+		&row.ID,
+		&row.ChapterID,
+		&row.ChapterCode,
+		&row.ChapterName,
+		&row.Grade,
+		&row.Subject,
+		&row.ExamTrack,
+		&row.IsInSyllabus,
+		&row.PrescribedMinutes,
+		&row.CoverageSequence,
+		&row.UpdatedByEmail,
+		&row.UpdatedAt,
+		&row.LockToken,
+	)
+	if err == sql.ErrNoRows {
+		return nil, errors.New("LMS Chapter Exam Config does not exist")
+	}
+	if err != nil {
+		return nil, err
+	}
+	row.PrescribedHours = PrescribedHoursLabel(row.PrescribedMinutes)
+	return &row, nil
+}
+
 func (r *CurriculumConfigRepo) optionRows(ctx context.Context, sql string) ([]curriculumconfig.Option, error) {
 	rows, err := r.db.QueryContext(ctx, sql)
 	if err != nil {
@@ -362,8 +410,37 @@ func (r *CurriculumConfigRepo) Create(ctx context.Context, input curriculumconfi
 	return curriculumconfig.MutationResult{Row: row, Warnings: warnings, Impact: impact}, nil
 }
 
-func (r *CurriculumConfigRepo) Edit(context.Context, curriculumconfig.EditInput) (curriculumconfig.MutationResult, error) {
-	return curriculumconfig.MutationResult{}, curriculumconfig.ErrNotImplemented
+func (r *CurriculumConfigRepo) Edit(ctx context.Context, input curriculumconfig.EditInput) (curriculumconfig.MutationResult, error) {
+	if err := validateEditInput(input); err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	current, err := r.Get(ctx, input.ID)
+	if err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	if current.IsInSyllabus && !input.IsInSyllabus {
+		return curriculumconfig.MutationResult{}, errors.New("Use the dedicated remove action to remove an in-syllabus row from syllabus")
+	}
+	row, err := r.updateConfig(ctx, input)
+	if err != nil {
+		return curriculumconfig.MutationResult{}, mapEditError(err)
+	}
+	warnings, err := r.warningsForConfig(ctx, *row)
+	if err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	impact, err := r.impactCounts(ctx, curriculumconfig.ImpactQuery{
+		ConfigID:          row.ID,
+		ChapterID:         row.ChapterID,
+		ExamTrack:         row.ExamTrack,
+		IsInSyllabus:      row.IsInSyllabus,
+		PrescribedMinutes: row.PrescribedMinutes,
+		CoverageSequence:  row.CoverageSequence,
+	})
+	if err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	return curriculumconfig.MutationResult{Row: row, Warnings: warnings, Impact: impact}, nil
 }
 
 func (r *CurriculumConfigRepo) RemoveFromSyllabus(context.Context, curriculumconfig.RemoveInput) (curriculumconfig.MutationResult, error) {
@@ -437,6 +514,68 @@ func (r *CurriculumConfigRepo) insertConfig(ctx context.Context, input curriculu
 			LIMIT 1
 		) sn ON true
 	`, input.ChapterID, input.ExamTrack, input.IsInSyllabus, input.PrescribedMinutes, input.CoverageSequence, strings.TrimSpace(input.AdminEmail)).Scan(
+		&row.ID,
+		&row.ChapterID,
+		&row.ChapterCode,
+		&row.ChapterName,
+		&row.Grade,
+		&row.Subject,
+		&row.ExamTrack,
+		&row.IsInSyllabus,
+		&row.PrescribedMinutes,
+		&row.CoverageSequence,
+		&row.UpdatedByEmail,
+		&row.UpdatedAt,
+		&row.LockToken,
+	)
+	if err != nil {
+		return nil, err
+	}
+	row.PrescribedHours = PrescribedHoursLabel(row.PrescribedMinutes)
+	return &row, nil
+}
+
+func (r *CurriculumConfigRepo) updateConfig(ctx context.Context, input curriculumconfig.EditInput) (*curriculumconfig.ListRow, error) {
+	row := curriculumconfig.ListRow{}
+	err := r.db.QueryRowContext(ctx, `
+		WITH updated AS (
+			UPDATE lms_chapter_exam_configs c
+			SET is_in_syllabus = $2, prescribed_minutes = $3, coverage_sequence = $4, updated_by_email = $5, updated_at = NOW()
+			WHERE c.id = $1
+			  AND c.xmin::text = $6
+			RETURNING c.id, c.chapter_id, c.exam_track, c.is_in_syllabus, c.prescribed_minutes, c.coverage_sequence, c.updated_by_email, c.updated_at, c.xmin::text
+		)
+		SELECT
+			c.id,
+			c.chapter_id,
+			ch.code AS chapter_code,
+			COALESCE(chn.name, '') AS chapter_name,
+			g.number::text AS grade,
+			COALESCE(sn.name, '') AS subject,
+			c.exam_track,
+			c.is_in_syllabus,
+			c.prescribed_minutes,
+			c.coverage_sequence,
+			c.updated_by_email,
+			c.updated_at,
+			c.xmin::text AS lock_token
+		FROM updated c
+		JOIN chapter ch ON ch.id = c.chapter_id
+		JOIN grade g ON g.id = ch.grade_id
+		JOIN subject s ON s.id = ch.subject_id
+		LEFT JOIN LATERAL (
+			SELECT elem->>'chapter' AS name
+			FROM jsonb_array_elements(ch.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) chn ON true
+		LEFT JOIN LATERAL (
+			SELECT elem->>'subject' AS name
+			FROM jsonb_array_elements(s.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) sn ON true
+	`, input.ID, input.IsInSyllabus, input.PrescribedMinutes, input.CoverageSequence, strings.TrimSpace(input.AdminEmail), strings.TrimSpace(input.LockToken)).Scan(
 		&row.ID,
 		&row.ChapterID,
 		&row.ChapterCode,
@@ -608,6 +747,27 @@ func mapCreateError(err error) error {
 	return err
 }
 
+func mapEditError(err error) error {
+	if err == sql.ErrNoRows {
+		return curriculumconfig.ErrStaleLock
+	}
+	var pqErr *pq.Error
+	if errors.As(err, &pqErr) {
+		switch pqErr.Code {
+		case "23514":
+			switch pqErr.Constraint {
+			case "lms_chapter_exam_configs_prescribed_minutes_check":
+				return errors.New("prescribed minutes must be non-negative")
+			case "lms_chapter_exam_configs_coverage_sequence_check":
+				return errors.New("coverage order must be positive")
+			case "lms_chapter_exam_configs_out_of_syllabus_minutes_check":
+				return errors.New("out-of-syllabus rows must have zero prescribed minutes")
+			}
+		}
+	}
+	return err
+}
+
 func examTrackLabel(value string) string {
 	switch value {
 	case "jee_main":
@@ -737,6 +897,37 @@ func validateCreateInput(input curriculumconfig.CreateInput) error {
 		return errors.New(strings.Join(problems, "; "))
 	}
 	return nil
+}
+
+func validateEditInput(input curriculumconfig.EditInput) error {
+	var problems []string
+	missingLock := strings.TrimSpace(input.LockToken) == ""
+	if input.ID < 1 {
+		problems = append(problems, "config id must be positive")
+	}
+	if input.PrescribedMinutes < 0 {
+		problems = append(problems, "prescribed minutes must be non-negative")
+	}
+	if input.CoverageSequence < 1 {
+		problems = append(problems, "coverage order must be positive")
+	}
+	if !input.IsInSyllabus && input.PrescribedMinutes != 0 {
+		problems = append(problems, "out-of-syllabus rows must have zero prescribed minutes")
+	}
+	if missingLock {
+		problems = append(problems, "lock token is required")
+	}
+	if strings.TrimSpace(input.AdminEmail) == "" {
+		problems = append(problems, "admin email is required")
+	}
+	if len(problems) == 0 {
+		return nil
+	}
+	message := strings.Join(problems, "; ")
+	if missingLock {
+		return fmt.Errorf("%w: %s", curriculumconfig.ErrStaleLock, message)
+	}
+	return errors.New(message)
 }
 
 func isAllowedExamTrack(value string) bool {
