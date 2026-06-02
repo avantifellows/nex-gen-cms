@@ -426,6 +426,10 @@ window.initializeRichTextEditors = function (root = document) {
         insertImage(event, editor);
     });
 
+    if (typeof initImageEditing === 'function') {
+        initImageEditing(editor, editorWrapper);
+    }
+
     const fullscreenBtn = toolbar.querySelector(".fullscreenBtn");
     let isFullscreen = false;
     let isPreviewVisible = true;

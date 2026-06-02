@@ -1083,10 +1083,6 @@
             };
         }
 
-        if (window.initializeRichTextEditors) {
-            window.initializeRichTextEditors(document.querySelector('form.card'));
-        }
-
         function buildProblemJson(topicId, chapterId) {
             const subtype = document.getElementById('problem-type-dropdown').value;
 
@@ -1149,6 +1145,32 @@
                 tags: getTagsForSection(mainTagsRoot),
             });
         }
+
+        // editor.js may still be loading when this inline script runs (common on HTMX body swap)
+        function bootRichTextEditors() {
+            const form = document.querySelector('form.card');
+            if (!form?.querySelector('.container')) return false;
+            if (!window.initializeRichTextEditors) return false;
+            window.initializeRichTextEditors(form);
+            return true;
+        }
+
+        function scheduleEditorBoot() {
+            if (bootRichTextEditors()) return;
+
+            const editorScript = document.querySelector('script[src*="editor.js"]');
+            if (editorScript) {
+                const run = () => { bootRichTextEditors(); };
+                if (window.initializeRichTextEditors) {
+                    run();
+                } else {
+                    editorScript.addEventListener('load', run, { once: true });
+                }
+            } else {
+                requestAnimationFrame(scheduleEditorBoot);
+            }
+        }
+        scheduleEditorBoot();
     })();
 </script>
 {{ end }}
