@@ -646,6 +646,131 @@ func TestCurriculumConfigEditRejectsMismatchedLockTokenAsConflict(t *testing.T) 
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestCurriculumConfigRemoveFromSyllabusForcesZeroMinutesPreservesCoverageAndReturnsImpact(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	updatedAt := time.Date(2026, 6, 3, 10, 45, 0, 0, time.UTC)
+	expectGetConfigRow(mock, int64(99), time.Date(2026, 6, 3, 10, 15, 0, 0, time.UTC), true)
+	mock.ExpectQuery(regexp.QuoteMeta("SET is_in_syllabus = false, prescribed_minutes = 0, updated_by_email = $2, updated_at = NOW()")).
+		WithArgs(int64(99), "admin@avantifellows.org", "15001").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "chapter_id", "chapter_code", "chapter_name", "grade", "subject", "exam_track",
+			"is_in_syllabus", "prescribed_minutes", "coverage_sequence", "updated_by_email", "updated_at", "lock_token",
+		}).AddRow(int64(99), int64(44), "MATH-001", "Quadratic Equations", "11", "Mathematics", "jee_main", false, 0, 7, "admin@avantifellows.org", updatedAt, "15002"))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(t.id)::int AS topic_count")).
+		WithArgs(int64(44)).
+		WillReturnRows(sqlmock.NewRows([]string{"topic_count"}).AddRow(2))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*) FROM school sc")).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(6))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(DISTINCT log.id) FROM lms_curriculum_logs log")).
+		WithArgs(int64(44), "jee_main").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*) FROM lms_curriculum_chapter_completions completion")).
+		WithArgs(int64(44), "jee_main").
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(4))
+
+	result, err := NewCurriculumConfigRepo(database).RemoveFromSyllabus(context.Background(), curriculumconfig.RemoveInput{
+		ID:         99,
+		LockToken:  "15001",
+		AdminEmail: "admin@avantifellows.org",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result.Row)
+	assert.False(t, result.Row.IsInSyllabus)
+	assert.Equal(t, 0, result.Row.PrescribedMinutes)
+	assert.Equal(t, "0 hours", result.Row.PrescribedHours)
+	assert.Equal(t, 7, result.Row.CoverageSequence)
+	assert.Equal(t, "admin@avantifellows.org", result.Row.UpdatedByEmail)
+	assert.Equal(t, curriculumconfig.ImpactResult{SummaryRows: 6, ActiveLogs: 2, ChapterCompletions: 4}, result.Impact)
+	assert.Empty(t, result.Warnings)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigRemoveFromSyllabusRejectsAlreadyOutOfSyllabusRow(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	expectGetConfigRow(mock, int64(99), time.Date(2026, 6, 3, 10, 15, 0, 0, time.UTC), false)
+
+	_, err := NewCurriculumConfigRepo(database).RemoveFromSyllabus(context.Background(), curriculumconfig.RemoveInput{
+		ID:         99,
+		LockToken:  "15001",
+		AdminEmail: "admin@avantifellows.org",
+	})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already out of syllabus")
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigRemoveFromSyllabusTreatsAlreadyRemovedStaleTokenAsConflict(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	expectGetConfigRow(mock, int64(99), time.Date(2026, 6, 3, 10, 15, 0, 0, time.UTC), false)
+
+	_, err := NewCurriculumConfigRepo(database).RemoveFromSyllabus(context.Background(), curriculumconfig.RemoveInput{
+		ID:         99,
+		LockToken:  "stale",
+		AdminEmail: "admin@avantifellows.org",
+	})
+
+	require.ErrorIs(t, err, curriculumconfig.ErrStaleLock)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigRemoveFromSyllabusRejectsMismatchedLockTokenAsConflict(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	expectGetConfigRow(mock, int64(99), time.Date(2026, 6, 3, 10, 15, 0, 0, time.UTC), true)
+	mock.ExpectQuery(regexp.QuoteMeta("SET is_in_syllabus = false, prescribed_minutes = 0, updated_by_email = $2, updated_at = NOW()")).
+		WithArgs(int64(99), "admin@avantifellows.org", "stale").
+		WillReturnError(sql.ErrNoRows)
+
+	_, err := NewCurriculumConfigRepo(database).RemoveFromSyllabus(context.Background(), curriculumconfig.RemoveInput{
+		ID:         99,
+		LockToken:  "stale",
+		AdminEmail: "admin@avantifellows.org",
+	})
+
+	require.ErrorIs(t, err, curriculumconfig.ErrStaleLock)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigRemoveFromSyllabusReturnsUnavailableImpactWithoutBlockingValidRemove(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	updatedAt := time.Date(2026, 6, 3, 10, 45, 0, 0, time.UTC)
+	expectGetConfigRow(mock, int64(99), time.Date(2026, 6, 3, 10, 15, 0, 0, time.UTC), true)
+	mock.ExpectQuery(regexp.QuoteMeta("SET is_in_syllabus = false, prescribed_minutes = 0, updated_by_email = $2, updated_at = NOW()")).
+		WithArgs(int64(99), "admin@avantifellows.org", "15001").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "chapter_id", "chapter_code", "chapter_name", "grade", "subject", "exam_track",
+			"is_in_syllabus", "prescribed_minutes", "coverage_sequence", "updated_by_email", "updated_at", "lock_token",
+		}).AddRow(int64(99), int64(44), "MATH-001", "Quadratic Equations", "11", "Mathematics", "jee_main", false, 0, 7, "admin@avantifellows.org", updatedAt, "15002"))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(t.id)::int AS topic_count")).
+		WithArgs(int64(44)).
+		WillReturnRows(sqlmock.NewRows([]string{"topic_count"}).AddRow(2))
+	mock.ExpectQuery(regexp.QuoteMeta("COUNT(*) FROM school sc")).
+		WillReturnError(context.DeadlineExceeded)
+
+	result, err := NewCurriculumConfigRepo(database).RemoveFromSyllabus(context.Background(), curriculumconfig.RemoveInput{
+		ID:         99,
+		LockToken:  "15001",
+		AdminEmail: "admin@avantifellows.org",
+	})
+
+	require.NoError(t, err)
+	assert.True(t, result.Impact.Unavailable)
+	require.NotNil(t, result.Row)
+	assert.False(t, result.Row.IsInSyllabus)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestCurriculumConfigImpactReturnsWarningsAndUnavailableStateDoesNotBlock(t *testing.T) {
 	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
 	defer cleanup()

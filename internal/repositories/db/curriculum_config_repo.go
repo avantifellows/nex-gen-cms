@@ -443,8 +443,40 @@ func (r *CurriculumConfigRepo) Edit(ctx context.Context, input curriculumconfig.
 	return curriculumconfig.MutationResult{Row: row, Warnings: warnings, Impact: impact}, nil
 }
 
-func (r *CurriculumConfigRepo) RemoveFromSyllabus(context.Context, curriculumconfig.RemoveInput) (curriculumconfig.MutationResult, error) {
-	return curriculumconfig.MutationResult{}, curriculumconfig.ErrNotImplemented
+func (r *CurriculumConfigRepo) RemoveFromSyllabus(ctx context.Context, input curriculumconfig.RemoveInput) (curriculumconfig.MutationResult, error) {
+	if err := validateRemoveInput(input); err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	current, err := r.Get(ctx, input.ID)
+	if err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	if !current.IsInSyllabus {
+		if strings.TrimSpace(current.LockToken) != strings.TrimSpace(input.LockToken) {
+			return curriculumconfig.MutationResult{}, curriculumconfig.ErrStaleLock
+		}
+		return curriculumconfig.MutationResult{}, errors.New("LMS Chapter Exam Config is already out of syllabus")
+	}
+	row, err := r.removeConfigFromSyllabus(ctx, input)
+	if err != nil {
+		return curriculumconfig.MutationResult{}, mapEditError(err)
+	}
+	warnings, err := r.warningsForConfig(ctx, *row)
+	if err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	impact, err := r.impactCounts(ctx, curriculumconfig.ImpactQuery{
+		ConfigID:          row.ID,
+		ChapterID:         row.ChapterID,
+		ExamTrack:         row.ExamTrack,
+		IsInSyllabus:      row.IsInSyllabus,
+		PrescribedMinutes: row.PrescribedMinutes,
+		CoverageSequence:  row.CoverageSequence,
+	})
+	if err != nil {
+		return curriculumconfig.MutationResult{}, err
+	}
+	return curriculumconfig.MutationResult{Row: row, Warnings: warnings, Impact: impact}, nil
 }
 
 func (r *CurriculumConfigRepo) ExportRows(context.Context, curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
@@ -576,6 +608,68 @@ func (r *CurriculumConfigRepo) updateConfig(ctx context.Context, input curriculu
 			LIMIT 1
 		) sn ON true
 	`, input.ID, input.IsInSyllabus, input.PrescribedMinutes, input.CoverageSequence, strings.TrimSpace(input.AdminEmail), strings.TrimSpace(input.LockToken)).Scan(
+		&row.ID,
+		&row.ChapterID,
+		&row.ChapterCode,
+		&row.ChapterName,
+		&row.Grade,
+		&row.Subject,
+		&row.ExamTrack,
+		&row.IsInSyllabus,
+		&row.PrescribedMinutes,
+		&row.CoverageSequence,
+		&row.UpdatedByEmail,
+		&row.UpdatedAt,
+		&row.LockToken,
+	)
+	if err != nil {
+		return nil, err
+	}
+	row.PrescribedHours = PrescribedHoursLabel(row.PrescribedMinutes)
+	return &row, nil
+}
+
+func (r *CurriculumConfigRepo) removeConfigFromSyllabus(ctx context.Context, input curriculumconfig.RemoveInput) (*curriculumconfig.ListRow, error) {
+	row := curriculumconfig.ListRow{}
+	err := r.db.QueryRowContext(ctx, `
+		WITH updated AS (
+			UPDATE lms_chapter_exam_configs c
+			SET is_in_syllabus = false, prescribed_minutes = 0, updated_by_email = $2, updated_at = NOW()
+			WHERE c.id = $1
+			  AND c.xmin::text = $3
+			RETURNING c.id, c.chapter_id, c.exam_track, c.is_in_syllabus, c.prescribed_minutes, c.coverage_sequence, c.updated_by_email, c.updated_at, c.xmin::text
+		)
+		SELECT
+			c.id,
+			c.chapter_id,
+			ch.code AS chapter_code,
+			COALESCE(chn.name, '') AS chapter_name,
+			g.number::text AS grade,
+			COALESCE(sn.name, '') AS subject,
+			c.exam_track,
+			c.is_in_syllabus,
+			c.prescribed_minutes,
+			c.coverage_sequence,
+			c.updated_by_email,
+			c.updated_at,
+			c.xmin::text AS lock_token
+		FROM updated c
+		JOIN chapter ch ON ch.id = c.chapter_id
+		JOIN grade g ON g.id = ch.grade_id
+		JOIN subject s ON s.id = ch.subject_id
+		LEFT JOIN LATERAL (
+			SELECT elem->>'chapter' AS name
+			FROM jsonb_array_elements(ch.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) chn ON true
+		LEFT JOIN LATERAL (
+			SELECT elem->>'subject' AS name
+			FROM jsonb_array_elements(s.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) sn ON true
+	`, input.ID, strings.TrimSpace(input.AdminEmail), strings.TrimSpace(input.LockToken)).Scan(
 		&row.ID,
 		&row.ChapterID,
 		&row.ChapterCode,
@@ -913,6 +1007,28 @@ func validateEditInput(input curriculumconfig.EditInput) error {
 	}
 	if !input.IsInSyllabus && input.PrescribedMinutes != 0 {
 		problems = append(problems, "out-of-syllabus rows must have zero prescribed minutes")
+	}
+	if missingLock {
+		problems = append(problems, "lock token is required")
+	}
+	if strings.TrimSpace(input.AdminEmail) == "" {
+		problems = append(problems, "admin email is required")
+	}
+	if len(problems) == 0 {
+		return nil
+	}
+	message := strings.Join(problems, "; ")
+	if missingLock {
+		return fmt.Errorf("%w: %s", curriculumconfig.ErrStaleLock, message)
+	}
+	return errors.New(message)
+}
+
+func validateRemoveInput(input curriculumconfig.RemoveInput) error {
+	var problems []string
+	missingLock := strings.TrimSpace(input.LockToken) == ""
+	if input.ID < 1 {
+		problems = append(problems, "config id must be positive")
 	}
 	if missingLock {
 		problems = append(problems, "lock token is required")

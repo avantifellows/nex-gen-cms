@@ -113,7 +113,34 @@ func (h *CurriculumConfigHandler) Remove(w http.ResponseWriter, r *http.Request)
 	if _, ok := h.ensureReady(w, r, false); !ok {
 		return
 	}
-	h.placeholder(w, "Remove from syllabus is not available in this slice")
+	id := int64(positiveInt(r.URL.Query().Get("id"), 0))
+	if id < 1 {
+		http.Error(w, "Config id is required", http.StatusUnprocessableEntity)
+		return
+	}
+	row, err := h.repo.Get(r.Context(), id)
+	if err != nil {
+		writeRemoveError(w, http.StatusNotFound, "Could not load LMS Chapter Exam Config", err.Error())
+		return
+	}
+	if !row.IsInSyllabus {
+		writeRemoveError(w, http.StatusUnprocessableEntity, "Could not remove LMS Chapter Exam Config", "LMS Chapter Exam Config is already out of syllabus.")
+		return
+	}
+	impact, err := h.repo.Impact(r.Context(), curriculumconfig.ImpactQuery{
+		ConfigID:          row.ID,
+		ChapterID:         row.ChapterID,
+		ExamTrack:         row.ExamTrack,
+		IsInSyllabus:      false,
+		PrescribedMinutes: 0,
+		CoverageSequence:  row.CoverageSequence,
+	})
+	if err != nil {
+		log.Printf("curriculum config remove impact: %v", err)
+		http.Error(w, "Could not load impact preview", http.StatusInternalServerError)
+		return
+	}
+	writeRemovePanel(w, listQueryFromRequest(r), row, impact.Warnings, impact)
 }
 
 func (h *CurriculumConfigHandler) ChapterOptions(w http.ResponseWriter, r *http.Request) {
@@ -230,7 +257,29 @@ func (h *CurriculumConfigHandler) RemoveFromSyllabus(w http.ResponseWriter, r *h
 	if _, ok := h.ensureMutationReady(w, r); !ok {
 		return
 	}
-	h.placeholder(w, "Remove from syllabus is not available in this slice")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid remove form", http.StatusBadRequest)
+		return
+	}
+	claims := auth.FromContext(r.Context())
+	adminEmail := ""
+	if claims != nil {
+		adminEmail = claims.Email
+	}
+	input := removeInputFromForm(r.PostForm, adminEmail)
+	result, err := h.repo.RemoveFromSyllabus(r.Context(), input)
+	if err != nil {
+		writeRemoveMutationError(w, err)
+		return
+	}
+	query := listQueryFromForm(r.PostForm)
+	listResult, err := h.repo.List(r.Context(), query)
+	if err != nil {
+		log.Printf("curriculum config list after remove: %v", err)
+		http.Error(w, "Removed config but could not refresh table", http.StatusInternalServerError)
+		return
+	}
+	writeRemoveSuccess(w, result, tableViewData{Result: listResult, Query: query})
 }
 
 func (h *CurriculumConfigHandler) Export(w http.ResponseWriter, r *http.Request) {
@@ -370,6 +419,14 @@ func editInputFromForm(values url.Values, adminEmail string) (curriculumconfig.E
 	}, nil
 }
 
+func removeInputFromForm(values url.Values, adminEmail string) curriculumconfig.RemoveInput {
+	return curriculumconfig.RemoveInput{
+		ID:         int64(positiveInt(values.Get("id"), 0)),
+		LockToken:  strings.TrimSpace(values.Get("lock_token")),
+		AdminEmail: adminEmail,
+	}
+}
+
 func boolFormValue(value string, fallback bool) bool {
 	switch strings.TrimSpace(strings.ToLower(value)) {
 	case "true", "on", "1", "yes":
@@ -459,6 +516,9 @@ func curriculumConfigFuncMap() template.FuncMap {
 		},
 		"curriculumConfigEditURL": func(query curriculumconfig.ListQuery, id int64) string {
 			return "/admin/curriculum-config/edit?id=" + strconv.FormatInt(id, 10) + "&" + encodeListQuery(query)
+		},
+		"curriculumConfigRemoveURL": func(query curriculumconfig.ListQuery, id int64) string {
+			return "/admin/curriculum-config/remove?id=" + strconv.FormatInt(id, 10) + "&" + encodeListQuery(query)
 		},
 		"minus": func(left, right int) int {
 			return left - right
@@ -557,6 +617,25 @@ func writeEditPanel(w http.ResponseWriter, query curriculumconfig.ListQuery, row
 	fmt.Fprintf(w, `<input id="curriculum-config-edit-coverage" class="form-control w-full" name="coverage_sequence" inputmode="numeric" value="%d" hx-get="/admin/curriculum-config/impact" hx-target="#curriculum-config-impact-preview" hx-swap="innerHTML" hx-include="#curriculum-config-edit-form" hx-vals='{"config_id":%d,"chapter_id":%d,"exam_track":"%s"}'>`, row.CoverageSequence, row.ID, row.ChapterID, html.EscapeString(row.ExamTrack))
 	fmt.Fprint(w, `<div id="curriculum-config-impact-preview"></div>`)
 	fmt.Fprint(w, `<div class="flex justify-end"><button type="submit" class="btn-primary btn-sm">Update config</button></div>`)
+	fmt.Fprint(w, `</form></section>`)
+}
+
+func writeRemovePanel(w http.ResponseWriter, query curriculumconfig.ListQuery, row *curriculumconfig.ListRow, warnings []curriculumconfig.Warning, impact curriculumconfig.ImpactResult) {
+	query = curriculumconfig.NormalizeListQuery(query)
+	if row == nil {
+		writeRemoveError(w, http.StatusNotFound, "Could not load LMS Chapter Exam Config", "LMS Chapter Exam Config does not exist")
+		return
+	}
+	fmt.Fprint(w, `<section id="curriculum-config-remove-panel" class="space-y-4">`)
+	fmt.Fprint(w, `<header><h2 class="text-lg font-semibold text-ink">Remove from syllabus</h2></header>`)
+	fmt.Fprintf(w, `<div class="rounded-md border border-border bg-bg-card-alt p-3 text-sm"><div class="font-medium">%s</div><div>%s</div><div>Chapter ID %d</div><div>Grade %s · %s</div><div>%s</div><div>Coverage order %d</div></div>`, html.EscapeString(row.ChapterCode), html.EscapeString(row.ChapterName), row.ChapterID, html.EscapeString(row.Grade), html.EscapeString(row.Subject), html.EscapeString(examTrackLabelForView(row.ExamTrack)), row.CoverageSequence)
+	writeWarningAndImpact(w, warnings, impact)
+	fmt.Fprint(w, `<form id="curriculum-config-remove-form" hx-post="/admin/curriculum-config/remove-from-syllabus" hx-target="#curriculum-config-remove-panel" hx-swap="outerHTML" class="space-y-3">`)
+	writeAppliedFilterHiddenFields(w, query)
+	fmt.Fprintf(w, `<input type="hidden" name="id" value="%d">`, row.ID)
+	fmt.Fprintf(w, `<input type="hidden" name="lock_token" value="%s">`, html.EscapeString(row.LockToken))
+	fmt.Fprint(w, `<p class="text-sm text-ink-muted">This will set the row out of syllabus, force prescribed minutes to 0, and preserve coverage order.</p>`)
+	fmt.Fprint(w, `<div class="flex justify-end"><button type="submit" class="btn-danger btn-sm">Remove from syllabus</button></div>`)
 	fmt.Fprint(w, `</form></section>`)
 }
 
@@ -663,6 +742,15 @@ func writeUpdateSuccess(w http.ResponseWriter, result curriculumconfig.MutationR
 	fmt.Fprint(w, `</div></section>`)
 }
 
+func writeRemoveSuccess(w http.ResponseWriter, result curriculumconfig.MutationResult, table tableViewData) {
+	fmt.Fprint(w, `<section id="curriculum-config-remove-result" class="space-y-3">`)
+	fmt.Fprint(w, `<div role="status" class="rounded-md border border-success bg-success-subtle p-3">Removed LMS Chapter Exam Config from syllabus.</div>`)
+	writeWarningAndImpact(w, result.Warnings, result.Impact)
+	fmt.Fprint(w, `<div id="curriculum-config-table" class="rounded-md border border-border bg-bg-card p-4">`)
+	views.ExecuteTemplate(curriculumConfigTableTemplate, w, table, curriculumConfigFuncMap())
+	fmt.Fprint(w, `</div></section>`)
+}
+
 func writeMutationError(w http.ResponseWriter, err error) {
 	message := err.Error()
 	status := http.StatusUnprocessableEntity
@@ -684,7 +772,20 @@ func writeEditMutationError(w http.ResponseWriter, err error) {
 	writeUpdateError(w, http.StatusUnprocessableEntity, "Could not update LMS Chapter Exam Config", err.Error())
 }
 
+func writeRemoveMutationError(w http.ResponseWriter, err error) {
+	if errors.Is(err, curriculumconfig.ErrStaleLock) || strings.Contains(err.Error(), "lock token") {
+		writeRemoveError(w, http.StatusConflict, "Could not remove LMS Chapter Exam Config", "This LMS Chapter Exam Config changed while you were removing it. Reload the row and try again.")
+		return
+	}
+	writeRemoveError(w, http.StatusUnprocessableEntity, "Could not remove LMS Chapter Exam Config", err.Error())
+}
+
 func writeUpdateError(w http.ResponseWriter, status int, title string, message string) {
 	w.WriteHeader(status)
 	fmt.Fprintf(w, `<section id="curriculum-config-edit-panel" role="alert"><h2>%s</h2><p>%s</p></section>`, html.EscapeString(title), html.EscapeString(message))
+}
+
+func writeRemoveError(w http.ResponseWriter, status int, title string, message string) {
+	w.WriteHeader(status)
+	fmt.Fprintf(w, `<section id="curriculum-config-remove-panel" role="alert"><h2>%s</h2><p>%s</p></section>`, html.EscapeString(title), html.EscapeString(message))
 }

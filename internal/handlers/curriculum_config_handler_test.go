@@ -37,6 +37,7 @@ type fakeCurriculumConfigRepository struct {
 	createInputs         []curriculumconfig.CreateInput
 	editIDs              []int64
 	editInputs           []curriculumconfig.EditInput
+	removeInputs         []curriculumconfig.RemoveInput
 }
 
 func (f *fakeCurriculumConfigRepository) SchemaReadiness(context.Context) (curriculumconfig.Readiness, error) {
@@ -77,8 +78,9 @@ func (f *fakeCurriculumConfigRepository) Edit(_ context.Context, input curriculu
 	return f.mutationResult, f.mutationErr
 }
 
-func (f *fakeCurriculumConfigRepository) RemoveFromSyllabus(context.Context, curriculumconfig.RemoveInput) (curriculumconfig.MutationResult, error) {
-	return curriculumconfig.MutationResult{}, curriculumconfig.ErrNotImplemented
+func (f *fakeCurriculumConfigRepository) RemoveFromSyllabus(_ context.Context, input curriculumconfig.RemoveInput) (curriculumconfig.MutationResult, error) {
+	f.removeInputs = append(f.removeInputs, input)
+	return f.mutationResult, f.mutationErr
 }
 
 func (f *fakeCurriculumConfigRepository) ExportRows(context.Context, curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
@@ -189,6 +191,62 @@ func TestCurriculumConfigHTMXTableRendersDefaultRowsAsPartial(t *testing.T) {
 	assert.Contains(t, body, "admin@avantifellows.org")
 	assert.NotContains(t, body, "14983")
 	assert.False(t, strings.Contains(body, "<html"))
+}
+
+func TestCurriculumConfigTableShowsRemoveActionOnlyForInSyllabusRows(t *testing.T) {
+	constants.InitRuntimeConstant()
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		listResult: curriculumconfig.ListResult{
+			Rows: []curriculumconfig.ListRow{
+				{
+					ID:                12,
+					ChapterID:         44,
+					ChapterCode:       "MATH-001",
+					ChapterName:       "Quadratic Equations",
+					Grade:             "11",
+					Subject:           "Mathematics",
+					ExamTrack:         "jee_main",
+					IsInSyllabus:      true,
+					PrescribedMinutes: 60,
+					PrescribedHours:   "1 hour",
+					CoverageSequence:  7,
+					UpdatedAt:         time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC),
+				},
+				{
+					ID:                13,
+					ChapterID:         45,
+					ChapterCode:       "MATH-002",
+					ChapterName:       "Sequences",
+					Grade:             "11",
+					Subject:           "Mathematics",
+					ExamTrack:         "jee_main",
+					IsInSyllabus:      false,
+					PrescribedMinutes: 0,
+					PrescribedHours:   "0 hours",
+					CoverageSequence:  8,
+					UpdatedAt:         time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC),
+				},
+			},
+			TotalRows:  2,
+			Page:       1,
+			Limit:      50,
+			TotalPages: 1,
+		},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/table?exam_track=neet&grade=12&subject=Chemistry&syllabus_status=all&page=2&limit=20&sort=updated_at&dir=desc", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.Table(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, `hx-get="/admin/curriculum-config/remove?id=12&amp;exam_track=neet&amp;grade=12&amp;subject=Chemistry`)
+	assert.Contains(t, body, ">Remove<")
+	assert.NotContains(t, body, `hx-get="/admin/curriculum-config/remove?id=13`)
 }
 
 func TestCurriculumConfigTableNormalizesInvalidAppliedQueryBeforeListing(t *testing.T) {
@@ -421,6 +479,115 @@ func TestCurriculumConfigEditRendersSidePanelWithImmutableIdentityAndAppliedFilt
 	assert.Contains(t, body, `name="filter_exam_track" value="neet"`)
 	assert.Contains(t, body, `name="filter_page" value="2"`)
 	assert.NotContains(t, body, "<html")
+}
+
+func TestCurriculumConfigRemoveRendersConfirmationForInSyllabusRowWithImpactAndAppliedFilters(t *testing.T) {
+	updatedAt := time.Date(2026, 6, 3, 10, 15, 0, 0, time.UTC)
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		getRow: &curriculumconfig.ListRow{
+			ID:                99,
+			ChapterID:         44,
+			ChapterCode:       "MATH-001",
+			ChapterName:       "Quadratic Equations",
+			Grade:             "11",
+			Subject:           "Mathematics",
+			ExamTrack:         "jee_main",
+			IsInSyllabus:      true,
+			PrescribedMinutes: 60,
+			PrescribedHours:   "1 hour",
+			CoverageSequence:  7,
+			UpdatedByEmail:    "admin@avantifellows.org",
+			UpdatedAt:         updatedAt,
+			LockToken:         "15001",
+		},
+		impactResult: curriculumconfig.ImpactResult{SummaryRows: 6, ActiveLogs: 2, ChapterCompletions: 4},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/remove?id=99&exam_track=neet&grade=12&subject=Chemistry&search=organic&chapter_id=77&syllabus_status=all&page=2&limit=20&sort=updated_at&dir=desc", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.Remove(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, []int64{99}, repo.editIDs)
+	require.Len(t, repo.impactQueries, 1)
+	assert.Equal(t, curriculumconfig.ImpactQuery{ConfigID: 99, ChapterID: 44, ExamTrack: "jee_main", IsInSyllabus: false, PrescribedMinutes: 0, CoverageSequence: 7}, repo.impactQueries[0])
+	body := rec.Body.String()
+	assert.Contains(t, body, `id="curriculum-config-remove-panel"`)
+	assert.Contains(t, body, `hx-post="/admin/curriculum-config/remove-from-syllabus"`)
+	assert.Contains(t, body, "Remove from syllabus")
+	assert.Contains(t, body, "MATH-001")
+	assert.Contains(t, body, "Quadratic Equations")
+	assert.Contains(t, body, "Chapter ID 44")
+	assert.Contains(t, body, "JEE Main")
+	assert.Contains(t, body, "Summary rows: 6")
+	assert.Contains(t, body, `name="id" value="99"`)
+	assert.Contains(t, body, `name="lock_token" value="15001"`)
+	assert.Contains(t, body, `name="filter_exam_track" value="neet"`)
+	assert.Contains(t, body, `name="filter_page" value="2"`)
+	assert.NotContains(t, body, "<html")
+}
+
+func TestCurriculumConfigRemoveRejectsAlreadyOutOfSyllabusConfirmation(t *testing.T) {
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		getRow: &curriculumconfig.ListRow{
+			ID:           99,
+			ChapterID:    44,
+			ChapterCode:  "MATH-001",
+			ChapterName:  "Quadratic Equations",
+			ExamTrack:    "jee_main",
+			IsInSyllabus: false,
+			LockToken:    "15001",
+		},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/remove?id=99", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.Remove(rec, req)
+
+	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	assert.Empty(t, repo.impactQueries)
+	assert.Contains(t, rec.Body.String(), "already out of syllabus")
+}
+
+func TestCurriculumConfigRemoveRendersUnavailableImpactStateWithConfirmation(t *testing.T) {
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		getRow: &curriculumconfig.ListRow{
+			ID:                99,
+			ChapterID:         44,
+			ChapterCode:       "MATH-001",
+			ChapterName:       "Quadratic Equations",
+			Grade:             "11",
+			Subject:           "Mathematics",
+			ExamTrack:         "jee_main",
+			IsInSyllabus:      true,
+			PrescribedMinutes: 60,
+			PrescribedHours:   "1 hour",
+			CoverageSequence:  7,
+			LockToken:         "15001",
+		},
+		impactResult: curriculumconfig.ImpactResult{Unavailable: true},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/remove?id=99", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.Remove(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "Impact counts unavailable")
+	assert.Contains(t, body, `hx-post="/admin/curriculum-config/remove-from-syllabus"`)
 }
 
 func TestCurriculumConfigChapterOptionsRendersMetadataWarnings(t *testing.T) {
@@ -787,6 +954,125 @@ func TestCurriculumConfigUpdateMapsStaleLockToConflictFeedback(t *testing.T) {
 
 	require.Equal(t, http.StatusConflict, rec.Code)
 	assert.Contains(t, rec.Body.String(), "This LMS Chapter Exam Config changed while you were editing")
+}
+
+func TestCurriculumConfigRemoveFromSyllabusParsesLockTokenStampsAdminAndRefreshesAppliedFilters(t *testing.T) {
+	constants.InitRuntimeConstant()
+	updatedAt := time.Date(2026, 6, 3, 10, 45, 0, 0, time.UTC)
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		mutationResult: curriculumconfig.MutationResult{
+			Row: &curriculumconfig.ListRow{
+				ID:                99,
+				ChapterID:         44,
+				ChapterCode:       "MATH-001",
+				ChapterName:       "Quadratic Equations",
+				Grade:             "11",
+				Subject:           "Mathematics",
+				ExamTrack:         "jee_main",
+				IsInSyllabus:      false,
+				PrescribedMinutes: 0,
+				PrescribedHours:   "0 hours",
+				CoverageSequence:  7,
+				UpdatedByEmail:    "admin@avantifellows.org",
+				UpdatedAt:         updatedAt,
+			},
+			Impact: curriculumconfig.ImpactResult{SummaryRows: 6, ActiveLogs: 2, ChapterCompletions: 4},
+		},
+		listResult: curriculumconfig.ListResult{
+			Rows: []curriculumconfig.ListRow{{
+				ID:                99,
+				ChapterID:         44,
+				ChapterCode:       "MATH-001",
+				ChapterName:       "Quadratic Equations",
+				Grade:             "11",
+				Subject:           "Mathematics",
+				ExamTrack:         "jee_main",
+				IsInSyllabus:      false,
+				PrescribedMinutes: 0,
+				PrescribedHours:   "0 hours",
+				CoverageSequence:  7,
+				UpdatedByEmail:    "admin@avantifellows.org",
+				UpdatedAt:         updatedAt,
+			}},
+			TotalRows:  1,
+			Page:       2,
+			Limit:      20,
+			TotalPages: 3,
+		},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+	form := url.Values{
+		"id":                     {"99"},
+		"lock_token":             {"15001"},
+		"filter_exam_track":      {"neet"},
+		"filter_grade":           {"12"},
+		"filter_subject":         {"Chemistry"},
+		"filter_search":          {"organic"},
+		"filter_chapter_id":      {"77"},
+		"filter_syllabus_status": {"all"},
+		"filter_page":            {"2"},
+		"filter_limit":           {"20"},
+		"filter_sort":            {"updated_at"},
+		"filter_dir":             {"desc"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/admin/curriculum-config/remove-from-syllabus", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req = req.WithContext(auth.WithSession(req.Context(), &auth.SessionClaims{Email: "admin@avantifellows.org", Role: auth.RoleAdmin}))
+	rec := httptest.NewRecorder()
+
+	handler.RemoveFromSyllabus(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, repo.removeInputs, 1)
+	assert.Equal(t, curriculumconfig.RemoveInput{
+		ID:         99,
+		LockToken:  "15001",
+		AdminEmail: "admin@avantifellows.org",
+	}, repo.removeInputs[0])
+	require.Len(t, repo.listQueries, 1)
+	assert.Equal(t, curriculumconfig.ListQuery{
+		ExamTrack:      "neet",
+		Grade:          "12",
+		Subject:        "Chemistry",
+		Search:         "organic",
+		ChapterID:      "77",
+		SyllabusStatus: "all",
+		Page:           2,
+		Limit:          20,
+		Sort:           "updated_at",
+		Direction:      "desc",
+	}, repo.listQueries[0])
+	body := rec.Body.String()
+	assert.Contains(t, body, "Removed LMS Chapter Exam Config from syllabus")
+	assert.Contains(t, body, "Summary rows: 6")
+	assert.Contains(t, body, `id="curriculum-config-row-99"`)
+	assert.Contains(t, body, "Out of syllabus")
+	assert.Contains(t, body, `name="exam_track" value="neet"`)
+	assert.Contains(t, body, `name="page" value="2"`)
+}
+
+func TestCurriculumConfigRemoveFromSyllabusMapsStaleLockToConflictFeedback(t *testing.T) {
+	repo := &fakeCurriculumConfigRepository{
+		readiness:   curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		mutationErr: curriculumconfig.ErrStaleLock,
+	}
+	handler := NewCurriculumConfigHandler(repo)
+	form := url.Values{
+		"id":         {"99"},
+		"lock_token": {"stale"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/admin/curriculum-config/remove-from-syllabus", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req = req.WithContext(auth.WithSession(req.Context(), &auth.SessionClaims{Email: "admin@avantifellows.org", Role: auth.RoleAdmin}))
+	rec := httptest.NewRecorder()
+
+	handler.RemoveFromSyllabus(rec, req)
+
+	require.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), "This LMS Chapter Exam Config changed while you were removing it")
 }
 
 func TestCurriculumConfigPageShowsControlledUnavailableStateWhenSchemaIsNotReady(t *testing.T) {
