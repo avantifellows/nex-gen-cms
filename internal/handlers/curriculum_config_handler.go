@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"context"
+	"encoding/csv"
 	"errors"
 	"fmt"
 	"html"
@@ -10,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/avantifellows/nex-gen-cms/internal/auth"
 	"github.com/avantifellows/nex-gen-cms/internal/curriculumconfig"
@@ -289,7 +292,38 @@ func (h *CurriculumConfigHandler) Export(w http.ResponseWriter, r *http.Request)
 	if _, ok := h.ensureReady(w, r, false); !ok {
 		return
 	}
-	h.placeholder(w, "Curriculum Config export is not available in this slice")
+	query := listQueryFromRequest(r)
+	query.Page = 1
+	query.Limit = 100
+
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	rows, err := h.repo.ExportRows(ctx, query)
+	if err != nil {
+		log.Printf("curriculum config export: %v", err)
+		http.Error(w, "Could not export Curriculum Config", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", "attachment; filename=curriculum-config-"+time.Now().Format("2006-01-02")+".csv")
+
+	writer := csv.NewWriter(w)
+	if err := writer.Write(curriculumConfigExportHeaders()); err != nil {
+		log.Printf("curriculum config export header: %v", err)
+		return
+	}
+	for _, row := range rows {
+		if err := writer.Write(curriculumConfigExportRecord(row)); err != nil {
+			log.Printf("curriculum config export row: %v", err)
+			return
+		}
+	}
+	writer.Flush()
+	if err := writer.Error(); err != nil {
+		log.Printf("curriculum config export flush: %v", err)
+	}
 }
 
 func (h *CurriculumConfigHandler) ensureMutationReady(w http.ResponseWriter, r *http.Request) (curriculumconfig.Readiness, bool) {
@@ -321,6 +355,50 @@ func (h *CurriculumConfigHandler) ensureReady(w http.ResponseWriter, r *http.Req
 func (h *CurriculumConfigHandler) placeholder(w http.ResponseWriter, message string) {
 	w.WriteHeader(http.StatusServiceUnavailable)
 	_, _ = fmt.Fprintf(w, `<section class="panel" role="status"><h2>Unavailable</h2><p>%s.</p></section>`, message)
+}
+
+func curriculumConfigExportHeaders() []string {
+	return []string{
+		"chapter_code",
+		"chapter_name",
+		"grade",
+		"subject",
+		"exam_track",
+		"is_in_syllabus",
+		"prescribed_minutes",
+		"prescribed_hours",
+		"coverage_sequence",
+		"updated_by_email",
+		"updated_at",
+	}
+}
+
+func curriculumConfigExportRecord(row curriculumconfig.ExportRow) []string {
+	return []string{
+		formulaEscapeCSVCell(row.ChapterCode),
+		formulaEscapeCSVCell(row.ChapterName),
+		formulaEscapeCSVCell(row.Grade),
+		formulaEscapeCSVCell(row.Subject),
+		formulaEscapeCSVCell(row.ExamTrack),
+		strconv.FormatBool(row.IsInSyllabus),
+		strconv.Itoa(row.PrescribedMinutes),
+		formulaEscapeCSVCell(row.PrescribedHours),
+		strconv.Itoa(row.CoverageSequence),
+		formulaEscapeCSVCell(row.UpdatedByEmail),
+		row.UpdatedAt.Format(time.RFC3339),
+	}
+}
+
+func formulaEscapeCSVCell(value string) string {
+	if value == "" {
+		return value
+	}
+	switch value[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + value
+	default:
+		return value
+	}
 }
 
 func (h *CurriculumConfigHandler) writeUnavailable(w http.ResponseWriter, fullPage bool, title string, reasons []string) {
@@ -513,6 +591,9 @@ func curriculumConfigFuncMap() template.FuncMap {
 		},
 		"curriculumConfigNewURL": func(query curriculumconfig.ListQuery) string {
 			return "/admin/curriculum-config/new?" + encodeListQuery(query)
+		},
+		"curriculumConfigExportURL": func(query curriculumconfig.ListQuery) string {
+			return "/admin/curriculum-config/export?" + encodeListQuery(query)
 		},
 		"curriculumConfigEditURL": func(query curriculumconfig.ListQuery, id int64) string {
 			return "/admin/curriculum-config/edit?id=" + strconv.FormatInt(id, 10) + "&" + encodeListQuery(query)

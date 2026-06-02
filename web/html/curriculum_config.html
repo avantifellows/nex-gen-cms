@@ -6,11 +6,17 @@
             <p class="text-sm text-ink-muted">Manage LMS Chapter Exam Config readiness from CMS.</p>
         </div>
         {{ if not .UnavailableTitle }}
-        <button type="button"
-                class="btn-primary btn-sm"
-                hx-get="{{ curriculumConfigNewURL .Query }}"
-                hx-target="#curriculum-config-side-panel"
-                hx-swap="innerHTML">Add config</button>
+        <div class="flex items-center gap-2">
+            <a class="btn-secondary btn-sm" href="{{ curriculumConfigExportURL .Query }}">
+                <i class="fa-solid fa-download" aria-hidden="true"></i>
+                <span>Export CSV</span>
+            </a>
+            <button type="button"
+                    class="btn-primary btn-sm"
+                    hx-get="{{ curriculumConfigNewURL .Query }}"
+                    hx-target="#curriculum-config-side-panel"
+                    hx-swap="innerHTML">Add config</button>
+        </div>
         {{ end }}
     </div>
 

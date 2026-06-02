@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/avantifellows/nex-gen-cms/config"
 	"github.com/avantifellows/nex-gen-cms/di"
+	"github.com/avantifellows/nex-gen-cms/internal/auth"
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/curriculumconfig"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers"
@@ -80,7 +83,19 @@ func (routeTestCurriculumConfigRepo) RemoveFromSyllabus(context.Context, curricu
 	return curriculumconfig.MutationResult{}, curriculumconfig.ErrNotImplemented
 }
 func (routeTestCurriculumConfigRepo) ExportRows(context.Context, curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
-	return nil, curriculumconfig.ErrNotImplemented
+	return []curriculumconfig.ExportRow{{
+		ChapterCode:       "MATH-001",
+		ChapterName:       "Quadratic Equations",
+		Grade:             "11",
+		Subject:           "Mathematics",
+		ExamTrack:         "jee_main",
+		IsInSyllabus:      true,
+		PrescribedMinutes: 60,
+		PrescribedHours:   "1 hour",
+		CoverageSequence:  1,
+		UpdatedByEmail:    "admin@avantifellows.org",
+		UpdatedAt:         time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC),
+	}}, nil
 }
 
 func TestSetup(t *testing.T) {
@@ -153,4 +168,31 @@ func TestSetupRegistersCurriculumConfigRoutes(t *testing.T) {
 		_, ok := mockServeMux.routeHandlers[route]
 		assert.True(t, ok, "Route not registered: "+route)
 	}
+}
+
+func TestSetupRegistersWorkingCurriculumConfigExportRoute(t *testing.T) {
+	t.Setenv("SESSION_SECRET", "curriculum-config-route-secret")
+	mockConfig := new(MockConfig)
+	mockConfig.On("LoadEnv", mock.Anything).Return(nil)
+
+	mockServeMux := NewMockServeMux()
+	appComponentPtr := &di.AppComponent{
+		CssPathHandler:          http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}),
+		CurriculumConfigHandler: handlers.NewCurriculumConfigHandler(routeTestCurriculumConfigRepo{}),
+	}
+	setup(mockConfig, mockServeMux, appComponentPtr)
+
+	login := httptest.NewRecorder()
+	assert.NoError(t, auth.IssueSession(login, 1, "admin@avantifellows.org", auth.RoleAdmin))
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/export", nil)
+	for _, cookie := range login.Result().Cookies() {
+		req.AddCookie(cookie)
+	}
+	rec := httptest.NewRecorder()
+
+	mockServeMux.routeHandlers["/admin/curriculum-config/export"].ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+	assert.Contains(t, rec.Body.String(), "MATH-001")
 }

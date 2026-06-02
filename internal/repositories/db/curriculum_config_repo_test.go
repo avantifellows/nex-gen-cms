@@ -147,6 +147,63 @@ func TestCurriculumConfigListUsesDefaultFiltersAndMapsJoinedRows(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestCurriculumConfigExportRowsUsesFiltersSortAndRowCapWithoutPagination(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+
+	updatedAt := time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC)
+	mock.ExpectQuery(regexp.QuoteMeta("ORDER BY c.updated_at DESC")).
+		WithArgs("neet", "11", "Mathematics", "44", "%quad%", curriculumConfigExportRowLimit).
+		WillReturnRows(sqlmock.NewRows([]string{
+			"chapter_code", "chapter_name", "grade", "subject", "exam_track",
+			"is_in_syllabus", "prescribed_minutes", "coverage_sequence", "updated_by_email", "updated_at",
+		}).AddRow("MATH-001", "Quadratic Equations", "11", "Mathematics", "neet", true, 90, 7, "admin@avantifellows.org", updatedAt))
+
+	rows, err := NewCurriculumConfigRepo(database).ExportRows(context.Background(), curriculumconfig.ListQuery{
+		ExamTrack:      "neet",
+		Grade:          "11",
+		Subject:        "Mathematics",
+		Search:         "quad",
+		ChapterID:      "44",
+		SyllabusStatus: "all",
+		Page:           9,
+		Limit:          10,
+		Sort:           "updated_at",
+		Direction:      "desc",
+	})
+
+	require.NoError(t, err)
+	require.Len(t, rows, 1)
+	assert.Equal(t, curriculumconfig.ExportRow{
+		ChapterCode:       "MATH-001",
+		ChapterName:       "Quadratic Equations",
+		Grade:             "11",
+		Subject:           "Mathematics",
+		ExamTrack:         "neet",
+		IsInSyllabus:      true,
+		PrescribedMinutes: 90,
+		PrescribedHours:   "1.5 hours",
+		CoverageSequence:  7,
+		UpdatedByEmail:    "admin@avantifellows.org",
+		UpdatedAt:         updatedAt,
+	}, rows[0])
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestCurriculumConfigExportRowsHonorsCanceledContext(t *testing.T) {
+	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
+	defer cleanup()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	rows, err := NewCurriculumConfigRepo(database).ExportRows(ctx, curriculumconfig.ListQuery{})
+
+	require.Error(t, err)
+	assert.Empty(t, rows)
+	assert.ErrorIs(t, err, context.Canceled)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestCurriculumConfigListReturnsEmptyFirstPageWhenNoRowsMatch(t *testing.T) {
 	database, mock, cleanup := newCurriculumConfigReadinessMock(t)
 	defer cleanup()

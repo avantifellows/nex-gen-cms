@@ -16,6 +16,8 @@ import (
 	"github.com/lib/pq"
 )
 
+const curriculumConfigExportRowLimit = 10000
+
 type CurriculumConfigRepo struct {
 	db *sql.DB
 
@@ -479,8 +481,61 @@ func (r *CurriculumConfigRepo) RemoveFromSyllabus(ctx context.Context, input cur
 	return curriculumconfig.MutationResult{Row: row, Warnings: warnings, Impact: impact}, nil
 }
 
-func (r *CurriculumConfigRepo) ExportRows(context.Context, curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
-	return nil, curriculumconfig.ErrNotImplemented
+func (r *CurriculumConfigRepo) ExportRows(ctx context.Context, query curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
+	query = curriculumconfig.NormalizeListQuery(query)
+	whereSQL, args := buildListWhere(query)
+	rowArgs := append(append([]any{}, args...), curriculumConfigExportRowLimit)
+
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
+	rowsSQL := `
+		SELECT
+			ch.code AS chapter_code,
+			COALESCE(chn.name, '') AS chapter_name,
+			g.number::text AS grade,
+			COALESCE(sn.name, '') AS subject,
+			c.exam_track,
+			c.is_in_syllabus,
+			c.prescribed_minutes,
+			c.coverage_sequence,
+			c.updated_by_email,
+			c.updated_at
+		FROM lms_chapter_exam_configs c
+		` + listDisplayJoins() + `
+		` + whereSQL + `
+		ORDER BY ` + listOrderBy(query) + `
+		LIMIT $` + strconv.Itoa(len(args)+1)
+	rows, err := r.db.QueryContext(ctx, rowsSQL, rowArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var exportRows []curriculumconfig.ExportRow
+	for rows.Next() {
+		var row curriculumconfig.ExportRow
+		if err := rows.Scan(
+			&row.ChapterCode,
+			&row.ChapterName,
+			&row.Grade,
+			&row.Subject,
+			&row.ExamTrack,
+			&row.IsInSyllabus,
+			&row.PrescribedMinutes,
+			&row.CoverageSequence,
+			&row.UpdatedByEmail,
+			&row.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		row.PrescribedHours = PrescribedHoursLabel(row.PrescribedMinutes)
+		exportRows = append(exportRows, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return exportRows, nil
 }
 
 func (r *CurriculumConfigRepo) ensureNoExistingConfig(ctx context.Context, chapterID int64, examTrack string) error {

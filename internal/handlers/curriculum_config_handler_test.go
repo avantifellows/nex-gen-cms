@@ -38,6 +38,8 @@ type fakeCurriculumConfigRepository struct {
 	editIDs              []int64
 	editInputs           []curriculumconfig.EditInput
 	removeInputs         []curriculumconfig.RemoveInput
+	exportRows           []curriculumconfig.ExportRow
+	exportQueries        []curriculumconfig.ListQuery
 }
 
 func (f *fakeCurriculumConfigRepository) SchemaReadiness(context.Context) (curriculumconfig.Readiness, error) {
@@ -83,8 +85,9 @@ func (f *fakeCurriculumConfigRepository) RemoveFromSyllabus(_ context.Context, i
 	return f.mutationResult, f.mutationErr
 }
 
-func (f *fakeCurriculumConfigRepository) ExportRows(context.Context, curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
-	return nil, curriculumconfig.ErrNotImplemented
+func (f *fakeCurriculumConfigRepository) ExportRows(_ context.Context, query curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
+	f.exportQueries = append(f.exportQueries, query)
+	return f.exportRows, f.mutationErr
 }
 
 func TestCurriculumConfigPageRendersThroughBaseTemplateWhenReady(t *testing.T) {
@@ -325,6 +328,22 @@ func TestCurriculumConfigPageRendersExplicitApplyFiltersFromOptions(t *testing.T
 	assert.Contains(t, body, `name="chapter_id" value="77"`)
 	assert.NotContains(t, body, `select id="curriculum-config-exam-track" name="exam_track" hx-get`)
 	assert.NotContains(t, body, `input id="curriculum-config-search" name="search" hx-get`)
+}
+
+func TestCurriculumConfigPageRendersExportLinkForAppliedFilters(t *testing.T) {
+	constants.InitRuntimeConstant()
+	handler := NewCurriculumConfigHandler(&fakeCurriculumConfigRepository{
+		readiness:  curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		listResult: curriculumconfig.ListResult{Rows: nil, TotalRows: 0, Page: 2, Limit: 20, TotalPages: 0},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config?exam_track=neet&grade=12&subject=Chemistry&search=organic&chapter_id=77&syllabus_status=all&page=2&limit=20&sort=updated_at&dir=desc", nil)
+	rec := httptest.NewRecorder()
+
+	handler.Page(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), `href="/admin/curriculum-config/export?exam_track=neet&amp;grade=12&amp;subject=Chemistry&amp;search=organic&amp;chapter_id=77&amp;syllabus_status=all&amp;page=2&amp;limit=20&amp;sort=updated_at&amp;dir=desc"`)
 }
 
 func TestCurriculumConfigTablePreservesAppliedFiltersForPaginationPageSizeAndSorting(t *testing.T) {
@@ -1116,6 +1135,119 @@ func TestCurriculumConfigHTMXRequestShowsControlledUnavailableStateWhenSchemaIsN
 	assert.NotContains(t, body, "<html")
 }
 
+func TestCurriculumConfigExportWritesSafeCSVForAppliedFiltersAndIgnoresPagination(t *testing.T) {
+	updatedAt := time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC)
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		exportRows: []curriculumconfig.ExportRow{{
+			ChapterCode:       "=MATH-001",
+			ChapterName:       "Quadratic, Equations",
+			Grade:             "11",
+			Subject:           "+Mathematics",
+			ExamTrack:         "neet",
+			IsInSyllabus:      true,
+			PrescribedMinutes: 90,
+			PrescribedHours:   "1.5 hours",
+			CoverageSequence:  7,
+			UpdatedByEmail:    "admin@avantifellows.org",
+			UpdatedAt:         updatedAt,
+		}},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/export?exam_track=neet&grade=11&subject=Mathematics&search=quad&chapter_id=44&syllabus_status=all&page=9&limit=10&sort=updated_at&dir=desc", nil)
+	rec := httptest.NewRecorder()
+
+	handler.Export(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "text/csv; charset=utf-8", rec.Header().Get("Content-Type"))
+	assert.Contains(t, rec.Header().Get("Content-Disposition"), "attachment; filename=curriculum-config-"+time.Now().Format("2006-01-02")+".csv")
+	require.Len(t, repo.exportQueries, 1)
+	assert.Equal(t, curriculumconfig.ListQuery{
+		ExamTrack:      "neet",
+		Grade:          "11",
+		Subject:        "Mathematics",
+		Search:         "quad",
+		ChapterID:      "44",
+		SyllabusStatus: "all",
+		Page:           1,
+		Limit:          100,
+		Sort:           "updated_at",
+		Direction:      "desc",
+	}, repo.exportQueries[0])
+	body := rec.Body.String()
+	assert.Equal(t, "chapter_code,chapter_name,grade,subject,exam_track,is_in_syllabus,prescribed_minutes,prescribed_hours,coverage_sequence,updated_by_email,updated_at\n'=MATH-001,\"Quadratic, Equations\",11,'+Mathematics,neet,true,90,1.5 hours,7,admin@avantifellows.org,2026-06-03T09:30:00Z\n", body)
+	assert.NotContains(t, body, "lock_token")
+	assert.NotContains(t, body, "chapter_id")
+}
+
+func TestCurriculumConfigExportReturnsHeaderOnlyCSVWhenNoRowsMatch(t *testing.T) {
+	handler := NewCurriculumConfigHandler(&fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/export?exam_track=jee_main", nil)
+	rec := httptest.NewRecorder()
+
+	handler.Export(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, "chapter_code,chapter_name,grade,subject,exam_track,is_in_syllabus,prescribed_minutes,prescribed_hours,coverage_sequence,updated_by_email,updated_at\n", rec.Body.String())
+}
+
+func TestCurriculumConfigExportFormulaEscapesAllDangerousPrefixes(t *testing.T) {
+	updatedAt := time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC)
+	handler := NewCurriculumConfigHandler(&fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		exportRows: []curriculumconfig.ExportRow{{
+			ChapterCode:       "=code",
+			ChapterName:       "+name",
+			Grade:             "-grade",
+			Subject:           "@subject",
+			ExamTrack:         "\ttrack",
+			IsInSyllabus:      true,
+			PrescribedMinutes: 60,
+			PrescribedHours:   "\rhours",
+			CoverageSequence:  1,
+			UpdatedByEmail:    "admin@avantifellows.org",
+			UpdatedAt:         updatedAt,
+		}},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/export", nil)
+	rec := httptest.NewRecorder()
+
+	handler.Export(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "'=code")
+	assert.Contains(t, body, "'+name")
+	assert.Contains(t, body, "'-grade")
+	assert.Contains(t, body, "'@subject")
+	assert.Contains(t, body, "'\ttrack")
+	assert.Contains(t, body, "'\rhours")
+}
+
+func TestCurriculumConfigExportShowsControlledUnavailableStateWhenSchemaIsNotReady(t *testing.T) {
+	handler := NewCurriculumConfigHandler(&fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{
+			Ready:   false,
+			Reasons: []string{"missing column lms_chapter_exam_configs.updated_at"},
+		},
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/export", nil)
+	rec := httptest.NewRecorder()
+
+	handler.Export(rec, req)
+
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	assert.Contains(t, rec.Body.String(), "Curriculum Config unavailable")
+	assert.Contains(t, rec.Body.String(), "missing column lms_chapter_exam_configs.updated_at")
+}
+
 func TestCurriculumConfigEndpointsRequireCMSAdminAccess(t *testing.T) {
 	t.Setenv("SESSION_SECRET", "curriculum-config-test-secret")
 	handler := NewCurriculumConfigHandler(&fakeCurriculumConfigRepository{
@@ -1134,6 +1266,16 @@ func TestCurriculumConfigEndpointsRequireCMSAdminAccess(t *testing.T) {
 	adminOnly.ServeHTTP(viewerRec, viewerReq)
 
 	require.Equal(t, http.StatusForbidden, viewerRec.Code)
+
+	exportReq := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/export", nil)
+	for _, cookie := range viewerLogin.Result().Cookies() {
+		exportReq.AddCookie(cookie)
+	}
+	exportRec := httptest.NewRecorder()
+
+	middleware.RequireRole(auth.RoleAdmin, http.HandlerFunc(handler.Export)).ServeHTTP(exportRec, exportReq)
+
+	require.Equal(t, http.StatusForbidden, exportRec.Code)
 
 	htmxReq := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/table", nil)
 	htmxReq.Header.Set("HX-Request", "true")
