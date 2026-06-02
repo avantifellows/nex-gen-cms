@@ -1083,6 +1083,10 @@
             };
         }
 
+        if (window.initializeRichTextEditors) {
+            window.initializeRichTextEditors(document.querySelector('form.card'));
+        }
+
         function buildProblemJson(topicId, chapterId) {
             const subtype = document.getElementById('problem-type-dropdown').value;
 

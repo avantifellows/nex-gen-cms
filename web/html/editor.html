@@ -60,15 +60,46 @@
                 </label>
             </div>
 
-            <!-- Ordered and Unordered List Buttons -->
-            <div class="flex gap-0 border border-border rounded-sm overflow-hidden">
-                <button title="Unordered List" type="button"
-                    class="ulBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border-r border-border">
-                    <i class="fas fa-list-ul"></i>
-                </button>
-                <button title="Ordered List" type="button" class="olBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg">
-                    <i class="fas fa-list-ol"></i>
-                </button>
+            <!-- Ordered and Unordered List Buttons + Ordered List Type Dropdown -->
+            <div class="relative shrink-0">
+                <div class="flex gap-0 border border-border rounded-sm overflow-hidden">
+                    <button title="Unordered List" type="button"
+                        class="ulBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border-r border-border">
+                        <i class="fas fa-list-ul"></i>
+                    </button>
+                    <button title="Ordered List" type="button"
+                        class="olBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border-r border-border">
+                        <i class="fas fa-list-ol"></i>
+                    </button>
+                    <button title="Ordered List Type" type="button"
+                        class="olTypeDropdownBtn px-2 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg">
+                        <i class="fas fa-caret-down text-xs"></i>
+                    </button>
+                </div>
+
+                <div
+                    class="olTypeDropdownMenu absolute left-0 mt-1 hidden bg-bg-card border border-border rounded-sm shadow-card p-2 grid grid-cols-1 gap-1 w-28 z-50">
+                    <button type="button" data-ol-type="1"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="1, 2, 3">
+                        1, 2, 3
+                    </button>
+                    <button type="button" data-ol-type="a"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="a, b, c">
+                        a, b, c
+                    </button>
+                    <button type="button" data-ol-type="A"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="A, B, C">
+                        A, B, C
+                    </button>
+                    <button type="button" data-ol-type="i"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="i, ii, iii">
+                        i, ii, iii
+                    </button>
+                    <button type="button" data-ol-type="I"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="I, II, III">
+                        I, II, III
+                    </button>
+                </div>
             </div>
 
             <!-- Paragraph Formatting Dropdown -->

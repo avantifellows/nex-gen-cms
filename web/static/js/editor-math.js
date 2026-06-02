@@ -71,5 +71,7 @@ function renderMath(editor) {
     const container = editor.closest('.container');
     const output = container.querySelector('.output');
     output.innerHTML = editor.innerHTML;
-    MathJax.typesetPromise([output]);
+    if (window.MathJax?.typesetPromise) {
+        MathJax.typesetPromise([output]).catch(console.error);
+    }
 }
