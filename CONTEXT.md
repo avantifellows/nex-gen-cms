@@ -54,6 +54,8 @@ _Avoid_: LMS Admin, superuser
 - **Curriculum Config Management** edits happen in a modal or side panel, not inline in the table
 - Filter changes require an explicit apply action
 - Table and modal updates use server-rendered HTMX partials
+- Impact preview HTMX requests carry the candidate chapter, exam track, syllabus status, prescribed minutes, and coverage order so warnings and counts match the pending save
+- Mutation responses preserve the last applied table filters through hidden `filter_*` form fields
 - CMS v1 does not embed a separate client app for **Curriculum Config Management**
 - CMS preserves LMS audit fields: create stamps inserted and updated email fields, while edit and remove stamp only the updated email field
 - **Curriculum Config Management** uses direct DB queries and does not use or invalidate the existing CMS content caches
