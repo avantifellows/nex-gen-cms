@@ -1,0 +1,41 @@
+{{ block "content" . }}
+<section id="curriculum-config-page" data-hide-global-filters="true" class="space-y-4">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+            <h1 class="text-2xl font-semibold text-ink">Curriculum Config</h1>
+            <p class="text-sm text-ink-muted">Manage LMS Chapter Exam Config readiness from CMS.</p>
+        </div>
+    </div>
+
+    {{ if .UnavailableTitle }}
+    <div class="rounded-md border border-warning bg-warning-subtle p-4" role="status">
+        <h2 class="font-semibold text-ink">{{ .UnavailableTitle }}</h2>
+        <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-muted">
+            {{ range .UnavailableReasons }}
+            <li>{{ . }}</li>
+            {{ end }}
+        </ul>
+    </div>
+    {{ else }}
+    {{ if not .Readiness.MutationReady }}
+    <div class="rounded-md border border-warning bg-warning-subtle p-4" role="status">
+        <h2 class="font-semibold text-ink">Curriculum Config mutations unavailable</h2>
+        <ul class="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-muted">
+            {{ range .Readiness.MutationReasons }}
+            <li>{{ . }}</li>
+            {{ end }}
+        </ul>
+    </div>
+    {{ end }}
+
+    <div id="curriculum-config-table"
+         hx-get="/admin/curriculum-config/table"
+         hx-trigger="load"
+         hx-target="this"
+         hx-swap="innerHTML"
+         class="rounded-md border border-border bg-bg-card p-4">
+        <p class="text-sm text-ink-muted">Curriculum Config table is not available in this slice.</p>
+    </div>
+    {{ end }}
+</section>
+{{ end }}
