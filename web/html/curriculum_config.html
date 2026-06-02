@@ -30,11 +30,10 @@
 
     <div id="curriculum-config-table"
          hx-get="/admin/curriculum-config/table"
-         hx-trigger="load"
          hx-target="this"
          hx-swap="innerHTML"
          class="rounded-md border border-border bg-bg-card p-4">
-        <p class="text-sm text-ink-muted">Curriculum Config table is not available in this slice.</p>
+        {{ template "curriculum_config_table.html" . }}
     </div>
     {{ end }}
 </section>

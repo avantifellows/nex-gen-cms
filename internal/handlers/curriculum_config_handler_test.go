@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/avantifellows/nex-gen-cms/internal/auth"
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
@@ -21,15 +22,18 @@ func init() {
 }
 
 type fakeCurriculumConfigRepository struct {
-	readiness curriculumconfig.Readiness
+	readiness   curriculumconfig.Readiness
+	listResult  curriculumconfig.ListResult
+	listQueries []curriculumconfig.ListQuery
 }
 
 func (f *fakeCurriculumConfigRepository) SchemaReadiness(context.Context) (curriculumconfig.Readiness, error) {
 	return f.readiness, nil
 }
 
-func (f *fakeCurriculumConfigRepository) List(context.Context, curriculumconfig.ListQuery) (curriculumconfig.ListResult, error) {
-	return curriculumconfig.ListResult{}, curriculumconfig.ErrNotImplemented
+func (f *fakeCurriculumConfigRepository) List(_ context.Context, query curriculumconfig.ListQuery) (curriculumconfig.ListResult, error) {
+	f.listQueries = append(f.listQueries, query)
+	return f.listResult, nil
 }
 
 func (f *fakeCurriculumConfigRepository) FilterOptions(context.Context) (curriculumconfig.FilterOptions, error) {
@@ -64,6 +68,28 @@ func TestCurriculumConfigPageRendersThroughBaseTemplateWhenReady(t *testing.T) {
 	constants.InitRuntimeConstant()
 	handler := NewCurriculumConfigHandler(&fakeCurriculumConfigRepository{
 		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		listResult: curriculumconfig.ListResult{
+			Rows: []curriculumconfig.ListRow{{
+				ID:                12,
+				ChapterID:         44,
+				ChapterCode:       "MATH-001",
+				ChapterName:       "Quadratic Equations",
+				Grade:             "11",
+				Subject:           "Mathematics",
+				ExamTrack:         "jee_main",
+				IsInSyllabus:      true,
+				PrescribedMinutes: 90,
+				PrescribedHours:   "1.5 hours",
+				CoverageSequence:  7,
+				UpdatedByEmail:    "admin@avantifellows.org",
+				UpdatedAt:         time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC),
+				LockToken:         "14983",
+			}},
+			TotalRows:  1,
+			Page:       1,
+			Limit:      50,
+			TotalPages: 1,
+		},
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config", nil)
@@ -77,11 +103,82 @@ func TestCurriculumConfigPageRendersThroughBaseTemplateWhenReady(t *testing.T) {
 	assert.Contains(t, body, "Curriculum Config")
 	assert.Contains(t, body, `id="curriculum-config-page"`)
 	assert.Contains(t, body, `data-hide-global-filters="true"`)
+	assert.Contains(t, body, "MATH-001")
+	assert.Contains(t, body, "Quadratic Equations")
+	assert.NotContains(t, body, "14983")
 }
 
-func TestCurriculumConfigHTMXPlaceholderReturnsControlledUnavailableResponse(t *testing.T) {
+func TestCurriculumConfigHTMXTableRendersDefaultRowsAsPartial(t *testing.T) {
+	constants.InitRuntimeConstant()
+	repo := &fakeCurriculumConfigRepository{
+		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		listResult: curriculumconfig.ListResult{
+			Rows: []curriculumconfig.ListRow{{
+				ID:                12,
+				ChapterID:         44,
+				ChapterCode:       "MATH-001",
+				ChapterName:       "Quadratic Equations",
+				Grade:             "11",
+				Subject:           "Mathematics",
+				ExamTrack:         "jee_main",
+				IsInSyllabus:      true,
+				PrescribedMinutes: 90,
+				PrescribedHours:   "1.5 hours",
+				CoverageSequence:  7,
+				UpdatedByEmail:    "admin@avantifellows.org",
+				UpdatedAt:         time.Date(2026, 6, 3, 9, 30, 0, 0, time.UTC),
+				LockToken:         "14983",
+			}},
+			TotalRows:  1,
+			Page:       1,
+			Limit:      50,
+			TotalPages: 1,
+		},
+	}
+	handler := NewCurriculumConfigHandler(repo)
+
+	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/table", nil)
+	req.Header.Set("HX-Request", "true")
+	rec := httptest.NewRecorder()
+
+	handler.Table(rec, req)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, repo.listQueries, 1)
+	assert.Equal(t, curriculumconfig.ListQuery{
+		ExamTrack:      "jee_main",
+		SyllabusStatus: "in_syllabus",
+		Page:           1,
+		Limit:          50,
+		Sort:           "curriculum",
+		Direction:      "asc",
+	}, repo.listQueries[0])
+	body := rec.Body.String()
+	assert.Contains(t, body, "MATH-001")
+	assert.Contains(t, body, "Quadratic Equations")
+	assert.Contains(t, body, "44")
+	assert.Contains(t, body, "11")
+	assert.Contains(t, body, "Mathematics")
+	assert.Contains(t, body, "JEE Main")
+	assert.Contains(t, body, "In syllabus")
+	assert.Contains(t, body, "90 min")
+	assert.Contains(t, body, "1.5 hours")
+	assert.Contains(t, body, "admin@avantifellows.org")
+	assert.NotContains(t, body, "14983")
+	assert.False(t, strings.Contains(body, "<html"))
+}
+
+func TestCurriculumConfigHTMXTableRendersUsefulEmptyState(t *testing.T) {
+	constants.InitRuntimeConstant()
 	handler := NewCurriculumConfigHandler(&fakeCurriculumConfigRepository{
 		readiness: curriculumconfig.Readiness{Ready: true, MutationReady: true},
+		listResult: curriculumconfig.ListResult{
+			Rows:       nil,
+			TotalRows:  0,
+			Page:       1,
+			Limit:      50,
+			TotalPages: 0,
+		},
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/admin/curriculum-config/table", nil)
@@ -90,9 +187,11 @@ func TestCurriculumConfigHTMXPlaceholderReturnsControlledUnavailableResponse(t *
 
 	handler.Table(rec, req)
 
-	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Curriculum Config table is not available in this slice")
-	assert.False(t, strings.Contains(rec.Body.String(), "<html"))
+	require.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, "No LMS Chapter Exam Config rows found")
+	assert.Contains(t, body, "No in-syllabus JEE Main rows match the current filters.")
+	assert.NotContains(t, body, "<html")
 }
 
 func TestCurriculumConfigPageShowsControlledUnavailableStateWhenSchemaIsNotReady(t *testing.T) {

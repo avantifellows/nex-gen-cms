@@ -58,6 +58,7 @@ type ListRow struct {
 	ExamTrack         string
 	IsInSyllabus      bool
 	PrescribedMinutes int
+	PrescribedHours   string
 	CoverageSequence  int
 	UpdatedByEmail    string
 	UpdatedAt         time.Time

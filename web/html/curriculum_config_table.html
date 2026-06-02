@@ -1,0 +1,52 @@
+<div class="space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="text-sm text-ink-muted">
+            Showing page {{ .Result.Page }} of {{ if gt .Result.TotalPages 0 }}{{ .Result.TotalPages }}{{ else }}1{{ end }} · {{ .Result.TotalRows }} rows
+        </div>
+        <div class="text-xs font-medium uppercase text-ink-muted">Default view: JEE Main · In syllabus · 50 rows</div>
+    </div>
+
+    {{ if .Result.Rows }}
+    <div class="overflow-x-auto">
+        <table class="app-table min-w-[1180px]">
+            <thead>
+                <tr>
+                    <th>Chapter code</th>
+                    <th>Chapter name</th>
+                    <th>Chapter ID</th>
+                    <th>Grade</th>
+                    <th>Subject</th>
+                    <th>Exam track</th>
+                    <th>Syllabus status</th>
+                    <th>Prescribed time</th>
+                    <th>Coverage order</th>
+                    <th>Updated by</th>
+                    <th>Updated at</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{ range .Result.Rows }}
+                <tr id="curriculum-config-row-{{ .ID }}" class="border-b">
+                    <td class="py-2 px-4 font-medium">{{ .ChapterCode }}</td>
+                    <td class="py-2 px-4">{{ .ChapterName }}</td>
+                    <td class="py-2 px-4 text-ink-muted">{{ .ChapterID }}</td>
+                    <td class="py-2 px-4">{{ .Grade }}</td>
+                    <td class="py-2 px-4">{{ .Subject }}</td>
+                    <td class="py-2 px-4">{{ examTrackLabel .ExamTrack }}</td>
+                    <td class="py-2 px-4">{{ syllabusStatusLabel .IsInSyllabus }}</td>
+                    <td class="py-2 px-4">{{ .PrescribedMinutes }} min <span class="text-ink-muted">({{ .PrescribedHours }})</span></td>
+                    <td class="py-2 px-4">{{ .CoverageSequence }}</td>
+                    <td class="py-2 px-4">{{ .UpdatedByEmail }}</td>
+                    <td class="py-2 px-4 text-ink-muted">{{ .UpdatedAt.Format "2006-01-02 15:04" }}</td>
+                </tr>
+                {{ end }}
+            </tbody>
+        </table>
+    </div>
+    {{ else }}
+    <div class="rounded-md border border-border bg-bg-card-alt p-6 text-center" role="status">
+        <h2 class="text-base font-semibold text-ink">No LMS Chapter Exam Config rows found</h2>
+        <p class="mt-1 text-sm text-ink-muted">No in-syllabus JEE Main rows match the current filters.</p>
+    </div>
+    {{ end }}
+</div>

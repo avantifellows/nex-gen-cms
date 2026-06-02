@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"sort"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/avantifellows/nex-gen-cms/internal/curriculumconfig"
@@ -44,8 +47,86 @@ func (r *CurriculumConfigRepo) SchemaReadiness(ctx context.Context) (curriculumc
 	return readiness, nil
 }
 
-func (r *CurriculumConfigRepo) List(context.Context, curriculumconfig.ListQuery) (curriculumconfig.ListResult, error) {
-	return curriculumconfig.ListResult{}, curriculumconfig.ErrNotImplemented
+func (r *CurriculumConfigRepo) List(ctx context.Context, query curriculumconfig.ListQuery) (curriculumconfig.ListResult, error) {
+	query = normalizeListQuery(query)
+	whereSQL, args := buildListWhere(query)
+
+	var totalRows int
+	countSQL := `
+		SELECT COUNT(*)
+		FROM lms_chapter_exam_configs c
+		` + listDisplayJoins() + `
+		` + whereSQL
+	if err := r.db.QueryRowContext(ctx, countSQL, args...).Scan(&totalRows); err != nil {
+		return curriculumconfig.ListResult{}, err
+	}
+
+	offset := (query.Page - 1) * query.Limit
+	rowArgs := append(append([]any{}, args...), query.Limit, offset)
+	rowsSQL := `
+		SELECT
+			c.id,
+			c.chapter_id,
+			ch.code AS chapter_code,
+			COALESCE(chn.name, '') AS chapter_name,
+			g.number::text AS grade,
+			COALESCE(sn.name, '') AS subject,
+			c.exam_track,
+			c.is_in_syllabus,
+			c.prescribed_minutes,
+			c.coverage_sequence,
+			c.updated_by_email,
+			c.updated_at,
+			c.xmin::text AS lock_token
+		FROM lms_chapter_exam_configs c
+		` + listDisplayJoins() + `
+		` + whereSQL + `
+		ORDER BY ` + listOrderBy(query) + `
+		LIMIT $` + strconv.Itoa(len(args)+1) + ` OFFSET $` + strconv.Itoa(len(args)+2)
+	rows, err := r.db.QueryContext(ctx, rowsSQL, rowArgs...)
+	if err != nil {
+		return curriculumconfig.ListResult{}, err
+	}
+	defer rows.Close()
+
+	var resultRows []curriculumconfig.ListRow
+	for rows.Next() {
+		var row curriculumconfig.ListRow
+		if err := rows.Scan(
+			&row.ID,
+			&row.ChapterID,
+			&row.ChapterCode,
+			&row.ChapterName,
+			&row.Grade,
+			&row.Subject,
+			&row.ExamTrack,
+			&row.IsInSyllabus,
+			&row.PrescribedMinutes,
+			&row.CoverageSequence,
+			&row.UpdatedByEmail,
+			&row.UpdatedAt,
+			&row.LockToken,
+		); err != nil {
+			return curriculumconfig.ListResult{}, err
+		}
+		row.PrescribedHours = PrescribedHoursLabel(row.PrescribedMinutes)
+		resultRows = append(resultRows, row)
+	}
+	if err := rows.Err(); err != nil {
+		return curriculumconfig.ListResult{}, err
+	}
+
+	totalPages := 0
+	if totalRows > 0 {
+		totalPages = int(math.Ceil(float64(totalRows) / float64(query.Limit)))
+	}
+	return curriculumconfig.ListResult{
+		Rows:       resultRows,
+		TotalRows:  totalRows,
+		Page:       query.Page,
+		Limit:      query.Limit,
+		TotalPages: totalPages,
+	}, nil
 }
 
 func (r *CurriculumConfigRepo) FilterOptions(context.Context) (curriculumconfig.FilterOptions, error) {
@@ -74,6 +155,135 @@ func (r *CurriculumConfigRepo) RemoveFromSyllabus(context.Context, curriculumcon
 
 func (r *CurriculumConfigRepo) ExportRows(context.Context, curriculumconfig.ListQuery) ([]curriculumconfig.ExportRow, error) {
 	return nil, curriculumconfig.ErrNotImplemented
+}
+
+func normalizeListQuery(query curriculumconfig.ListQuery) curriculumconfig.ListQuery {
+	query.ExamTrack = normalizeChoice(query.ExamTrack, "jee_main", map[string]struct{}{
+		"jee_main":     {},
+		"jee_advanced": {},
+		"neet":         {},
+	})
+	query.SyllabusStatus = normalizeChoice(query.SyllabusStatus, "in_syllabus", map[string]struct{}{
+		"in_syllabus":     {},
+		"out_of_syllabus": {},
+		"all":             {},
+	})
+	if query.Page < 1 {
+		query.Page = 1
+	}
+	switch query.Limit {
+	case 10, 20, 50, 100:
+	default:
+		query.Limit = 50
+	}
+	query.Sort = normalizeChoice(query.Sort, "curriculum", map[string]struct{}{
+		"curriculum":        {},
+		"exam_track":        {},
+		"grade":             {},
+		"subject":           {},
+		"coverage_sequence": {},
+		"chapter_code":      {},
+		"chapter_name":      {},
+		"updated_at":        {},
+	})
+	if strings.EqualFold(query.Direction, "desc") {
+		query.Direction = "desc"
+	} else {
+		query.Direction = "asc"
+	}
+	query.Grade = strings.TrimSpace(query.Grade)
+	query.Subject = strings.TrimSpace(query.Subject)
+	query.Search = strings.TrimSpace(query.Search)
+	query.ChapterID = strings.TrimSpace(query.ChapterID)
+	return query
+}
+
+func normalizeChoice(value, fallback string, allowed map[string]struct{}) string {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if _, ok := allowed[value]; ok {
+		return value
+	}
+	return fallback
+}
+
+func buildListWhere(query curriculumconfig.ListQuery) (string, []any) {
+	clauses := []string{"c.exam_track = $1"}
+	args := []any{query.ExamTrack}
+	nextArg := 2
+
+	if query.SyllabusStatus != "all" {
+		clauses = append(clauses, fmt.Sprintf("c.is_in_syllabus = $%d", nextArg))
+		args = append(args, query.SyllabusStatus == "in_syllabus")
+		nextArg++
+	}
+	if query.Grade != "" {
+		clauses = append(clauses, fmt.Sprintf("g.number::text = $%d", nextArg))
+		args = append(args, query.Grade)
+		nextArg++
+	}
+	if query.Subject != "" {
+		clauses = append(clauses, fmt.Sprintf("(s.id::text = $%d OR COALESCE(sn.name, '') = $%d)", nextArg, nextArg))
+		args = append(args, query.Subject)
+		nextArg++
+	}
+	if query.ChapterID != "" {
+		clauses = append(clauses, fmt.Sprintf("c.chapter_id::text = $%d", nextArg))
+		args = append(args, query.ChapterID)
+		nextArg++
+	}
+	if query.Search != "" {
+		clauses = append(clauses, fmt.Sprintf("(ch.code ILIKE $%d OR COALESCE(chn.name, '') ILIKE $%d)", nextArg, nextArg))
+		args = append(args, "%"+query.Search+"%")
+	}
+	return "WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func listDisplayJoins() string {
+	return `
+		JOIN chapter ch ON ch.id = c.chapter_id
+		JOIN grade g ON g.id = ch.grade_id
+		JOIN subject s ON s.id = ch.subject_id
+		LEFT JOIN LATERAL (
+			SELECT elem->>'chapter' AS name
+			FROM jsonb_array_elements(ch.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) chn ON true
+		LEFT JOIN LATERAL (
+			SELECT elem->>'subject' AS name
+			FROM jsonb_array_elements(s.name) elem
+			WHERE elem->>'lang_code' = 'en'
+			LIMIT 1
+		) sn ON true`
+}
+
+func listOrderBy(query curriculumconfig.ListQuery) string {
+	if query.Sort == "curriculum" {
+		return "c.exam_track ASC, g.number ASC, COALESCE(sn.name, '') ASC, c.coverage_sequence ASC, ch.code ASC, COALESCE(chn.name, '') ASC, c.id ASC"
+	}
+
+	sortColumns := map[string]string{
+		"exam_track":        "c.exam_track",
+		"grade":             "g.number",
+		"subject":           "COALESCE(sn.name, '')",
+		"coverage_sequence": "c.coverage_sequence",
+		"chapter_code":      "ch.code",
+		"chapter_name":      "COALESCE(chn.name, '')",
+		"updated_at":        "c.updated_at",
+	}
+	column := sortColumns[query.Sort]
+	return column + " " + strings.ToUpper(query.Direction) + ", c.exam_track ASC, g.number ASC, COALESCE(sn.name, '') ASC, c.coverage_sequence ASC, ch.code ASC, COALESCE(chn.name, '') ASC, c.id ASC"
+}
+
+func PrescribedHoursLabel(minutes int) string {
+	hours := float64(minutes) / 60
+	if minutes%60 == 0 {
+		if minutes == 60 {
+			return "1 hour"
+		}
+		return fmt.Sprintf("%d hours", minutes/60)
+	}
+	return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", hours), "0"), ".") + " hours"
 }
 
 func (r *CurriculumConfigRepo) checkSchemaReadiness(ctx context.Context) (curriculumconfig.Readiness, error) {

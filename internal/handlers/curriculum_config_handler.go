@@ -3,14 +3,20 @@ package handlers
 import (
 	"fmt"
 	"html"
+	"html/template"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/curriculumconfig"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
-const curriculumConfigTemplate = "curriculum_config.html"
+const (
+	curriculumConfigTemplate      = "curriculum_config.html"
+	curriculumConfigTableTemplate = "curriculum_config_table.html"
+)
 
 type CurriculumConfigHandler struct {
 	repo curriculumconfig.Repository
@@ -28,10 +34,17 @@ func (h *CurriculumConfigHandler) Page(w http.ResponseWriter, r *http.Request) {
 	if !ok && !readiness.Ready {
 		return
 	}
+	result, err := h.repo.List(r.Context(), listQueryFromRequest(r))
+	if err != nil {
+		log.Printf("curriculum config list: %v", err)
+		http.Error(w, "Could not load Curriculum Config", http.StatusInternalServerError)
+		return
+	}
 	data := map[string]any{
 		"Readiness": readiness,
+		"Result":    result,
 	}
-	views.ExecuteTemplates(w, data, nil, baseTemplate, curriculumConfigTemplate)
+	views.ExecuteTemplates(w, data, curriculumConfigFuncMap(), baseTemplate, curriculumConfigTemplate, curriculumConfigTableTemplate)
 }
 
 func (h *CurriculumConfigHandler) Table(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +54,13 @@ func (h *CurriculumConfigHandler) Table(w http.ResponseWriter, r *http.Request) 
 	if _, ok := h.ensureReady(w, r, false); !ok {
 		return
 	}
-	h.placeholder(w, "Curriculum Config table is not available in this slice")
+	result, err := h.repo.List(r.Context(), listQueryFromRequest(r))
+	if err != nil {
+		log.Printf("curriculum config list: %v", err)
+		http.Error(w, "Could not load Curriculum Config", http.StatusInternalServerError)
+		return
+	}
+	views.ExecuteTemplate(curriculumConfigTableTemplate, w, tableViewData{Result: result}, curriculumConfigFuncMap())
 }
 
 func (h *CurriculumConfigHandler) New(w http.ResponseWriter, r *http.Request) {
@@ -181,7 +200,7 @@ func (h *CurriculumConfigHandler) writeUnavailable(w http.ResponseWriter, fullPa
 		},
 	}
 	if fullPage {
-		views.ExecuteTemplates(w, data, nil, baseTemplate, curriculumConfigTemplate)
+		views.ExecuteTemplates(w, data, curriculumConfigFuncMap(), baseTemplate, curriculumConfigTemplate, curriculumConfigTableTemplate)
 		return
 	}
 	_, _ = fmt.Fprintf(w, `<section class="panel" role="status"><h2>%s</h2><ul>`, html.EscapeString(title))
@@ -198,4 +217,63 @@ func allowMethod(w http.ResponseWriter, r *http.Request, method string) bool {
 	w.Header().Set("Allow", method)
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	return false
+}
+
+type tableViewData struct {
+	Result curriculumconfig.ListResult
+}
+
+func listQueryFromRequest(r *http.Request) curriculumconfig.ListQuery {
+	values := r.URL.Query()
+	return curriculumconfig.ListQuery{
+		ExamTrack:      queryValue(values.Get("exam_track"), "jee_main"),
+		Grade:          strings.TrimSpace(values.Get("grade")),
+		Subject:        strings.TrimSpace(values.Get("subject")),
+		Search:         strings.TrimSpace(values.Get("search")),
+		ChapterID:      strings.TrimSpace(values.Get("chapter_id")),
+		SyllabusStatus: queryValue(values.Get("syllabus_status"), "in_syllabus"),
+		Page:           positiveInt(values.Get("page"), 1),
+		Limit:          positiveInt(values.Get("limit"), 50),
+		Sort:           queryValue(values.Get("sort"), "curriculum"),
+		Direction:      queryValue(values.Get("dir"), "asc"),
+	}
+}
+
+func queryValue(value, fallback string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return fallback
+	}
+	return value
+}
+
+func positiveInt(value string, fallback int) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil || parsed < 1 {
+		return fallback
+	}
+	return parsed
+}
+
+func curriculumConfigFuncMap() template.FuncMap {
+	return template.FuncMap{
+		"examTrackLabel": func(value string) string {
+			switch value {
+			case "jee_main":
+				return "JEE Main"
+			case "jee_advanced":
+				return "JEE Advanced"
+			case "neet":
+				return "NEET"
+			default:
+				return value
+			}
+		},
+		"syllabusStatusLabel": func(inSyllabus bool) string {
+			if inSyllabus {
+				return "In syllabus"
+			}
+			return "Out of syllabus"
+		},
+	}
 }
