@@ -1,16 +1,16 @@
 {{ define "content" }}
 <div>
     <!-- Search + Subject Filter Row -->
-    <div class="flex items-center gap-4 mb-4">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
 
         <input type="hidden" id="problems-restore-flag" value="fresh">
-        
+
         <!-- Search field -->
         <input type="text" id="problem-search" name="problem-search" placeholder="Search problems by question or code..."
-            class="border border-gray-400 p-2 rounded w-[19rem]">
+            class="form-input w-76">
 
         <!-- Subject Dropdown -->
-        <select class="border border-gray-400 p-2 rounded w-fit" id="problems-subject-dropdown" 
+        <select class="form-select-compact w-auto" id="problems-subject-dropdown"
             name="problems-subject-dropdown" hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend"
             onchange="
                 const input = document.getElementById('problem-search');
@@ -23,32 +23,34 @@
 
     </div>
 
-    <table class="w-full bg-white shadow-md table-fixed">
-        <colgroup>
-            <col class="w-[6rem]">   <!-- Code -->
-            <col>                   <!-- Text (flexes) -->
-            <col class="w-[6rem]">   <!-- Actions -->
-        </colgroup>
-        <thead>
-            <tr class="bg-gray-200 text-gray-600 text-sm">
-                <th class="py-4">Code</th>
-                <th>Text</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
+    <div class="card overflow-x-auto">
+        <table class="app-table table-fixed">
+            <colgroup>
+                <col class="w-24">   <!-- Code -->
+                <col>                   <!-- Text (flexes) -->
+                <col class="w-24">   <!-- Actions -->
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Text</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
 
-        <tbody id="problems-table-body" class="text-gray-600 text-sm" data-mathjax="true"
-            hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=10&offset=0"
-            data-limit="10" data-offset="0" hx-sync="this:replace"
-            hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search, searchTriggered"
-            hx-include="#problem-search,#problems-subject-dropdown"
-            data-loader="#problems-search-loader" data-sentinel="#problems-table-sentinel">
-            <!-- Rows will be dynamically inserted here -->
-        </tbody>
-    </table>
+            <tbody id="problems-table-body" data-mathjax="true"
+                hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=10&offset=0"
+                data-limit="10" data-offset="0" hx-sync="this:replace"
+                hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search, searchTriggered"
+                hx-include="#problem-search,#problems-subject-dropdown"
+                data-loader="#problems-search-loader" data-sentinel="#problems-table-sentinel">
+                <!-- Rows will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
     <div id="problems-table-sentinel"></div>
-    <div id="problems-search-loader" class="hidden flex justify-center py-4">
-        <div class="w-6 h-6 border-4 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
+    <div id="problems-search-loader" class="hidden justify-center py-4">
+        <div class="w-6 h-6 border-4 border-border border-t-accent rounded-full animate-spin"></div>
     </div>
 </div>
 <script>

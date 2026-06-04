@@ -1,6 +1,11 @@
 .env*
 .DS_Store
 node_modules/*
+.ralph/
+
+# Generated Tailwind output — built from input.css via `npm run build:css`
+# (at deploy time, in CI, and locally). Not committed; see README.
+/web/static/css/output.css
 /test-results/
 /playwright-report/
 /blob-report/
@@ -14,3 +19,6 @@ terraform/.terraform.lock.hcl
 terraform/terraform.tfstate*
 terraform/terraform.tfvars
 terraform/terraform.prod.tfvars
+
+# Local working notes (not for the repo)
+TODO.md

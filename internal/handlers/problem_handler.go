@@ -262,13 +262,13 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		TopicPtr: selectedTopicPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16":         utils.JoinInt16,
-		"add":               utils.Add,
-		"stringToInt":       utils.StringToInt,
-		"toJson":            utils.ToJson,
-		"getConceptName":    getConceptName,
-		"dict":              utils.Dict,
-		"emptyStringSlice":  utils.EmptyStringSlice,
+		"joinInt16":        utils.JoinInt16,
+		"add":              utils.Add,
+		"stringToInt":      utils.StringToInt,
+		"toJson":           utils.ToJson,
+		"getConceptName":   getConceptName,
+		"dict":             utils.Dict,
+		"emptyStringSlice": utils.EmptyStringSlice,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, problemAnswerNumericalTemplate, inputTagsTemplate)
 }
@@ -324,13 +324,13 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
-		"joinInt16":         utils.JoinInt16,
-		"add":               utils.Add,
-		"stringToInt":       utils.StringToInt,
-		"toJson":            utils.ToJson,
-		"getConceptName":    getConceptName,
-		"dict":              utils.Dict,
-		"emptyStringSlice":  utils.EmptyStringSlice,
+		"joinInt16":        utils.JoinInt16,
+		"add":              utils.Add,
+		"stringToInt":      utils.StringToInt,
+		"toJson":           utils.ToJson,
+		"getConceptName":   getConceptName,
+		"dict":             utils.Dict,
+		"emptyStringSlice": utils.EmptyStringSlice,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate,
 		problemAnswerNumericalTemplate, inputTagsTemplate)
 }

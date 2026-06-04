@@ -1,0 +1,36 @@
+<tr class="border-b" id="user-row-{{ .ID }}">
+    <td class="py-2 px-4">{{ .Email }}</td>
+    <td class="py-2 px-4">{{ if .FullName }}{{ .FullName }}{{ else }}<span class="text-ink-muted/70">—</span>{{ end }}</td>
+    <td class="py-2 px-4">
+        <form hx-post="/admin/users/role" hx-target="#user-row-{{ .ID }}" hx-swap="outerHTML">
+            <input type="hidden" name="id" value="{{ .ID }}">
+            <select name="role" onchange="this.form.requestSubmit()" class="border rounded-sm px-2 py-1">
+                <option value="viewer" {{ if eq .Role "viewer" }}selected{{ end }}>viewer</option>
+                <option value="editor" {{ if eq .Role "editor" }}selected{{ end }}>editor</option>
+                <option value="admin"  {{ if eq .Role "admin"  }}selected{{ end }}>admin</option>
+            </select>
+        </form>
+    </td>
+    <td class="py-2 px-4">
+        {{ if .IsActive }}
+        <span class="px-2 py-0.5 rounded-sm text-xs bg-success-bg text-success">active</span>
+        {{ else }}
+        <span class="px-2 py-0.5 rounded-sm text-xs bg-bg-card-alt text-ink-muted">inactive</span>
+        {{ end }}
+    </td>
+    <td class="py-2 px-4 text-ink-muted">
+        {{ if .LastLoginAt }}{{ .LastLoginAt.Format "2006-01-02 15:04" }}{{ else }}<span class="text-ink-muted/70">never</span>{{ end }}
+    </td>
+    <td class="py-2 px-4 text-right">
+        {{ if .IsActive }}
+        <button hx-post="/admin/users/active?id={{ .ID }}&active=false"
+                hx-target="#user-row-{{ .ID }}" hx-swap="outerHTML"
+                hx-confirm="Deactivate {{ .Email }}?"
+                class="text-danger hover:text-accent-hover hover:underline">Deactivate</button>
+        {{ else }}
+        <button hx-post="/admin/users/active?id={{ .ID }}&active=true"
+                hx-target="#user-row-{{ .ID }}" hx-swap="outerHTML"
+                class="text-accent hover:text-accent-hover hover:underline font-medium">Reactivate</button>
+        {{ end }}
+    </td>
+</tr>

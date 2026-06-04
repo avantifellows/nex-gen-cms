@@ -18,10 +18,14 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: 1.23.4  # Update to match our Go version
+        go-version: '1.25'  # bumped from 1.23.4 for go-oidc v3.18 (CMS user auth)
 
     - name: Install dependencies
       run: npm ci
+
+    - name: Build CSS
+      # output.css is generated (not committed); build it so the server serves real styles.
+      run: npm run build:css
 
     - name: Install Playwright Browsers
       run: npx playwright install --with-deps
@@ -29,14 +33,18 @@ jobs:
     - name: Create .env file
       run: echo "${{ secrets.ENV_FILE_FOR_PLAYWRIGHT_TESTS }}" > .env
 
+    - name: Build Go server
+      # Build separately so module downloads + compile don't eat into the readiness wait below.
+      run: go build -o cms-server ./cmd
+
     - name: Start Go server
       run: |
-        go run cmd/main.go > server.log 2>&1 &
+        ./cms-server > server.log 2>&1 &
         echo $! > server.pid  # Save the PID of the server
 
     - name: Wait for server to be ready
       run: |
-        for i in {1..20}; do
+        for i in {1..30}; do
           if curl -s http://localhost:8080/login > /dev/null; then
             echo "Server is up"
             exit 0
