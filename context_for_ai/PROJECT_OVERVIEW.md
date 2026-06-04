@@ -214,7 +214,7 @@ DTOs:
 
 - Renders template (`question_paper.html` or `answer_sheet.html`) to an HTML string.
 - Inlines Tailwind CSS by reading `web/static/css/output.css` and injecting a `<style>` tag.
-- Navigates a headless Chrome page to `data:text/html,<html>` and ensures MathJax completes typesetting.
+- Loads HTML into headless Chrome via `about:blank` and `Page.setDocumentContent` (avoids Chrome's ~2MB `data:` URL limit for large papers), then ensures MathJax completes typesetting.
 - Prints to A4 PDF with custom header/footer and margins; streams the PDF as the HTTP response.
 
 
