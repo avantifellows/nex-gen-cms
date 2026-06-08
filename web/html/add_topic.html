@@ -1,8 +1,7 @@
 <!-- Form to add new topic -->
 <form id="addTopicForm" class="card card-pad-sm mt-3 flex flex-wrap items-end gap-3"
-    hx-post="/create-topic?chapter_id={{.}}" hx-target="#topicTableBody"
-    hx-swap="beforeend" hx-include="#curriculum-dropdown"
-    hx-on::after-request="if(event.detail.successful) this.reset()">
+    hx-post="/create-topic?chapter_id={{.}}" hx-swap="none" hx-include="#curriculum-dropdown"
+    hx-on::after-request="if(event.detail.successful) { this.reset(); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); document.body.dispatchEvent(new Event('topicAdded')); }">
     <div>
         <label class="form-label" for="add-topic-code">Code</label>
         <input id="add-topic-code" type="text" name="code" placeholder="Topic code" class="form-input w-48 font-mono">

@@ -135,6 +135,10 @@ func (s *Service[T]) AddObject(body any, cacheKey string, urlEndPoint string) (*
 	return objPtr, nil
 }
 
+func (s *Service[T]) InvalidateCache(cacheKey string) {
+	s.cacheRepository.Delete(cacheKey)
+}
+
 func (s *Service[T]) DeleteObject(objIdStr string, objKeepingPredicate func(*T) bool, cacheKey string,
 	urlEndPoint string) error {
 	_, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodDelete, nil)

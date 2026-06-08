@@ -24,7 +24,9 @@
                     <th class="text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody id="topicTableBody" hx-get="/api/topics?view=list&id={{.ChapterID}}" hx-trigger="load">
+            <tbody id="topicTableBody" hx-get="/api/topics?view=list&id={{.ChapterID}}"
+                hx-trigger="load, topicAdded from:body"
+                hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>

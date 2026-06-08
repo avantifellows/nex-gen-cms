@@ -75,7 +75,7 @@
                     </select>
                     <select id="topic-dropdown" name="topic-dropdown" hx-ext="cascade-clear" class="form-select"
                         hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
-                        hx-include="#chapter-dropdown" onchange="if (this.value) sessionStorage.setItem('selectedTopic', this.value);"
+                        hx-include="#chapter-dropdown, #curriculum-dropdown" onchange="if (this.value) sessionStorage.setItem('selectedTopic', this.value);"
                         hx-on::after-request="onDropdownLoaded(this, 'selectedTopic')">
                         <option value="">Select Topic</option>
                     </select>
