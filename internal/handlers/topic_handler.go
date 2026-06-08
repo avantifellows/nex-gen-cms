@@ -72,6 +72,11 @@ func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *ht
 		http.Error(responseWriter, fmt.Sprintf("Error adding topic: %v", err), http.StatusInternalServerError)
 		return
 	}
+	// The POST response may include curriculums from all curricula the topic belongs to.
+	// AddObject appended this to the cache alongside the existing GET-cached entry for the
+	// same topic, creating a duplicate. Invalidate so the next read fetches a clean list.
+	h.service.InvalidateCache(handlerutils.TopicsKey)
+	newTopicPtr.NormalizeCurriculums()
 
 	topicPtrs := []*models.Topic{newTopicPtr}
 	views.ExecuteTemplate(topicRowTemplate, responseWriter, topicPtrs, template.FuncMap{

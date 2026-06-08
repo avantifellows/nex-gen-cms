@@ -64,6 +64,10 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		return c.StatusID != constants.StatusArchived
 	}).([]*models.Chapter)
 
+	for _, chapterPtr := range *chapters {
+		chapterPtr.CurriculumID = curriculumId
+	}
+
 	h.getTopics(responseWriter, *chapters)
 
 	sortColumn := urlVals.Get("sortColumn")
@@ -112,7 +116,8 @@ func associateTopicsWithChapters(chapterPtrs []*models.Chapter, topicPtrs []*mod
 
 	// Loop through each topic and assign it to the corresponding chapter
 	for _, topicPtr := range topicPtrs {
-		if chapterPtr, exists := chapterPtrsMap[topicPtr.ChapterID]; exists {
+		if chapterPtr, exists := chapterPtrsMap[topicPtr.ChapterID]; exists &&
+			topicPtr.HasCurriculumID(chapterPtr.CurriculumID) {
 			chapterPtr.Topics = append(chapterPtr.Topics, topicPtr)
 		}
 	}
@@ -344,15 +349,20 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 		}
 		return
 	}
-	if len(selectedChapterPtr.Topics) == 0 {
-		h.getTopics(responseWriter, []*models.Chapter{selectedChapterPtr})
+	// Use a local copy so we never mutate the cached chapter pointer.
+	localChapter := *selectedChapterPtr
+	localChapter.Topics = nil
+	curriculumId, _, _ := getCurriculumGradeSubjectIds(urlVals)
+	if curriculumId != 0 {
+		localChapter.CurriculumID = curriculumId
 	}
+	h.getTopics(responseWriter, []*models.Chapter{&localChapter})
 
 	sortColumn := urlVals.Get("sortColumn")
 	sortOrder := urlVals.Get("sortOrder")
-	sortTopics(selectedChapterPtr.Topics, sortColumn, sortOrder)
+	sortTopics(localChapter.Topics, sortColumn, sortOrder)
 
-	views.ExecuteTemplate(filename, responseWriter, selectedChapterPtr.Topics, template.FuncMap{
+	views.ExecuteTemplate(filename, responseWriter, localChapter.Topics, template.FuncMap{
 		"getName": getTopicName,
 	})
 }
