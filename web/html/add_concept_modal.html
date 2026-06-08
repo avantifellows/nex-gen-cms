@@ -64,7 +64,7 @@
                     <!-- Topic -->
                     <select id="topic-dropdown" name="topic_id"
                             class="form-select w-40" hx-get="/api/topics?view=dropdown" 
-                            hx-trigger="change from:#chapter-dropdown" hx-include="#chapter-dropdown"
+                            hx-trigger="change from:#chapter-dropdown" hx-include="#chapter-dropdown, #curriculum-dropdown"
                             hx-on::before-request="beforeTopicsRequest();">
                         <option disabled selected>Select a chapter first</option>
                     </select>

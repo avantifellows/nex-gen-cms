@@ -53,7 +53,7 @@
                 <select id="topic-dropdown" name="topic_id" class="form-select"
                         hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
                         hx-target="this" hx-swap="innerHTML" onchange="toggleMoveButton()" 
-                        hx-include="#chapter-dropdown" hx-on::after-swap="toggleMoveButton()"
+                        hx-include="#chapter-dropdown, #curriculum-dropdown" hx-on::after-swap="toggleMoveButton()"
                         hx-on::before-request="beforeMoveProblemsTopicsRequest()"
                         hx-on::after-request="toggleMoveButton()">
                     <option value="" disabled selected>Select a chapter first</option>

@@ -435,7 +435,8 @@
                 return Promise.resolve(topicsOptionsHtml);
             }
 
-            return fetchText(`/api/topics?view=dropdown&chapter-dropdown=${encodeURIComponent(currentChapterId)}`)
+            const curriculumId = document.getElementById('curriculum-dropdown')?.value || '';
+            return fetchText(`/api/topics?view=dropdown&chapter-dropdown=${encodeURIComponent(currentChapterId)}&curriculum-dropdown=${encodeURIComponent(curriculumId)}`)
                 .then(html => {
                     topicsOptionsHtml = getUnselectedOptionsHtml(html);
                     return topicsOptionsHtml;

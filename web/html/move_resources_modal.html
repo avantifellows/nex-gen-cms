@@ -41,7 +41,7 @@
 
                 <select id="topic-dropdown" name="topic_id" class="form-select"
                     hx-get="/api/topics?view=dropdown-optional" hx-trigger="change from:#chapter-dropdown"
-                    hx-target="this" hx-swap="innerHTML" hx-include="#chapter-dropdown"
+                    hx-target="this" hx-swap="innerHTML" hx-include="#chapter-dropdown, #curriculum-dropdown"
                     hx-on::before-request="beforeMoveResourcesTopicsRequest()" hx-on::after-request="toggleMoveResourceButton()">
                     <option value="" selected hidden>Select Topic (Optional)</option>
                 </select>
