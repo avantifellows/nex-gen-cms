@@ -61,15 +61,17 @@ func (r *APIRepository) CallAPI(urlEndPoint string, method string, body any) ([]
 	}
 	defer resp.Body.Close()
 
-	// Check for non-2xx status codes
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("received non-success status code: %d", resp.StatusCode)
-	}
-
-	// Read the response body
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response: %v", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		bodyStr := string(bodyBytes)
+		if bodyStr != "" {
+			return nil, fmt.Errorf("API error (status %d): %s", resp.StatusCode, bodyStr)
+		}
+		return nil, fmt.Errorf("received non-success status code: %d", resp.StatusCode)
 	}
 
 	return bodyBytes, nil

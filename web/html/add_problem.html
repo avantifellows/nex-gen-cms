@@ -454,13 +454,18 @@
             });
         }
 
-        function fetchText(url) {
-            return fetch(url).then(res => {
+        function readResponseOrThrow(res) {
+            return res.text().then(text => {
                 if (!res.ok) {
-                    throw new Error(`HTTP error! status: ${res.status}`);
+                    const detail = text.trim();
+                    throw new Error(detail || `Request failed (HTTP ${res.status})`);
                 }
-                return res.text();
+                return text;
             });
+        }
+
+        function fetchText(url) {
+            return fetch(url).then(readResponseOrThrow);
         }
 
         function getUnselectedOptionsHtml(html) {
@@ -821,20 +826,16 @@
                     'HX-Request': 'true'  // so that your server can detect HTMX if needed
                 }
 
-            }).then(res => {
-                if (!res.ok) {
-                    // Turn HTTP error into a real JS error to trigger .catch
-                    throw new Error(`HTTP error! status: ${res.status}`);
-                }
-                return res.text(); // if OK, read body
-
-            }).then(html => {
+            }).then(readResponseOrThrow).then(() => {
                 // go back to remove add/edit problem screen
                 goBackAfterDelay(0);
 
             }).catch(err => {
                 console.error("Error during problem creation:", err);
-                alert("There was an error while saving the problem.");
+                const message = err && err.message
+                    ? err.message
+                    : "There was an error while saving the problem.";
+                alert(message);
                 toggleButton(saveBtn, false, 'Save');
             });
         };
