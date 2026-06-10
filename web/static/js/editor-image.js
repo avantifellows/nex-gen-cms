@@ -215,18 +215,26 @@ function ensureImageBlock(img, editor) {
     return block;
 }
 
+/** Zero-width space lets the caret sit after a floated image; stripped before save. */
+const IMAGE_CARET_MARKER = '\u200B';
+const IMAGE_CARET_MARKER_ENTITY = `&#${IMAGE_CARET_MARKER.charCodeAt(0)};`;
+
 function ensureTextAfterImage(img) {
     const next = img.nextSibling;
     if (next?.nodeType === Node.TEXT_NODE) {
-        if (!next.textContent.includes('\u200B')) {
-            next.textContent = '\u200B' + next.textContent;
+        if (!next.textContent.includes(IMAGE_CARET_MARKER)) {
+            next.textContent = IMAGE_CARET_MARKER + next.textContent;
         }
         return next;
     }
 
-    const textNode = document.createTextNode('\u200B');
+    const textNode = document.createTextNode(IMAGE_CARET_MARKER);
     img.after(textNode);
     return textNode;
+}
+
+function stripImageCaretMarkers(html) {
+    return html.replaceAll(IMAGE_CARET_MARKER, '').replaceAll(IMAGE_CARET_MARKER_ENTITY, '');
 }
 
 function placeCaretAfterImage(img) {

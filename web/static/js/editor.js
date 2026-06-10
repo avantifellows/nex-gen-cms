@@ -1,3 +1,12 @@
+function getEditorHtml(editor) {
+    let html = editor.innerHTML;
+    if (typeof stripImageCaretMarkers === 'function') {
+        html = stripImageCaretMarkers(html);
+    }
+    return html.trim();
+}
+window.getEditorHtml = getEditorHtml;
+
 window.initializeRichTextEditors = function (root = document) {
     root.querySelectorAll('.container').forEach(container => {
     if (container.dataset.editorInitialized === 'true') return;
@@ -478,7 +487,7 @@ window.initializeRichTextEditors = function (root = document) {
 
     function toggleCodeView() {
         if (codeView.classList.contains("hidden")) {
-            codeView.textContent = formatHTML(editor.innerHTML); // Show formatted HTML
+            codeView.textContent = formatHTML(getEditorHtml(editor)); // Show formatted HTML
             codeView.classList.remove("hidden");
             editor.classList.add("hidden");
         } else {

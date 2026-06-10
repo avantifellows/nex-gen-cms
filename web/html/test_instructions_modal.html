@@ -70,7 +70,7 @@
     function saveInstructionsModal() {
         const hiddenInput = document.getElementById("test-instructions");
         const editor = getInstructionsEditor();
-        hiddenInput.value = editor ? editor.innerHTML.trim() : "";
+        hiddenInput.value = editor ? getEditorHtml(editor) : "";
         closeInstructionsModal();
     }
 </script>
