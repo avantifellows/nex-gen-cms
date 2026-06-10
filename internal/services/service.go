@@ -107,8 +107,10 @@ func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any,
 	// Update in cache
 	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	if list != nil {
-		selectedObjPtr := funk.Find(*list, objFindingPredicate).(*T)
-		*selectedObjPtr = *objPtr
+		if found := funk.Find(*list, objFindingPredicate); found != nil {
+			selectedObjPtr := found.(*T)
+			*selectedObjPtr = *objPtr
+		}
 	}
 
 	return objPtr, nil
