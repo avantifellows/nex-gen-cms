@@ -638,7 +638,7 @@ func (h *TestsHandler) CreateTest(responseWriter http.ResponseWriter, request *h
 
 	_, err = h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error adding test: %v", err), http.StatusInternalServerError)
+		handlerutils.WriteRemoteAPIError(responseWriter, "Error adding test", err)
 		return
 	}
 }
@@ -714,7 +714,7 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 			return (*test).ID == testId
 		})
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error updating test: %v", err), http.StatusInternalServerError)
+		handlerutils.WriteRemoteAPIError(responseWriter, "Error updating test", err)
 		return
 	}
 }
