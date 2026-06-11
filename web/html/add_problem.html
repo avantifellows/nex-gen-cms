@@ -708,7 +708,7 @@
 
         function saveCurrentContent() {
             tabContent[activeIndex] = {
-                html: editor.innerHTML,
+                html: getEditorHtml(editor),
                 preview: preview.innerHTML
             };
         }
@@ -805,7 +805,7 @@
             // Edit comprehension: same PATCH body as other types, plus paragraph for the API.
             if (isEditPage && subtype === 'comprehension') {
                 const paragraphEditor = paragraphDiv.querySelector('.editor');
-                const paragraph = paragraphEditor ? paragraphEditor.innerHTML.trim() : '';
+                const paragraph = paragraphEditor ? getEditorHtml(paragraphEditor) : '';
                 payload = { ...payload, paragraph };
             }
 
@@ -969,7 +969,7 @@
 
         function buildComprehensionProblemsPayload(topicId, chapterId) {
             const paragraphEditor = paragraphDiv.querySelector('.editor');
-            const paragraph = paragraphEditor ? paragraphEditor.innerHTML.trim() : '';
+            const paragraph = paragraphEditor ? getEditorHtml(paragraphEditor) : '';
 
             const problems = [];
             problems.push(buildProblemJson(topicId, chapterId));
@@ -999,7 +999,8 @@
 
             const difficulty = problemBlock.querySelector(`input[name="additional-difficulty-${idx}"]:checked`)?.value;
 
-            const question = problemBlock.querySelector('.additional-question .editor')?.innerHTML?.trim() ?? '';
+            const questionEditor = problemBlock.querySelector('.additional-question .editor');
+            const question = questionEditor ? getEditorHtml(questionEditor) : '';
 
             const selectedType = problemBlock.querySelector(`input[name="additional-numType-${idx}"]:checked`)?.value;
             let answers = [];
@@ -1012,7 +1013,8 @@
                 ];
             }
 
-            const solution = problemBlock.querySelector('.additional-solution .editor')?.innerHTML?.trim() ?? '';
+            const solutionEditor = problemBlock.querySelector('.additional-solution .editor');
+            const solution = solutionEditor ? getEditorHtml(solutionEditor) : '';
 
             const tags = getTagsForSection(problemBlock.querySelector('.problem-tags-section'));
 
@@ -1096,7 +1098,7 @@
 
             const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
 
-            const question = document.getElementById('questionDiv').querySelector('.editor').innerHTML.trim();
+            const question = getEditorHtml(document.getElementById('questionDiv').querySelector('.editor'));
 
             let options = null;
             let answers = [];
@@ -1124,7 +1126,7 @@
                 // integer_type
                 answers = [document.getElementById("answerInput").value];
             }
-            const solution = document.getElementById('solutionDiv').querySelector('.editor').innerHTML.trim();
+            const solution = getEditorHtml(document.getElementById('solutionDiv').querySelector('.editor'));
 
             const conceptsDropdown = document.getElementById("concepts-dropdown");
             const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
@@ -1146,6 +1148,32 @@
                 tags: getTagsForSection(mainTagsRoot),
             });
         }
+
+        // editor.js may still be loading when this inline script runs (common on HTMX body swap)
+        function bootRichTextEditors() {
+            const form = document.querySelector('form.card');
+            if (!form?.querySelector('.container')) return false;
+            if (!window.initializeRichTextEditors) return false;
+            window.initializeRichTextEditors(form);
+            return true;
+        }
+
+        function scheduleEditorBoot() {
+            if (bootRichTextEditors()) return;
+
+            const editorScript = document.querySelector('script[src*="editor.js"]');
+            if (editorScript) {
+                const run = () => { bootRichTextEditors(); };
+                if (window.initializeRichTextEditors) {
+                    run();
+                } else {
+                    editorScript.addEventListener('load', run, { once: true });
+                }
+            } else {
+                requestAnimationFrame(scheduleEditorBoot);
+            }
+        }
+        scheduleEditorBoot();
     })();
 </script>
 {{ end }}

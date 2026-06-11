@@ -24,6 +24,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 	"github.com/thoas/go-funk"
 )
@@ -935,7 +936,9 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		http.Error(responseWriter, "CSS read error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style></head>", 1)
+	// output.css sets html/body to the app warm beige; question papers need a white page.
+	pdfPageStyle := `<style>html,body{background:#fff!important;background-color:#fff!important;min-height:auto!important}</style>`
+	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style>"+pdfPageStyle+"</head>", 1)
 
 	headerHTML := fmt.Sprintf(`
 		<div style="width:100%%; font-size:12px; font-family:Arial; text-align:center; padding:0 40px;">
@@ -980,27 +983,45 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	var pdfData []byte
 
+	// Load HTML via CDP SetDocumentContent instead of a data: URL. Chrome aborts navigation
+	// (net::ERR_ABORTED) when the encoded data URL exceeds ~2MB;
 	tasks := chromedp.Tasks{
+		chromedp.Navigate("about:blank"),
 		// Set page content
-		chromedp.Navigate("data:text/html," + url.PathEscape(htmlContent)),
-
-		// Wait for MathJax to finish rendering
 		chromedp.ActionFunc(func(ctx context.Context) error {
-			for i := 0; i < 100; i++ {
-				var doneText string
-				chromedp.Evaluate(`document.getElementById('mathjax-done') ? document.getElementById('mathjax-done').textContent : ''`, &doneText).Do(ctx)
+			tree, err := page.GetFrameTree().Do(ctx)
+			if err != nil {
+				return fmt.Errorf("get frame tree: %w", err)
+			}
+			return page.SetDocumentContent(tree.Frame.ID, htmlContent).Do(ctx)
+		}),
+		// Wait for deferred scripts (e.g. MathJax CDN) before polling typeset completion.
+		chromedp.Evaluate(`new Promise(resolve => {
+			if (document.readyState === 'complete') resolve();
+			else window.addEventListener('load', resolve, {once: true});
+		})`, nil, evalAwaitPromise),
 
+		// mathjax-done is set in pageReady after defaultPageReady() (initial typeset) finishes.
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			const maxPolls = 500
+			for i := 0; i < maxPolls; i++ {
+				var doneText string
+				if err := chromedp.Evaluate(`document.getElementById('mathjax-done') ? document.getElementById('mathjax-done').textContent : ''`, &doneText).Do(ctx); err != nil {
+					return err
+				}
 				if doneText == "true" {
 					return nil
 				}
 				time.Sleep(100 * time.Millisecond)
 			}
-			log.Printf("MathJax timeout after 100 polls")
-			return nil // timeout, proceed anyway
+			return fmt.Errorf("MathJax typeset did not complete within %ds (pdf type=%s)", maxPolls/10, pdfType)
 		}),
 
-		// Wait for fonts/rendering to complete
-		chromedp.Sleep(500 * time.Millisecond),
+		// Flush web fonts and layout after MathJax mutates the DOM.
+		chromedp.Evaluate(`(async () => {
+			await document.fonts.ready;
+			await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+		})()`, nil, evalAwaitPromise),
 
 		// Generate PDF using CDP low-level API
 		chromedp.ActionFunc(func(ctx context.Context) error {
@@ -1042,6 +1063,10 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - %s.pdf"`,
 		selectedTestPtr.GetNameByLang("en"), pdfSuffix))
 	_, _ = responseWriter.Write(pdfData)
+}
+
+func evalAwaitPromise(p *runtime.EvaluateParams) *runtime.EvaluateParams {
+	return p.WithAwaitPromise(true)
 }
 
 func optionLabels() []string {

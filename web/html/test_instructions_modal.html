@@ -29,6 +29,13 @@
 </div>
 <script src="/web/static/js/editor.js"></script>
 <script>
+    (function () {
+        const wrapper = document.getElementById("test-instructions-editor-wrapper");
+        if (window.initializeRichTextEditors && wrapper) {
+            window.initializeRichTextEditors(wrapper);
+        }
+    })();
+
     function getCurrentInstructions() {
         const hiddenInput = document.getElementById("test-instructions");
         return hiddenInput?.value || "";
@@ -63,7 +70,7 @@
     function saveInstructionsModal() {
         const hiddenInput = document.getElementById("test-instructions");
         const editor = getInstructionsEditor();
-        hiddenInput.value = editor ? editor.innerHTML.trim() : "";
+        hiddenInput.value = editor ? getEditorHtml(editor) : "";
         closeInstructionsModal();
     }
 </script>

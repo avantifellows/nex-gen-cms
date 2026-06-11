@@ -1,3 +1,36 @@
+// Insert \( \) delimiters at the cursor so LaTeX can be typed directly.
+function insertInlineMathDelimiters(editor) {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    const open = '\\(';
+    const close = '\\)';
+
+    if (!range.collapsed) {
+        const textNode = document.createTextNode(open + range.toString() + close);
+        range.deleteContents();
+        range.insertNode(textNode);
+
+        const after = document.createRange();
+        after.setStartAfter(textNode);
+        after.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(after);
+    } else {
+        const textNode = document.createTextNode(open + close);
+        range.insertNode(textNode);
+
+        const inside = document.createRange();
+        inside.setStart(textNode, open.length);
+        inside.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(inside);
+    }
+
+    renderMath(editor);
+}
+
 // Insert an editable inline math field at the cursor
 function insertMath(editor) {
     const mathfield = document.createElement('math-field');
@@ -38,5 +71,7 @@ function renderMath(editor) {
     const container = editor.closest('.container');
     const output = container.querySelector('.output');
     output.innerHTML = editor.innerHTML;
-    MathJax.typesetPromise([output]);
+    if (window.MathJax?.typesetPromise) {
+        MathJax.typesetPromise([output]).catch(console.error);
+    }
 }
