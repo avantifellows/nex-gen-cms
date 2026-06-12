@@ -216,8 +216,8 @@ function ensureImageBlock(img, editor) {
 }
 
 /** Zero-width space lets the caret sit after a floated image; stripped before save. */
-const IMAGE_CARET_MARKER = '\u200B';
-const IMAGE_CARET_MARKER_ENTITY = `&#${IMAGE_CARET_MARKER.charCodeAt(0)};`;
+var IMAGE_CARET_MARKER = '\u200B';
+var IMAGE_CARET_MARKER_ENTITY = `&#${IMAGE_CARET_MARKER.charCodeAt(0)};`;
 
 function ensureTextAfterImage(img) {
     const next = img.nextSibling;
