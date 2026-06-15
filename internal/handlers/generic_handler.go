@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -12,10 +11,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
-
-const CURRICULUM_DROPDOWN_NAME = "curriculum-dropdown"
-const GRADE_DROPDOWN_NAME = "grade-dropdown"
-const SUBJECT_DROPDOWN_NAME = "subject-dropdown"
 
 const baseTemplate = "home.html"
 
@@ -48,17 +43,8 @@ func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
 
 func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
 	// these query parameters can be queried by element names only, not ids
-	curriculumId, err := utils.StringToIntType[int16](urlValues.Get(CURRICULUM_DROPDOWN_NAME))
-	if err != nil {
-		fmt.Println("Selected Curriculum is invalid")
-	}
-	gradeId, err := utils.StringToIntType[int8](urlValues.Get(GRADE_DROPDOWN_NAME))
-	if err != nil {
-		fmt.Println("Selected Grade is invalid")
-	}
-	subjectId, err := utils.StringToIntType[int8](urlValues.Get(SUBJECT_DROPDOWN_NAME))
-	if err != nil {
-		fmt.Println("Selected Subject is invalid")
-	}
+	curriculumId, _ := utils.StringToIntType[int16](urlValues.Get(CURRICULUM_DROPDOWN_NAME))
+	gradeId, _ := utils.StringToIntType[int8](urlValues.Get(GRADE_DROPDOWN_NAME))
+	subjectId, _ := utils.StringToIntType[int8](urlValues.Get(SUBJECT_DROPDOWN_NAME))
 	return curriculumId, gradeId, subjectId
 }

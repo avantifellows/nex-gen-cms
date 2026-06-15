@@ -10,6 +10,7 @@ import (
 )
 
 const QUERY_PARAM_CURRICULUM_ID = "curriculum_id"
+const CURRICULUM_DROPDOWN_NAME = "curriculum-dropdown"
 
 const getCurriculumsEndPoint = "curriculum"
 const curriculumsKey = "curriculums"

@@ -62,18 +62,13 @@ func (h *ResourcesHandler) OpenAddResource(responseWriter http.ResponseWriter, r
 func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
 	curriculumIdStr := urlVals.Get(CURRICULUM_DROPDOWN_NAME)
-	gradeIdStr := urlVals.Get(GRADE_DROPDOWN_NAME)
+	gradeParam := urlVals.Get(GRADE_DROPDOWN_NAME)
 	chapterIdStr := urlVals.Get("chapter_id")
 	topicIdStr := urlVals.Get("topic_id")
 
 	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
-		return
-	}
-	gradeId, err := utils.StringToIntType[int8](gradeIdStr)
-	if err != nil {
-		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
 		return
 	}
 
@@ -85,14 +80,21 @@ func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, requ
 			http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 			return
 		}
-		queryParams = fmt.Sprintf("?curriculum_id=%d&grade_id=%d&topic_id=%d", curriculumId, gradeId, topicId)
+		queryParams = fmt.Sprintf("?curriculum_id=%d&topic_id=%d", curriculumId, topicId)
 	} else {
 		chapterId, err := utils.StringToIntType[int16](chapterIdStr)
 		if err != nil {
 			http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 			return
 		}
-		queryParams = fmt.Sprintf("?curriculum_id=%d&grade_id=%d&chapter_id=%d", curriculumId, gradeId, chapterId)
+		queryParams = fmt.Sprintf("?curriculum_id=%d&chapter_id=%d", curriculumId, chapterId)
+	}
+
+	var ok bool
+	queryParams, ok = appendGradeIDQueryParam(queryParams, gradeParam)
+	if !ok {
+		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
+		return
 	}
 
 	resources, err := h.service.GetList(resourcesCurriculumEndPoint+queryParams, resourcesKey, false, true)
@@ -225,9 +227,9 @@ func (h *ResourcesHandler) AddResource(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	gradeIdStr := request.FormValue(GRADE_DROPDOWN_NAME)
-	gradeId, err := utils.StringToIntType[int8](gradeIdStr)
-	if err != nil {
+	gradeParam := request.FormValue(GRADE_DROPDOWN_NAME)
+	gradeId, _, gradeOk := parseGradeFilter(gradeParam)
+	if !gradeOk {
 		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
 		return
 	}
@@ -264,10 +266,16 @@ func (h *ResourcesHandler) MoveResource(responseWriter http.ResponseWriter, requ
 		return
 	}
 
-	curriculumID, gradeID, subjectID := getCurriculumGradeSubjectIds(request.Form)
-	if curriculumID == 0 || gradeID == 0 || subjectID == 0 {
+	curriculumID, _, subjectID := getCurriculumGradeSubjectIds(request.Form)
+	gradeParam := request.FormValue(GRADE_DROPDOWN_NAME)
+	gradeID, isCommon, gradeOk := parseGradeFilter(gradeParam)
+	if curriculumID == 0 || subjectID == 0 || !gradeOk {
 		http.Error(responseWriter, "Invalid curriculum, grade or subject ID", http.StatusBadRequest)
 		return
+	}
+	curriculumGrade := models.CurriculumGrade{CurriculumID: curriculumID}
+	if !isCommon {
+		curriculumGrade.GradeID = gradeID
 	}
 
 	chapterIDStr := request.Form.Get("chapter-dropdown")
@@ -298,10 +306,7 @@ func (h *ResourcesHandler) MoveResource(responseWriter http.ResponseWriter, requ
 	requestBody := dto.MoveResourcesRequest{
 		ResourceIDs: resourceIDs,
 		CurriculumGrades: []models.CurriculumGrade{
-			{
-				CurriculumID: curriculumID,
-				GradeID:      gradeID,
-			},
+			curriculumGrade,
 		},
 		SubjectID: subjectID,
 		ChapterID: chapterID,

@@ -134,10 +134,11 @@
      it wherever we want to use isInt() and then any function defined inside such module script cannot be 
      accessed from same file's html code -->
     <script type="module">
-        import { isInt } from '/web/static/js/utils.js';
+        import { isInt, isValidGradeFilter } from '/web/static/js/utils.js';
 
         // Attach to window to make it globally accessible
         window.isInt = isInt;
+        window.isValidGradeFilter = isValidGradeFilter;
     </script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {

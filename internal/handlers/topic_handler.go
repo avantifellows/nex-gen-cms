@@ -182,7 +182,16 @@ func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *ht
 		return
 	}
 
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
+	urlVals := request.URL.Query()
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlVals)
+	if curriculumId == 0 || subjectId == 0 {
+		http.Error(responseWriter, "Invalid curriculum or subject ID", http.StatusBadRequest)
+		return
+	}
+	if _, _, gradeOk := parseGradeFilter(urlVals.Get(GRADE_DROPDOWN_NAME)); !gradeOk {
+		http.Error(responseWriter, "Invalid grade ID", http.StatusBadRequest)
+		return
+	}
 	data := dto.TopicData{
 		HomeData: dto.HomeData{
 			CurriculumID: curriculumId,

@@ -14,7 +14,6 @@ func StringToInt(s string) int {
 	// Convert string to integer using strconv.Atoi
 	num, err := strconv.Atoi(s)
 	if err != nil {
-		fmt.Println("Error:", err)
 		return 0 // Return zero
 	}
 	return num // Return the converted integer
@@ -42,7 +41,6 @@ func StringToIntType[T IntType](str string) (T, error) {
 	// Parse the string as an int64
 	num, err := strconv.ParseInt(str, 10, 32)
 	if err != nil {
-		fmt.Println("Error:", err)
 		return 0, err
 	}
 

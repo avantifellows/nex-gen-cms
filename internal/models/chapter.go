@@ -5,7 +5,7 @@ type Chapter struct {
 	Code         string        `json:"code"`
 	Name         []ChapterLang `json:"name"`
 	CurriculumID int16         `json:"curriculum_id"`
-	GradeID      int8          `json:"grade_id"`
+	GradeID      int8          `json:"grade_id,omitempty"`
 	SubjectID    int8          `json:"subject_id"`
 	StatusID     int8          `json:"cms_status_id,omitempty"`
 	/**

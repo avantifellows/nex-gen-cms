@@ -11,6 +11,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
+const SUBJECT_DROPDOWN_NAME = "subject-dropdown"
 const subjectsTemplate = "subjects.html"
 
 type SubjectsHandler struct {

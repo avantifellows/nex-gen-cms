@@ -78,7 +78,7 @@
                             const subject = params["subject-dropdown"];
 
                             // if dropdown values are showing default value like "Loading...", then don't execute request
-                            if (!isInt(curriculum) || !isInt(grade) || !isInt(subject)) {
+                            if (!isInt(curriculum) || !isValidGradeFilter(grade) || !isInt(subject)) {
                                 console.log("Skipping /api/chapters request because dropdowns are not loaded yet.");
                                 event.preventDefault();
 
