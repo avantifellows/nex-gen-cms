@@ -16,7 +16,12 @@
             hx-get="/problems/edit-problem?id={{.ID}}&curriculum_id={{.CurriculumID}}&topic_id={{.TopicID}}"
             hx-params="none" hx-target="body" hx-push-url="true">
             <i class="fa-solid fa-pen"></i>
-        </button>    
+        </button>
+        <button class="action-button"
+            hx-get="/problems/copy-problem?id={{.ID}}"
+            hx-params="none" hx-target="body" hx-swap="beforeend" title="Copy Problem">
+            <i class="fa-solid fa-copy"></i>
+        </button>
         <button class="action-button" hx-delete="/archive-problem?id={{.ID}}" hx-params="none"
             hx-confirm="Are you sure you want to delete problem?" hx-target="closest tr">
             <i class="fa-solid fa-trash"></i>

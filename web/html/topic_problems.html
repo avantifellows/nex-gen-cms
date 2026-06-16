@@ -37,10 +37,13 @@
                     <th>Actions</th>
                 </tr>
             </thead>
+            <!-- In before-request, condition is added to only clear the tbody 
+             when the request comes from the tbody itself (its own refresh on load);
+             otherwise it reloads even on just clicking copy problem button for any row -->
             <tbody id="problemTableBody" class="text-ink-muted text-sm" hx-trigger="load, refreshProblems"
                 hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
                 hx-indicator="#topic-problems-loader"
-                hx-on::before-request="this.innerHTML=''"
+                hx-on::before-request="if (event.detail.elt === this) this.innerHTML=''"
                 hx-on::after-swap="updateHeaderState()" data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>

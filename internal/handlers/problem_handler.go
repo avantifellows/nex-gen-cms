@@ -43,6 +43,7 @@ const problemAnswerNumericalTemplate = "problem_answer_numerical.html"
 const inputTagsTemplate = "input_tags.html"
 const problemTestAssociationTemplate = "problem_test_association_modal.html"
 const moveProblemsTemplate = "move_problems_modal.html"
+const copyProblemModalTemplate = "copy_problem_modal.html"
 
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
@@ -465,6 +466,15 @@ func (h *ProblemsHandler) LoadTestAssociations(responseWriter http.ResponseWrite
 func (h *ProblemsHandler) LoadMoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	idsStr := request.FormValue("problem_ids")
 	views.ExecuteTemplate(moveProblemsTemplate, responseWriter, idsStr, nil)
+}
+
+func (h *ProblemsHandler) LoadCopyProblem(responseWriter http.ResponseWriter, request *http.Request) {
+	problemIdStr := request.URL.Query().Get("id")
+	if problemIdStr == "" {
+		http.Error(responseWriter, "Missing problem ID", http.StatusBadRequest)
+		return
+	}
+	views.ExecuteTemplate(copyProblemModalTemplate, responseWriter, problemIdStr, nil)
 }
 
 func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
