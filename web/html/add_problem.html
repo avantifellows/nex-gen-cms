@@ -839,7 +839,16 @@
                     const topicUrl = '/topic?id={{if .TopicPtr}}{{.TopicPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
                     history.replaceState(null, '', topicUrl);
                     htmx.ajax('GET', topicUrl, { target: 'body', swap: 'innerHTML' });
+                
                 } else {
+                    if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {
+                        const curriculumId = document.getElementById("curriculum-dropdown").value;
+                        sessionStorage.setItem(
+                            REFRESH_PROBLEM_URL_KEY,
+                            `/problem?id=${problemId}&curriculum_id=${curriculumId}`
+                        );
+                        sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
+                    }
                     // go back to remove add/edit problem screen
                     goBackAfterDelay(0);
                 }
