@@ -40,7 +40,8 @@
             <!-- In before-request, condition is added to only clear the tbody 
              when the request comes from the tbody itself (its own refresh on load);
              otherwise it reloads even on just clicking copy problem button for any row -->
-            <tbody id="problemTableBody" class="text-ink-muted text-sm" hx-trigger="load, refreshProblems"
+            <tbody id="problemTableBody" class="text-ink-muted text-sm"
+                hx-trigger="refreshProblems"
                 hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
                 hx-indicator="#topic-problems-loader"
                 hx-on::before-request="if (event.detail.elt === this) this.innerHTML=''"
@@ -57,6 +58,51 @@
     var selectAll = document.getElementById("select-all");
     var tbody = document.getElementById("problemTableBody");
     var moveBtn = document.getElementById("move-problems-btn");
+
+    var topicId = '{{.}}';
+
+    // Initial load via script, because load hx-trigger on tbody is not working when this screen is 
+    // opened from javascript after copy-save navigation 
+    function loadTopicProblems() {
+        const curriculum = document.getElementById('curriculum-dropdown').value;
+        const subject = document.getElementById('subject-dropdown').value;
+        if (!curriculum || !subject) return false;
+        htmx.ajax('GET', `/api/topic/problems?topic-dropdown=${topicId}&curriculum-dropdown=${curriculum}&subject-dropdown=${subject}`, {
+            target: '#problemTableBody',
+            swap: 'innerHTML',
+        });
+        return true;
+    }
+
+    function filtersLoading() {
+        const curriculumEl = document.getElementById('curriculum-dropdown');
+        const subjectEl = document.getElementById('subject-dropdown');
+        return !curriculumEl.options[0] || curriculumEl.options[0].disabled
+            || !subjectEl.options[0] || subjectEl.options[0].disabled;
+    }
+
+    function initTopicProblemsList() {
+        const curriculumEl = document.getElementById('curriculum-dropdown');
+        const subjectEl = document.getElementById('subject-dropdown');
+
+        function tryLoad() {
+            if (loadTopicProblems()) cleanup();
+        }
+
+        function cleanup() {
+            curriculumEl.removeEventListener('onLoaded', tryLoad);
+            subjectEl.removeEventListener('onLoaded', tryLoad);
+        }
+
+        if (filtersLoading()) {
+            curriculumEl.addEventListener('onLoaded', tryLoad);
+            subjectEl.addEventListener('onLoaded', tryLoad);
+        } else {
+            tryLoad();
+        }
+    }
+
+    initTopicProblemsList();
 
     var getCheckboxes = () =>
         tbody.querySelectorAll('input[name="select-problem"]');

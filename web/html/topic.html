@@ -28,6 +28,16 @@
             // clear session storage values stored earlier as this is new screen opened
             sessionStorage.removeItem(SESSION_KEY_TOPIC_TAB);
         }
+        const tabOnce = sessionStorage.getItem('topicTabOnce');
+        if (tabOnce) {
+            sessionStorage.removeItem('topicTabOnce');
+            setTimeout(() => {
+                const btn = document.getElementById(tabOnce);
+                if (!btn) return;
+                onTopicTabClick(btn);
+                htmx.ajax('GET', btn.getAttribute('hx-get'), { target: '#subContent', swap: 'innerHTML' });
+            }, 0);
+        }
     })();
 
     function onTopicTabClick(subtabBtn, event) {

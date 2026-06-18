@@ -7,3 +7,8 @@ type ProblemData struct {
 	ProblemPtr *models.Problem
 	TopicPtr   *models.Topic
 }
+
+type CopyProblemModalData struct {
+	ProblemID          string
+	SourceCurriculumID string
+}
