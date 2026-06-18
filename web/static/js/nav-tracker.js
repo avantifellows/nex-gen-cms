@@ -1,8 +1,12 @@
 var BACK_TO_ADD_TEST_EVT = "back-to-add-test";
 var BACK_TO_TOPIC_EVT = "back-to-topic";
+var BACK_TO_PROBLEM_EVT = "back-to-problem";
+var REFRESH_PROBLEM_ON_BACK_KEY = "refreshProblemOnBack";
+var REFRESH_PROBLEM_URL_KEY = "refreshProblemUrl";
 
 var ADD_TEST_DIV_SELECTOR = "#add-test-right-div";
 var TOPIC_DIV_SELECTOR = "#topic-div";
+var PROBLEM_DIV_SELECTOR = "#problem-div";
 
 var PUSHED_SCREEN_ADD_TEST = "add-test";
 var PUSHED_SCREEN_TOPIC = "topic";
@@ -23,6 +27,11 @@ if (!window._htmxHistoryRestoreAttached) {
         const topicDiv = document.querySelector(TOPIC_DIV_SELECTOR);
         if (topicDiv) {
             topicDiv.dispatchEvent(new CustomEvent(BACK_TO_TOPIC_EVT));
+            return;
+        }
+        const problemDiv = document.querySelector(PROBLEM_DIV_SELECTOR);
+        if (problemDiv) {
+            problemDiv.dispatchEvent(new CustomEvent(BACK_TO_PROBLEM_EVT));
             return;
         }
     });
