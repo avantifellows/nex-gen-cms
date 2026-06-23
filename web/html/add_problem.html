@@ -623,13 +623,17 @@
                 ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
             {{ end }}
         ];
-        
+
         // Initial rendering of options & answers for mcq & matrix match only
-        const subtype = document.getElementById('problem-type-dropdown').value;
-        if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
-            renderTabs();
-            setActiveTab(0);
+        function bootMcqTabsIfNeeded() {
+            const subtype = document.getElementById('problem-type-dropdown').value;
+            if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
+                renderTabs();
+                setActiveTab(0);
+            }
         }
+
+        bootMcqTabsIfNeeded();
 
         function getLabel(index) {
             return labelPool[index];
@@ -761,10 +765,21 @@
 
         function loadActiveContent() {
             const content = tabContent[activeIndex] || { html: '', preview: '' };
-            editor.innerHTML = content.html;
-            preview.innerHTML = content.preview;
-            // This is required for edit problem where by default MathJax is applied to only first option
-            applyMathJaxIfNeeded();
+            const applyContent = () => {
+                editor.innerHTML = content.html;
+                if (typeof normalizeRenderedMath === 'function') {
+                    normalizeRenderedMath(editor);
+                }
+                // This is required for edit problem where by default MathJax is applied to only first option
+                if (typeof renderMath === 'function') {
+                    renderMath(editor);
+                } else {
+                    preview.innerHTML = content.preview;
+                    applyMathJaxIfNeeded();
+                }
+            };
+
+            applyContent();
         }
 
         function applyMathJaxIfNeeded() {
@@ -1167,19 +1182,22 @@
         }
 
         function scheduleEditorBoot() {
-            if (bootRichTextEditors()) return;
-
-            const editorScript = document.querySelector('script[src*="editor.js"]');
-            if (editorScript) {
-                const run = () => { bootRichTextEditors(); };
-                if (window.initializeRichTextEditors) {
-                    run();
+            const boot = () => {
+                if (bootRichTextEditors()) return;
+                const editorScript = document.querySelector('script[src*="editor.js"]');
+                if (editorScript) {
+                    const run = () => { bootRichTextEditors(); };
+                    if (window.initializeRichTextEditors) {
+                        run();
+                    } else {
+                        editorScript.addEventListener('load', run, { once: true });
+                    }
                 } else {
-                    editorScript.addEventListener('load', run, { once: true });
+                    requestAnimationFrame(scheduleEditorBoot);
                 }
-            } else {
-                requestAnimationFrame(scheduleEditorBoot);
-            }
+            };
+
+            boot();
         }
         scheduleEditorBoot();
     })();
