@@ -1,5 +1,12 @@
 function getEditorHtml(editor) {
-    let html = editor.innerHTML;
+    const clone = editor.cloneNode(true);
+    if (typeof serializeMathFields === 'function') {
+        serializeMathFields(clone);
+    }
+    if (typeof normalizeRenderedMath === 'function') {
+        normalizeRenderedMath(clone);
+    }
+    let html = clone.innerHTML;
     if (typeof stripImageCaretMarkers === 'function') {
         html = stripImageCaretMarkers(html);
     }
@@ -17,15 +24,26 @@ window.initializeRichTextEditors = function (root = document) {
 
     const editor = editorWrapper.querySelector(".editor");
 
-    // for edit problem screen update preview on opening page itself, because content must already be there in editor
-    const latex = editor.innerHTML.trim();
-    if (latex && typeof renderMath === 'function') {
-        try {
-            renderMath(editor);
-        } catch (err) {
-            console.error('Editor preview render failed', err);
+    const initPreview = () => {
+        // for edit problem screen update preview on opening page itself, because content must already be there in editor
+        const latex = editor.innerHTML.trim();
+        if (latex && typeof renderMath === 'function') {
+            try {
+                renderMath(editor);
+            } catch (err) {
+                console.error('Editor preview render failed', err);
+            }
         }
-    }
+    };
+
+    const initEditorContent = () => {
+        if (typeof normalizeRenderedMath === 'function') {
+            normalizeRenderedMath(editor);
+        }
+        initPreview();
+    };
+
+    initEditorContent();
 
     // listener to display preview
     editor.addEventListener('input', () => {

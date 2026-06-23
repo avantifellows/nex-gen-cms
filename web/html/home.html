@@ -14,8 +14,28 @@
     <!-- For Font Awesome library -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <script src="https://unpkg.com/mathlive"></script>
+    <script>
+        window.MathJax = {
+            options: {
+                renderActions: {
+                    addSourceTex: [
+                        151,
+                        (doc) => {
+                            for (const math of doc.math) {
+                                doc.adaptor.setAttribute(math.typesetRoot, 'data-tex', math.math);
+                            }
+                        },
+                        (math, doc) => {
+                            doc.adaptor.setAttribute(math.typesetRoot, 'data-tex', math.math);
+                        },
+                    ],
+                },
+            },
+        };
+    </script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
     </script>
+    <script src="/web/static/js/editor-math.js"></script>
     <script src="/web/static/js/constants.js"></script>
     <script src="/web/static/js/resource-form.js"></script>
     <script src="/web/static/js/infinite-scroll.js"></script>
