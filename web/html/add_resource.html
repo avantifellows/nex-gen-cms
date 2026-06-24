@@ -2,7 +2,7 @@
 <form id="addResourceForm" class="card card-pad-sm mt-3 flex flex-wrap items-end gap-3"
     hx-post="/create-resource?chapter_id={{.ChapterID}}{{ if .TopicID }}&topic_id={{.TopicID}}{{ end }}"
     hx-target="#resourceTableBody"
-    hx-swap="beforeend" hx-include="#curriculum-dropdown, #grade-dropdown"
+    hx-swap="beforeend" hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown"
     hx-on::after-request="if(event.detail.successful) { this.reset(); ResourceForm.sync('add-resource-type','add-resource-subtype'); }">
     <div class="w-1/3 min-w-[200px]">
         <label class="form-label" for="add-resource-name">Name</label>

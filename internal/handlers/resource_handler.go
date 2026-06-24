@@ -234,7 +234,14 @@ func (h *ResourcesHandler) AddResource(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	newResourcePtr := models.NewResource(resourceCode, resourceName, resourceType, resourceSubtype, srcLink, chapterId, curriculumId, gradeId)
+	subjectIdStr := request.FormValue(SUBJECT_DROPDOWN_NAME)
+	subjectId, err := utils.StringToIntType[int8](subjectIdStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Subject ID", http.StatusBadRequest)
+		return
+	}
+
+	newResourcePtr := models.NewResource(resourceCode, resourceName, resourceType, resourceSubtype, srcLink, chapterId, curriculumId, gradeId, subjectId)
 	if topicId != 0 {
 		newResourcePtr.TopicID = topicId
 	}
