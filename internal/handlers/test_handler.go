@@ -937,7 +937,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		return
 	}
 	// output.css sets html/body to the app warm beige; question papers need a white page.
-	pdfPageStyle := `<style>html,body{background:#fff!important;background-color:#fff!important;min-height:auto!important}</style>`
+	pdfPageStyle := `<style>html,body{background:#fff!important;background-color:#fff!important;min-height:auto!important}mjx-num{padding-bottom:0.1em!important}mjx-den{padding-top:0.1em!important}</style>`
 	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style>"+pdfPageStyle+"</head>", 1)
 
 	headerHTML := fmt.Sprintf(`
