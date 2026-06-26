@@ -53,7 +53,7 @@
                     {{ if and (gt (len $p.MetaData.Solutions) 0) (ne (trim (printf "%s" (index $p.MetaData.Solutions 0).Value)) "") }}
                         <div class="mb-4 flex">
                             <span class="font-semibold">Q{{ $Counter }}.</span>
-                            <span class="ml-5 block flex-1">{{ (index $p.MetaData.Solutions 0).Value }}</span>
+                            <div class="ml-5 flex-1 solution-content">{{ (index $p.MetaData.Solutions 0).Value }}</div>
                         </div>
                     {{ end }}
                 {{ end }}

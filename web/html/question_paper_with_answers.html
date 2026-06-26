@@ -39,7 +39,7 @@
                             {{ if and (gt (len $p.MetaData.Solutions) 0) (ne (trim (printf "%s" (index $p.MetaData.Solutions 0).Value)) "") }}
                             <div class="mt-1">
                                 <span class="font-semibold">Solution:</span>
-                                <span class="ml-1">{{ (index $p.MetaData.Solutions 0).Value }}</span>
+                                <div class="ml-1 solution-content">{{ (index $p.MetaData.Solutions 0).Value }}</div>
                             </div>
                             {{ end }}
                         </div>

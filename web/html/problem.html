@@ -76,13 +76,13 @@
             {{ end }}
         </p>
         <h2 class="section-title mt-6">Solution</h2>
-        <p class="mt-2 text-ink">
+        <div class="mt-2 text-ink solution-content">
             {{ if gt (len .ProblemPtr.MetaData.Solutions) 0 }}
                 {{ (index .ProblemPtr.MetaData.Solutions 0).Value }}
             {{ else }}
                 <span class="text-ink-muted italic">No solution available.</span>
             {{ end }}
-        </p>
+        </div>
         <h2 class="section-title mt-6">Difficulty</h2>
         <div class="mt-2 flex items-center text-brand-gold">
             {{ range $i := seq 1 3 }}
