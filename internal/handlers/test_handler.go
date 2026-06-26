@@ -842,7 +842,7 @@ func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRu
 		}
 	}
 
-	return nil, fmt.Errorf("no matching test rule found for examID=%d and testType=%s", examId, testType)
+	return nil, nil
 }
 
 func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *http.Request) {

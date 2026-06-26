@@ -64,7 +64,7 @@ window.MathJax = {
 {{ end }}
 
 {{ define "pdf_question_options" }}
-<div class="mb-6">
+<div class="mb-6" style="break-inside: avoid;">
     {{ if and (eq .Problem.Subtype "comprehension") .Problem.Paragraph }}
     <div class="flex items-start mb-3 pl-11">
         <div class="flex-1 border border-gray-200 rounded p-3 bg-gray-50 text-sm">
