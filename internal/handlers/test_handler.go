@@ -827,7 +827,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 	}, addTestModalTemplate, testTypeOptionsTemplate, curriculumGradeSelectsTemplate)
 }
 
-func (h *TestsHandler) AddCurriculumGradeDropdowns(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *TestsHandler) AddCurriculumGradeDropdowns(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, addCurriculumGradeSelectsTemplate, curriculumGradeSelectsTemplate)
 }
 

@@ -23,7 +23,7 @@ func NewExamsHandler(service *services.Service[models.Exam]) *ExamsHandler {
 	}
 }
 
-func (h *ExamsHandler) GetExams(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ExamsHandler) GetExams(responseWriter http.ResponseWriter, _ *http.Request) {
 	exams, err := h.service.GetList(examsEndPoint, examsKey, false, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching exams: %v", err), http.StatusInternalServerError)

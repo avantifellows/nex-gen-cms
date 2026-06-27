@@ -21,12 +21,12 @@ func StringToInt(s string) int {
 }
 
 // StringToIntOrDefault converts string to int with validation and fallback
-func StringToIntOrDefault(val string, defaultVal int, min int) int {
+func StringToIntOrDefault(val string, defaultVal int, minVal int) int {
 	if val == "" {
 		return defaultVal
 	}
 
-	if v, err := strconv.Atoi(val); err == nil && v >= min {
+	if v, err := strconv.Atoi(val); err == nil && v >= minVal {
 		return v
 	}
 
