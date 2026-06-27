@@ -1128,7 +1128,9 @@ func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request 
 	}
 
 	responseWriter.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(responseWriter).Encode(data)
+	if err := json.NewEncoder(responseWriter).Encode(data); err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func getProblemChapterName(p models.Problem, lang string) string {
