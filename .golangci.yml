@@ -10,17 +10,23 @@ linters:
   enable:
     - bodyclose    # unclosed HTTP response bodies (this CMS makes many db-service calls)
     - dupl         # duplicated code blocks
+    - gocognit     # cognitive complexity hotspots
     - gocyclo      # cyclomatic complexity hotspots
     - misspell     # typos in comments/strings
+    - nilerr       # returning nil after a non-nil error check
+    - prealloc     # slices that could be preallocated in a loop
     - revive       # broad style linter (golint successor)
     - unconvert    # redundant type conversions
     - unparam      # unused function parameters
+    - wastedassign # assignments whose value is never read
 
   settings:
     gocyclo:
+      min-complexity: 15
+    gocognit:
       min-complexity: 20
     dupl:
-      threshold: 150
+      threshold: 100
     misspell:
       locale: US
 
@@ -36,6 +42,7 @@ linters:
       - path: _test\.go
         linters:
           - dupl
+          - gocognit
           - gocyclo
           - errcheck
           - unparam
