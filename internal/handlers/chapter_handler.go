@@ -325,11 +325,12 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	urlVals := request.URL.Query()
 	view := urlVals.Get("view")
 	var filename string
-	if view == "list" {
+	switch view {
+	case "list":
 		filename = topicRowTemplate
-	} else if view == "dropdown-optional" {
+	case "dropdown-optional":
 		filename = topicDropdownOptionalTemplate
-	} else {
+	default:
 		filename = topicDropdownTemplate
 	}
 
