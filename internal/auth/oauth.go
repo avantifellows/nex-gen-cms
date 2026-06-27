@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/avantifellows/nex-gen-cms/config"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
+
+	"github.com/avantifellows/nex-gen-cms/config"
 )
 
 const (

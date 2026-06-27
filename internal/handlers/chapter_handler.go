@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/thoas/go-funk"
+
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
@@ -14,7 +16,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
-	"github.com/thoas/go-funk"
 )
 
 const chaptersEndPoint = "chapter"

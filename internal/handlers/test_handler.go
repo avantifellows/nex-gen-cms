@@ -16,6 +16,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/cdproto/runtime"
+	"github.com/chromedp/chromedp"
+	"github.com/thoas/go-funk"
+
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
@@ -23,10 +28,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
-	"github.com/chromedp/cdproto/page"
-	"github.com/chromedp/cdproto/runtime"
-	"github.com/chromedp/chromedp"
-	"github.com/thoas/go-funk"
 )
 
 const TESTTYPE_DROPDOWN_NAME = "testtype-dropdown"
