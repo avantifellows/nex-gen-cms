@@ -58,7 +58,7 @@ func (s *Service[T]) GetList(urlEndPoint string, cacheKey string, onlyCache bool
 	return &list, nil
 }
 
-func (s *Service[T]) GetObject(objIdStr string, objFindingPredicate func(*T) bool, cacheKey string,
+func (s *Service[T]) GetObject(objIDStr string, objFindingPredicate func(*T) bool, cacheKey string,
 	urlEndPoint string) (*T, error) {
 
 	// check in the cache for list
@@ -71,10 +71,10 @@ func (s *Service[T]) GetObject(objIdStr string, objFindingPredicate func(*T) boo
 	}
 
 	var fullURL string
-	if objIdStr == "" {
+	if objIDStr == "" {
 		fullURL = urlEndPoint
 	} else {
-		fullURL = urlEndPoint + "/" + objIdStr
+		fullURL = urlEndPoint + "/" + objIDStr
 	}
 
 	// call api to fetch single object
@@ -91,10 +91,10 @@ func (s *Service[T]) GetObject(objIdStr string, objFindingPredicate func(*T) boo
 	return objPtr, nil
 }
 
-func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any, cacheKey string,
+func (s *Service[T]) UpdateObject(objIDStr string, urlEndPoint string, body any, cacheKey string,
 	objFindingPredicate func(*T) bool) (*T, error) {
 
-	respBytes, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodPatch, body)
+	respBytes, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIDStr, http.MethodPatch, body)
 	if err != nil {
 		return nil, err
 	}
@@ -142,9 +142,9 @@ func (s *Service[T]) InvalidateCache(cacheKey string) {
 	s.cacheRepository.Delete(cacheKey)
 }
 
-func (s *Service[T]) DeleteObject(objIdStr string, objKeepingPredicate func(*T) bool, cacheKey string,
+func (s *Service[T]) DeleteObject(objIDStr string, objKeepingPredicate func(*T) bool, cacheKey string,
 	urlEndPoint string) error {
-	_, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodDelete, nil)
+	_, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIDStr, http.MethodDelete, nil)
 	if err != nil {
 		return err
 	}
@@ -157,9 +157,9 @@ func (s *Service[T]) DeleteObject(objIdStr string, objKeepingPredicate func(*T) 
 	return nil
 }
 
-func (s *Service[T]) ArchiveObject(objIdStr string, urlEndPoint string, body any, cacheKey string,
+func (s *Service[T]) ArchiveObject(objIDStr string, urlEndPoint string, body any, cacheKey string,
 	objKeepingPredicate func(*T) bool) error {
-	_, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIdStr, http.MethodPatch, body)
+	_, err := s.apiRepository.CallAPI(urlEndPoint+"/"+objIDStr, http.MethodPatch, body)
 	if err != nil {
 		return err
 	}

@@ -70,7 +70,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	constants.InitRuntimeConstant()
 	configLoader.LoadEnv(new(config.Env))
 
-	muxHandler.Handle("/web/", appComponentPtr.CssPathHandler)
+	muxHandler.Handle("/web/", appComponentPtr.CSSPathHandler)
 
 	muxHandler.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {

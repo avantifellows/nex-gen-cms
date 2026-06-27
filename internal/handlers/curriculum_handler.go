@@ -9,7 +9,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 )
 
-const QUERY_PARAM_CURRICULUM_ID = "curriculum_id"
+const QueryParamCurriculumID = "curriculum_id"
 
 const getCurriculumsEndPoint = "curriculum"
 const curriculumsKey = "curriculums"

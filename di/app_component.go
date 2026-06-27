@@ -17,7 +17,7 @@ import (
 
 type AppComponent struct {
 	DB                 *sql.DB
-	CssPathHandler     http.Handler
+	CSSPathHandler     http.Handler
 	LoginHandler       *handlers.LoginHandler
 	AdminUsersHandler  *handlers.AdminUsersHandler
 	ChaptersHandler    *handlers.ChaptersHandler
@@ -88,7 +88,7 @@ func NewAppComponent() (*AppComponent, error) {
 
 	return &AppComponent{
 		DB:                 database,
-		CssPathHandler:     cssPathHandler,
+		CSSPathHandler:     cssPathHandler,
 		LoginHandler:       loginHandler,
 		AdminUsersHandler:  adminUsersHandler,
 		ChaptersHandler:    chaptersHandler,

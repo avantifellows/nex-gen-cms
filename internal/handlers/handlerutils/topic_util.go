@@ -12,15 +12,15 @@ import (
 const TopicsEndPoint = "topic"
 const TopicsKey = "topics"
 
-func GetTopicById(topicIdStr string, topicsService *services.Service[models.Topic]) (*models.Topic, int, error) {
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
+func GetTopicByID(topicIDStr string, topicsService *services.Service[models.Topic]) (*models.Topic, int, error) {
+	topicID, err := utils.StringToIntType[int16](topicIDStr)
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid Topic ID: %w", err)
 	}
 
-	selectedTopicPtr, err := topicsService.GetObject(topicIdStr,
+	selectedTopicPtr, err := topicsService.GetObject(topicIDStr,
 		func(topic *models.Topic) bool {
-			return (*topic).ID == topicId
+			return (*topic).ID == topicID
 		}, TopicsKey, TopicsEndPoint)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching topic: %v", err)

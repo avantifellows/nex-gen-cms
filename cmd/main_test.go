@@ -68,7 +68,7 @@ func TestSetup(t *testing.T) {
 		pattern string
 		handler http.Handler
 	}{
-		{"/web/", appComponentPtr.CssPathHandler},
+		{"/web/", appComponentPtr.CSSPathHandler},
 		{"/", http.HandlerFunc(handlers.GenericHandler)},
 		{"/tests", http.HandlerFunc(handlers.GenericHandler)},
 		{"/add-chapter", http.HandlerFunc(handlers.GenericHandler)},
@@ -94,7 +94,7 @@ func TestSetup(t *testing.T) {
 	setup(mockConfig, mockServeMux, appComponentPtr)
 
 	// verify if runtime constants are  initialized
-	assert.NotEmpty(t, constants.GetHtmlFolderPath(), "Runtime constants are not initilized")
+	assert.NotEmpty(t, constants.GetHTMLFolderPath(), "Runtime constants are not initilized")
 
 	// verify if environment variables are loaded from .env file
 	mockConfig.AssertCalled(t, "LoadEnv", mock.Anything)

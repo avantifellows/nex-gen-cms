@@ -66,8 +66,8 @@ func (resourcePtr *Resource) BuildMap(code string, name string, resourceType str
 	return resourceMap
 }
 
-func (r *Resource) GetNameByLang(langCode string) string {
-	for _, resourceLang := range r.Name {
+func (resourcePtr *Resource) GetNameByLang(langCode string) string {
+	for _, resourceLang := range resourcePtr.Name {
 		if resourceLang.LangCode == langCode {
 			return resourceLang.Resource
 		}

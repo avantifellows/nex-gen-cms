@@ -84,15 +84,15 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 }
 
 func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int, error) {
-	problemIdStr := urlValues.Get("id")
-	problemId := utils.StringToInt(problemIdStr)
-	endPointWithId := fmt.Sprintf(problemEndPoint, problemId, urlValues.Get(QUERY_PARAM_CURRICULUM_ID))
+	problemIDStr := urlValues.Get("id")
+	problemID := utils.StringToInt(problemIDStr)
+	endPointWithID := fmt.Sprintf(problemEndPoint, problemID, urlValues.Get(QueryParamCurriculumID))
 
 	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
 	selectedProblemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
-			return problem.ID == problemId
-		}, problemsKey, endPointWithId)
+			return problem.ID == problemID
+		}, problemsKey, endPointWithID)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching problem: %v", err)
 	}
@@ -111,8 +111,8 @@ func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int
 	}
 
 	// Loop through skill ids and add corresponding skills
-	for _, skillId := range selectedProblemPtr.SkillIDs {
-		selectedProblemPtr.Skills = append(selectedProblemPtr.Skills, *skillPtrsMap[skillId])
+	for _, skillID := range selectedProblemPtr.SkillIDs {
+		selectedProblemPtr.Skills = append(selectedProblemPtr.Skills, *skillPtrsMap[skillID])
 	}
 	return selectedProblemPtr, http.StatusOK, nil
 }
@@ -121,14 +121,14 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	const includeParagraphSiblingsParam = "include_paragraph_siblings"
 
 	urlValues := request.URL.Query()
-	topicIdStr := urlValues.Get("topic-dropdown")
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	topicIDStr := urlValues.Get("topic-dropdown")
+	topicID, err := utils.StringToIntType[int16](topicIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 		return
 	}
 
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%s&topic_id=%d&lang_code=en", urlValues.Get(CURRICULUM_DROPDOWN_NAME), topicId)
+	queryParams := fmt.Sprintf("?"+QueryParamCurriculumID+"=%s&topic_id=%d&lang_code=en", urlValues.Get(CurriculumDropdownName), topicID)
 	if urlValues.Has(includeParagraphSiblingsParam) {
 		queryParams += "&" + includeParagraphSiblingsParam + "=" + urlValues.Get(includeParagraphSiblingsParam)
 	}
@@ -138,7 +138,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(urlValues.Get(SUBJECT_DROPDOWN_NAME),
+	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(urlValues.Get(SubjectDropdownName),
 		h.subjectsService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), statusCode)
@@ -156,15 +156,15 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		problemPtr.Subject = *subjectPtr
 
 		// Loop through tag ids and add corresponding tag names
-		for _, tagId := range problemPtr.TagIDs {
-			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagId])
+		for _, tagID := range problemPtr.TagIDs {
+			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagID])
 		}
 	}
 
 	levels := urlValues["level"]
 	ptype := urlValues.Get("ptype-dropdown")
-	selectedIds := urlValues.Get("selected-ids")
-	filterProblems(problems, levels, ptype, selectedIds)
+	selectedIDs := urlValues.Get("selected-ids")
+	filterProblems(problems, levels, ptype, selectedIDs)
 
 	if urlValues.Has("ptype-dropdown") {
 		// for add/edit test screen
@@ -193,11 +193,11 @@ func (h *ProblemsHandler) getTagsMap() (map[int]string, error) {
 	return tagsMap, nil
 }
 
-func filterProblems(problems *[]*models.Problem, levels []string, ptype string, selectedIdsRaw string) {
+func filterProblems(problems *[]*models.Problem, levels []string, ptype string, selectedIDsRaw string) {
 	// Build map of already selected problem ids. map is used instead of slice for better performance
-	selectedIds := map[int]bool{}
-	for _, id := range strings.Split(selectedIdsRaw, ",") {
-		selectedIds[utils.StringToInt(id)] = true
+	selectedIDs := map[int]bool{}
+	for _, id := range strings.Split(selectedIDsRaw, ",") {
+		selectedIDs[utils.StringToInt(id)] = true
 	}
 
 	// Build a map of allowed difficulty levels for fast lookup
@@ -230,7 +230,7 @@ func filterProblems(problems *[]*models.Problem, levels []string, ptype string, 
 		}
 
 		// skip already selected ones
-		if selectedIds[p.ID] {
+		if selectedIDs[p.ID] {
 			continue
 		}
 
@@ -246,13 +246,13 @@ func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, _ *ht
 }
 
 func (h *ProblemsHandler) LoadTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	views.ExecuteTemplate(topicProblemsTemplate, responseWriter, topicIdStr, nil)
+	topicIDStr := request.URL.Query().Get(QueryParamTopicID)
+	views.ExecuteTemplate(topicProblemsTemplate, responseWriter, topicIDStr, nil)
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	selectedTopicPtr, code, err := handlerutils.GetTopicById(topicIdStr, h.topicsService)
+	topicIDStr := request.URL.Query().Get(QueryParamTopicID)
+	selectedTopicPtr, code, err := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -265,7 +265,7 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		"joinInt16":        utils.JoinInt16,
 		"add":              utils.Add,
 		"stringToInt":      utils.StringToInt,
-		"toJson":           utils.ToJson,
+		"toJson":           utils.ToJSON,
 		"getConceptName":   getConceptName,
 		"dict":             utils.Dict,
 		"emptyStringSlice": utils.EmptyStringSlice,
@@ -327,7 +327,7 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 		"joinInt16":        utils.JoinInt16,
 		"add":              utils.Add,
 		"stringToInt":      utils.StringToInt,
-		"toJson":           utils.ToJson,
+		"toJson":           utils.ToJSON,
 		"getConceptName":   getConceptName,
 		"dict":             utils.Dict,
 		"emptyStringSlice": utils.EmptyStringSlice,
@@ -342,12 +342,12 @@ func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, requ
 		return
 	}
 
-	problemIdStr := request.URL.Query().Get("id")
-	problemId := utils.StringToInt(problemIdStr)
+	problemIDStr := request.URL.Query().Get("id")
+	problemID := utils.StringToInt(problemIDStr)
 
-	_, err = h.problemsService.UpdateObject(problemIdStr, resourcesEndPoint, reqBodyBytes, problemsKey,
+	_, err = h.problemsService.UpdateObject(problemIDStr, resourcesEndPoint, reqBodyBytes, problemsKey,
 		func(problem *models.Problem) bool {
-			return (*problem).ID == problemId
+			return (*problem).ID == problemID
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating problem: %v", err), http.StatusInternalServerError)
@@ -356,16 +356,16 @@ func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, requ
 }
 
 func (h *ProblemsHandler) ArchiveProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	problemIdStr := request.URL.Query().Get("id")
-	problemId := utils.StringToInt(problemIdStr)
+	problemIDStr := request.URL.Query().Get("id")
+	problemID := utils.StringToInt(problemIDStr)
 	body := map[string]any{
 		"cms_status_id": constants.StatusArchived,
 		"lang_code":     "en",
 	}
 
-	err := h.problemsService.ArchiveObject(problemIdStr, resourcesEndPoint, body, problemsKey,
+	err := h.problemsService.ArchiveObject(problemIDStr, resourcesEndPoint, body, problemsKey,
 		func(problem *models.Problem) bool {
-			return problem.ID != problemId
+			return problem.ID != problemID
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error archiving problem: %v", err), http.StatusInternalServerError)
@@ -381,9 +381,9 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 	offset := utils.StringToIntOrDefault(urlVals.Get("offset"), 0, 0) // min = 0
 	queryParams := "?lang_code=en&search=" + url.QueryEscape(search) + "&limit=" + strconv.Itoa(limit) + "&offset=" + strconv.Itoa(offset)
 
-	subjectId := utils.StringToInt(urlVals.Get("problems-subject-dropdown"))
-	if subjectId != 0 {
-		queryParams += "&subject_id=" + strconv.Itoa(subjectId)
+	subjectID := utils.StringToInt(urlVals.Get("problems-subject-dropdown"))
+	if subjectID != 0 {
+		queryParams += "&subject_id=" + strconv.Itoa(subjectID)
 	}
 
 	problems, err := h.problemsService.GetList(searchProblemsEndPoint+queryParams, "", false, true)
@@ -429,8 +429,8 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 		problemPtr.Subject = *subjectPtr
 
 		// Loop through tag ids and add corresponding tag names
-		for _, tagId := range problemPtr.TagIDs {
-			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagId])
+		for _, tagID := range problemPtr.TagIDs {
+			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagID])
 		}
 	}
 
@@ -477,41 +477,41 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.Form)
-	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+	curriculumID, gradeID, subjectID := getCurriculumGradeSubjectIDs(request.Form)
+	if curriculumID == 0 || gradeID == 0 || subjectID == 0 {
 		http.Error(responseWriter, "Invalid curriculum, grade or subject ID", http.StatusBadRequest)
 		return
 	}
 
-	chapterIdStr := request.Form.Get("chapter-dropdown")
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	chapterIDStr := request.Form.Get("chapter-dropdown")
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Invalid Chapter ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	topicIdStr := request.Form.Get("topic_id")
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	topicIDStr := request.Form.Get("topic_id")
+	topicID, err := utils.StringToIntType[int16](topicIDStr)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
 		return
 	}
-	topicIdPtr := &topicId
+	topicIDPtr := &topicID
 
-	problemIdsStr := request.Form.Get("problem_ids")
-	problemIds := utils.StringSliceToIntSlice(strings.Split(problemIdsStr, ","))
+	problemIDsStr := request.Form.Get("problem_ids")
+	problemIDs := utils.StringSliceToIntSlice(strings.Split(problemIDsStr, ","))
 
 	reqBody := dto.MoveResourcesRequest{
-		ResourceIDs: problemIds,
+		ResourceIDs: problemIDs,
 		CurriculumGrades: []models.CurriculumGrade{
 			{
-				CurriculumID: curriculumId,
-				GradeID:      gradeId,
+				CurriculumID: curriculumID,
+				GradeID:      gradeID,
 			},
 		},
-		SubjectID: subjectId,
-		ChapterID: chapterId,
-		TopicID:   topicIdPtr,
+		SubjectID: subjectID,
+		ChapterID: chapterID,
+		TopicID:   topicIDPtr,
 		LangCode:  "en",
 	}
 

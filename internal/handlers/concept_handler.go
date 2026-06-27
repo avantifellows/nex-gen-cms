@@ -33,14 +33,14 @@ func (h *ConceptsHandler) GetConcepts(responseWriter http.ResponseWriter, reques
 	queryParams := ""
 
 	urlVals := request.URL.Query()
-	if urlVals.Has(QUERY_PARAM_TOPIC_ID) {
-		topicIdStr := urlVals.Get(QUERY_PARAM_TOPIC_ID)
-		topicId, err := utils.StringToIntType[int16](topicIdStr)
+	if urlVals.Has(QueryParamTopicID) {
+		topicIDStr := urlVals.Get(QueryParamTopicID)
+		topicID, err := utils.StringToIntType[int16](topicIDStr)
 		if err != nil {
 			http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
 			return
 		}
-		queryParams = fmt.Sprintf("?"+QUERY_PARAM_TOPIC_ID+"=%d", topicId)
+		queryParams = fmt.Sprintf("?"+QueryParamTopicID+"=%d", topicID)
 	}
 	concepts, err := h.service.GetList(conceptsEndPoint+queryParams, conceptsKey, false, true)
 	if err != nil {
@@ -55,18 +55,18 @@ func (h *ConceptsHandler) GetConcepts(responseWriter http.ResponseWriter, reques
 		// no exclusion, just reuse
 		filtered = concepts
 	} else {
-		excludeIds := make(map[int32]struct{})
+		excludeIDs := make(map[int32]struct{})
 		for _, idStr := range strings.Split(excludeStr, ",") {
 			if idStr == "" {
 				continue
 			}
 			if id, err := utils.StringToIntType[int32](idStr); err == nil {
-				excludeIds[id] = struct{}{}
+				excludeIDs[id] = struct{}{}
 			}
 		}
 		tmp := make([]*models.Concept, 0, len(*concepts))
 		for _, c := range *concepts {
-			if _, found := excludeIds[c.ID]; !found {
+			if _, found := excludeIDs[c.ID]; !found {
 				tmp = append(tmp, c)
 			}
 		}

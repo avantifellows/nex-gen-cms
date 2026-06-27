@@ -16,7 +16,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const QUERY_PARAM_TOPIC_ID = "topic_id"
+const QueryParamTopicID = "topic_id"
 
 const topicsTemplate = "topics.html"
 const topicRowTemplate = "topic_row.html"
@@ -36,36 +36,36 @@ func NewTopicsHandler(service *services.Service[models.Topic]) *TopicsHandler {
 }
 
 func (h *TopicsHandler) LoadResources(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIdStr := request.URL.Query().Get("topicId")
-	chapterIdStr := request.URL.Query().Get("chapterId")
+	topicIDStr := request.URL.Query().Get("topicId")
+	chapterIDStr := request.URL.Query().Get("chapterId")
 	data := dto.ResourcesData{
-		ChapterId: chapterIdStr,
-		TopicId:   topicIdStr,
+		ChapterID: chapterIDStr,
+		TopicID:   topicIDStr,
 	}
 	views.ExecuteTemplate(resourcesTemplate, responseWriter, data, nil)
 }
 
 func (h *TopicsHandler) OpenAddTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterId := request.URL.Query().Get("chapterId")
-	views.ExecuteTemplate(addTopicTemplate, responseWriter, chapterId, nil)
+	chapterID := request.URL.Query().Get("chapterId")
+	views.ExecuteTemplate(addTopicTemplate, responseWriter, chapterID, nil)
 }
 
 func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *http.Request) {
 	topicCode := request.FormValue("code")
 	topicName := request.FormValue("name")
-	chapterIdStr := request.FormValue("chapter_id")
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	chapterIDStr := request.FormValue("chapter_id")
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 		return
 	}
-	curriculumIdStr := request.FormValue(CURRICULUM_DROPDOWN_NAME)
-	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
+	curriculumIDStr := request.FormValue(CurriculumDropdownName)
+	curriculumID, err := utils.StringToIntType[int16](curriculumIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
 		return
 	}
-	newTopicPtr := models.NewTopic(topicCode, topicName, chapterId, curriculumId)
+	newTopicPtr := models.NewTopic(topicCode, topicName, chapterID, curriculumID)
 
 	newTopicPtr, err = h.service.AddObject(newTopicPtr, handlerutils.TopicsKey, handlerutils.TopicsEndPoint)
 	if err != nil {
@@ -89,8 +89,8 @@ func getTopicName(t models.Topic, lang string) string {
 }
 
 func (h *TopicsHandler) ArchiveTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIdStr := request.URL.Query().Get("id")
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	topicIDStr := request.URL.Query().Get("id")
+	topicID, err := utils.StringToIntType[int16](topicIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 		return
@@ -100,9 +100,9 @@ func (h *TopicsHandler) ArchiveTopic(responseWriter http.ResponseWriter, request
 		"cms_status_id": constants.StatusArchived,
 	}
 
-	err = h.service.ArchiveObject(topicIdStr, handlerutils.TopicsEndPoint, topicMap, handlerutils.TopicsKey,
+	err = h.service.ArchiveObject(topicIDStr, handlerutils.TopicsEndPoint, topicMap, handlerutils.TopicsKey,
 		func(topic *models.Topic) bool {
-			return (*topic).ID != topicId
+			return (*topic).ID != topicID
 		})
 
 	// If http error is thrown from here then target row won't be removed by htmx code
@@ -112,7 +112,7 @@ func (h *TopicsHandler) ArchiveTopic(responseWriter http.ResponseWriter, request
 }
 
 func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedTopicPtr, code, err := handlerutils.GetTopicById(request.URL.Query().Get("id"), h.service)
+	selectedTopicPtr, code, err := handlerutils.GetTopicByID(request.URL.Query().Get("id"), h.service)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -124,8 +124,8 @@ func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *h
 }
 
 func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIdStr := request.FormValue("id")
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	topicIDStr := request.FormValue("id")
+	topicID, err := utils.StringToIntType[int16](topicIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 		return
@@ -137,9 +137,9 @@ func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request 
 	dummyTopicPtr := &models.Topic{}
 	topicMap := dummyTopicPtr.BuildMap(topicCode, topicName)
 
-	_, err = h.service.UpdateObject(topicIdStr, handlerutils.TopicsEndPoint, topicMap, handlerutils.TopicsKey,
+	_, err = h.service.UpdateObject(topicIDStr, handlerutils.TopicsEndPoint, topicMap, handlerutils.TopicsKey,
 		func(topic *models.Topic) bool {
-			return topic.ID == topicId
+			return topic.ID == topicID
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating topic: %v", err), http.StatusInternalServerError)
@@ -176,18 +176,18 @@ func sortTopics(topics []*models.Topic, sortColumn string, sortOrder string) {
 }
 
 func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedTopicPtr, code, err := handlerutils.GetTopicById(request.URL.Query().Get("id"), h.service)
+	selectedTopicPtr, code, err := handlerutils.GetTopicByID(request.URL.Query().Get("id"), h.service)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
+	curriculumID, gradeID, subjectID := getCurriculumGradeSubjectIDs(request.URL.Query())
 	data := dto.TopicData{
 		HomeData: dto.HomeData{
-			CurriculumID: curriculumId,
-			GradeID:      gradeId,
-			SubjectID:    subjectId,
+			CurriculumID: curriculumID,
+			GradeID:      gradeID,
+			SubjectID:    subjectID,
 		},
 		TopicPtr: selectedTopicPtr,
 	}

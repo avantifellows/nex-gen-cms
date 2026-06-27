@@ -21,12 +21,12 @@ type TopicLang struct {
 	TopicName string `json:"topic"`
 }
 
-func NewTopic(code string, name string, chapter_id int16, curriculum_id int16) *Topic {
+func NewTopic(code string, name string, chapterID int16, curriculumID int16) *Topic {
 	return &Topic{
 		Code:         code,
 		Name:         []TopicLang{{LangCode: "en", TopicName: name}},
-		ChapterID:    chapter_id,
-		CurriculumID: curriculum_id,
+		ChapterID:    chapterID,
+		CurriculumID: curriculumID,
 	}
 }
 
@@ -51,7 +51,7 @@ func (t *Topic) HasCurriculumID(curriculumID int16) bool {
 	return false
 }
 
-func (topicPtr *Topic) BuildMap(code string, name string) map[string]any {
+func (t *Topic) BuildMap(code string, name string) map[string]any {
 	return map[string]any{
 		"code": code,
 		"name": []TopicLang{{TopicName: name, LangCode: "en"}},

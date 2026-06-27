@@ -13,9 +13,9 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const CURRICULUM_DROPDOWN_NAME = "curriculum-dropdown"
-const GRADE_DROPDOWN_NAME = "grade-dropdown"
-const SUBJECT_DROPDOWN_NAME = "subject-dropdown"
+const CurriculumDropdownName = "curriculum-dropdown"
+const GradeDropdownName = "grade-dropdown"
+const SubjectDropdownName = "subject-dropdown"
 
 const baseTemplate = "home.html"
 
@@ -29,7 +29,7 @@ func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	// All urls contain -, which are replaced by _ in file names, hence replace hyphens by underscores
 	filename := strings.ReplaceAll(path, "-", "_")
 	// Define the template file path
-	filePath := filepath.Join(constants.GetHtmlFolderPath(), filename+".html")
+	filePath := filepath.Join(constants.GetHTMLFolderPath(), filename+".html")
 
 	// Parse the template
 	tmpl, err := template.ParseFiles(filePath)
@@ -46,19 +46,19 @@ func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
+func getCurriculumGradeSubjectIDs(urlValues url.Values) (int16, int8, int8) {
 	// these query parameters can be queried by element names only, not ids
-	curriculumId, err := utils.StringToIntType[int16](urlValues.Get(CURRICULUM_DROPDOWN_NAME))
+	curriculumID, err := utils.StringToIntType[int16](urlValues.Get(CurriculumDropdownName))
 	if err != nil {
 		fmt.Println("Selected Curriculum is invalid")
 	}
-	gradeId, err := utils.StringToIntType[int8](urlValues.Get(GRADE_DROPDOWN_NAME))
+	gradeID, err := utils.StringToIntType[int8](urlValues.Get(GradeDropdownName))
 	if err != nil {
 		fmt.Println("Selected Grade is invalid")
 	}
-	subjectId, err := utils.StringToIntType[int8](urlValues.Get(SUBJECT_DROPDOWN_NAME))
+	subjectID, err := utils.StringToIntType[int8](urlValues.Get(SubjectDropdownName))
 	if err != nil {
 		fmt.Println("Selected Subject is invalid")
 	}
-	return curriculumId, gradeId, subjectId
+	return curriculumID, gradeID, subjectID
 }

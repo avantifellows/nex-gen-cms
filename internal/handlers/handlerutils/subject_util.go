@@ -13,16 +13,16 @@ const SubjectsEndPoint = "subject"
 const SubjectsKey = "subjects"
 
 func FetchSelectedSubject(
-	subIdStr string,
+	subIDStr string,
 	subjectsService *services.Service[models.Subject],
 ) (*models.Subject, int, error) {
-	subjectId, err := utils.StringToIntType[int8](subIdStr)
+	subjectID, err := utils.StringToIntType[int8](subIDStr)
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid subject ID: %w", err)
 	}
 
-	selectedSubPtr, err := subjectsService.GetObject(subIdStr, func(subject *models.Subject) bool {
-		return subject.ID == subjectId
+	selectedSubPtr, err := subjectsService.GetObject(subIDStr, func(subject *models.Subject) bool {
+		return subject.ID == subjectID
 	}, SubjectsKey, SubjectsEndPoint)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching subject: %w", err)

@@ -21,10 +21,10 @@
              eg - Click edit on any resource -> Back. It should invoke /api/resources only once
              -->
             <tbody id="resourceTableBody" class="text-ink-muted text-sm"
-                {{ if .TopicId }}
-                    hx-get="/api/resources?topic_id={{.TopicId}}"
+                {{ if .TopicID }}
+                    hx-get="/api/resources?topic_id={{.TopicID}}"
                 {{ else }}
-                    hx-get="/api/resources?chapter_id={{.ChapterId}}"
+                    hx-get="/api/resources?chapter_id={{.ChapterID}}"
                 {{ end }}
                 hx-trigger="load delay:150ms, change from:(#curriculum-dropdown, #grade-dropdown), refreshResources"
                 hx-include="#curriculum-dropdown, #grade-dropdown">
@@ -36,7 +36,7 @@
     <!-- Form to add new resource -->
     <div class="mt-4">
         <h4 id="addResourceLink" class="add-new-link"
-            onclick="toggleResourceForm(event, '{{.ChapterId}}', '{{.TopicId}}')">
+            onclick="toggleResourceForm(event, '{{.ChapterID}}', '{{.TopicID}}')">
             <a href="#">+ Add New Resource</a>
         </h4>
     </div>

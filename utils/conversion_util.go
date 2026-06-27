@@ -120,7 +120,7 @@ func Dict(values ...any) map[string]any {
 	return dict
 }
 
-func ToJson(v any) template.JS {
+func ToJSON(v any) template.JS {
 	b, err := json.Marshal(v)
 	if err != nil {
 		log.Printf("Error marshaling to JSON: %v", err)

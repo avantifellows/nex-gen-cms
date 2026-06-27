@@ -42,9 +42,9 @@ func (r *APIRepository) CallAPI(urlEndPoint string, method string, body any) ([]
 	}
 
 	// Build a request url
-	apiUrl := config.GetEnv("DB_SERVICE_ENDPOINT", "") + urlEndPoint
+	apiURL := config.GetEnv("DB_SERVICE_ENDPOINT", "") + urlEndPoint
 
-	req, err := http.NewRequest(method, apiUrl, reqBody)
+	req, err := http.NewRequest(method, apiURL, reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %v", err)
 	}

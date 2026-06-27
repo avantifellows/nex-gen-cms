@@ -49,12 +49,12 @@ func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, _ *ht
 
 func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlVals)
-	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+	curriculumID, gradeID, subjectID := getCurriculumGradeSubjectIDs(urlVals)
+	if curriculumID == 0 || gradeID == 0 || subjectID == 0 {
 		return
 	}
 
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&subject_id=%d", curriculumId, gradeId, subjectId)
+	queryParams := fmt.Sprintf("?"+QueryParamCurriculumID+"=%d&grade_id=%d&subject_id=%d", curriculumID, gradeID, subjectID)
 	chapters, err := h.chaptersService.GetList(chaptersEndPoint+queryParams, chaptersKey, false, true)
 
 	if err != nil {
@@ -66,7 +66,7 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 	}).([]*models.Chapter)
 
 	for _, chapterPtr := range *chapters {
-		chapterPtr.CurriculumID = curriculumId
+		chapterPtr.CurriculumID = curriculumID
 	}
 
 	h.getTopics(responseWriter, *chapters)
@@ -145,8 +145,8 @@ func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, reques
 }
 
 func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterIdStr := request.FormValue("id")
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	chapterIDStr := request.FormValue("id")
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 		return
@@ -158,9 +158,9 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 	dummyChapterPtr := &models.Chapter{}
 	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName)
 
-	_, err = h.chaptersService.UpdateObject(chapterIdStr, chaptersEndPoint, chapterMap, chaptersKey,
+	_, err = h.chaptersService.UpdateObject(chapterIDStr, chaptersEndPoint, chapterMap, chaptersKey,
 		func(chapter *models.Chapter) bool {
-			return (*chapter).ID == chapterId
+			return (*chapter).ID == chapterID
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating chapter: %v", err), http.StatusInternalServerError)
@@ -173,25 +173,25 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request *http.Request) {
 	chapterCode := request.FormValue("code")
 	chapterName := request.FormValue("name")
-	curriculumIdStr := request.FormValue(CURRICULUM_DROPDOWN_NAME)
-	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
+	curriculumIDStr := request.FormValue(CurriculumDropdownName)
+	curriculumID, err := utils.StringToIntType[int16](curriculumIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
 		return
 	}
-	gradeIdStr := request.FormValue(GRADE_DROPDOWN_NAME)
-	gradeId, err := utils.StringToIntType[int8](gradeIdStr)
+	gradeIDStr := request.FormValue(GradeDropdownName)
+	gradeID, err := utils.StringToIntType[int8](gradeIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
 		return
 	}
-	subjectIdStr := request.FormValue(SUBJECT_DROPDOWN_NAME)
-	subjectId, err := utils.StringToIntType[int8](subjectIdStr)
+	subjectIDStr := request.FormValue(SubjectDropdownName)
+	subjectID, err := utils.StringToIntType[int8](subjectIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Subject ID", http.StatusBadRequest)
 		return
 	}
-	newChapterPtr := models.NewChapter(chapterCode, chapterName, curriculumId, gradeId, subjectId)
+	newChapterPtr := models.NewChapter(chapterCode, chapterName, curriculumID, gradeID, subjectID)
 
 	newChapterPtr, err = h.chaptersService.AddObject(newChapterPtr, chaptersKey, chaptersEndPoint)
 	if err != nil {
@@ -206,8 +206,8 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 }
 
 func (h *ChaptersHandler) ArchiveChapter(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterIdStr := request.URL.Query().Get("id")
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	chapterIDStr := request.URL.Query().Get("id")
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 		return
@@ -217,9 +217,9 @@ func (h *ChaptersHandler) ArchiveChapter(responseWriter http.ResponseWriter, req
 		"cms_status_id": constants.StatusArchived,
 	}
 
-	err = h.chaptersService.ArchiveObject(chapterIdStr, chaptersEndPoint, chapterMap, chaptersKey,
+	err = h.chaptersService.ArchiveObject(chapterIDStr, chaptersEndPoint, chapterMap, chaptersKey,
 		func(chapter *models.Chapter) bool {
-			return (*chapter).ID != chapterId
+			return (*chapter).ID != chapterID
 		})
 
 	// If http error is thrown from here then target row won't be removed by htmx code
@@ -259,19 +259,19 @@ func sortChapters(chapterPtrs []*models.Chapter, sortColumn string, sortOrder st
 
 func (h *ChaptersHandler) getChapter(request *http.Request) (*models.Chapter, int, error) {
 	urlVals := request.URL.Query()
-	chapterIdStr := urlVals.Get("id")
+	chapterIDStr := urlVals.Get("id")
 
-	if chapterIdStr == "" {
-		chapterIdStr = urlVals.Get("chapter-dropdown")
+	if chapterIDStr == "" {
+		chapterIDStr = urlVals.Get("chapter-dropdown")
 	}
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid Chapter ID: %w", err)
 	}
 
-	selectedChapterPtr, err := h.chaptersService.GetObject(chapterIdStr,
+	selectedChapterPtr, err := h.chaptersService.GetObject(chapterIDStr,
 		func(chapter *models.Chapter) bool {
-			return (*chapter).ID == chapterId
+			return (*chapter).ID == chapterID
 		}, chaptersKey, chaptersEndPoint)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching chapter: %v", err)
@@ -287,16 +287,16 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
-	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+	curriculumID, gradeID, subjectID := getCurriculumGradeSubjectIDs(request.URL.Query())
+	if curriculumID == 0 || gradeID == 0 || subjectID == 0 {
 		return
 	}
 
 	data := dto.ChapterData{
 		HomeData: dto.HomeData{
-			CurriculumID: curriculumId,
-			GradeID:      gradeId,
-			SubjectID:    subjectId,
+			CurriculumID: curriculumID,
+			GradeID:      gradeID,
+			SubjectID:    subjectID,
 		},
 		ChapterPtr: selectedChapterPtr,
 	}
@@ -306,17 +306,17 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 }
 
 func (h *ChaptersHandler) LoadTopics(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterIdStr := request.URL.Query().Get("id")
+	chapterIDStr := request.URL.Query().Get("id")
 	data := dto.TopicsData{
-		ChapterID: chapterIdStr,
+		ChapterID: chapterIDStr,
 	}
 	views.ExecuteTemplate(topicsTemplate, responseWriter, data, nil)
 }
 
 func (h *ChaptersHandler) LoadResources(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterIdStr := request.URL.Query().Get("chapterId")
+	chapterIDStr := request.URL.Query().Get("chapterId")
 	data := dto.ResourcesData{
-		ChapterId: chapterIdStr,
+		ChapterID: chapterIDStr,
 	}
 	views.ExecuteTemplate(resourcesTemplate, responseWriter, data, nil)
 }
@@ -354,9 +354,9 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	// Use a local copy so we never mutate the cached chapter pointer.
 	localChapter := *selectedChapterPtr
 	localChapter.Topics = nil
-	curriculumId, _, _ := getCurriculumGradeSubjectIds(urlVals)
-	if curriculumId != 0 {
-		localChapter.CurriculumID = curriculumId
+	curriculumID, _, _ := getCurriculumGradeSubjectIDs(urlVals)
+	if curriculumID != 0 {
+		localChapter.CurriculumID = curriculumID
 	}
 	h.getTopics(responseWriter, []*models.Chapter{&localChapter})
 

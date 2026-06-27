@@ -20,13 +20,13 @@ type ChapterLang struct {
 	LangCode    string `json:"lang_code"`
 }
 
-func NewChapter(code string, name string, curriculum_id int16, grade_id int8, subject_id int8) *Chapter {
+func NewChapter(code string, name string, curriculumID int16, gradeID int8, subjectID int8) *Chapter {
 	return &Chapter{
 		Code:         code,
 		Name:         []ChapterLang{{ChapterName: name, LangCode: "en"}},
-		CurriculumID: curriculum_id,
-		GradeID:      grade_id,
-		SubjectID:    subject_id,
+		CurriculumID: curriculumID,
+		GradeID:      gradeID,
+		SubjectID:    subjectID,
 	}
 }
 
@@ -34,15 +34,15 @@ func (chapter Chapter) TopicCount() int8 {
 	return int8(len(chapter.Topics))
 }
 
-func (chapterPtr *Chapter) BuildMap(code string, name string) map[string]any {
+func (chapter *Chapter) BuildMap(code string, name string) map[string]any {
 	return map[string]any{
 		"code": code,
 		"name": []ChapterLang{{ChapterName: name, LangCode: "en"}},
 	}
 }
 
-func (ch *Chapter) GetNameByLang(langCode string) string {
-	for _, chapterLang := range ch.Name {
+func (chapter *Chapter) GetNameByLang(langCode string) string {
+	for _, chapterLang := range chapter.Name {
 		if chapterLang.LangCode == langCode {
 			return chapterLang.ChapterName
 		}

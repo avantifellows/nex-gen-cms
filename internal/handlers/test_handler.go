@@ -30,7 +30,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const TESTTYPE_DROPDOWN_NAME = "testtype-dropdown"
+const TestTypeDropdownName = "testtype-dropdown"
 
 const testsTemplate = "tests.html"
 const testsFilterViewTemplate = "tests_filter_view.html"
@@ -60,7 +60,7 @@ const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
 const pdfSharedTemplate = "test_pdf_shared.html"
 
-const testProblemsEndPoint = "resource/test/%d/problems?lang_code=en&" + QUERY_PARAM_CURRICULUM_ID + "=%s"
+const testProblemsEndPoint = "resource/test/%d/problems?lang_code=en&" + QueryParamCurriculumID + "=%s"
 const testRulesEndPoint = "test-rule"
 
 const testsKey = "tests"
@@ -116,12 +116,12 @@ func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *ht
 func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
 
-	curriculumId, gradeId, _ := getCurriculumGradeSubjectIds(urlVals)
-	if curriculumId == 0 || gradeId == 0 {
+	curriculumID, gradeID, _ := getCurriculumGradeSubjectIDs(urlVals)
+	if curriculumID == 0 || gradeID == 0 {
 		return
 	}
-	testtype := urlVals.Get(TESTTYPE_DROPDOWN_NAME)
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
+	testtype := urlVals.Get(TestTypeDropdownName)
+	queryParams := fmt.Sprintf("?"+QueryParamCurriculumID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumID, gradeID, testtype)
 
 	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
 	if err != nil {
@@ -328,10 +328,10 @@ func (h *TestsHandler) GetSubjectwiseTestProblems(responseWriter http.ResponseWr
 	}
 
 	selectedIDs := map[int]bool{}
-	selectedIdsParam := request.URL.Query().Get("selected-ids")
-	if selectedIdsParam != "" {
+	selectedIDsParam := request.URL.Query().Get("selected-ids")
+	if selectedIDsParam != "" {
 		// Build a set of already-selected problem IDs
-		for _, idStr := range strings.Split(selectedIdsParam, ",") {
+		for _, idStr := range strings.Split(selectedIDsParam, ",") {
 			selectedIDs[utils.StringToInt(idStr)] = true
 		}
 	}
@@ -351,22 +351,22 @@ func (h *TestsHandler) GetSubjectwiseTestProblems(responseWriter http.ResponseWr
 
 func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http.Request) (*models.Test, int, error) {
 	urlVals := request.URL.Query()
-	testIdStr := urlVals.Get("id")
-	testId := utils.StringToInt(testIdStr)
+	testIDStr := urlVals.Get("id")
+	testID := utils.StringToInt(testIDStr)
 
-	selectedTestPtr, err := h.testsService.GetObject(testIdStr,
+	selectedTestPtr, err := h.testsService.GetObject(testIDStr,
 		func(test *models.Test) bool {
-			return (*test).ID == testId
+			return (*test).ID == testID
 		}, testsKey, resourcesEndPoint)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching test: %v", err)
 	}
 
-	curriculumId, err := utils.StringToIntType[int16](urlVals.Get(QUERY_PARAM_CURRICULUM_ID))
+	curriculumID, err := utils.StringToIntType[int16](urlVals.Get(QueryParamCurriculumID))
 	if err == nil {
-		gradeId, err := utils.StringToIntType[int8](urlVals.Get("grade_id"))
+		gradeID, err := utils.StringToIntType[int8](urlVals.Get("grade_id"))
 		if err == nil {
-			selectedTestPtr.SetCurriculumGrade(curriculumId, gradeId)
+			selectedTestPtr.SetCurriculumGrade(curriculumID, gradeID)
 		}
 	}
 
@@ -382,11 +382,11 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 		http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
 	} else {
 		// Create a map to quickly lookup subject names by their ID
-		subjectIdToNameMap := make(map[int8]string)
+		subjectIDToNameMap := make(map[int8]string)
 
 		// fill the map with the address of each subject
 		for _, subjectPtr := range *subjectPtrs {
-			subjectIdToNameMap[subjectPtr.ID] = subjectPtr.GetNameByLang("en")
+			subjectIDToNameMap[subjectPtr.ID] = subjectPtr.GetNameByLang("en")
 		}
 
 		// loop through subjects of test and update subject name
@@ -395,7 +395,7 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 			updating name directly on testSubject will change it in copy of actual subjects instead of
 			original subjects under testPtr, hence we are assigning it to testPtr.TypeParams.Subjects[i].Name
 			*/
-			testPtr.TypeParams.Subjects[i].Name = subjectIdToNameMap[testSubject.SubjectID]
+			testPtr.TypeParams.Subjects[i].Name = subjectIDToNameMap[testSubject.SubjectID]
 		}
 	}
 }
@@ -407,14 +407,14 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 	}
 
 	urlVals := request.URL.Query()
-	subjectId, err := utils.StringToIntType[int8](urlVals.Get("subject_id"))
+	subjectID, err := utils.StringToIntType[int8](urlVals.Get("subject_id"))
 	if err != nil {
 		fmt.Println("invalid subject id")
 		return
 	}
 
 	*problems = funk.Filter(*problems, func(p *models.Problem) bool {
-		return p.SubjectID == subjectId
+		return p.SubjectID == subjectID
 	}).([]*models.Problem)
 
 	// Passing custom function add to use in template for serial number by adding 1 to index
@@ -425,11 +425,11 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 
 func (h *TestsHandler) getTestProblems(responseWriter http.ResponseWriter, request *http.Request) *[]*models.Problem {
 	urlVals := request.URL.Query()
-	testIdStr := urlVals.Get("id")
-	testId := utils.StringToInt(testIdStr)
+	testIDStr := urlVals.Get("id")
+	testID := utils.StringToInt(testIDStr)
 
-	endPointWithId := fmt.Sprintf(testProblemsEndPoint, testId, urlVals.Get(QUERY_PARAM_CURRICULUM_ID))
-	problems, err := h.problemsService.GetList(endPointWithId, problemsKey, false, true)
+	endPointWithID := fmt.Sprintf(testProblemsEndPoint, testID, urlVals.Get(QueryParamCurriculumID))
+	problems, err := h.problemsService.GetList(endPointWithID, problemsKey, false, true)
 
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
@@ -446,15 +446,15 @@ func (h *TestsHandler) fillProblemSubjects(responseWriter http.ResponseWriter, p
 		http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
 	} else {
 		// Create a map to quickly lookup subjects by their ID
-		subjectIdToSubMap := make(map[int8]models.Subject)
+		subjectIDToSubMap := make(map[int8]models.Subject)
 
 		// fill the map with each subject
 		for _, subjectPtr := range *subjectPtrs {
-			subjectIdToSubMap[subjectPtr.ID] = *subjectPtr
+			subjectIDToSubMap[subjectPtr.ID] = *subjectPtr
 		}
 		// loop through problems and update subject inside it
 		for _, problem := range *problems {
-			problem.Subject = subjectIdToSubMap[problem.SubjectID]
+			problem.Subject = subjectIDToSubMap[problem.SubjectID]
 		}
 	}
 }
@@ -477,8 +477,8 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"getSectionName":           views.GetSectionName,
 		"sectionSubtypeForProblem": views.SectionSubtypeForProblem,
 		"examIdFromTest":           views.ExamIDFromTest,
-		"toJson":                   utils.ToJson,
-		"getParentId":              getParentSubjectId,
+		"toJson":                   utils.ToJSON,
+		"getParentId":              getParentSubjectID,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
@@ -496,35 +496,35 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.TestData, error
 
 	var curriculumGrades []models.CurriculumGrade
 	for i := range curriculums {
-		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
+		curriculumID, err := utils.StringToIntType[int16](curriculums[i])
 		if err != nil {
 			return dto.TestData{}, fmt.Errorf("invalid curriculum id at index %d", i)
 		}
 
-		gradeId, err := utils.StringToIntType[int8](grades[i])
+		gradeID, err := utils.StringToIntType[int8](grades[i])
 		if err != nil {
 			return dto.TestData{}, fmt.Errorf("invalid grade id at index %d", i)
 		}
 
 		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
-			CurriculumID: curriculumId,
-			GradeID:      gradeId,
+			CurriculumID: curriculumID,
+			GradeID:      gradeID,
 		})
 	}
 
-	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
+	examID, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
 	if err != nil {
 		return dto.TestData{}, fmt.Errorf("invalid exam id")
 	}
 
-	testRule, err := h.getTestRule(testType, examId)
+	testRule, err := h.getTestRule(testType, examID)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
 
 	data := dto.TestData{
 		TestPtr: &models.Test{
-			ExamIDs:          []int8{examId},
+			ExamIDs:          []int8{examID},
 			Subtype:          testType,
 			CurriculumGrades: curriculumGrades,
 		},
@@ -550,16 +550,16 @@ func (h *TestsHandler) resolveJeeAdvancedExamID() int16 {
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
-	problemIdStr := request.FormValue("id")
-	problemId := utils.StringToInt(problemIdStr)
+	problemIDStr := request.FormValue("id")
+	problemID := utils.StringToInt(problemIDStr)
 
-	endPointWithId := fmt.Sprintf(problemEndPoint, problemId, request.FormValue("curriculum-id"))
+	endPointWithID := fmt.Sprintf(problemEndPoint, problemID, request.FormValue("curriculum-id"))
 
 	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
 	problemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
-			return problem.ID == problemId
-		}, problemsKey, endPointWithId)
+			return problem.ID == problemID
+		}, problemsKey, endPointWithID)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
@@ -573,12 +573,12 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	// set subject as its name is required to be displayed under right hand side table for add/edit test screen
 	problemPtr.Subject = *subjectPtr
 
-	insertAfterId := request.FormValue("insert-after-id")
+	insertAfterID := request.FormValue("insert-after-id")
 	subjectExists := request.FormValue("subject-exists") == "true"
 	subtypeExists := request.FormValue("subtype-exists") == "true"
 	readOnlyMarks := request.FormValue("read-only-marks") == "true"
 	canSaveSingleSubject := request.FormValue("can-save-single-subject") == "true" // for edit test scenario
-	testId := request.FormValue("test-id")
+	testID := request.FormValue("test-id")
 	examID, _ := utils.StringToIntType[int8](request.FormValue("exam-id"))
 	sectionSubtype := views.SectionSubtypeForProblem(problemPtr.Subtype, examID, h.resolveJeeAdvancedExamID())
 
@@ -594,7 +594,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 			"SectionSubtype":       sectionSubtype,
 			"ReadOnlyMarks":        readOnlyMarks,
 			"CanSaveSingleSubject": canSaveSingleSubject,
-			"TestId":               testId,
+			"TestId":               testID,
 		}
 
 	case subjectExists && !subtypeExists:
@@ -603,7 +603,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		data = map[string]any{
 			"Problem":        problemPtr,
 			"SectionSubtype": sectionSubtype,
-			"InsertAfterId":  insertAfterId,
+			"InsertAfterId":  insertAfterID,
 			"ReadOnlyMarks":  readOnlyMarks,
 		}
 
@@ -613,14 +613,14 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 		data = map[string]any{
 			"Problem":        problemPtr,
 			"SectionSubtype": sectionSubtype,
-			"InsertAfterId":  insertAfterId,
+			"InsertAfterId":  insertAfterID,
 			"ReadOnlyMarks":  readOnlyMarks,
 		}
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getParentName":  getParentSubjectName,
-		"getParentId":    getParentSubjectId,
+		"getParentId":    getParentSubjectID,
 		"joinInt16":      utils.JoinInt16,
 		"dict":           utils.Dict,
 		"getSectionName": views.GetSectionName,
@@ -689,8 +689,8 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"getSectionName":           views.GetSectionName,
 		"sectionSubtypeForProblem": views.SectionSubtypeForProblem,
 		"examIdFromTest":           views.ExamIDFromTest,
-		"toJson":                   utils.ToJson,
-		"getParentId":              getParentSubjectId,
+		"toJson":                   utils.ToJSON,
+		"getParentId":              getParentSubjectID,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
@@ -708,12 +708,12 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 		return
 	}
 
-	testIdStr := request.URL.Query().Get("id")
-	testId := utils.StringToInt(testIdStr)
+	testIDStr := request.URL.Query().Get("id")
+	testID := utils.StringToInt(testIDStr)
 
-	_, err = h.testsService.UpdateObject(testIdStr, resourcesEndPoint, testObj, testsKey,
+	_, err = h.testsService.UpdateObject(testIDStr, resourcesEndPoint, testObj, testsKey,
 		func(test *models.Test) bool {
-			return (*test).ID == testId
+			return (*test).ID == testID
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating test: %v", err), http.StatusInternalServerError)
@@ -769,15 +769,15 @@ func (h *TestsHandler) UpdateTestSubject(responseWriter http.ResponseWriter, req
 }
 
 func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *http.Request) {
-	testIdStr := request.URL.Query().Get("id")
-	testId := utils.StringToInt(testIdStr)
+	testIDStr := request.URL.Query().Get("id")
+	testID := utils.StringToInt(testIDStr)
 	body := map[string]any{
 		"cms_status_id": constants.StatusArchived,
 	}
 
-	err := h.testsService.ArchiveObject(testIdStr, resourcesEndPoint, body, testsKey,
+	err := h.testsService.ArchiveObject(testIDStr, resourcesEndPoint, body, testsKey,
 		func(test *models.Test) bool {
-			return test.ID != testId
+			return test.ID != testID
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error archiving test: %v", err), http.StatusInternalServerError)
@@ -797,11 +797,11 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 	if len(query) > 0 {
 		// copy test scenario
 		subtype := query.Get("subtype")
-		examIdStr := query.Get("exam_id")
+		examIDStr := query.Get("exam_id")
 		curriculumGradesStr := query.Get("curriculum_grades")
 
 		// Decode exam_id
-		examId, _ := utils.StringToIntType[int8](examIdStr)
+		examID, _ := utils.StringToIntType[int8](examIDStr)
 
 		// Decode curriculum_grades JSON string
 		var curriculumGrades []models.CurriculumGrade
@@ -812,7 +812,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 		data = dto.AddTestDialogData{
 			Subtype:          subtype,
 			CurriculumGrades: curriculumGrades,
-			ExamID:           examId,
+			ExamID:           examID,
 		}
 
 	} else {
@@ -831,19 +831,19 @@ func (h *TestsHandler) AddCurriculumGradeDropdowns(responseWriter http.ResponseW
 	views.ExecuteTemplates(responseWriter, nil, nil, addCurriculumGradeSelectsTemplate, curriculumGradeSelectsTemplate)
 }
 
-func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRule, error) {
+func (h *TestsHandler) getTestRule(testType string, examID int8) (*models.TestRule, error) {
 	testRules, err := h.testRulesService.GetList(testRulesEndPoint, testRulesKey, false, false)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching test rules: %v", err)
 	}
 
 	for _, rule := range *testRules {
-		if rule.ExamID == examId && rule.TestType == testType {
+		if rule.ExamID == examID && rule.TestType == testType {
 			return rule, nil
 		}
 	}
 
-	return nil, fmt.Errorf("no matching test rule found for examID=%d and testType=%s", examId, testType)
+	return nil, fmt.Errorf("no matching test rule found for examID=%d and testType=%s", examID, testType)
 }
 
 func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *http.Request) {
@@ -900,8 +900,8 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	}
 
 	// Load template
-	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfTemplate)
-	sharedTmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfSharedTemplate)
+	tmplPath := filepath.Join(constants.GetHTMLFolderPath(), pdfTemplate)
+	sharedTmplPath := filepath.Join(constants.GetHTMLFolderPath(), pdfSharedTemplate)
 	tmpl, err := template.New(pdfTemplate).Funcs(template.FuncMap{
 		"getName":        getTestName,
 		"add":            utils.Add,
@@ -1112,8 +1112,8 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		"getSectionName":           views.GetSectionName,
 		"sectionSubtypeForProblem": views.SectionSubtypeForProblem,
 		"examIdFromTest":           views.ExamIDFromTest,
-		"toJson":                   utils.ToJson,
-		"getParentId":              getParentSubjectId,
+		"toJson":                   utils.ToJSON,
+		"getParentId":              getParentSubjectID,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,

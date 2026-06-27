@@ -28,11 +28,11 @@ func NewSkillsHandler(service *services.Service[models.Skill]) *SkillsHandler {
 }
 
 func (h *SkillsHandler) GetSkills(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedSkillIds := request.URL.Query().Get("selected_skill_ids")
+	selectedSkillIDs := request.URL.Query().Get("selected_skill_ids")
 	selectedIDs := make(map[int]bool)
 
-	if selectedSkillIds != "" {
-		ids := strings.Split(selectedSkillIds, ",")
+	if selectedSkillIDs != "" {
+		ids := strings.Split(selectedSkillIDs, ",")
 		for _, idStr := range ids {
 			id, err := strconv.Atoi(idStr)
 			if err == nil {
@@ -50,10 +50,10 @@ func (h *SkillsHandler) GetSkills(responseWriter http.ResponseWriter, request *h
 	// Wrap both skills & selected skill ids in a struct
 	data := struct {
 		Skills           *[]*models.Skill
-		SelectedSkillIds map[int]bool
+		SelectedSkillIDs map[int]bool
 	}{
 		Skills:           skills,
-		SelectedSkillIds: selectedIDs,
+		SelectedSkillIDs: selectedIDs,
 	}
 
 	views.ExecuteTemplate(skillsTemplate, responseWriter, data, nil)

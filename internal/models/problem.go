@@ -27,7 +27,7 @@ type Problem struct {
 }
 
 type ProbTypeParams struct {
-	TestIds []int `json:"test_ids"`
+	TestIDs []int `json:"test_ids"`
 }
 
 type ProbMetaData struct {

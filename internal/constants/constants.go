@@ -41,6 +41,6 @@ func initialize() {
 	}
 }
 
-func GetHtmlFolderPath() string {
+func GetHTMLFolderPath() string {
 	return htmlFolder
 }

@@ -46,7 +46,7 @@ func getParentSubjectName(s models.Subject, lang string) string {
 	return s.GetNameByLang(lang)
 }
 
-func getParentSubjectId(s models.Subject) int8 {
+func getParentSubjectID(s models.Subject) int8 {
 	if s.ParentID != 0 {
 		return s.ParentID
 	}

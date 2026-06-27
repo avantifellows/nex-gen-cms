@@ -49,11 +49,11 @@ func NewResourcesHandler(service *services.Service[models.Resource]) *ResourcesH
 }
 
 func (h *ResourcesHandler) OpenAddResource(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterId := request.URL.Query().Get("chapterId")
-	topicId := request.URL.Query().Get("topicId")
+	chapterID := request.URL.Query().Get("chapterId")
+	topicID := request.URL.Query().Get("topicId")
 	data := addResourceTemplateData{
-		ChapterID:   chapterId,
-		TopicID:     topicId,
+		ChapterID:   chapterID,
+		TopicID:     topicID,
 		TypeOptions: resourceTypeOptions,
 	}
 	views.ExecuteTemplate(addResourceTemplate, responseWriter, data, nil)
@@ -61,38 +61,38 @@ func (h *ResourcesHandler) OpenAddResource(responseWriter http.ResponseWriter, r
 
 func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
-	curriculumIdStr := urlVals.Get(CURRICULUM_DROPDOWN_NAME)
-	gradeIdStr := urlVals.Get(GRADE_DROPDOWN_NAME)
-	chapterIdStr := urlVals.Get("chapter_id")
-	topicIdStr := urlVals.Get("topic_id")
+	curriculumIDStr := urlVals.Get(CurriculumDropdownName)
+	gradeIDStr := urlVals.Get(GradeDropdownName)
+	chapterIDStr := urlVals.Get("chapter_id")
+	topicIDStr := urlVals.Get("topic_id")
 
-	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
+	curriculumID, err := utils.StringToIntType[int16](curriculumIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
 		return
 	}
-	gradeId, err := utils.StringToIntType[int8](gradeIdStr)
+	gradeID, err := utils.StringToIntType[int8](gradeIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
 		return
 	}
 
-	isTopicRequest := strings.TrimSpace(topicIdStr) != ""
+	isTopicRequest := strings.TrimSpace(topicIDStr) != ""
 	var queryParams string
 	if isTopicRequest {
-		topicId, err := utils.StringToIntType[int16](topicIdStr)
+		topicID, err := utils.StringToIntType[int16](topicIDStr)
 		if err != nil {
 			http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 			return
 		}
-		queryParams = fmt.Sprintf("?curriculum_id=%d&grade_id=%d&topic_id=%d", curriculumId, gradeId, topicId)
+		queryParams = fmt.Sprintf("?curriculum_id=%d&grade_id=%d&topic_id=%d", curriculumID, gradeID, topicID)
 	} else {
-		chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+		chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 		if err != nil {
 			http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 			return
 		}
-		queryParams = fmt.Sprintf("?curriculum_id=%d&grade_id=%d&chapter_id=%d", curriculumId, gradeId, chapterId)
+		queryParams = fmt.Sprintf("?curriculum_id=%d&grade_id=%d&chapter_id=%d", curriculumID, gradeID, chapterID)
 	}
 
 	resources, err := h.service.GetList(resourcesCurriculumEndPoint+queryParams, resourcesKey, false, true)
@@ -121,16 +121,16 @@ func (h *ResourcesHandler) GetResources(responseWriter http.ResponseWriter, requ
 }
 
 func (h *ResourcesHandler) EditResource(responseWriter http.ResponseWriter, request *http.Request) {
-	resourceIdStr := request.URL.Query().Get("id")
-	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
+	resourceIDStr := request.URL.Query().Get("id")
+	resourceID, err := utils.StringToIntType[int32](resourceIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Resource ID", http.StatusBadRequest)
 		return
 	}
 
-	selectedResourcePtr, err := h.service.GetObject(resourceIdStr,
+	selectedResourcePtr, err := h.service.GetObject(resourceIDStr,
 		func(resource *models.Resource) bool {
-			return resource.ID == int(resourceId)
+			return resource.ID == int(resourceID)
 		}, resourcesKey, resourcesEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching resource: %v", err), http.StatusInternalServerError)
@@ -147,8 +147,8 @@ func (h *ResourcesHandler) EditResource(responseWriter http.ResponseWriter, requ
 }
 
 func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, request *http.Request) {
-	resourceIdStr := request.FormValue("id")
-	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
+	resourceIDStr := request.FormValue("id")
+	resourceID, err := utils.StringToIntType[int32](resourceIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Resource ID", http.StatusBadRequest)
 		return
@@ -163,9 +163,9 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 	dummyResourcePtr := &models.Resource{}
 	resourceMap := dummyResourcePtr.BuildMap(resourceCode, resourceName, resourceType, resourceSubtype, srcLink)
 
-	_, err = h.service.UpdateObject(resourceIdStr, resourcesEndPoint, resourceMap, resourcesKey,
+	_, err = h.service.UpdateObject(resourceIDStr, resourcesEndPoint, resourceMap, resourcesKey,
 		func(resource *models.Resource) bool {
-			return resource.ID == int(resourceId)
+			return resource.ID == int(resourceID)
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating resource: %v", err), http.StatusInternalServerError)
@@ -176,16 +176,16 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 }
 
 func (h *ResourcesHandler) DeleteResource(responseWriter http.ResponseWriter, request *http.Request) {
-	resourceIdStr := request.URL.Query().Get("id")
-	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
+	resourceIDStr := request.URL.Query().Get("id")
+	resourceID, err := utils.StringToIntType[int32](resourceIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Resource ID", http.StatusBadRequest)
 		return
 	}
 
-	err = h.service.DeleteObject(resourceIdStr,
+	err = h.service.DeleteObject(resourceIDStr,
 		func(resource *models.Resource) bool {
-			return resource.ID != int(resourceId)
+			return resource.ID != int(resourceID)
 		}, resourcesKey, resourcesEndPoint)
 
 	// If http error is thrown from here then target row won't be removed by htmx code
@@ -201,40 +201,40 @@ func (h *ResourcesHandler) AddResource(responseWriter http.ResponseWriter, reque
 	resourceSubtype := request.FormValue("subtype")
 	srcLink := request.FormValue("src_link")
 
-	chapterIdStr := request.FormValue("chapter_id")
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	chapterIDStr := request.FormValue("chapter_id")
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
 		return
 	}
 
-	topicIdStr := request.FormValue("topic_id")
-	var topicId int16
-	if strings.TrimSpace(topicIdStr) != "" {
-		topicId, err = utils.StringToIntType[int16](topicIdStr)
+	topicIDStr := request.FormValue("topic_id")
+	var topicID int16
+	if strings.TrimSpace(topicIDStr) != "" {
+		topicID, err = utils.StringToIntType[int16](topicIDStr)
 		if err != nil {
 			http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 			return
 		}
 	}
 
-	curriculumIdStr := request.FormValue(CURRICULUM_DROPDOWN_NAME)
-	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
+	curriculumIDStr := request.FormValue(CurriculumDropdownName)
+	curriculumID, err := utils.StringToIntType[int16](curriculumIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
 		return
 	}
 
-	gradeIdStr := request.FormValue(GRADE_DROPDOWN_NAME)
-	gradeId, err := utils.StringToIntType[int8](gradeIdStr)
+	gradeIDStr := request.FormValue(GradeDropdownName)
+	gradeID, err := utils.StringToIntType[int8](gradeIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
 		return
 	}
 
-	newResourcePtr := models.NewResource(resourceCode, resourceName, resourceType, resourceSubtype, srcLink, chapterId, curriculumId, gradeId)
-	if topicId != 0 {
-		newResourcePtr.TopicID = topicId
+	newResourcePtr := models.NewResource(resourceCode, resourceName, resourceType, resourceSubtype, srcLink, chapterID, curriculumID, gradeID)
+	if topicID != 0 {
+		newResourcePtr.TopicID = topicID
 	}
 	newResourcePtr, err = h.service.AddObject(newResourcePtr, resourcesKey, resourcesEndPoint)
 	if err != nil {
@@ -264,7 +264,7 @@ func (h *ResourcesHandler) MoveResource(responseWriter http.ResponseWriter, requ
 		return
 	}
 
-	curriculumID, gradeID, subjectID := getCurriculumGradeSubjectIds(request.Form)
+	curriculumID, gradeID, subjectID := getCurriculumGradeSubjectIDs(request.Form)
 	if curriculumID == 0 || gradeID == 0 || subjectID == 0 {
 		http.Error(responseWriter, "Invalid curriculum, grade or subject ID", http.StatusBadRequest)
 		return

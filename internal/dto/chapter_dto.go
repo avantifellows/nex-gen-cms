@@ -8,6 +8,6 @@ type ChapterData struct {
 }
 
 type ResourcesData struct {
-	ChapterId string
-	TopicId   string
+	ChapterID string
+	TopicID   string
 }

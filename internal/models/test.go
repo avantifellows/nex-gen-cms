@@ -98,8 +98,8 @@ func (t Test) ProblemCount() int {
 	return total
 }
 
-func (test *Test) GetNameByLang(langCode string) string {
-	for _, testLang := range test.Name {
+func (t *Test) GetNameByLang(langCode string) string {
+	for _, testLang := range t.Name {
 		if testLang.LangCode == langCode {
 			return testLang.Resource
 		}
@@ -107,27 +107,27 @@ func (test *Test) GetNameByLang(langCode string) string {
 	return ""
 }
 
-func (test *Test) SetCurriculumGrade(curriculumID int16, gradeID int8) {
+func (t *Test) SetCurriculumGrade(curriculumID int16, gradeID int8) {
 	newPair := CurriculumGrade{
 		CurriculumID: curriculumID,
 		GradeID:      gradeID,
 	}
 
 	// If nil or empty, initialize with the new pair
-	if len(test.CurriculumGrades) == 0 {
-		test.CurriculumGrades = []CurriculumGrade{newPair}
+	if len(t.CurriculumGrades) == 0 {
+		t.CurriculumGrades = []CurriculumGrade{newPair}
 		return
 	}
 
 	// Check if the pair already exists
-	for _, cg := range test.CurriculumGrades {
+	for _, cg := range t.CurriculumGrades {
 		if cg.CurriculumID == curriculumID && cg.GradeID == gradeID {
 			return // Already exists, do nothing
 		}
 	}
 
 	// Append if not found
-	test.CurriculumGrades = append(test.CurriculumGrades, newPair)
+	t.CurriculumGrades = append(t.CurriculumGrades, newPair)
 }
 
 func (t *Test) DisplaySubtype() string {
