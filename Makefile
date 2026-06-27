@@ -1,4 +1,4 @@
-.PHONY: css css-watch run build
+.PHONY: css css-watch run build lint test
 
 # Build the Tailwind CSS bundle (web/static/css/output.css is generated, not committed).
 css:
@@ -15,3 +15,12 @@ run: css
 # Build CSS, then compile the server binary.
 build: css
 	go build -o nex-gen-cms ./cmd
+
+# Static analysis. Mirrors CI but scans the whole tree (CI gates only changed code).
+# Install once: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+lint:
+	golangci-lint run ./...
+
+# Run unit tests with the race detector, as CI does.
+test:
+	go test -race ./...

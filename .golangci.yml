@@ -1,0 +1,50 @@
+# golangci-lint configuration (v2 schema).
+# Run locally with `make lint`; CI runs the same binary via go-ci.yml.
+# Docs: https://golangci-lint.run/
+version: "2"
+
+linters:
+  # "standard" = errcheck, govet, ineffassign, staticcheck, unused.
+  # We add the high-value fallow-style checks on top.
+  default: standard
+  enable:
+    - bodyclose    # unclosed HTTP response bodies (this CMS makes many db-service calls)
+    - dupl         # duplicated code blocks
+    - gocyclo      # cyclomatic complexity hotspots
+    - misspell     # typos in comments/strings
+    - revive       # broad style linter (golint successor)
+    - unconvert    # redundant type conversions
+    - unparam      # unused function parameters
+
+  settings:
+    gocyclo:
+      min-complexity: 20
+    dupl:
+      threshold: 150
+    misspell:
+      locale: US
+
+  exclusions:
+    generated: lax
+    # Presets relax common false positives (e.g. unchecked errors on Close/Write).
+    presets:
+      - comments
+      - common-false-positives
+      - std-error-handling
+    rules:
+      # Tests are allowed to be repetitive, complex, and to ignore errors.
+      - path: _test\.go
+        linters:
+          - dupl
+          - gocyclo
+          - errcheck
+          - unparam
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/avantifellows/nex-gen-cms
