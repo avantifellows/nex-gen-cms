@@ -79,6 +79,18 @@ test('image toolbar can make a diagram free movable inside the editor', async ({
   expect(after.y - before.y).toBeGreaterThan(10);
   await expect(image).toHaveCSS('position', 'relative');
   await expect(image).toHaveCSS('float', 'none');
+  await expect(image).toHaveCSS('outline-style', 'none');
+
+  const overlay = page.locator('#questionDiv .img-resize-overlay');
+  await expect.poll(async () => {
+    const [imageBox, overlayBox] = await Promise.all([
+      image.boundingBox(),
+      overlay.boundingBox(),
+    ]);
+    const leftDelta = Math.abs(Math.round((imageBox?.x ?? 0) - (overlayBox?.x ?? 0)));
+    const topDelta = Math.abs(Math.round((imageBox?.y ?? 0) - (overlayBox?.y ?? 0)));
+    return leftDelta <= 2 && topDelta <= 2;
+  }).toBe(true);
 
   const savedHtml = await editor.evaluate((el: any) => window.getEditorHtml(el));
   expect(savedHtml).toContain('position: relative');
