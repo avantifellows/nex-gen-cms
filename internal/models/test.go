@@ -114,7 +114,7 @@ func (test *Test) SetCurriculumGrade(curriculumID int16, gradeID int8) {
 	}
 
 	// If nil or empty, initialize with the new pair
-	if test.CurriculumGrades == nil || len(test.CurriculumGrades) == 0 {
+	if len(test.CurriculumGrades) == 0 {
 		test.CurriculumGrades = []CurriculumGrade{newPair}
 		return
 	}
@@ -154,7 +154,7 @@ func (t *Test) DisplaySubtype() string {
 }
 
 func (t *Test) RecalculateTotalMarksFromSubjects() {
-	var total int16 = 0
+	var total int16
 
 	for _, subject := range t.TypeParams.Subjects {
 		total += int16(subject.Marks)

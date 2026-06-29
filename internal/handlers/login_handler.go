@@ -124,7 +124,7 @@ func (h *LoginHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // Logout clears the session and redirects to /login.
-func (h *LoginHandler) Logout(w http.ResponseWriter, r *http.Request) {
+func (h *LoginHandler) Logout(w http.ResponseWriter, _ *http.Request) {
 	auth.ClearSession(w)
 	w.Header().Set("HX-Redirect", "/login")
 	w.WriteHeader(http.StatusOK)

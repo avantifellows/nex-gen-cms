@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/thoas/go-funk"
+
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
@@ -14,7 +16,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
-	"github.com/thoas/go-funk"
 )
 
 const chaptersEndPoint = "chapter"
@@ -42,7 +43,7 @@ func NewChaptersHandler(chaptersService *services.Service[models.Chapter],
 	}
 }
 
-func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, chaptersTemplate)
 }
 
@@ -324,11 +325,12 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	urlVals := request.URL.Query()
 	view := urlVals.Get("view")
 	var filename string
-	if view == "list" {
+	switch view {
+	case "list":
 		filename = topicRowTemplate
-	} else if view == "dropdown-optional" {
+	case "dropdown-optional":
 		filename = topicDropdownOptionalTemplate
-	} else {
+	default:
 		filename = topicDropdownTemplate
 	}
 

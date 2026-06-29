@@ -23,7 +23,7 @@ func NewSubjectsHandler(service *services.Service[models.Subject]) *SubjectsHand
 	}
 }
 
-func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *SubjectsHandler) GetSubjects(responseWriter http.ResponseWriter, _ *http.Request) {
 	subjects, err := h.service.GetList(handlerutils.SubjectsEndPoint, handlerutils.SubjectsKey, false, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching subjects: %v", err), http.StatusInternalServerError)
@@ -42,15 +42,13 @@ func getSubjectName(s models.Subject, lang string) string {
 func getParentSubjectName(s models.Subject, lang string) string {
 	if s.ParentID != 0 {
 		return s.GetParentNameByLang(lang)
-	} else {
-		return s.GetNameByLang(lang)
 	}
+	return s.GetNameByLang(lang)
 }
 
 func getParentSubjectId(s models.Subject) int8 {
 	if s.ParentID != 0 {
 		return s.ParentID
-	} else {
-		return s.ID
 	}
+	return s.ID
 }

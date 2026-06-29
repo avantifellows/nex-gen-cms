@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/thoas/go-funk"
+
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	remote_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/remote"
-	"github.com/thoas/go-funk"
 )
 
 type Service[T any] struct {

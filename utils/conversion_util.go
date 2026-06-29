@@ -21,12 +21,12 @@ func StringToInt(s string) int {
 }
 
 // StringToIntOrDefault converts string to int with validation and fallback
-func StringToIntOrDefault(val string, defaultVal int, min int) int {
+func StringToIntOrDefault(val string, defaultVal int, minVal int) int {
 	if val == "" {
 		return defaultVal
 	}
 
-	if v, err := strconv.Atoi(val); err == nil && v >= min {
+	if v, err := strconv.Atoi(val); err == nil && v >= minVal {
 		return v
 	}
 
@@ -85,7 +85,7 @@ func ExtractNumericSuffix(s string) int {
 }
 
 func JoinInt16(intArr []int16, separator string) string {
-	var stringArr []string
+	stringArr := make([]string, 0, len(intArr))
 	for _, integer := range intArr {
 		stringArr = append(stringArr, strconv.Itoa(int(integer)))
 	}
@@ -123,7 +123,7 @@ func Dict(values ...any) map[string]any {
 func ToJson(v any) template.JS {
 	b, err := json.Marshal(v)
 	if err != nil {
-		log.Printf("Error marshalling to JSON: %v", err)
+		log.Printf("Error marshaling to JSON: %v", err)
 		return template.JS("[]") // fallback to empty JSON array
 	}
 	return template.JS(b)
