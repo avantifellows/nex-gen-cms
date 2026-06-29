@@ -194,6 +194,7 @@
 
   /* Image — show pointer to hint it's clickable */
   .editor img { cursor: pointer; }
+  .editor img.editor-img-free { cursor: move; }
   .editor img.img-selected { outline: 2px solid var(--color-accent); outline-offset: 1px; }
 
   /* Floated image: text beside, then full width below image (clearfix on paragraph) */

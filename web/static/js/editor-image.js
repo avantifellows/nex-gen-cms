@@ -27,6 +27,7 @@ function initImageEditing(editor, editorWrapper) {
     if (!imgToolbar || !resizeOverlay) return;
 
     let selectedImg = null;
+    let moveState = null;
 
     function positionUI(img) {
         const wRect = editorWrapper.getBoundingClientRect();
@@ -60,6 +61,11 @@ function initImageEditing(editor, editorWrapper) {
     }
 
     editor.addEventListener('click', (e) => {
+        if (moveState?.didMove) {
+            moveState.didMove = false;
+            return;
+        }
+
         if (e.target.tagName === 'IMG') {
             selectImage(e.target);
         } else {
@@ -68,7 +74,10 @@ function initImageEditing(editor, editorWrapper) {
     });
 
     editor.addEventListener('mousedown', (e) => {
-        if (e.target.tagName === 'IMG') return;
+        if (e.target.tagName === 'IMG') {
+            startFreeImageMove(e, e.target);
+            return;
+        }
 
         for (const img of editor.querySelectorAll('img')) {
             const float = img.style.float;
@@ -86,6 +95,68 @@ function initImageEditing(editor, editorWrapper) {
             }
         }
     });
+
+    editor.addEventListener('dragstart', (e) => {
+        if (e.target.tagName === 'IMG' && isFreeMoveImage(e.target)) {
+            e.preventDefault();
+        }
+    });
+
+    function startFreeImageMove(e, img) {
+        if (!isFreeMoveImage(img)) return;
+
+        e.preventDefault();
+        selectImage(img);
+
+        const editorRect = editor.getBoundingClientRect();
+        const imgRect = img.getBoundingClientRect();
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const startLeft = parseFloat(img.style.left || '0') || 0;
+        const startTop = parseFloat(img.style.top || '0') || 0;
+        const minDx = editorRect.left - imgRect.left;
+        const maxDx = editorRect.right - imgRect.right;
+        const minDy = editorRect.top - imgRect.top;
+        const maxDy = editorRect.bottom - imgRect.bottom;
+
+        moveState = { didMove: false };
+
+        const onMouseMove = (ev) => {
+            const rawDx = ev.clientX - startX;
+            const rawDy = ev.clientY - startY;
+            if (!moveState.didMove && Math.abs(rawDx) + Math.abs(rawDy) < 4) return;
+
+            ev.preventDefault();
+            moveState.didMove = true;
+            editor.style.userSelect = 'none';
+            img.style.cursor = 'grabbing';
+            window.getSelection()?.removeAllRanges();
+
+            const dx = Math.min(Math.max(rawDx, minDx), maxDx);
+            const dy = Math.min(Math.max(rawDy, minDy), maxDy);
+            const leftPercent = startLeft + (dx / Math.max(editorRect.width, 1)) * 100;
+
+            img.style.left = leftPercent.toFixed(2).replace(/\.?0+$/, '') + '%';
+            img.style.top = Math.round(startTop + dy) + 'px';
+            positionUI(img);
+        };
+
+        const onMouseUp = () => {
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+            editor.style.userSelect = '';
+            img.style.cursor = '';
+
+            if (moveState.didMove) {
+                window.getSelection()?.removeAllRanges();
+                renderMath(editor);
+                requestAnimationFrame(() => positionUI(img));
+            }
+        };
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    }
 
     editor.addEventListener('scroll', () => {
         if (selectedImg) positionUI(selectedImg);
@@ -253,7 +324,16 @@ function clearInlineImageStyles(img) {
     img.style.verticalAlign = '';
 }
 
+function clearFreeMoveStyles(img) {
+    img.classList.remove('editor-img-free');
+    img.style.position = '';
+    img.style.left = '';
+    img.style.top = '';
+    img.style.zIndex = '';
+}
+
 function applyFloatStyles(img, align) {
+    clearFreeMoveStyles(img);
     clearInlineImageStyles(img);
     img.style.flexBasis = '';
     img.style.display = 'block';
@@ -268,6 +348,12 @@ function applyFloatStyles(img, align) {
 }
 
 function applyImageAlign(img, align, editor) {
+    if (align === 'free') {
+        applyFreeMoveImage(img);
+        placeCaretAfterImage(img);
+        return;
+    }
+
     if (align === 'inline') {
         applyInlineImage(img);
         placeCaretAfterImage(img);
@@ -275,6 +361,7 @@ function applyImageAlign(img, align, editor) {
     }
 
     if (align === 'justify') {
+        clearFreeMoveStyles(img);
         clearInlineImageStyles(img);
         let block = getImageBlock(img);
         flattenTextSpan(block || img.parentElement);
@@ -307,6 +394,7 @@ function applyImageAlign(img, align, editor) {
 }
 
 function applyInlineImage(img) {
+    clearFreeMoveStyles(img);
     const block = getImageBlock(img);
     if (block) {
         flattenTextSpan(block);
@@ -319,6 +407,30 @@ function applyInlineImage(img) {
     img.style.margin = '0 0.25em';
     img.style.height = 'auto';
     img.style.flexBasis = '';
+}
+
+function applyFreeMoveImage(img) {
+    const block = getImageBlock(img);
+    if (block) {
+        flattenTextSpan(block);
+        block.replaceWith(img);
+    }
+
+    img.classList.add('editor-img-free');
+    img.style.float = 'none';
+    img.style.display = 'inline-block';
+    img.style.position = 'relative';
+    img.style.left = img.style.left || '0%';
+    img.style.top = img.style.top || '0px';
+    img.style.zIndex = '1';
+    img.style.verticalAlign = 'middle';
+    img.style.margin = '0 0.25em';
+    img.style.height = 'auto';
+    img.style.flexBasis = '';
+}
+
+function isFreeMoveImage(img) {
+    return img.classList.contains('editor-img-free') || img.style.position === 'relative';
 }
 
 function applyImageSize(img, percent) {

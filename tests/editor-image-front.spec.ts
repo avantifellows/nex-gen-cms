@@ -46,6 +46,47 @@ test('image toolbar can keep a diagram inline with its label', async ({ page }) 
     .not.toContain('img-selected');
 });
 
+test('image toolbar can make a diagram free movable inside the editor', async ({ page }) => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.request.post('http://localhost:8080/dev-login');
+  await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
+
+  const editor = page.locator('#questionDiv .editor');
+  await editor.evaluate((el) => {
+    el.innerHTML = `
+      <p>
+        (A)
+        <img alt="movable-diagram" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAFElEQVR4AWP8z8Dwn4EIwESJ5lEDAN9OCJm5N4+jAAAAAElFTkSuQmCC" style="width: 80px; max-width: 80px; height: auto;">
+      </p>`;
+  });
+
+  const image = page.locator('#questionDiv .editor img[alt="movable-diagram"]');
+  await image.click();
+  await page.locator('#questionDiv').getByTitle('Float None / Move').click();
+
+  const before = await image.boundingBox();
+  if (!before) throw new Error('Image bounding box missing before drag');
+
+  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(before.x + before.width / 2 + 120, before.y + before.height / 2 + 24, { steps: 6 });
+  await page.mouse.up();
+
+  const after = await image.boundingBox();
+  if (!after) throw new Error('Image bounding box missing after drag');
+
+  expect(after.x - before.x).toBeGreaterThan(80);
+  expect(after.y - before.y).toBeGreaterThan(10);
+  await expect(image).toHaveCSS('position', 'relative');
+  await expect(image).toHaveCSS('float', 'none');
+
+  const savedHtml = await editor.evaluate((el: any) => window.getEditorHtml(el));
+  expect(savedHtml).toContain('position: relative');
+  expect(savedHtml).toContain('left:');
+  expect(savedHtml).not.toContain('draggable');
+  expect(savedHtml).not.toContain('img-selected');
+});
+
 test('resizing the editor keeps the preview matched', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.request.post('http://localhost:8080/dev-login');
