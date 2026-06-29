@@ -445,7 +445,10 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 }
 
 func (h *ProblemsHandler) LoadTestAssociations(responseWriter http.ResponseWriter, request *http.Request) {
-	request.ParseForm()
+	if err := request.ParseForm(); err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error parsing form: %v", err), http.StatusBadRequest)
+		return
+	}
 	problemIDsStr := request.Form["select-problem"]
 	problemIDs := utils.StringSliceToIntSlice(problemIDsStr)
 
