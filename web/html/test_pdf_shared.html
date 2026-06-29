@@ -75,7 +75,7 @@ window.MathJax = {
     {{ end }}
     <div class="flex items-start mb-2">
         <div class="w-6 font-semibold">Q{{ .Counter }}.</div>
-        <div class="flex-1 pl-5 whitespace-pre-wrap">{{ .Problem.MetaData.Question }}</div>
+        <div class="flex-1 pl-5">{{ .Problem.MetaData.Question }}</div>
     </div>
 
     {{ if or (eq .Problem.Subtype "mcq_single_answer") (eq .Problem.Subtype "mcq_multiple_answer") (eq .Problem.Subtype "matrix_match") }}
