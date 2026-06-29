@@ -32,6 +32,7 @@ test('image toolbar can keep a diagram inline with its label', async ({ page }) 
 
   await expect(image).toHaveCSS('display', 'inline-block');
   await expect(image).toHaveCSS('float', 'none');
+  await expect(image).toHaveCSS('outline-style', 'none');
 
   await expect(editor.locator('p.editor-img-float')).toHaveCount(0);
 
@@ -44,53 +45,6 @@ test('image toolbar can keep a diagram inline with its label', async ({ page }) 
   await expect
     .poll(() => editor.evaluate((el: any) => window.getEditorHtml(el)))
     .not.toContain('img-selected');
-});
-
-test('image toolbar applies old CMS float-none behavior', async ({ page }) => {
-  await page.setViewportSize({ width: 1400, height: 900 });
-  await page.request.post('http://localhost:8080/dev-login');
-  await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
-
-  const editor = page.locator('#questionDiv .editor');
-  await editor.evaluate((el) => {
-    el.innerHTML = `
-      <table style="width: 100%; border-collapse: collapse;">
-        <tbody>
-          <tr>
-            <td style="border: 1px solid black; height: 120px;">
-              <span id="option-label">(A)</span>
-              <img alt="movable-diagram" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAFElEQVR4AWP8z8Dwn4EIwESJ5lEDAN9OCJm5N4+jAAAAAElFTkSuQmCC" style="width: 80px; max-width: 80px; height: auto;">
-            </td>
-          </tr>
-        </tbody>
-      </table>`;
-  });
-
-  const image = page.locator('#questionDiv .editor img[alt="movable-diagram"]');
-  await image.click();
-  await page.locator('#questionDiv').getByTitle('Float None').click();
-
-  await expect(image).toHaveCSS('float', 'none');
-  await expect(image).not.toHaveClass(/editor-img-free/);
-  await expect(image).toHaveCSS('outline-style', 'none');
-
-  const overlay = page.locator('#questionDiv .img-resize-overlay');
-  await expect.poll(async () => {
-    const [imageBox, overlayBox] = await Promise.all([
-      image.boundingBox(),
-      overlay.boundingBox(),
-    ]);
-    const leftDelta = Math.abs(Math.round((imageBox?.x ?? 0) - (overlayBox?.x ?? 0)));
-    const topDelta = Math.abs(Math.round((imageBox?.y ?? 0) - (overlayBox?.y ?? 0)));
-    return leftDelta <= 2 && topDelta <= 2;
-  }).toBe(true);
-
-  const savedHtml = await editor.evaluate((el: any) => window.getEditorHtml(el));
-  expect(savedHtml).toContain('float: none');
-  expect(savedHtml).not.toContain('position: absolute');
-  expect(savedHtml).not.toContain('editor-img-free');
-  expect(savedHtml).not.toContain('draggable');
-  expect(savedHtml).not.toContain('img-selected');
 });
 
 test('resizing the editor keeps the preview matched', async ({ page }) => {
