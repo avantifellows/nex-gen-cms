@@ -185,10 +185,6 @@
     font-family: var(--font-sans);
   }
   .editor,
-  .output {
-    position: relative;
-  }
-  .editor,
   .codeView {
     resize: both;
     overflow: auto;
@@ -198,7 +194,6 @@
 
   /* Image — show pointer to hint it's clickable */
   .editor img { cursor: pointer; }
-  .editor img.editor-img-free { cursor: move; }
 
   /* Floated image: text beside, then full width below image (clearfix on paragraph) */
   .editor p.editor-img-float,

@@ -35,7 +35,7 @@ Then read this file fully before doing anything else in this session.
 - Content CRUD for chapters, topics, concepts, resources, tests, problems, skills, tags, exams via the
   db-service API + `go-cache` (generic `Service[T]`).
 - Problem editor math templates include a piecewise/cases insert via the existing MathLive editor.
-- Problem editor images can be kept inline with surrounding labels/text or set to float-none move mode
+- Problem editor images can be kept inline with surrounding labels/text or set to old-CMS-style float none
   via the image toolbar; editor surfaces are resizable, keep the preview size in sync, and stay within
   the page card; add/edit problem pages use full width.
 - Server-rendered HTML + HTMX UI; Tailwind v4 styling (built from `input.css`; generated CSS not committed).

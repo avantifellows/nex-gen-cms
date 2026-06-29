@@ -27,7 +27,6 @@ function initImageEditing(editor, editorWrapper) {
     if (!imgToolbar || !resizeOverlay) return;
 
     let selectedImg = null;
-    let moveState = null;
 
     function positionUI(img) {
         const wRect = editorWrapper.getBoundingClientRect();
@@ -61,11 +60,6 @@ function initImageEditing(editor, editorWrapper) {
     }
 
     editor.addEventListener('click', (e) => {
-        if (moveState?.didMove) {
-            moveState.didMove = false;
-            return;
-        }
-
         if (e.target.tagName === 'IMG') {
             selectImage(e.target);
         } else {
@@ -74,10 +68,7 @@ function initImageEditing(editor, editorWrapper) {
     });
 
     editor.addEventListener('mousedown', (e) => {
-        if (e.target.tagName === 'IMG') {
-            startFreeImageMove(e, e.target);
-            return;
-        }
+        if (e.target.tagName === 'IMG') return;
 
         for (const img of editor.querySelectorAll('img')) {
             const float = img.style.float;
@@ -95,64 +86,6 @@ function initImageEditing(editor, editorWrapper) {
             }
         }
     });
-
-    editor.addEventListener('dragstart', (e) => {
-        if (e.target.tagName === 'IMG' && isFreeMoveImage(e.target)) {
-            e.preventDefault();
-        }
-    });
-
-    function startFreeImageMove(e, img) {
-        if (!isFreeMoveImage(img)) return;
-
-        e.preventDefault();
-        selectImage(img);
-
-        const imgRect = img.getBoundingClientRect();
-        const startX = e.clientX;
-        const startY = e.clientY;
-        const startLeft = offsetToPx(img.style.left, editor.clientWidth);
-        const startTop = offsetToPx(img.style.top, editor.clientHeight);
-        const maxLeft = Math.max(0, editor.clientWidth - imgRect.width);
-        const maxTop = Math.max(0, editor.clientHeight - imgRect.height);
-
-        moveState = { didMove: false };
-
-        const onMouseMove = (ev) => {
-            const rawDx = ev.clientX - startX;
-            const rawDy = ev.clientY - startY;
-            if (!moveState.didMove && Math.abs(rawDx) + Math.abs(rawDy) < 4) return;
-
-            ev.preventDefault();
-            moveState.didMove = true;
-            editor.style.userSelect = 'none';
-            img.style.cursor = 'grabbing';
-            window.getSelection()?.removeAllRanges();
-
-            const left = clamp(startLeft + rawDx, 0, maxLeft);
-            const top = clamp(startTop + rawDy, 0, maxTop);
-
-            img.style.left = pxToPercent(left, editor.clientWidth);
-            img.style.top = Math.round(top) + 'px';
-            positionUI(img);
-        };
-
-        const onMouseUp = () => {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-            editor.style.userSelect = '';
-            img.style.cursor = '';
-
-            if (moveState.didMove) {
-                window.getSelection()?.removeAllRanges();
-                renderMath(editor);
-                requestAnimationFrame(() => positionUI(img));
-            }
-        };
-
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
-    }
 
     editor.addEventListener('scroll', () => {
         if (selectedImg) positionUI(selectedImg);
@@ -320,8 +253,7 @@ function clearInlineImageStyles(img) {
     img.style.verticalAlign = '';
 }
 
-function clearFreeMoveStyles(img) {
-    img.classList.remove('editor-img-free');
+function clearImagePositionStyles(img) {
     img.style.position = '';
     img.style.left = '';
     img.style.top = '';
@@ -329,7 +261,7 @@ function clearFreeMoveStyles(img) {
 }
 
 function applyFloatStyles(img, align) {
-    clearFreeMoveStyles(img);
+    clearImagePositionStyles(img);
     clearInlineImageStyles(img);
     img.style.flexBasis = '';
     img.style.display = 'block';
@@ -345,7 +277,7 @@ function applyFloatStyles(img, align) {
 
 function applyImageAlign(img, align, editor) {
     if (align === 'free') {
-        applyFreeMoveImage(img, editor);
+        applyFloatNoneImage(img);
         placeCaretAfterImage(img);
         return;
     }
@@ -357,7 +289,7 @@ function applyImageAlign(img, align, editor) {
     }
 
     if (align === 'justify') {
-        clearFreeMoveStyles(img);
+        clearImagePositionStyles(img);
         clearInlineImageStyles(img);
         let block = getImageBlock(img);
         flattenTextSpan(block || img.parentElement);
@@ -390,7 +322,7 @@ function applyImageAlign(img, align, editor) {
 }
 
 function applyInlineImage(img) {
-    clearFreeMoveStyles(img);
+    clearImagePositionStyles(img);
     const block = getImageBlock(img);
     if (block) {
         flattenTextSpan(block);
@@ -405,48 +337,20 @@ function applyInlineImage(img) {
     img.style.flexBasis = '';
 }
 
-function applyFreeMoveImage(img, editor) {
+function applyFloatNoneImage(img) {
     const block = getImageBlock(img);
     if (block) {
         flattenTextSpan(block);
         block.replaceWith(img);
     }
 
-    const editorRect = editor.getBoundingClientRect();
-    const imgRect = img.getBoundingClientRect();
-    const left = clamp(imgRect.left - editorRect.left + editor.scrollLeft, 0, editor.clientWidth - imgRect.width);
-    const top = clamp(imgRect.top - editorRect.top + editor.scrollTop, 0, editor.clientHeight - imgRect.height);
-
-    img.classList.add('editor-img-free');
     img.style.float = 'none';
-    img.style.display = 'inline-block';
-    img.style.position = 'absolute';
-    img.style.left = pxToPercent(left, editor.clientWidth);
-    img.style.top = Math.round(top) + 'px';
-    img.style.zIndex = '1';
+    img.style.display = '';
+    clearImagePositionStyles(img);
     img.style.verticalAlign = 'middle';
     img.style.margin = '0 0.25em';
     img.style.height = 'auto';
     img.style.flexBasis = '';
-}
-
-function isFreeMoveImage(img) {
-    return img.classList.contains('editor-img-free') || img.style.position === 'absolute';
-}
-
-function offsetToPx(value, basis) {
-    if (!value) return 0;
-    const number = parseFloat(value);
-    if (!Number.isFinite(number)) return 0;
-    return value.trim().endsWith('%') ? (number / 100) * Math.max(basis, 1) : number;
-}
-
-function pxToPercent(value, basis) {
-    return ((value / Math.max(basis, 1)) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
-}
-
-function clamp(value, min, max) {
-    return Math.min(Math.max(value, min), Math.max(min, max));
 }
 
 function applyImageSize(img, percent) {

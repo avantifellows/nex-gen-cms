@@ -46,7 +46,7 @@ test('image toolbar can keep a diagram inline with its label', async ({ page }) 
     .not.toContain('img-selected');
 });
 
-test('image toolbar can make a diagram free movable inside the editor', async ({ page }) => {
+test('image toolbar applies old CMS float-none behavior', async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.request.post('http://localhost:8080/dev-login');
   await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
@@ -68,26 +68,10 @@ test('image toolbar can make a diagram free movable inside the editor', async ({
 
   const image = page.locator('#questionDiv .editor img[alt="movable-diagram"]');
   await image.click();
-  await page.locator('#questionDiv').getByTitle('Float None / Move').click();
+  await page.locator('#questionDiv').getByTitle('Float None').click();
 
-  const before = await image.boundingBox();
-  if (!before) throw new Error('Image bounding box missing before drag');
-
-  const editorBox = await editor.boundingBox();
-  if (!editorBox) throw new Error('Editor bounding box missing');
-
-  await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(editorBox.x + 8, before.y + before.height / 2 + 24, { steps: 6 });
-  await page.mouse.up();
-
-  const after = await image.boundingBox();
-  if (!after) throw new Error('Image bounding box missing after drag');
-
-  expect(after.x).toBeLessThan(editorBox.x + 16);
-  expect(after.y - before.y).toBeGreaterThan(10);
-  await expect(image).toHaveCSS('position', 'absolute');
   await expect(image).toHaveCSS('float', 'none');
+  await expect(image).not.toHaveClass(/editor-img-free/);
   await expect(image).toHaveCSS('outline-style', 'none');
 
   const overlay = page.locator('#questionDiv .img-resize-overlay');
@@ -102,8 +86,9 @@ test('image toolbar can make a diagram free movable inside the editor', async ({
   }).toBe(true);
 
   const savedHtml = await editor.evaluate((el: any) => window.getEditorHtml(el));
-  expect(savedHtml).toContain('position: absolute');
-  expect(savedHtml).toContain('left:');
+  expect(savedHtml).toContain('float: none');
+  expect(savedHtml).not.toContain('position: absolute');
+  expect(savedHtml).not.toContain('editor-img-free');
   expect(savedHtml).not.toContain('draggable');
   expect(savedHtml).not.toContain('img-selected');
 });
