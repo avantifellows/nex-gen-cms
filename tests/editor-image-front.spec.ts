@@ -54,10 +54,16 @@ test('image toolbar can make a diagram free movable inside the editor', async ({
   const editor = page.locator('#questionDiv .editor');
   await editor.evaluate((el) => {
     el.innerHTML = `
-      <p>
-        (A)
-        <img alt="movable-diagram" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAFElEQVR4AWP8z8Dwn4EIwESJ5lEDAN9OCJm5N4+jAAAAAElFTkSuQmCC" style="width: 80px; max-width: 80px; height: auto;">
-      </p>`;
+      <table style="width: 100%; border-collapse: collapse;">
+        <tbody>
+          <tr>
+            <td style="border: 1px solid black; height: 120px;">
+              <span id="option-label">(A)</span>
+              <img alt="movable-diagram" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAIAAAACUFjqAAAAFElEQVR4AWP8z8Dwn4EIwESJ5lEDAN9OCJm5N4+jAAAAAElFTkSuQmCC" style="width: 80px; max-width: 80px; height: auto;">
+            </td>
+          </tr>
+        </tbody>
+      </table>`;
   });
 
   const image = page.locator('#questionDiv .editor img[alt="movable-diagram"]');
@@ -67,17 +73,20 @@ test('image toolbar can make a diagram free movable inside the editor', async ({
   const before = await image.boundingBox();
   if (!before) throw new Error('Image bounding box missing before drag');
 
+  const editorBox = await editor.boundingBox();
+  if (!editorBox) throw new Error('Editor bounding box missing');
+
   await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2);
   await page.mouse.down();
-  await page.mouse.move(before.x + before.width / 2 + 120, before.y + before.height / 2 + 24, { steps: 6 });
+  await page.mouse.move(editorBox.x + 8, before.y + before.height / 2 + 24, { steps: 6 });
   await page.mouse.up();
 
   const after = await image.boundingBox();
   if (!after) throw new Error('Image bounding box missing after drag');
 
-  expect(after.x - before.x).toBeGreaterThan(80);
+  expect(after.x).toBeLessThan(editorBox.x + 16);
   expect(after.y - before.y).toBeGreaterThan(10);
-  await expect(image).toHaveCSS('position', 'relative');
+  await expect(image).toHaveCSS('position', 'absolute');
   await expect(image).toHaveCSS('float', 'none');
   await expect(image).toHaveCSS('outline-style', 'none');
 
@@ -93,7 +102,7 @@ test('image toolbar can make a diagram free movable inside the editor', async ({
   }).toBe(true);
 
   const savedHtml = await editor.evaluate((el: any) => window.getEditorHtml(el));
-  expect(savedHtml).toContain('position: relative');
+  expect(savedHtml).toContain('position: absolute');
   expect(savedHtml).toContain('left:');
   expect(savedHtml).not.toContain('draggable');
   expect(savedHtml).not.toContain('img-selected');

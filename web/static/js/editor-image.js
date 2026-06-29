@@ -108,16 +108,13 @@ function initImageEditing(editor, editorWrapper) {
         e.preventDefault();
         selectImage(img);
 
-        const editorRect = editor.getBoundingClientRect();
         const imgRect = img.getBoundingClientRect();
         const startX = e.clientX;
         const startY = e.clientY;
-        const startLeft = parseFloat(img.style.left || '0') || 0;
-        const startTop = parseFloat(img.style.top || '0') || 0;
-        const minDx = editorRect.left - imgRect.left;
-        const maxDx = editorRect.right - imgRect.right;
-        const minDy = editorRect.top - imgRect.top;
-        const maxDy = editorRect.bottom - imgRect.bottom;
+        const startLeft = offsetToPx(img.style.left, editor.clientWidth);
+        const startTop = offsetToPx(img.style.top, editor.clientHeight);
+        const maxLeft = Math.max(0, editor.clientWidth - imgRect.width);
+        const maxTop = Math.max(0, editor.clientHeight - imgRect.height);
 
         moveState = { didMove: false };
 
@@ -132,12 +129,11 @@ function initImageEditing(editor, editorWrapper) {
             img.style.cursor = 'grabbing';
             window.getSelection()?.removeAllRanges();
 
-            const dx = Math.min(Math.max(rawDx, minDx), maxDx);
-            const dy = Math.min(Math.max(rawDy, minDy), maxDy);
-            const leftPercent = startLeft + (dx / Math.max(editorRect.width, 1)) * 100;
+            const left = clamp(startLeft + rawDx, 0, maxLeft);
+            const top = clamp(startTop + rawDy, 0, maxTop);
 
-            img.style.left = leftPercent.toFixed(2).replace(/\.?0+$/, '') + '%';
-            img.style.top = Math.round(startTop + dy) + 'px';
+            img.style.left = pxToPercent(left, editor.clientWidth);
+            img.style.top = Math.round(top) + 'px';
             positionUI(img);
         };
 
@@ -349,7 +345,7 @@ function applyFloatStyles(img, align) {
 
 function applyImageAlign(img, align, editor) {
     if (align === 'free') {
-        applyFreeMoveImage(img);
+        applyFreeMoveImage(img, editor);
         placeCaretAfterImage(img);
         return;
     }
@@ -409,19 +405,24 @@ function applyInlineImage(img) {
     img.style.flexBasis = '';
 }
 
-function applyFreeMoveImage(img) {
+function applyFreeMoveImage(img, editor) {
     const block = getImageBlock(img);
     if (block) {
         flattenTextSpan(block);
         block.replaceWith(img);
     }
 
+    const editorRect = editor.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    const left = clamp(imgRect.left - editorRect.left + editor.scrollLeft, 0, editor.clientWidth - imgRect.width);
+    const top = clamp(imgRect.top - editorRect.top + editor.scrollTop, 0, editor.clientHeight - imgRect.height);
+
     img.classList.add('editor-img-free');
     img.style.float = 'none';
     img.style.display = 'inline-block';
-    img.style.position = 'relative';
-    img.style.left = img.style.left || '0%';
-    img.style.top = img.style.top || '0px';
+    img.style.position = 'absolute';
+    img.style.left = pxToPercent(left, editor.clientWidth);
+    img.style.top = Math.round(top) + 'px';
     img.style.zIndex = '1';
     img.style.verticalAlign = 'middle';
     img.style.margin = '0 0.25em';
@@ -430,7 +431,22 @@ function applyFreeMoveImage(img) {
 }
 
 function isFreeMoveImage(img) {
-    return img.classList.contains('editor-img-free') || img.style.position === 'relative';
+    return img.classList.contains('editor-img-free') || img.style.position === 'absolute';
+}
+
+function offsetToPx(value, basis) {
+    if (!value) return 0;
+    const number = parseFloat(value);
+    if (!Number.isFinite(number)) return 0;
+    return value.trim().endsWith('%') ? (number / 100) * Math.max(basis, 1) : number;
+}
+
+function pxToPercent(value, basis) {
+    return ((value / Math.max(basis, 1)) * 100).toFixed(2).replace(/\.?0+$/, '') + '%';
+}
+
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), Math.max(min, max));
 }
 
 function applyImageSize(img, percent) {

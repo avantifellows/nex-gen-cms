@@ -185,6 +185,10 @@
     font-family: var(--font-sans);
   }
   .editor,
+  .output {
+    position: relative;
+  }
+  .editor,
   .codeView {
     resize: both;
     overflow: auto;
