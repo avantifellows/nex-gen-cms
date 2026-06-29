@@ -18,7 +18,7 @@ edges:
     condition: when working on login, sessions, roles, route guards, or the Postgres user store
   - target: context/deployment.md
     condition: when deploying, changing AWS/Terraform infra, CI/CD, or release operations
-last_updated: 2026-06-26
+last_updated: 2026-06-29
 ---
 
 # Session Bootstrap
@@ -34,6 +34,7 @@ Then read this file fully before doing anything else in this session.
   `cms_user_permission`; `DEV_LOGIN_EMAIL` bypass for local/E2E.
 - Content CRUD for chapters, topics, concepts, resources, tests, problems, skills, tags, exams via the
   db-service API + `go-cache` (generic `Service[T]`).
+- Problem editor math templates include a piecewise/cases insert via the existing MathLive editor.
 - Server-rendered HTML + HTMX UI; Tailwind v4 styling (built from `input.css`; generated CSS not committed).
 - Question paper / answer sheet / combined PDF generation via headless Chrome (chromedp + MathJax).
 - Admin user management (`/admin/users`), move/copy of resources & problems.

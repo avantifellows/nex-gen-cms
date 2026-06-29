@@ -264,6 +264,8 @@ window.initializeRichTextEditors = function (root = document) {
 
     const dropdownBtn = toolbar.querySelector('.paragraphDropdownBtn');
     const dropdownMenu = toolbar.querySelector('.paragraphDropdownMenu');
+    const mathTemplateBtn = toolbar.querySelector('.mathTemplateBtn');
+    const mathTemplateDropdown = toolbar.querySelector('.mathTemplateDropdown');
 
     dropdownBtn.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent bubbling up
@@ -280,6 +282,7 @@ window.initializeRichTextEditors = function (root = document) {
     function closeToolbarMenus() {
         dropdownMenu.classList.add('hidden');
         if (olTypeDropdownMenu) olTypeDropdownMenu.classList.add('hidden');
+        if (mathTemplateDropdown) mathTemplateDropdown.classList.add('hidden');
     }
 
     // Close dropdowns when clicking outside this editor within the page form/content area
@@ -295,6 +298,9 @@ window.initializeRichTextEditors = function (root = document) {
         }
         if (olTypeDropdownMenu && !olTypeDropdownMenu.contains(e.target) && !olTypeDropdownBtn?.contains(e.target)) {
             olTypeDropdownMenu.classList.add('hidden');
+        }
+        if (mathTemplateDropdown && !mathTemplateDropdown.contains(e.target) && !mathTemplateBtn?.contains(e.target)) {
+            mathTemplateDropdown.classList.add('hidden');
         }
         if (!dropdownMenu.contains(e.target) && !dropdownBtn.contains(e.target)) {
             dropdownMenu.classList.add('hidden');
@@ -560,6 +566,23 @@ window.initializeRichTextEditors = function (root = document) {
     toolbar.querySelector('.mathBtn').addEventListener('click', () => {
         insertMath(editor);
     });
+
+    if (mathTemplateBtn && mathTemplateDropdown) {
+        mathTemplateBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            mathTemplateDropdown.classList.toggle('hidden');
+        });
+
+        mathTemplateDropdown.querySelectorAll('button[data-math-template]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                restoreSelection();
+                insertMathTemplate(editor, btn.dataset.mathTemplate);
+                mathTemplateDropdown.classList.add('hidden');
+            });
+        });
+    }
 
     editor.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') {
