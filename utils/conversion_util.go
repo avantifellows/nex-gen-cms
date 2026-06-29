@@ -123,7 +123,7 @@ func Dict(values ...any) map[string]any {
 func ToJson(v any) template.JS {
 	b, err := json.Marshal(v)
 	if err != nil {
-		log.Printf("Error marshalling to JSON: %v", err)
+		log.Printf("Error marshaling to JSON: %v", err)
 		return template.JS("[]") // fallback to empty JSON array
 	}
 	return template.JS(b)

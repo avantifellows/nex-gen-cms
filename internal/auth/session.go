@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/avantifellows/nex-gen-cms/config"
 	"github.com/golang-jwt/jwt/v5"
+
+	"github.com/avantifellows/nex-gen-cms/config"
 )
 
 const (
