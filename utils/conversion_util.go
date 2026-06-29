@@ -144,6 +144,13 @@ func Capitalize(s string) string {
 	return strings.ToUpper(string(s[0])) + s[1:]
 }
 
+// IsEmptyHTML returns true if s contains no visible text after stripping HTML tags.
+// Handles cases like "<div><br></div>" that are visually empty but non-empty strings.
+func IsEmptyHTML(s string) bool {
+	stripped := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(s, "")
+	return strings.TrimSpace(stripped) == ""
+}
+
 func Append[T any](slice []T, v T) []T {
 	return append(slice, v)
 }

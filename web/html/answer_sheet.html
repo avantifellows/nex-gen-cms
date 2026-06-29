@@ -50,7 +50,7 @@
                 {{ range $prob := $section.Compulsory.Problems }}
                     {{ $p := index $.ProblemsMap $prob.ID }}
                     {{ $Counter = add $Counter 1 }}
-                    {{ if and (gt (len $p.MetaData.Solutions) 0) (ne (trim (printf "%s" (index $p.MetaData.Solutions 0).Value)) "") }}
+                    {{ if and (gt (len $p.MetaData.Solutions) 0) (not (isEmptyHTML (printf "%s" (index $p.MetaData.Solutions 0).Value))) }}
                         <div class="mb-4 flex">
                             <span class="font-semibold">Q{{ $Counter }}.</span>
                             <div class="ml-5 flex-1 solution-content">{{ (index $p.MetaData.Solutions 0).Value }}</div>

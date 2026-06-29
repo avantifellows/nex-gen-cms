@@ -909,6 +909,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		"getSectionName": views.GetSectionName,
 		"stringToInt":    utils.StringToInt,
 		"trim":           strings.TrimSpace,
+		"isEmptyHTML":    utils.IsEmptyHTML,
 		"getChapterName": getProblemChapterName,
 	}).ParseFiles(sharedTmplPath, tmplPath)
 	if err != nil {
