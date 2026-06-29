@@ -23,7 +23,7 @@ func NewGradesHandler(service *services.Service[models.Grade]) *GradesHandler {
 	}
 }
 
-func (h *GradesHandler) GetGrades(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *GradesHandler) GetGrades(responseWriter http.ResponseWriter, _ *http.Request) {
 	grades, err := h.service.GetList(getGradesEndPoint, gradesKey, false, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching grades: %v", err), http.StatusInternalServerError)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	// pq registers the "postgres" driver with database/sql via its init().
 	_ "github.com/lib/pq"
 
 	"github.com/avantifellows/nex-gen-cms/config"

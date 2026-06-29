@@ -43,7 +43,7 @@ func NewChaptersHandler(chaptersService *services.Service[models.Chapter],
 	}
 }
 
-func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, chaptersTemplate)
 }
 
