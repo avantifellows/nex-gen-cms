@@ -184,6 +184,13 @@
   .editor {
     font-family: var(--font-sans);
   }
+  .editor,
+  .codeView {
+    resize: both;
+    overflow: auto;
+    min-width: 16rem;
+    min-height: 13rem;
+  }
 
   /* Image — show pointer to hint it's clickable */
   .editor img { cursor: pointer; }

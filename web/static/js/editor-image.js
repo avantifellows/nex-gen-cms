@@ -110,6 +110,7 @@ function initImageEditing(editor, editorWrapper) {
             return;
         }
 
+        renderMath(editor);
         requestAnimationFrame(() => {
             if (selectedImg) positionUI(selectedImg);
         });
@@ -248,7 +249,12 @@ function placeCaretAfterImage(img) {
     sel.addRange(range);
 }
 
+function clearInlineImageStyles(img) {
+    img.style.verticalAlign = '';
+}
+
 function applyFloatStyles(img, align) {
+    clearInlineImageStyles(img);
     img.style.flexBasis = '';
     img.style.display = 'block';
 
@@ -262,7 +268,14 @@ function applyFloatStyles(img, align) {
 }
 
 function applyImageAlign(img, align, editor) {
+    if (align === 'inline') {
+        applyInlineImage(img);
+        placeCaretAfterImage(img);
+        return;
+    }
+
     if (align === 'justify') {
+        clearInlineImageStyles(img);
         let block = getImageBlock(img);
         flattenTextSpan(block || img.parentElement);
 
@@ -291,6 +304,21 @@ function applyImageAlign(img, align, editor) {
 
     applyFloatStyles(img, align);
     placeCaretAfterImage(img);
+}
+
+function applyInlineImage(img) {
+    const block = getImageBlock(img);
+    if (block) {
+        flattenTextSpan(block);
+        block.replaceWith(img);
+    }
+
+    img.style.float = 'none';
+    img.style.display = 'inline-block';
+    img.style.verticalAlign = 'middle';
+    img.style.margin = '0 0.25em';
+    img.style.height = 'auto';
+    img.style.flexBasis = '';
 }
 
 function applyImageSize(img, percent) {
