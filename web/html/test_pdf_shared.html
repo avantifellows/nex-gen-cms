@@ -28,9 +28,9 @@ window.MathJax = {
 
 {{ define "pdf_test_header" }}
 <div id="mathjax-done" style="display:none"></div>
-<div class="flex justify-between mb-3 w-full">
+<div class="flex flex-wrap justify-between mb-3 w-full gap-y-1">
     <h2 class="text-lg font-bold">{{ getName .TestPtr "en" }}</h2>
-    <h2 class="text-lg font-bold">Test Code: {{ .TestPtr.Code }}</h2>
+    <h2 class="text-lg font-bold shrink-0">Test Code: {{ .TestPtr.Code }}</h2>
 </div>
 {{ end }}
 
