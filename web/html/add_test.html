@@ -1465,7 +1465,7 @@
 
     function renumberSerials() {
         let sr = 0;
-        document.querySelectorAll("#questions-table-body tr").forEach(row => {
+        document.querySelectorAll("#questions-table-body > tr").forEach(row => {
             const firstTd = row.querySelector("td");
             if (!firstTd || firstTd.hasAttribute("colspan")) return;
             sr++;
