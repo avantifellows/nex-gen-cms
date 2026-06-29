@@ -85,7 +85,7 @@ func ExtractNumericSuffix(s string) int {
 }
 
 func JoinInt16(intArr []int16, separator string) string {
-	var stringArr []string
+	stringArr := make([]string, 0, len(intArr))
 	for _, integer := range intArr {
 		stringArr = append(stringArr, strconv.Itoa(int(integer)))
 	}

@@ -259,7 +259,7 @@ func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string, cur
 				sortResult = strings.Compare(c1, c2)
 			} else {
 				// Normal case: sort by problem count
-				sortResult = int(t1.ProblemCount() - t2.ProblemCount())
+				sortResult = t1.ProblemCount() - t2.ProblemCount()
 			}
 		case "4":
 			if gradeMap != nil {
@@ -280,7 +280,7 @@ func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string, cur
 			if curriculumMap != nil {
 				sortResult = strings.Compare(t1.DisplaySubtype(), t2.DisplaySubtype())
 			} else {
-				sortResult = int(utils.StringToInt(t1.TypeParams.Duration) - utils.StringToInt(t2.TypeParams.Duration))
+				sortResult = utils.StringToInt(t1.TypeParams.Duration) - utils.StringToInt(t2.TypeParams.Duration)
 			}
 		default:
 			sortResult = 0
@@ -863,7 +863,8 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	var pdfTemplate, headerTxt, pdfSuffix string
 	var testRule *models.TestRule
-	if pdfType == "questions" {
+	switch pdfType {
+	case "questions":
 		pdfTemplate = questionPaperTemplate
 		headerTxt = selectedTestPtr.DisplaySubtype()
 		pdfSuffix = "Question Paper"
@@ -875,7 +876,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			}
 		}
 
-	} else if pdfType == "questions_with_answers" {
+	case "questions_with_answers":
 		pdfTemplate = questionPaperWithAnswersTemplate
 		headerTxt = selectedTestPtr.DisplaySubtype() + " - Questions & Answers"
 		pdfSuffix = "Question Paper with Answers"
@@ -887,7 +888,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			}
 		}
 
-	} else if pdfType == "answers" {
+	case "answers":
 		pdfTemplate = answerSolutionSheetTemplate
 		headerTxt = selectedTestPtr.DisplaySubtype() + " - Answer Sheet"
 		pdfSuffix = "Answer Sheet"
