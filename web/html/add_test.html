@@ -280,12 +280,13 @@
         </div>
 
         {{ $hasTestRule := (ne .TestRule nil) }}
+        {{ $hasRuleMarkingScheme := and $hasTestRule (gt (len .TestRule.Config.MarkingScheme.PosMarks) 0) }}
         <h2 class="mt-4 text-lg font-semibold">Marking Scheme</h2>
         <div id="marking-scheme-div" class="mt-2 grid grid-cols-4 gap-4 items-center">
             {{ $posMarks := slice }}
             {{ $negMarks := slice }}
 
-            {{ if .TestRule }}
+            {{ if $hasRuleMarkingScheme }}
                 {{ $posMarks = .TestRule.Config.MarkingScheme.PosMarks }}
                 {{ $negMarks = .TestRule.Config.MarkingScheme.NegMarks }}
             {{ else if .Problems }}
@@ -293,8 +294,8 @@
                 {{ $negMarks = .TestPtr.TypeParams.NegMarks }}
             {{ end }}
 
-            {{ template "test_chip_editor" (dict "Label" "Award" "Id" "chip-editor-pos" "Marks" $posMarks "Readonly" $hasTestRule) }}
-            {{ template "test_chip_editor" (dict "Label" "Deduct" "Id" "chip-editor-neg" "Marks" $negMarks "Readonly" $hasTestRule) }}
+            {{ template "test_chip_editor" (dict "Label" "Award" "Id" "chip-editor-pos" "Marks" $posMarks "Readonly" $hasRuleMarkingScheme) }}
+            {{ template "test_chip_editor" (dict "Label" "Deduct" "Id" "chip-editor-neg" "Marks" $negMarks "Readonly" $hasRuleMarkingScheme) }}
         </div>
 
         {{ $easy := 0 }}
@@ -368,19 +369,19 @@
                     {{ $sr := 0 }}
                     {{range .TestPtr.TypeParams.Subjects}}
                         {{ $subjectId := .SubjectID }}
-                        {{ template "dest_subject_row" (dict "SubjectId" $subjectId "SubjectName" .Name 
-                        "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasTestRule 
+                        {{ template "dest_subject_row" (dict "SubjectId" $subjectId "SubjectName" .Name
+                        "PosMarks" .PosMarks "NegMarks" .NegMarks "ReadOnlyMarks" $hasRuleMarkingScheme
                         "CanSaveSingleSubject" (eq $mode "edit") "TestId" $id)}}
                         {{range .Sections}}
-                            {{template "dest_subtype_row" (dict "SubjectId" $subjectId "Subtype" .Type 
+                            {{template "dest_subtype_row" (dict "SubjectId" $subjectId "Subtype" .Type
                             "DisplaySubtype" (getSectionName .Type .Name) "PosMarks" .PosMarks "NegMarks" .NegMarks
-                            "ReadOnlyMarks" $hasTestRule)}}
+                            "ReadOnlyMarks" $hasRuleMarkingScheme)}}
                             {{range .Compulsory.Problems}}
                                 {{ $sr = add $sr 1 }}
                                 {{ $prob := index $.Problems .ID }}
                                 {{template "dest_problem_row" (dict "Problem" $prob "SrNo" $sr
-                                "PosMarks" .PosMarks "NegMarks" .NegMarks "DifficultyLevel" .DifficultyLevel "OptionLayout" .OptionLayout 
-                                "ReadOnlyMarks" $hasTestRule
+                                "PosMarks" .PosMarks "NegMarks" .NegMarks "DifficultyLevel" .DifficultyLevel "OptionLayout" .OptionLayout
+                                "ReadOnlyMarks" $hasRuleMarkingScheme
                                 "SectionSubtype" (sectionSubtypeForProblem $prob.Subtype (examIdFromTest $.TestPtr) $.JeeAdvancedExamID))}}
                             {{end}}
                         {{end}}
@@ -1046,6 +1047,17 @@
         };
     }
 
+    function applySubjectInstructions(instructionsHtml) {
+        const currentInstructions = getCurrentInstructions().trim();
+        const defaultFromRule = (document.getElementById('test-instructions-default-from-rule')?.value || "").trim();
+
+        // Only update if the user hasn't manually overridden the instructions
+        if (currentInstructions === defaultFromRule) {
+            document.getElementById('test-instructions').value = instructionsHtml;
+            document.getElementById('test-instructions-default-from-rule').value = instructionsHtml;
+        }
+    }
+
     function shouldIncludeTestInstructionsInPayload() {
         const current = (getCurrentInstructions() || "").trim();
         const defaultFromRule = (document.getElementById('test-instructions-default-from-rule')?.value || "").trim();
@@ -1275,31 +1287,25 @@
         }
     }
 
-    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemRows, questionsTableBody, 
+    function validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemRows, questionsTableBody,
             showAlert = true) {
-        if (!testRule || !testRule.config) {
+        if (!testRule || !testRule.config || !testRule.config.subjects) {
             // No test rule means no restrictions — treat as valid
             return { isValid: true, reason: null };
         }
 
-        const subjects = testRule.config.subjects;
-
-        if (subjects.length === 1) {
-            // Case 1: Only one subject is allowed
-            const allowedIds = subjects[0].subject_ids;
-
-            if (!allowedIds.includes(subjectId)) {
-                const errorMessage = 'Question from selected subject is not allowed for this test.';
-                if (showAlert) {
-                    alert(errorMessage);
-                }
-                return { isValid: false, reason: errorMessage };
+        const subjectRule = testRule.config.subjects.find(s => s.subject_id === subjectId);
+        if (!subjectRule) {
+            const errorMessage = 'Question from this subject is not allowed for this test.';
+            if (showAlert) {
+                alert(errorMessage);
             }
+            return { isValid: false, reason: errorMessage };
+        }
 
-            // Find subject already added
+        if (testRule.config.single_subject) {
             const firstRow = questionsTableBody.querySelector("tr[id^='subject-']");
             const existingSubjectId = firstRow ? parseInt(firstRow.id.replace("subject-", ""), 10) : null;
-
             if (existingSubjectId && existingSubjectId !== subjectId) {
                 const errorMessage = 'Question from only one subject is allowed for this test.';
                 if (showAlert) {
@@ -1307,40 +1313,24 @@
                 }
                 return { isValid: false, reason: errorMessage };
             }
-
-        } else {
-            // Case 2: Multiple subjects are allowed
-            const allowedIds = subjects.map(sub => sub.subject_ids[0]);
-            if (!allowedIds.includes(subjectId)) {
-                const errorMessage = 'Question from this subject is not allowed for this test.';
-                if (showAlert) {
-                    alert(errorMessage);
-                }
-                return { isValid: false, reason: errorMessage };
-            }
         }
 
-        const subjectRule = subjects.find(s => s.subject_ids.includes(subjectId));
-        if (subjectRule) {
-            const allowedTypes = subjectRule.rules.sections.map(s => s.type);
-            if (!allowedTypes.includes(subtype)) {
-                const errorMessage = `Questions of type ${subtype} are not allowed for this subject.`;
-                if (showAlert) {
-                    alert(errorMessage);
-                }
-                return { isValid: false, reason: errorMessage };
+        const allowedTypes = subjectRule.rules.sections.map(s => s.type);
+        if (!allowedTypes.includes(subtype)) {
+            const errorMessage = `Questions of type ${subtype} are not allowed for this subject.`;
+            if (showAlert) {
+                alert(errorMessage);
             }
+            return { isValid: false, reason: errorMessage };
+        }
 
-            // Count how many existing questions are there of this subtype and subject
-            const sectionRule = subjectRule.rules.sections.find(s => s.type === subtype);
-
-            if (existingSubtypeProblemRows >= sectionRule.count) {
-                const errorMessage = `Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`;
-                if (showAlert) {
-                    alert(errorMessage);
-                }
-                return { isValid: false, reason: errorMessage };
+        const sectionRule = subjectRule.rules.sections.find(s => s.type === subtype);
+        if (existingSubtypeProblemRows >= sectionRule.count) {
+            const errorMessage = `Only ${sectionRule.count} questions are allowed for ${subtype} under this subject.`;
+            if (showAlert) {
+                alert(errorMessage);
             }
+            return { isValid: false, reason: errorMessage };
         }
 
         return { isValid: true, reason: null };

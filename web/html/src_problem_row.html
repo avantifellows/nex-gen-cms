@@ -46,8 +46,14 @@
             const subjectProblemRows = questionsTableBody.querySelectorAll(`tr[data-subject="subject-${subjectId}"]`);
             const insertAfterId = getInsertAfterId(subjectProblemRows, subtypeProblemRows);
 
+            // For single-subject tests, apply per-subject instructions when a new subject row is created
+            const subjectRule = testRule?.config?.subjects?.find(s => s.subject_id === subjectId);
+            const newSubjectInstructions = (testRule?.config?.single_subject && subjectProblemRows.length === 0)
+                ? (subjectRule?.instructions ?? "")
+                : "";
+
             // Hook a one-time global listener that just closes over this specific button's data
-            const handler = createAfterRequestHandler(difficulty, insertAfterId, questionsTableBody, resolve);
+            const handler = createAfterRequestHandler(difficulty, insertAfterId, questionsTableBody, resolve, newSubjectInstructions);
             document.body.addEventListener("htmx:afterRequest", handler);
 
             htmx.ajax("POST", "/add-question-to-test", {
@@ -59,7 +65,7 @@
                     "subject-exists": subjectProblemRows.length > 0,
                     "subtype-exists": subtypeProblemRows.length > 0,
                     "insert-after-id": insertAfterId,
-                    "read-only-marks": !!testRule,
+                    "read-only-marks": !!(testRule?.config?.marking_scheme?.pos_marks?.length),
                     // single subject can be saved only in edit test scenario
                     "can-save-single-subject": mode === "edit",
                     "test-id": testId,
@@ -83,7 +89,7 @@
         return "";
     }
 
-    function createAfterRequestHandler(difficulty, insertAfterId, tableBody, resolve) {
+    function createAfterRequestHandler(difficulty, insertAfterId, tableBody, resolve, newSubjectInstructions) {
         return function handler(event) {
             if (event.detail.successful) {
                 incrementLevelCount(difficulty);
@@ -93,6 +99,10 @@
 
                 initSortableForSections();
                 updateSubjectArrowStates();
+
+                if (newSubjectInstructions && typeof applySubjectInstructions === "function") {
+                    applySubjectInstructions(newSubjectInstructions);
+                }
             }
             document.body.removeEventListener("htmx:afterRequest", handler);
             resolve();

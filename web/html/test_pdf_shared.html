@@ -36,8 +36,18 @@ window.MathJax = {
 
 {{ define "pdf_test_meta" }}
 {{ $instructions := .TestPtr.TypeParams.Instructions }}
-{{ if and (not $instructions) .TestRule .TestRule.Config.Instructions }}
-    {{ $instructions = .TestRule.Config.Instructions }}
+{{ if and (not $instructions) .TestRule }}
+    {{ if and .TestRule.Config.SingleSubject .TestPtr.TypeParams.Subjects }}
+        {{ $subjectId := (index .TestPtr.TypeParams.Subjects 0).SubjectID }}
+        {{ range .TestRule.Config.Subjects }}
+            {{ if eq .SubjectID $subjectId }}
+                {{ $instructions = .Instructions }}
+            {{ end }}
+        {{ end }}
+    {{ end }}
+    {{ if not $instructions }}
+        {{ $instructions = .TestRule.Config.Instructions }}
+    {{ end }}
 {{ end }}
 {{ if $instructions }}
 <div class="border border-black p-4 mb-5">
