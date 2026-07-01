@@ -92,7 +92,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/dev-login", loginHandler.DevLogin)
 
 	muxHandler.HandleFunc("/home", handlers.GenericHandler)
-	muxHandler.HandleFunc("/add-chapter", editor(handlers.GenericHandler))
+	muxHandler.HandleFunc("/add-chapter", admin(handlers.GenericHandler))
 
 	// Admin user management
 	adminUsers := appComponentPtr.AdminUsersHandler
@@ -109,31 +109,31 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/api/skills", appComponentPtr.SkillsHandler.GetSkills)
 
 	muxHandler.HandleFunc("/api/chapters", chaptersHandler.GetChapters)
-	muxHandler.Handle("/edit-chapter", middleware.RequireHTMX(middleware.RequireRole(auth.RoleEditor, http.HandlerFunc(chaptersHandler.EditChapter))))
-	muxHandler.HandleFunc("/update-chapter", editor(chaptersHandler.UpdateChapter))
-	muxHandler.HandleFunc("/create-chapter", editor(chaptersHandler.AddChapter))
-	muxHandler.HandleFunc("/archive-chapter", editor(chaptersHandler.ArchiveChapter))
+	muxHandler.Handle("/edit-chapter", middleware.RequireHTMX(middleware.RequireRole(auth.RoleAdmin, http.HandlerFunc(chaptersHandler.EditChapter))))
+	muxHandler.HandleFunc("/update-chapter", admin(chaptersHandler.UpdateChapter))
+	muxHandler.HandleFunc("/create-chapter", admin(chaptersHandler.AddChapter))
+	muxHandler.HandleFunc("/archive-chapter", admin(chaptersHandler.ArchiveChapter))
 	muxHandler.HandleFunc("/chapter", chaptersHandler.GetChapter)
 	muxHandler.HandleFunc("/topics", chaptersHandler.LoadTopics)
 	muxHandler.HandleFunc("/api/topics", chaptersHandler.GetTopics)
 	muxHandler.HandleFunc("/chapter/resources", chaptersHandler.LoadResources)
 
 	topicsHandler := appComponentPtr.TopicsHandler
-	muxHandler.HandleFunc("/add-topic", editor(topicsHandler.OpenAddTopic))
-	muxHandler.HandleFunc("/create-topic", editor(topicsHandler.AddTopic))
-	muxHandler.HandleFunc("/archive-topic", editor(topicsHandler.ArchiveTopic))
-	muxHandler.Handle("/edit-topic", middleware.RequireHTMX(middleware.RequireRole(auth.RoleEditor, http.HandlerFunc(topicsHandler.EditTopic))))
-	muxHandler.HandleFunc("/update-topic", editor(topicsHandler.UpdateTopic))
+	muxHandler.HandleFunc("/add-topic", admin(topicsHandler.OpenAddTopic))
+	muxHandler.HandleFunc("/create-topic", admin(topicsHandler.AddTopic))
+	muxHandler.HandleFunc("/archive-topic", admin(topicsHandler.ArchiveTopic))
+	muxHandler.Handle("/edit-topic", middleware.RequireHTMX(middleware.RequireRole(auth.RoleAdmin, http.HandlerFunc(topicsHandler.EditTopic))))
+	muxHandler.HandleFunc("/update-topic", admin(topicsHandler.UpdateTopic))
 	muxHandler.HandleFunc("/topic", topicsHandler.GetTopic)
 	muxHandler.HandleFunc("/topic/resources", topicsHandler.LoadResources)
 
 	resourcesHandler := appComponentPtr.ResourcesHandler
-	muxHandler.HandleFunc("/add-resource", editor(resourcesHandler.OpenAddResource))
-	muxHandler.HandleFunc("/create-resource", editor(resourcesHandler.AddResource))
+	muxHandler.HandleFunc("/add-resource", admin(resourcesHandler.OpenAddResource))
+	muxHandler.HandleFunc("/create-resource", admin(resourcesHandler.AddResource))
 	muxHandler.HandleFunc("/api/resources", resourcesHandler.GetResources)
-	muxHandler.Handle("/edit-resource", middleware.RequireHTMX(middleware.RequireRole(auth.RoleEditor, http.HandlerFunc(resourcesHandler.EditResource))))
-	muxHandler.HandleFunc("/update-resource", editor(resourcesHandler.UpdateResource))
-	muxHandler.HandleFunc("/delete-resource", editor(resourcesHandler.DeleteResource))
+	muxHandler.Handle("/edit-resource", middleware.RequireHTMX(middleware.RequireRole(auth.RoleAdmin, http.HandlerFunc(resourcesHandler.EditResource))))
+	muxHandler.HandleFunc("/update-resource", admin(resourcesHandler.UpdateResource))
+	muxHandler.HandleFunc("/delete-resource", admin(resourcesHandler.DeleteResource))
 	muxHandler.HandleFunc("/resources/move-resource", editor(resourcesHandler.LoadMoveResources))
 	muxHandler.HandleFunc("/move-resource", editor(resourcesHandler.MoveResource))
 
@@ -155,7 +155,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/add-curriculum-grade-selects", editor(testsHandler.AddCurriculumGradeDropdowns))
 	muxHandler.HandleFunc("/update-test", editor(testsHandler.UpdateTest))
 	muxHandler.HandleFunc("/update-test-subject", editor(testsHandler.UpdateTestSubject))
-	muxHandler.HandleFunc("/archive-test", editor(testsHandler.ArchiveTest))
+	muxHandler.HandleFunc("/archive-test", admin(testsHandler.ArchiveTest))
 	muxHandler.HandleFunc("/download-pdf", testsHandler.DownloadPdf)
 	muxHandler.HandleFunc("/tests/copy-test", editor(testsHandler.CopyTest))
 	muxHandler.HandleFunc("/tests/validate-test", testsHandler.ValidateTest)
