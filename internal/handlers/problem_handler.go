@@ -101,22 +101,22 @@ func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int
 	skills, err := h.skillsService.GetList(skillsEndPoint, skillsKey, false, false)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching skills: %v", err)
-	} else {
-		// Create a map to quickly lookup skills by their ID
-		skillPtrsMap := make(map[int16]*models.Skill)
-
-		// Fill the map with the address of each skill
-		for _, skillPtr := range *skills {
-			skillPtrsMap[skillPtr.ID] = skillPtr
-		}
-
-		// Loop through skill ids and add corresponding skills
-		for _, skillId := range selectedProblemPtr.SkillIDs {
-			selectedProblemPtr.Skills = append(selectedProblemPtr.Skills, *skillPtrsMap[skillId])
-		}
 	}
 
-	if err := h.enrichProblemTagNames(selectedProblemPtr); err != nil {
+	// Create a map to quickly lookup skills by their ID
+	skillPtrsMap := make(map[int16]*models.Skill)
+
+	// Fill the map with the address of each skill
+	for _, skillPtr := range *skills {
+		skillPtrsMap[skillPtr.ID] = skillPtr
+	}
+
+	// Loop through skill ids and add corresponding skills
+	for _, skillId := range selectedProblemPtr.SkillIDs {
+		selectedProblemPtr.Skills = append(selectedProblemPtr.Skills, *skillPtrsMap[skillId])
+	}
+
+	if err = h.enrichProblemTagNames(selectedProblemPtr); err != nil {
 		return nil, http.StatusInternalServerError, err
 	}
 	return selectedProblemPtr, http.StatusOK, nil
@@ -262,7 +262,7 @@ func filterProblems(problems *[]*models.Problem, levels []string, ptype string, 
 	*problems = ps[:n]
 }
 
-func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, problemsTemplate)
 }
 
@@ -294,7 +294,7 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		editorTemplate, problemAnswerNumericalTemplate, inputTagsTemplate)
 }
 
-func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, addConceptModalTemplate, curriculumGradeSelectsTemplate)
 }
 
@@ -466,7 +466,10 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 }
 
 func (h *ProblemsHandler) LoadTestAssociations(responseWriter http.ResponseWriter, request *http.Request) {
-	request.ParseForm()
+	if err := request.ParseForm(); err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error parsing form: %v", err), http.StatusBadRequest)
+		return
+	}
 	problemIDsStr := request.Form["select-problem"]
 	problemIDs := utils.StringSliceToIntSlice(problemIDsStr)
 
@@ -568,7 +571,7 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 
 	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.Form)
 	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
-		http.Error(responseWriter, fmt.Sprint("Invalid curriculum, grade or subject ID"), http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid curriculum, grade or subject ID", http.StatusBadRequest)
 		return
 	}
 

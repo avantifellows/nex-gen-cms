@@ -34,7 +34,7 @@ func (r *APIRepository) CallAPI(urlEndPoint string, method string, body any) ([]
 			var err error
 			jsonBodyBytes, err = json.Marshal(body)
 			if err != nil {
-				return nil, fmt.Errorf("error marshalling request body: %v", err)
+				return nil, fmt.Errorf("error marshaling request body: %v", err)
 			}
 		}
 

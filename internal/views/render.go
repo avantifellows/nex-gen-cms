@@ -17,7 +17,10 @@ func ExecuteTemplate(filename string, responseWriter http.ResponseWriter, data a
 	} else {
 		tmpl = template.Must(template.ParseFiles(tmplPath))
 	}
-	tmpl.Execute(responseWriter, data)
+	if err := tmpl.Execute(responseWriter, data); err != nil {
+		log.Println("Template Execution Error:", err)
+		http.Error(responseWriter, "Internal Server Error", http.StatusInternalServerError)
+	}
 }
 
 func ExecuteTemplates(responseWriter http.ResponseWriter, data any, funcMap template.FuncMap, templateFiles ...string) {

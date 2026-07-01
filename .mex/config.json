@@ -1,0 +1,10 @@
+{
+  "aiTools": [
+    "claude",
+    "codex"
+  ],
+  "scaffold_id": "4e780055-f144-466b-8872-07296d2305bc",
+  "scaffold_name": "nex-gen-cms",
+  "origin": null,
+  "upstream": null
+}
