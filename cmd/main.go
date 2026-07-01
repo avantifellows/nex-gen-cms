@@ -34,6 +34,9 @@ func main() {
 		"/auth/google/start",
 		"/auth/google/callback",
 		"/dev-login",
+		// Service-to-service JSON APIs — guarded by CMS_SERVICE_TOKEN instead (see setup()).
+		"/api/service/tests",
+		"/api/service/test",
 	}
 
 	addr := "0.0.0.0:8080"
@@ -159,6 +162,12 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/download-pdf", testsHandler.DownloadPdf)
 	muxHandler.HandleFunc("/tests/copy-test", editor(testsHandler.CopyTest))
 	muxHandler.HandleFunc("/tests/validate-test", testsHandler.ValidateTest)
+
+	// Service-to-service JSON APIs for session creation (af_lms, quiz-creator). Guarded by
+	// CMS_SERVICE_TOKEN (bearer), not the Google-OIDC session — so they are also listed in
+	// RequireLogin's exceptions in main().
+	muxHandler.HandleFunc("/api/service/tests", middleware.RequireServiceTokenFunc(testsHandler.GetTestsJSON))
+	muxHandler.HandleFunc("/api/service/test", middleware.RequireServiceTokenFunc(testsHandler.GetAssembledTestJSON))
 
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)

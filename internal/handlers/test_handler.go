@@ -119,22 +119,30 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	if curriculumId == 0 || gradeId == 0 {
 		return
 	}
-	testtype := urlVals.Get(TESTTYPE_DROPDOWN_NAME)
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
 
-	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
+	tests, err := h.listTests(curriculumId, gradeId, urlVals.Get(TESTTYPE_DROPDOWN_NAME),
+		urlVals.Get("sortColumn"), urlVals.Get("sortOrder"))
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	filterActiveTests(tests)
-
-	sortColumn := urlVals.Get("sortColumn")
-	sortOrder := urlVals.Get("sortOrder")
-	sortTests(*tests, sortColumn, sortOrder, nil, nil)
-
 	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
+}
+
+// listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the
+// HTMX row view (GetTests) and the service JSON API (GetTestsJSON).
+func (h *TestsHandler) listTests(curriculumId int16, gradeId int8, testtype, sortColumn, sortOrder string) (*[]*models.Test, error) {
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
+
+	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
+	if err != nil {
+		return nil, err
+	}
+
+	filterActiveTests(tests)
+	sortTests(*tests, sortColumn, sortOrder, nil, nil)
+	return tests, nil
 }
 
 // removes archived tests from the slice
