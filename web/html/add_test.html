@@ -906,10 +906,7 @@
             let url, method;
 
             if (mode === "edit") {
-                // Pass curriculum_id so the server can derive chapter_id from the test's
-                // problems (the edit payload omits curriculum_grades).
-                const curriculumId = curriculumGrades && curriculumGrades[0] ? curriculumGrades[0].curriculum_id : "";
-                url = `/update-test?id=${testId}${curriculumId ? `&curriculum_id=${curriculumId}` : ""}`;
+                url = `/update-test?id=${testId}`;
                 method = 'PATCH';
 
             } else {
@@ -1019,6 +1016,18 @@
                     });
             });
 
+        // A chapter test belongs to a single chapter. Derive chapter_id from the problem
+        // rows (each stamped with data-chapter-id); set it only when all problems resolve
+        // to exactly one chapter, mirroring the backfill's "single unambiguous chapter" rule.
+        const chapterIdSet = new Set();
+        document.querySelectorAll('#questions-table-body tr[data-chapter-id]')
+            .forEach(row => {
+                const parsed = parseInt(row.dataset.chapterId, 10);
+                if (!Number.isNaN(parsed) && parsed > 0) {
+                    chapterIdSet.add(parsed);
+                }
+            });
+
         const typeParams = {
             duration: document.getElementById('duration').value,
             marks: parseInt(document.getElementById('total-marks').textContent.trim()),
@@ -1026,6 +1035,10 @@
             neg_marks: getMarksArray(negChips),
             subjects: subjects
         };
+        // chapter_id is only meaningful for chapter tests, and only when unambiguous.
+        if (subtype === "chapter_test" && chapterIdSet.size === 1) {
+            typeParams.chapter_id = Array.from(chapterIdSet)[0];
+        }
         // Only persist instructions when they differ from the test-rule default (omit to let the rule apply; avoids redundant storage).
         if (shouldIncludeTestInstructionsInPayload()) {
             typeParams.instructions = getCurrentInstructions();

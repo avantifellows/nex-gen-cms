@@ -685,76 +685,11 @@ func (h *TestsHandler) CreateTest(responseWriter http.ResponseWriter, request *h
 		return
 	}
 
-	createdTest, err := h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
+	_, err = h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error adding test: %v", err), http.StatusInternalServerError)
 		return
 	}
-
-	// For chapter tests, derive chapter_id from the test's problems and persist it.
-	if createdTest != nil {
-		h.syncChapterID(&testObj, createdTest.ID, 0)
-	}
-}
-
-// syncChapterID derives a chapter_test's chapter from its problems and persists it onto
-// type_params.chapter_id. It re-PATCHes the just-written payload (known-good full body)
-// with only chapter_id added, so it can't clobber type_params. Best-effort: any failure,
-// or problems resolving to zero/multiple chapters, leaves chapter_id unset and never
-// affects the create/update that already succeeded. Only chapter_test carries a chapter_id.
-func (h *TestsHandler) syncChapterID(payload *models.Test, testId int, fallbackCurriculumId int16) {
-	if payload == nil || testId == 0 || payload.Subtype != "chapter_test" {
-		return
-	}
-
-	curriculumId := fallbackCurriculumId
-	if len(payload.CurriculumGrades) > 0 {
-		curriculumId = payload.CurriculumGrades[0].CurriculumID
-	}
-	if curriculumId == 0 {
-		return
-	}
-
-	chapterId := h.deriveChapterID(testId, curriculumId)
-	if chapterId == nil {
-		return
-	}
-	if payload.TypeParams.ChapterID != nil && *payload.TypeParams.ChapterID == *chapterId {
-		return // already correct; skip a redundant write
-	}
-
-	payload.TypeParams.ChapterID = chapterId
-	if _, err := h.testsService.UpdateObject(strconv.Itoa(testId), resourcesEndPoint, *payload, testsKey,
-		func(t *models.Test) bool { return t.ID == testId }); err != nil {
-		log.Printf("chapter_id sync failed for test %d: %v", testId, err)
-	}
-}
-
-// deriveChapterID returns the single chapter shared by all of a test's problems, or nil if
-// the problems can't be fetched or resolve to zero/multiple chapters.
-func (h *TestsHandler) deriveChapterID(testId int, curriculumId int16) *int16 {
-	endPoint := fmt.Sprintf(testProblemsEndPoint, testId, utils.IntToString(curriculumId))
-	problems, err := h.problemsService.GetList(endPoint, "", false, true)
-	if err != nil || problems == nil {
-		return nil
-	}
-	var chapterId int16
-	found := false
-	for _, p := range *problems {
-		if p.ChapterID == 0 {
-			continue
-		}
-		if !found {
-			chapterId = p.ChapterID
-			found = true
-		} else if p.ChapterID != chapterId {
-			return nil // problems span multiple chapters
-		}
-	}
-	if !found {
-		return nil
-	}
-	return &chapterId
 }
 
 func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -831,11 +766,6 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 		http.Error(responseWriter, fmt.Sprintf("Error updating test: %v", err), http.StatusInternalServerError)
 		return
 	}
-
-	// Edit omits curriculum_grades from the body, so fall back to the curriculum_id query
-	// param (added by the edit screen) for chapter derivation.
-	fallbackCurriculumId, _ := utils.StringToIntType[int16](request.URL.Query().Get(QUERY_PARAM_CURRICULUM_ID))
-	h.syncChapterID(&testObj, testId, fallbackCurriculumId)
 }
 
 func (h *TestsHandler) UpdateTestSubject(responseWriter http.ResponseWriter, request *http.Request) {
