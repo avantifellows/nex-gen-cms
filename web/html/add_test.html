@@ -906,9 +906,12 @@
             let url, method;
 
             if (mode === "edit") {
-                url = `/update-test?id=${testId}`;
+                // Pass curriculum_id so the server can derive chapter_id from the test's
+                // problems (the edit payload omits curriculum_grades).
+                const curriculumId = curriculumGrades && curriculumGrades[0] ? curriculumGrades[0].curriculum_id : "";
+                url = `/update-test?id=${testId}${curriculumId ? `&curriculum_id=${curriculumId}` : ""}`;
                 method = 'PATCH';
-                
+
             } else {
                 url = '/create-test';
                 method = 'POST';
