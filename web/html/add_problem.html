@@ -1,6 +1,6 @@
 {{ define "content" }}
 {{ $isEdit := (ne .ProblemPtr nil) }}
-<form class="card card-pad max-w-6xl mx-auto" onsubmit="createProblem(event,
+<form class="card card-pad w-full" onsubmit="createProblem(event,
         {{if .TopicPtr}}
         <!-- add problem -->
             {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}, null
