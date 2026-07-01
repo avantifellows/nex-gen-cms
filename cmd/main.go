@@ -117,6 +117,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/create-chapter", editor(chaptersHandler.AddChapter))
 	muxHandler.HandleFunc("/archive-chapter", editor(chaptersHandler.ArchiveChapter))
 	muxHandler.HandleFunc("/chapter", chaptersHandler.GetChapter)
+	muxHandler.HandleFunc("/chapter/tests", chaptersHandler.LoadChapterTests)
 	muxHandler.HandleFunc("/topics", chaptersHandler.LoadTopics)
 	muxHandler.HandleFunc("/api/topics", chaptersHandler.GetTopics)
 	muxHandler.HandleFunc("/chapter/resources", chaptersHandler.LoadResources)
@@ -146,6 +147,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	testsHandler := appComponentPtr.TestsHandler
 	muxHandler.HandleFunc("/tests", testsHandler.LoadTests)
 	muxHandler.HandleFunc("/api/tests", testsHandler.GetTests)
+	muxHandler.HandleFunc("/api/chapter-tests", testsHandler.GetChapterTests)
 	muxHandler.HandleFunc("/api/search-tests", testsHandler.GetSearchTests)
 	muxHandler.HandleFunc("/test", testsHandler.GetTest)
 	muxHandler.HandleFunc("/api/test/problems", testsHandler.GetTestProblems)

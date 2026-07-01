@@ -26,6 +26,7 @@ const chapterRowTemplate = "chapter_row.html"
 const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
+const chapterTestsTemplate = "chapter_tests.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
 const topicDropdownOptionalTemplate = "topic_dropdown_optional.html"
 
@@ -318,6 +319,18 @@ func (h *ChaptersHandler) LoadResources(responseWriter http.ResponseWriter, requ
 		ChapterId: chapterIdStr,
 	}
 	views.ExecuteTemplate(resourcesTemplate, responseWriter, data, nil)
+}
+
+// LoadChapterTests renders the Tests sub-tab shell for the chapter view; its tbody fetches
+// the chapter's tests from /api/chapter-tests (TestsHandler.GetChapterTests).
+func (h *ChaptersHandler) LoadChapterTests(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	data := dto.ChapterTestsData{
+		ChapterId:    urlVals.Get("chapterId"),
+		CurriculumId: urlVals.Get(QUERY_PARAM_CURRICULUM_ID),
+		GradeId:      urlVals.Get("grade_id"),
+	}
+	views.ExecuteTemplate(chapterTestsTemplate, responseWriter, data, nil)
 }
 
 func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request *http.Request) {

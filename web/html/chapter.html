@@ -12,10 +12,7 @@
             hx-trigger="load[document.getElementById('topics-sub-tab').classList.contains('active')], click"
             hx-get="/topics?id={{.ChapterPtr.ID}}"
             hx-target="#subContent"
-            onclick="
-                document.getElementById('topics-sub-tab').classList.add('active');
-                document.getElementById('resources-sub-tab').classList.remove('active');
-            ">
+            onclick="activateSubTab('topics-sub-tab')">
             Topics
         </div>
         <div class="sub-tab"
@@ -23,11 +20,16 @@
             hx-get="/chapter/resources?chapterId={{.ChapterPtr.ID}}"
             hx-trigger="load[document.getElementById('resources-sub-tab').classList.contains('active')], click"
             hx-target="#subContent"
-            onclick="
-                document.getElementById('resources-sub-tab').classList.add('active');
-                document.getElementById('topics-sub-tab').classList.remove('active');
-            ">
+            onclick="activateSubTab('resources-sub-tab')">
             Resources
+        </div>
+        <div class="sub-tab"
+            id="tests-sub-tab"
+            hx-get="/chapter/tests?chapterId={{.ChapterPtr.ID}}&curriculum_id={{.CurriculumID}}&grade_id={{.GradeID}}"
+            hx-trigger="load[document.getElementById('tests-sub-tab').classList.contains('active')], click"
+            hx-target="#subContent"
+            onclick="activateSubTab('tests-sub-tab')">
+            Tests
         </div>
     </div>
     <div id="sub-tabContent" class="pt-4">
@@ -35,4 +37,15 @@
         </div>
     </div>
 </div>
+<script>
+    // Toggle the `active` class among the chapter sub-tabs (Topics / Resources / Tests).
+    function activateSubTab(activeId) {
+        ["topics-sub-tab", "resources-sub-tab", "tests-sub-tab"].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.classList.toggle("active", id === activeId);
+            }
+        });
+    }
+</script>
 {{ end }}
