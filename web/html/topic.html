@@ -31,6 +31,9 @@
         const tabOnce = sessionStorage.getItem('topicTabOnce');
         if (tabOnce) {
             sessionStorage.removeItem('topicTabOnce');
+            // Suppress the Concepts load trigger so it doesn't race with the tab we're about to load.
+            const conceptsBtn = document.getElementById('topic-concepts-tab');
+            if (conceptsBtn) conceptsBtn.setAttribute('hx-trigger', 'click');
             setTimeout(() => {
                 const btn = document.getElementById(tabOnce);
                 if (!btn) return;
