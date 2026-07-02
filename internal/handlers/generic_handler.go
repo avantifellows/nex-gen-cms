@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
@@ -39,6 +41,19 @@ func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
 		http.Error(responseWriter, "Error rendering template", http.StatusInternalServerError)
 		log.Printf("Error executing template: %s", err)
 	}
+}
+
+// renderEntityList fetches a cached list from the given endpoint and renders it
+// with the given template. On failure it writes a 500 referencing label (e.g.
+// "grades", "exams"). It backs the otherwise-identical simple list handlers.
+func renderEntityList[T any](responseWriter http.ResponseWriter, service *services.Service[T],
+	endpoint, cacheKey, tmpl, label string) {
+	items, err := service.GetList(endpoint, cacheKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching %s: %v", label, err), http.StatusInternalServerError)
+		return
+	}
+	views.ExecuteTemplate(tmpl, responseWriter, items, nil)
 }
 
 func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {

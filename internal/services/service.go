@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/thoas/go-funk"
+
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	remote_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/remote"
-	"github.com/thoas/go-funk"
 )
 
 type Service[T any] struct {
@@ -107,8 +108,10 @@ func (s *Service[T]) UpdateObject(objIdStr string, urlEndPoint string, body any,
 	// Update in cache
 	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
 	if list != nil {
-		selectedObjPtr := funk.Find(*list, objFindingPredicate).(*T)
-		*selectedObjPtr = *objPtr
+		if found := funk.Find(*list, objFindingPredicate); found != nil {
+			selectedObjPtr := found.(*T)
+			*selectedObjPtr = *objPtr
+		}
 	}
 
 	return objPtr, nil

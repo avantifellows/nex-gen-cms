@@ -79,7 +79,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 		}
 		http.NotFound(w, r)
 	})
-	muxHandler.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+	muxHandler.HandleFunc("/favicon.ico", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 

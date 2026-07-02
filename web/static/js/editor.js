@@ -1,18 +1,49 @@
+function getEditorHtml(editor) {
+    const clone = editor.cloneNode(true);
+    if (typeof serializeMathFields === 'function') {
+        serializeMathFields(clone);
+    }
+    if (typeof normalizeRenderedMath === 'function') {
+        normalizeRenderedMath(clone);
+    }
+    let html = clone.innerHTML;
+    if (typeof stripImageCaretMarkers === 'function') {
+        html = stripImageCaretMarkers(html);
+    }
+    return html.trim();
+}
+window.getEditorHtml = getEditorHtml;
+
 window.initializeRichTextEditors = function (root = document) {
     root.querySelectorAll('.container').forEach(container => {
     if (container.dataset.editorInitialized === 'true') return;
-    container.dataset.editorInitialized = 'true';
 
+    try {
     const editorWrapper = container.querySelector(".editor-wrapper");
     const output = container.querySelector('.output');
 
     const editor = editorWrapper.querySelector(".editor");
 
-    // for edit problem screen update preview on opening page itself, because content must already be there in editor
-    const latex = editor.innerHTML;
-    if (latex) {
-        renderMath(editor);
-    }
+    const initPreview = () => {
+        // for edit problem screen update preview on opening page itself, because content must already be there in editor
+        const latex = editor.innerHTML.trim();
+        if (latex && typeof renderMath === 'function') {
+            try {
+                renderMath(editor);
+            } catch (err) {
+                console.error('Editor preview render failed', err);
+            }
+        }
+    };
+
+    const initEditorContent = () => {
+        if (typeof normalizeRenderedMath === 'function') {
+            normalizeRenderedMath(editor);
+        }
+        initPreview();
+    };
+
+    initEditorContent();
 
     // listener to display preview
     editor.addEventListener('input', () => {
@@ -67,18 +98,54 @@ window.initializeRichTextEditors = function (root = document) {
 
     function saveSelection() {
         const sel = window.getSelection();
-        if (sel.rangeCount > 0) {
+        if (sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
             savedRange = sel.getRangeAt(0);
         }
     }
 
-    function restoreSelection() {
-        if (savedRange) {
-            const sel = window.getSelection();
+    function ensureSelectionInEditor() {
+        const sel = window.getSelection();
+        if (!sel) return;
+
+        // If we already have a saved range inside this editor, use it.
+        if (
+            savedRange &&
+            editor.contains(savedRange.commonAncestorContainer)
+        ) {
             sel.removeAllRanges();
             sel.addRange(savedRange);
+            editor.focus();
+            return;
         }
+
+        // Otherwise, force a caret at the end of this editor so toolbar actions
+        // always apply to the correct editor instance.
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        savedRange = range;
+        sel.removeAllRanges();
+        sel.addRange(range);
+        editor.focus();
     }
+
+    function restoreSelection() {
+        ensureSelectionInEditor();
+    }
+
+    function execCommandInEditor(command, value = null) {
+        restoreSelection();
+        return document.execCommand(command, false, value);
+    }
+
+    // Keep focus/selection in the editor when using toolbar buttons
+    toolbar.addEventListener('mousedown', (e) => {
+        if (e.target.closest('input[type="color"], input[type="file"], select')) return;
+        if (e.target.closest('button, label.foreColorLabel, label.backColorLabel')) {
+            saveSelection();
+            e.preventDefault();
+        }
+    });
 
     toolbar.querySelector('.foreColor').addEventListener('input', function () {
         restoreSelection();
@@ -90,13 +157,110 @@ window.initializeRichTextEditors = function (root = document) {
         document.execCommand('hiliteColor', false, this.value);
     });
 
+    // Keep selection saved as user moves caret in editor (toolbar clicks steal focus)
+    editor.addEventListener('keyup', saveSelection);
+    editor.addEventListener('mouseup', saveSelection);
+    editor.addEventListener('touchend', saveSelection);
+
     toolbar.querySelector(".ulBtn").addEventListener("click", function () {
-        document.execCommand("insertUnorderedList", false, null);
+        execCommandInEditor("insertUnorderedList");
     });
 
-    toolbar.querySelector(".olBtn").addEventListener("click", function () {
+    let activeOrderedListType = '1';
+
+    function closestElement(node, tagName) {
+        if (!node) return null;
+        const upper = tagName.toUpperCase();
+        let cur = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+        while (cur) {
+            if (cur.tagName === upper) return cur;
+            cur = cur.parentElement;
+        }
+        return null;
+    }
+
+    function getActiveOrderedList() {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return null;
+        const anchor = sel.anchorNode;
+        if (!anchor || !editor.contains(anchor)) return null;
+        return closestElement(anchor, 'ol');
+    }
+
+    const ORDERED_LIST_STYLES = {
+        '1': null,
+        'a': 'lower-alpha',
+        'A': 'upper-alpha',
+        'i': 'lower-roman',
+        'I': 'upper-roman',
+    };
+
+    function setTypeOnOl(ol, type) {
+        if (!ol) return;
+        const listStyleType = ORDERED_LIST_STYLES[type];
+        if (!listStyleType) {
+            ol.removeAttribute('type');
+            ol.removeAttribute('data-ol-style');
+            ol.style.removeProperty('list-style-type');
+            return;
+        }
+        // Browsers normalize <ol type="a"> to type="A" in the DOM, so use data-ol-style + inline style.
+        ol.setAttribute('data-ol-style', type);
+        ol.style.listStyleType = listStyleType;
+        ol.setAttribute('type', type);
+    }
+
+    function applyOrderedListType(type, { ensureList = false } = {}) {
+        if (!type) return;
+        activeOrderedListType = type;
+
+        let ol = getActiveOrderedList();
+        if (!ol && ensureList) {
+            execCommandInEditor("insertOrderedList");
+            ol = getActiveOrderedList();
+        }
+        if (!ol) return;
+
+        setTypeOnOl(ol, type);
+    }
+
+    const olBtn = toolbar.querySelector(".olBtn");
+    olBtn.addEventListener("click", function () {
+        restoreSelection();
+        const wasInOl = !!getActiveOrderedList();
         document.execCommand("insertOrderedList", false, null);
+
+        // If toggled off ("unlist"), don't recreate the list by applying subtype.
+        const nowInOl = !!getActiveOrderedList();
+        if (!wasInOl && nowInOl && activeOrderedListType && activeOrderedListType !== '1') {
+            applyOrderedListType(activeOrderedListType, { ensureList: false });
+        } else if (wasInOl && nowInOl && activeOrderedListType && activeOrderedListType !== '1') {
+            applyOrderedListType(activeOrderedListType, { ensureList: false });
+        }
     });
+
+    const olTypeDropdownBtn = toolbar.querySelector('.olTypeDropdownBtn');
+    const olTypeDropdownMenu = toolbar.querySelector('.olTypeDropdownMenu');
+
+    if (olTypeDropdownBtn && olTypeDropdownMenu) {
+        // Save selection before focus moves to toolbar
+        olTypeDropdownBtn.addEventListener('mousedown', saveSelection);
+
+        olTypeDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            olTypeDropdownMenu.classList.toggle('hidden');
+        });
+
+        olTypeDropdownMenu.querySelectorAll('button[data-ol-type]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                restoreSelection();
+                applyOrderedListType(btn.dataset.olType, { ensureList: true });
+                olTypeDropdownMenu.classList.add('hidden');
+            });
+        });
+    }
 
     const dropdownBtn = toolbar.querySelector('.paragraphDropdownBtn');
     const dropdownMenu = toolbar.querySelector('.paragraphDropdownMenu');
@@ -108,9 +272,33 @@ window.initializeRichTextEditors = function (root = document) {
 
     dropdownMenu.querySelectorAll('button[data-cmd]').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.execCommand(btn.dataset.cmd);
+            execCommandInEditor(btn.dataset.cmd);
             dropdownMenu.classList.add('hidden');
         });
+    });
+
+    function closeToolbarMenus() {
+        dropdownMenu.classList.add('hidden');
+        if (olTypeDropdownMenu) olTypeDropdownMenu.classList.add('hidden');
+    }
+
+    // Close dropdowns when clicking outside this editor within the page form/content area
+    const menuCloseScope = container.closest('form') || container.closest('#content') || container;
+    menuCloseScope.addEventListener('click', (e) => {
+        if (!container.contains(e.target)) {
+            closeToolbarMenus();
+            return;
+        }
+        if (!toolbar.contains(e.target)) {
+            closeToolbarMenus();
+            return;
+        }
+        if (olTypeDropdownMenu && !olTypeDropdownMenu.contains(e.target) && !olTypeDropdownBtn?.contains(e.target)) {
+            olTypeDropdownMenu.classList.add('hidden');
+        }
+        if (!dropdownMenu.contains(e.target) && !dropdownBtn.contains(e.target)) {
+            dropdownMenu.classList.add('hidden');
+        }
     });
 
     toolbar.querySelector('.lineHeightSelector').addEventListener('change', function () {
@@ -265,6 +453,10 @@ window.initializeRichTextEditors = function (root = document) {
         insertImage(event, editor);
     });
 
+    if (typeof initImageEditing === 'function') {
+        initImageEditing(editor, editorWrapper);
+    }
+
     const fullscreenBtn = toolbar.querySelector(".fullscreenBtn");
     let isFullscreen = false;
     let isPreviewVisible = true;
@@ -313,7 +505,7 @@ window.initializeRichTextEditors = function (root = document) {
 
     function toggleCodeView() {
         if (codeView.classList.contains("hidden")) {
-            codeView.textContent = formatHTML(editor.innerHTML); // Show formatted HTML
+            codeView.textContent = formatHTML(getEditorHtml(editor)); // Show formatted HTML
             codeView.classList.remove("hidden");
             editor.classList.add("hidden");
         } else {
@@ -365,10 +557,23 @@ window.initializeRichTextEditors = function (root = document) {
         return result.trim();
     }
 
-    toolbar.querySelector('.mathBtn').addEventListener('click', (event) => {
-        insertMath(editor, event);
+    toolbar.querySelector('.mathBtn').addEventListener('click', () => {
+        insertMath(editor);
     });
-});
-};
 
-window.initializeRichTextEditors();
+    editor.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') {
+            e.preventDefault();
+            const selection = window.getSelection();
+            if (!selection.rangeCount) return;
+            if (!editor.contains(selection.anchorNode)) return;
+            insertInlineMathDelimiters(editor);
+        }
+    });
+
+    container.dataset.editorInitialized = 'true';
+    } catch (err) {
+        console.error('Failed to initialize rich text editor', err);
+    }
+    });
+};

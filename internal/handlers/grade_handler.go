@@ -6,7 +6,6 @@ import (
 
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
-	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
@@ -52,13 +51,6 @@ func appendGradeIDQueryParam(queryParams string, gradeParam string) (string, boo
 	return queryParams + fmt.Sprintf("&grade_id=%d", gradeId), true
 }
 
-func (h *GradesHandler) GetGrades(responseWriter http.ResponseWriter, request *http.Request) {
-	grades, err := h.service.GetList(getGradesEndPoint, gradesKey, false, false)
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching grades: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Load grades.html
-	views.ExecuteTemplate(gradesTemplate, responseWriter, grades, nil)
+func (h *GradesHandler) GetGrades(responseWriter http.ResponseWriter, _ *http.Request) {
+	renderEntityList(responseWriter, h.service, getGradesEndPoint, gradesKey, gradesTemplate, "grades")
 }

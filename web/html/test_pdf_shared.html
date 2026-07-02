@@ -2,9 +2,10 @@
 <script>
 window.MathJax = {
   startup: {
-    ready: () => {
-      MathJax.startup.defaultReady();
-      document.getElementById('mathjax-done').textContent = 'true';
+    pageReady: () => {
+      return MathJax.startup.defaultPageReady().then(() => {
+        document.getElementById('mathjax-done').textContent = 'true';
+      });
     }
   },
   chtml: {

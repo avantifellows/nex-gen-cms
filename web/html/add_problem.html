@@ -623,13 +623,17 @@
                 ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
             {{ end }}
         ];
-        
+
         // Initial rendering of options & answers for mcq & matrix match only
-        const subtype = document.getElementById('problem-type-dropdown').value;
-        if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
-            renderTabs();
-            setActiveTab(0);
+        function bootMcqTabsIfNeeded() {
+            const subtype = document.getElementById('problem-type-dropdown').value;
+            if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
+                renderTabs();
+                setActiveTab(0);
+            }
         }
+
+        bootMcqTabsIfNeeded();
 
         function getLabel(index) {
             return labelPool[index];
@@ -708,7 +712,7 @@
 
         function saveCurrentContent() {
             tabContent[activeIndex] = {
-                html: editor.innerHTML,
+                html: getEditorHtml(editor),
                 preview: preview.innerHTML
             };
         }
@@ -761,10 +765,21 @@
 
         function loadActiveContent() {
             const content = tabContent[activeIndex] || { html: '', preview: '' };
-            editor.innerHTML = content.html;
-            preview.innerHTML = content.preview;
-            // This is required for edit problem where by default MathJax is applied to only first option
-            applyMathJaxIfNeeded();
+            const applyContent = () => {
+                editor.innerHTML = content.html;
+                if (typeof normalizeRenderedMath === 'function') {
+                    normalizeRenderedMath(editor);
+                }
+                // This is required for edit problem where by default MathJax is applied to only first option
+                if (typeof renderMath === 'function') {
+                    renderMath(editor);
+                } else {
+                    preview.innerHTML = content.preview;
+                    applyMathJaxIfNeeded();
+                }
+            };
+
+            applyContent();
         }
 
         function applyMathJaxIfNeeded() {
@@ -805,7 +820,7 @@
             // Edit comprehension: same PATCH body as other types, plus paragraph for the API.
             if (isEditPage && subtype === 'comprehension') {
                 const paragraphEditor = paragraphDiv.querySelector('.editor');
-                const paragraph = paragraphEditor ? paragraphEditor.innerHTML.trim() : '';
+                const paragraph = paragraphEditor ? getEditorHtml(paragraphEditor) : '';
                 payload = { ...payload, paragraph };
             }
 
@@ -830,6 +845,14 @@
                 return res.text(); // if OK, read body
 
             }).then(html => {
+                if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {
+                    const curriculumId = document.getElementById("curriculum-dropdown").value;
+                    sessionStorage.setItem(
+                        REFRESH_PROBLEM_URL_KEY,
+                        `/problem?id=${problemId}&curriculum_id=${curriculumId}`
+                    );
+                    sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
+                }
                 // go back to remove add/edit problem screen
                 goBackAfterDelay(0);
 
@@ -969,7 +992,7 @@
 
         function buildComprehensionProblemsPayload(topicId, chapterId) {
             const paragraphEditor = paragraphDiv.querySelector('.editor');
-            const paragraph = paragraphEditor ? paragraphEditor.innerHTML.trim() : '';
+            const paragraph = paragraphEditor ? getEditorHtml(paragraphEditor) : '';
 
             const problems = [];
             problems.push(buildProblemJson(topicId, chapterId));
@@ -999,7 +1022,8 @@
 
             const difficulty = problemBlock.querySelector(`input[name="additional-difficulty-${idx}"]:checked`)?.value;
 
-            const question = problemBlock.querySelector('.additional-question .editor')?.innerHTML?.trim() ?? '';
+            const questionEditor = problemBlock.querySelector('.additional-question .editor');
+            const question = questionEditor ? getEditorHtml(questionEditor) : '';
 
             const selectedType = problemBlock.querySelector(`input[name="additional-numType-${idx}"]:checked`)?.value;
             let answers = [];
@@ -1012,7 +1036,8 @@
                 ];
             }
 
-            const solution = problemBlock.querySelector('.additional-solution .editor')?.innerHTML?.trim() ?? '';
+            const solutionEditor = problemBlock.querySelector('.additional-solution .editor');
+            const solution = solutionEditor ? getEditorHtml(solutionEditor) : '';
 
             const tags = getTagsForSection(problemBlock.querySelector('.problem-tags-section'));
 
@@ -1096,7 +1121,7 @@
 
             const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
 
-            const question = document.getElementById('questionDiv').querySelector('.editor').innerHTML.trim();
+            const question = getEditorHtml(document.getElementById('questionDiv').querySelector('.editor'));
 
             let options = null;
             let answers = [];
@@ -1124,7 +1149,7 @@
                 // integer_type
                 answers = [document.getElementById("answerInput").value];
             }
-            const solution = document.getElementById('solutionDiv').querySelector('.editor').innerHTML.trim();
+            const solution = getEditorHtml(document.getElementById('solutionDiv').querySelector('.editor'));
 
             const conceptsDropdown = document.getElementById("concepts-dropdown");
             const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
@@ -1146,6 +1171,35 @@
                 tags: getTagsForSection(mainTagsRoot),
             });
         }
+
+        // editor.js may still be loading when this inline script runs (common on HTMX body swap)
+        function bootRichTextEditors() {
+            const form = document.querySelector('form.card');
+            if (!form?.querySelector('.container')) return false;
+            if (!window.initializeRichTextEditors) return false;
+            window.initializeRichTextEditors(form);
+            return true;
+        }
+
+        function scheduleEditorBoot() {
+            const boot = () => {
+                if (bootRichTextEditors()) return;
+                const editorScript = document.querySelector('script[src*="editor.js"]');
+                if (editorScript) {
+                    const run = () => { bootRichTextEditors(); };
+                    if (window.initializeRichTextEditors) {
+                        run();
+                    } else {
+                        editorScript.addEventListener('load', run, { once: true });
+                    }
+                } else {
+                    requestAnimationFrame(scheduleEditorBoot);
+                }
+            };
+
+            boot();
+        }
+        scheduleEditorBoot();
     })();
 </script>
 {{ end }}

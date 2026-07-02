@@ -177,13 +177,113 @@
   }
 
   /* --- Rich-text editor surface --------------------------------------- */
+  .editor-wrapper {
+    position: relative; /* anchor for image toolbar & resize overlay */
+  }
+
   .editor {
     font-family: var(--font-sans);
   }
+
+  /* Image — show pointer to hint it's clickable */
+  .editor img { cursor: pointer; }
+  .editor img.img-selected { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+
+  /* Floated image: text beside, then full width below image (clearfix on paragraph) */
+  .editor p.editor-img-float,
+  .output p.editor-img-float {
+    margin: 0.5em 0;
+    overflow: visible;
+  }
+  .editor p.editor-img-float::after,
+  .output p.editor-img-float::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+  .editor p.editor-img-justify,
+  .output p.editor-img-justify {
+    margin: 0.5em 0;
+  }
+  .editor p.editor-img-justify > img,
+  .output p.editor-img-justify > img {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 0.5em 0;
+    float: none;
+  }
+
+  /* --- Image editing toolbar (appears above selected image) ----------- */
+  .img-edit-toolbar {
+    display: none;
+    position: absolute;
+    z-index: 200;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 4px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    box-shadow: var(--shadow-card);
+    white-space: nowrap;
+  }
+  .img-edit-toolbar.active { display: flex; }
+
+  .img-edit-toolbar button {
+    @apply px-2 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg rounded-sm;
+    border: none;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .img-edit-toolbar .img-delete-btn { @apply text-danger hover:bg-danger-bg; }
+
+  .img-edit-sep {
+    display: inline-block;
+    width: 1px;
+    height: 16px;
+    background: var(--color-border);
+    margin: 0 2px;
+    vertical-align: middle;
+  }
+
+  /* --- Resize overlay (border + corner handles) ----------------------- */
+  .img-resize-overlay {
+    display: none;
+    position: absolute;
+    z-index: 199;
+    border: 2px solid var(--color-accent);
+    box-sizing: border-box;
+    pointer-events: none; /* clicks pass through to editor; handles re-enable */
+  }
+  .img-resize-overlay.active { display: block; }
+
+  .img-resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-accent);
+    border-radius: 2px;
+    box-sizing: border-box;
+    pointer-events: all;
+  }
+  .img-resize-nw { top: -5px; left: -5px;   cursor: nw-resize; }
+  .img-resize-ne { top: -5px; right: -5px;  cursor: ne-resize; }
+  .img-resize-se { bottom: -5px; right: -5px; cursor: se-resize; }
+  .img-resize-sw { bottom: -5px; left: -5px;  cursor: sw-resize; }
   .editor ul,
   .output ul { @apply list-disc ml-6; }
   .editor ol,
   .output ol { @apply list-decimal ml-6; }
+  .editor ol[data-ol-style="a"],
+  .output ol[data-ol-style="a"] { list-style-type: lower-alpha; }
+  .editor ol[data-ol-style="A"],
+  .output ol[data-ol-style="A"] { list-style-type: upper-alpha; }
+  .editor ol[data-ol-style="i"],
+  .output ol[data-ol-style="i"] { list-style-type: lower-roman; }
+  .editor ol[data-ol-style="I"],
+  .output ol[data-ol-style="I"] { list-style-type: upper-roman; }
   .editor hr,
   .output hr { @apply m-4 border-t border-border; }
   .editor-fullscreen {

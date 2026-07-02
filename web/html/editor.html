@@ -60,15 +60,46 @@
                 </label>
             </div>
 
-            <!-- Ordered and Unordered List Buttons -->
-            <div class="flex gap-0 border border-border rounded-sm overflow-hidden">
-                <button title="Unordered List" type="button"
-                    class="ulBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border-r border-border">
-                    <i class="fas fa-list-ul"></i>
-                </button>
-                <button title="Ordered List" type="button" class="olBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg">
-                    <i class="fas fa-list-ol"></i>
-                </button>
+            <!-- Ordered and Unordered List Buttons + Ordered List Type Dropdown -->
+            <div class="relative shrink-0">
+                <div class="flex gap-0 border border-border rounded-sm overflow-hidden">
+                    <button title="Unordered List" type="button"
+                        class="ulBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border-r border-border">
+                        <i class="fas fa-list-ul"></i>
+                    </button>
+                    <button title="Ordered List" type="button"
+                        class="olBtn px-3 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg border-r border-border">
+                        <i class="fas fa-list-ol"></i>
+                    </button>
+                    <button title="Ordered List Type" type="button"
+                        class="olTypeDropdownBtn px-2 py-1 text-sm bg-bg-card hover:bg-brand-blue-bg">
+                        <i class="fas fa-caret-down text-xs"></i>
+                    </button>
+                </div>
+
+                <div
+                    class="olTypeDropdownMenu absolute left-0 mt-1 hidden bg-bg-card border border-border rounded-sm shadow-card p-2 grid grid-cols-1 gap-1 w-28 z-50">
+                    <button type="button" data-ol-type="1"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="1, 2, 3">
+                        1, 2, 3
+                    </button>
+                    <button type="button" data-ol-type="a"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="a, b, c">
+                        a, b, c
+                    </button>
+                    <button type="button" data-ol-type="A"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="A, B, C">
+                        A, B, C
+                    </button>
+                    <button type="button" data-ol-type="i"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="i, ii, iii">
+                        i, ii, iii
+                    </button>
+                    <button type="button" data-ol-type="I"
+                        class="px-2 py-1 text-left hover:bg-brand-blue-bg rounded-sm" title="I, II, III">
+                        I, II, III
+                    </button>
+                </div>
             </div>
 
             <!-- Paragraph Formatting Dropdown -->
@@ -177,6 +208,26 @@
         <pre contenteditable="true"
             class="codeView whitespace-pre-wrap text-sm p-2 h-52 bg-bg-card-alt border border-border rounded-sm overflow-y-auto hidden"></pre>
 
+        <!-- Image editing UI (positioned over the editor by JS) -->
+        <div class="img-edit-toolbar" role="toolbar" aria-label="Image options">
+            <button type="button" data-img-align="left" title="Align Left"><i class="fas fa-align-left"></i></button>
+            <button type="button" data-img-align="justify" title="Justify"><i class="fas fa-align-justify"></i></button>
+            <button type="button" data-img-align="right" title="Align Right"><i class="fas fa-align-right"></i></button>
+            <span class="img-edit-sep"></span>
+            <button type="button" data-img-size="25" title="25% width">25%</button>
+            <button type="button" data-img-size="50" title="50% width">50%</button>
+            <button type="button" data-img-size="75" title="75% width">75%</button>
+            <button type="button" data-img-size="100" title="Full width">100%</button>
+            <span class="img-edit-sep"></span>
+            <button type="button" class="img-delete-btn" title="Remove image"><i class="fas fa-trash-alt"></i></button>
+        </div>
+        <div class="img-resize-overlay" aria-hidden="true">
+            <div class="img-resize-handle img-resize-nw" data-dir="nw"></div>
+            <div class="img-resize-handle img-resize-ne" data-dir="ne"></div>
+            <div class="img-resize-handle img-resize-se" data-dir="se"></div>
+            <div class="img-resize-handle img-resize-sw" data-dir="sw"></div>
+        </div>
+
     </div>
 
     <div class="output w-1/2 self-end bg-bg-card-alt border border-border p-2 h-52 overflow-y-auto">
@@ -185,6 +236,5 @@
 
 <div id="math-keyboard" class="ML__keyboard mt-4"></div>
 
-<script src="/web/static/js/editor-math.js"></script>
 <script src="/web/static/js/editor-image.js"></script>
 {{ end }}
