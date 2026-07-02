@@ -314,6 +314,19 @@
     @apply border border-border px-4 py-2;
   }
 
+  /* Solution text rendered from rich-text HTML.
+     list-style-position: inside keeps every marker flush with the left edge of
+     the surrounding text — no separate marker column, no extra indent for
+     short markers like "i." vs "iii.". Tailwind v4 preflight already resets
+     padding/margin to 0, so only list-style needs to be set explicitly. */
+  .solution-content ol { list-style: decimal inside; }
+  .solution-content ul { list-style: disc inside; }
+  /* TipTap stores non-decimal ol types via data-ol-style attribute */
+  .solution-content ol[data-ol-style="i"] { list-style-type: lower-roman; }
+  .solution-content ol[data-ol-style="I"] { list-style-type: upper-roman; }
+  .solution-content ol[data-ol-style="a"] { list-style-type: lower-alpha; }
+  .solution-content ol[data-ol-style="A"] { list-style-type: upper-alpha; }
+
   /* --- HTMX loader visibility helpers --------------------------------- */
   #search-btn-loader,
   #searched-test-loader,

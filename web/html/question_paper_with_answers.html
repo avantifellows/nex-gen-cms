@@ -36,10 +36,10 @@
                         <div class="mt-2 border border-gray-200 rounded-sm p-2 bg-white text-sm">
                             <div><span class="font-semibold">Chapter:</span> <span class="ml-1">{{ getChapterName $p "en" }}</span></div>
                             <div><span class="font-semibold">Difficulty:</span> <span class="ml-1">{{ capitalize $p.DifficultyLevel }}</span></div>
-                            {{ if and (gt (len $p.MetaData.Solutions) 0) (ne (trim (printf "%s" (index $p.MetaData.Solutions 0).Value)) "") }}
+                            {{ if and (gt (len $p.MetaData.Solutions) 0) (not (isEmptyHTML (printf "%s" (index $p.MetaData.Solutions 0).Value))) }}
                             <div class="mt-1">
                                 <span class="font-semibold">Solution:</span>
-                                <span class="ml-1 whitespace-pre-wrap">{{ (index $p.MetaData.Solutions 0).Value }}</span>
+                                <div class="ml-1 solution-content">{{ (index $p.MetaData.Solutions 0).Value }}</div>
                             </div>
                             {{ end }}
                         </div>
