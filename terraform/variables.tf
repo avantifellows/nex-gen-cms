@@ -75,6 +75,12 @@ variable "db_service_token" {
   sensitive   = true
 }
 
+variable "cms_service_token" {
+  description = "Bearer token guarding the CMS service-to-service APIs (/api/service/*) consumed by af_lms/quiz-creator"
+  type        = string
+  sensitive   = true
+}
+
 variable "database_url" {
   description = "Postgres DSN used for direct cms_user_permission lookups (e.g. postgres://user:pass@host:5432/db?sslmode=require)"
   type        = string
