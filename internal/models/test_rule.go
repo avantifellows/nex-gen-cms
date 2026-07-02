@@ -13,11 +13,13 @@ type Config struct {
 	Duration      int16         `json:"duration"`
 	MarkingScheme MarkingScheme `json:"marking_scheme"`
 	Instructions  template.HTML `json:"instructions"`
+	SingleSubject bool          `json:"single_subject,omitempty"`
 }
 
 type SubjectRule struct {
-	SubjectIDs []int8      `json:"subject_ids"`
-	Rules      RuleDetails `json:"rules"`
+	SubjectID    int8          `json:"subject_id"`
+	Rules        RuleDetails   `json:"rules"`
+	Instructions template.HTML `json:"instructions,omitempty"`
 }
 
 type RuleDetails struct {
