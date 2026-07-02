@@ -1,24 +1,26 @@
 {{ define "content" }}
-{{ $isEdit := (ne .ProblemPtr nil) }}
+{{ $isCopy := and .TopicPtr .ProblemPtr }}
+{{ $isEdit := and .ProblemPtr (not $isCopy) }}
+{{ $prefill := or $isEdit $isCopy }}
 <form class="card card-pad max-w-6xl mx-auto" onsubmit="createProblem(event,
         {{if .TopicPtr}}
-        <!-- add problem -->
+        <!-- add or copy problem -->
             {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}, null
         {{else}}
         <!-- edit problem -->
             {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
         {{end}}
 );">
-    <h2 class="page-title mb-6">{{if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
+    <h2 class="page-title mb-6">{{if $isCopy}}Copy{{else if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
 
     <!-- type, skills, concepts -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div>
             <label class="form-label" for="problem-type-dropdown">Type</label>
             <select id="problem-type-dropdown" name="problem-type-dropdown"
-                {{if .ProblemPtr}}disabled title="Problem type cannot be changed in edit mode"{{end}}
-                class="form-select {{if .ProblemPtr}}bg-bg-card-alt text-ink-muted cursor-not-allowed{{end}}">
-                {{if $isEdit}}
+                {{if $isEdit}}disabled title="Problem type cannot be changed in edit mode"{{end}}
+                class="form-select {{if $isEdit}}bg-bg-card-alt text-ink-muted cursor-not-allowed{{end}}">
+                {{if $prefill}}
                 {{template "problem_type_options" .ProblemPtr.Subtype}}
                 {{else}}
                 {{template "problem_type_options"}}
@@ -29,7 +31,7 @@
             <label class="form-label" for="skills-dropdown">Skills</label>
             <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
                 class="form-select h-24 overflow-y-auto"
-                hx-get='/api/skills{{if $isEdit}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
+                hx-get='/api/skills{{if $prefill}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
                 <option disabled>Loading skills...</option>
             </select>
         </div>
@@ -37,9 +39,9 @@
             <label class="form-label" for="concepts-dropdown">Concepts</label>
             <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
                 class="form-select h-24 overflow-y-auto"
-                hx-swap="{{if $isEdit}}beforeend{{else}}innerHTML{{end}}"
-                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if $isEdit}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
-                    {{ if $isEdit }}
+                hx-swap="{{if $prefill}}beforeend{{else}}innerHTML{{end}}"
+                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if $prefill}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
+                    {{ if $prefill }}
                         {{ range .ProblemPtr.Concepts }}
                             <!-- These are already mapped concepts -->
                             <option value="{{.ID}}" selected>{{ getConceptName . "en" }}</option>
@@ -57,7 +59,7 @@
     <!-- Paragraph editor for comprehension type -->
     <div id="paragraphDiv" class="mb-6 hidden">
         <p class="form-label mb-2">Paragraph</p>
-        {{ if and $isEdit .ProblemPtr.Paragraph }}
+        {{ if and $prefill .ProblemPtr.Paragraph }}
         {{ template "editor" .ProblemPtr.Paragraph.Body }}
         {{ else }}
         {{ template "editor" }}
@@ -69,15 +71,15 @@
         <p class="form-label mb-2">Difficulty Rating</p>
         <div class="flex gap-2 flex-wrap">
             <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                <input type="radio" name="difficulty" value="easy" class="accent-accent" {{if and $isEdit (eq .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}>
+                <input type="radio" name="difficulty" value="easy" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}>
                 <span class="font-bold">1 — Easy</span>
             </label>
             <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                <input type="radio" name="difficulty" value="medium" class="accent-accent" {{if and $isEdit (eq .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}>
+                <input type="radio" name="difficulty" value="medium" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}>
                 <span class="font-bold">2 — Medium</span>
             </label>
             <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                <input type="radio" name="difficulty" value="hard" class="accent-accent" {{if and $isEdit (eq .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}>
+                <input type="radio" name="difficulty" value="hard" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}>
                 <span class="font-bold">3 — Hard</span>
             </label>
         </div>
@@ -86,7 +88,7 @@
     <!-- Question editor -->
     <div id="questionDiv" class="mb-6">
         <p class="form-label mb-2">Text</p>
-        {{ if $isEdit }}
+        {{ if $prefill }}
         {{ template "editor" .ProblemPtr.MetaData.Question }}
         {{ else }}
         {{ template "editor" }}
@@ -120,7 +122,7 @@
     <!-- Solution -->
     <div class="mb-6" id="solutionDiv">
         <p class="form-label mb-2">Solution</p>
-        {{ if and $isEdit (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
+        {{ if and $prefill (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
         {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
         {{ else }}
         {{ template "editor" }}
@@ -130,7 +132,7 @@
     <!-- Tags -->
     <div class="mb-6" id="main-problem-tags">
         <p class="form-label mb-2">Tags</p>
-        {{ if $isEdit }}
+        {{ if $prefill }}
             {{ template "input_tags" .ProblemPtr.TagNames }}
         {{ else }}
             {{ template "input_tags" (emptyStringSlice) }}
@@ -255,7 +257,7 @@
 
 <template id="tmplAnsNumeric">
     {{ $meta := (dict "Answers" nil) }}
-    {{ if $isEdit }}
+    {{ if $prefill }}
         {{ $meta = .ProblemPtr.MetaData }}
     {{ end }}
 
@@ -283,6 +285,8 @@
         const currentTopicId = '{{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}';
         const currentChapterId = '{{if .TopicPtr}}{{.TopicPtr.ChapterID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
         const isEditPage = {{ $isEdit }};
+        const isCopyPage = {{ $isCopy }};
+        const hasPrefill = {{ $prefill }};
 
         const mainTagsRoot = document.querySelector('#main-problem-tags .problem-tags-section');
         initProblemTagsSection(mainTagsRoot);
@@ -300,7 +304,7 @@
         // keep 4 tabs so that while editing such problem if type is changed to mcq
         // then 4 option tabs will be visible by default
         let tabs = new Array(
-            {{ if and $isEdit (gt (len .ProblemPtr.MetaData.Options) 0) }}
+            {{ if and $prefill (gt (len .ProblemPtr.MetaData.Options) 0) }}
                 {{ len .ProblemPtr.MetaData.Options }}
             {{ else }}
                 4
@@ -310,7 +314,7 @@
         let activeIndex = 0;
 
         const answerLabels = new Set([
-            {{ if and $isEdit (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
+            {{ if and $prefill (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
                 {{ range .ProblemPtr.MetaData.Answers }}
                     {{ if . }}
                         '{{ printf "%c" (add 64 (stringToInt .)) }}',
@@ -325,7 +329,7 @@
             onProblemTypeSelection(this.value);
         });
 
-        if (isEditPage) {
+        if (hasPrefill) {
             onProblemTypeSelection(problemTypeDropdown.value);
         }
 
@@ -516,7 +520,7 @@
             } else {
                 // Integer type fallback (simple input)
                 let answer = 
-                    {{ if $isEdit }}
+                    {{ if $prefill }}
                         '{{ index .ProblemPtr.MetaData.Answers 0 }}'
                     {{ else }}
                         ''
@@ -614,7 +618,7 @@
 
         // Initial setup
         const tabContent = [
-            {{ if $isEdit }}
+            {{ if $prefill }}
                 {{ range .ProblemPtr.MetaData.Options }}
                     { html: `{{ . }}`, preview: `{{ . }}` },
                 {{ end }}
@@ -845,16 +849,24 @@
                 return res.text(); // if OK, read body
 
             }).then(html => {
-                if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {
-                    const curriculumId = document.getElementById("curriculum-dropdown").value;
-                    sessionStorage.setItem(
-                        REFRESH_PROBLEM_URL_KEY,
-                        `/problem?id=${problemId}&curriculum_id=${curriculumId}`
-                    );
-                    sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
+                if (isCopyPage) {
+                    sessionStorage.setItem('topicTabOnce', 'topic-problems-tab');
+                    const topicUrl = '/topic?id={{if .TopicPtr}}{{.TopicPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
+                    history.replaceState(null, '', topicUrl);
+                    htmx.ajax('GET', topicUrl, { target: 'body', swap: 'innerHTML' });
+                
+                } else {
+                    if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {
+                        const curriculumId = document.getElementById("curriculum-dropdown").value;
+                        sessionStorage.setItem(
+                            REFRESH_PROBLEM_URL_KEY,
+                            `/problem?id=${problemId}&curriculum_id=${curriculumId}`
+                        );
+                        sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
+                    }
+                    // go back to remove add/edit problem screen
+                    goBackAfterDelay(0);
                 }
-                // go back to remove add/edit problem screen
-                goBackAfterDelay(0);
 
             }).catch(err => {
                 console.error("Error during problem creation:", err);

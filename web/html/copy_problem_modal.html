@@ -1,0 +1,131 @@
+<div id="copy-problem-modal"
+    class="fixed inset-0 bg-ink/40 flex justify-center items-center z-50 p-4">
+    <div class="card shadow-xl rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+
+        <h2 class="page-title mb-2">Copy Problem</h2>
+        <p class="text-sm text-ink-muted mb-6">
+            Select Curriculum, Grade & Subject in any order. Then select Chapter, and finally Topic.
+        </p>
+
+        <form id="copy-problem-form" class="space-y-6" hx-disabled-elt="#copy-problem-btn">
+
+            <input type="hidden" name="id" value="{{.ProblemID}}">
+            <input type="hidden" name="source_curriculum_id" value="{{.SourceCurriculumID}}">
+
+            <div class="grid grid-cols-3 gap-4">
+
+                <!-- Curriculum -->
+                <select id="copy-problem-curriculum-dropdown" name="curriculum-dropdown"
+                        class="form-select" hx-get="/api/curriculums"
+                        hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                        hx-on::after-request="afterCopyProblemDropdownReq(this)">
+                    <option disabled selected>Loading curriculums...</option>
+                </select>
+
+                <!-- Grade -->
+                <select id="copy-problem-grade-dropdown" name="grade-dropdown"
+                        class="form-select" hx-get="/api/grades"
+                        hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                        hx-on::after-request="afterCopyProblemDropdownReq(this)">
+                    <option disabled selected>Loading grades...</option>
+                </select>
+
+                <!-- Subject -->
+                <select id="copy-problem-subject-dropdown" name="subject-dropdown"
+                        class="form-select" hx-get="/api/subjects"
+                        hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                        hx-on::after-request="afterCopyProblemDropdownReq(this)">
+                    <option disabled selected>Loading subjects...</option>
+                </select>
+
+                <!-- Chapter -->
+                <select id="copy-problem-chapter-dropdown" name="chapter-dropdown"
+                        class="form-select" hx-get="/api/chapters"
+                        hx-target="this" hx-swap="innerHTML"
+                        hx-trigger="loadChapters, change from:(#copy-problem-modal #copy-problem-curriculum-dropdown, #copy-problem-modal #copy-problem-grade-dropdown, #copy-problem-modal #copy-problem-subject-dropdown)"
+                        hx-include="#copy-problem-modal #copy-problem-curriculum-dropdown, #copy-problem-modal #copy-problem-grade-dropdown, #copy-problem-modal #copy-problem-subject-dropdown"
+                        hx-params="not chapter-dropdown" hx-on::before-request="beforeCopyProblemChaptersRequest()"
+                        hx-on::after-request="toggleCopyProblemButton()">
+                    <option disabled selected>Loading chapters...</option>
+                </select>
+
+                <!-- Topic -->
+                <select id="copy-problem-topic-dropdown" name="topic_id" class="form-select"
+                        hx-get="/api/topics?view=dropdown" hx-trigger="change from:#copy-problem-chapter-dropdown"
+                        hx-target="this" hx-swap="innerHTML" onchange="toggleCopyProblemButton()"
+                        hx-include="#copy-problem-chapter-dropdown, #copy-problem-curriculum-dropdown"
+                        hx-on::before-request="beforeCopyProblemTopicsRequest()"
+                        hx-on::after-swap="toggleCopyProblemButton()"
+                        hx-on::after-request="toggleCopyProblemButton()">
+                    <option value="" disabled selected>Select a chapter first</option>
+                </select>
+
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-3 pt-4 border-t border-border">
+                <button type="button" onclick="closeCopyProblemModal()" class="btn-secondary">
+                    Cancel
+                </button>
+
+                <button id="copy-problem-btn" type="submit" disabled
+                    hx-get="/topic/copy-problem"
+                    hx-target="body"
+                    hx-swap="innerHTML"
+                    hx-replace-url="true"
+                    hx-include="#copy-problem-form"
+                    hx-on::after-swap="removeCopyProblemModal()"
+                    class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-card-alt disabled:text-ink-muted">
+                    Copy
+                </button>
+            </div>
+
+        </form>
+    </div>
+</div>
+<script>
+(function () {
+    const modal = document.getElementById('copy-problem-modal');
+    const curriculumDropdown = modal.querySelector('#copy-problem-curriculum-dropdown');
+    const gradeDropdown = modal.querySelector('#copy-problem-grade-dropdown');
+    const subjectDropdown = modal.querySelector('#copy-problem-subject-dropdown');
+    const chapterDropdown = modal.querySelector('#copy-problem-chapter-dropdown');
+    const topicDropdown = modal.querySelector('#copy-problem-topic-dropdown');
+    const copyBtn = modal.querySelector('#copy-problem-btn');
+
+    window.afterCopyProblemDropdownReq = function (dropdown) {
+        dropdown.dataset.loaded = 'true';
+
+        const allReady =
+            curriculumDropdown.dataset.loaded &&
+            gradeDropdown.dataset.loaded &&
+            subjectDropdown.dataset.loaded;
+
+        if (allReady) {
+            htmx.trigger(chapterDropdown, 'loadChapters');
+        }
+    };
+
+    window.beforeCopyProblemChaptersRequest = function () {
+        chapterDropdown.innerHTML = '<option disabled selected>Loading chapters...</option>';
+        topicDropdown.innerHTML = '<option value="" disabled selected>Select a chapter first</option>';
+        copyBtn.disabled = true;
+    };
+
+    window.beforeCopyProblemTopicsRequest = function () {
+        topicDropdown.innerHTML = '<option disabled selected>Loading topics...</option>';
+    };
+
+    window.toggleCopyProblemButton = function () {
+        copyBtn.disabled = !topicDropdown.value;
+    };
+
+    window.removeCopyProblemModal = function () {
+        modal.remove();
+    };
+
+    window.closeCopyProblemModal = function () {
+        goBackAfterDelay(0);
+    };
+})();
+</script>
