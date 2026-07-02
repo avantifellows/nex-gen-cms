@@ -118,6 +118,7 @@ ${templatefile("${path.module}/user-data.sh", {
   repo_branch          = var.repo_branch
   db_service_endpoint  = var.db_service_endpoint
   db_service_token     = var.db_service_token
+  cms_service_token    = var.cms_service_token
   database_url         = var.database_url
   session_secret       = var.session_secret
   google_client_id     = var.google_client_id

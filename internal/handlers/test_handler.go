@@ -120,20 +120,68 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	if curriculumId == 0 || gradeId == 0 {
 		return
 	}
-	testtype := urlVals.Get(TESTTYPE_DROPDOWN_NAME)
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
 
-	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
+	tests, err := h.listTests(curriculumId, gradeId, urlVals.Get(TESTTYPE_DROPDOWN_NAME),
+		urlVals.Get("sortColumn"), urlVals.Get("sortOrder"))
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	filterActiveTests(tests)
+	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
+}
 
-	sortColumn := urlVals.Get("sortColumn")
-	sortOrder := urlVals.Get("sortOrder")
+// listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the
+// HTMX row view (GetTests) and the service JSON API (GetTestsJSON).
+func (h *TestsHandler) listTests(curriculumId int16, gradeId int8, testtype, sortColumn, sortOrder string) (*[]*models.Test, error) {
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
+
+	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
+	if err != nil {
+		return nil, err
+	}
+
+	filterActiveTests(tests)
 	sortTests(*tests, sortColumn, sortOrder, nil, nil)
+	return tests, nil
+}
+
+// GetChapterTests renders the chapter tests belonging to a single chapter, for the chapter
+// view's Tests sub-tab. It lists chapter_tests for the curriculum/grade and keeps only those
+// whose type_params.chapter_id matches the chapter.
+func (h *TestsHandler) GetChapterTests(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+
+	chapterId, err := utils.StringToIntType[int16](urlVals.Get("chapterId"))
+	if err != nil {
+		http.Error(responseWriter, "Invalid Chapter ID", http.StatusBadRequest)
+		return
+	}
+	curriculumId, err := utils.StringToIntType[int16](urlVals.Get(QUERY_PARAM_CURRICULUM_ID))
+	if err != nil {
+		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
+		return
+	}
+	gradeId, err := utils.StringToIntType[int8](urlVals.Get("grade_id"))
+	if err != nil {
+		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
+		return
+	}
+
+	tests, err := h.listTests(curriculumId, gradeId, "chapter_test", urlVals.Get("sortColumn"), urlVals.Get("sortOrder"))
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// keep only tests linked to this chapter (chapter_id lives in type_params)
+	filtered := (*tests)[:0]
+	for _, t := range *tests {
+		if t.TypeParams.ChapterID != nil && *t.TypeParams.ChapterID == chapterId {
+			filtered = append(filtered, t)
+		}
+	}
+	*tests = filtered
 
 	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
 }
