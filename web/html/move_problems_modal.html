@@ -53,7 +53,7 @@
                 <select id="topic-dropdown" name="topic_id" class="form-select"
                         hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
                         hx-target="this" hx-swap="innerHTML" onchange="toggleMoveButton()" 
-                        hx-include="#chapter-dropdown, #curriculum-dropdown" hx-on::after-swap="toggleMoveButton()"
+                        hx-include="#chapter-dropdown, #move-problems-modal #curriculum-dropdown" hx-on::after-swap="toggleMoveButton()"
                         hx-on::before-request="beforeMoveProblemsTopicsRequest()"
                         hx-on::after-request="toggleMoveButton()">
                     <option value="" disabled selected>Select a chapter first</option>
@@ -91,23 +91,24 @@ function afterMoveProblemsDropdownReq(dropdown) {
         modal.querySelector("#subject-dropdown").dataset.loaded;
 
     if (allReady) {
-        htmx.trigger("#chapter-dropdown", "loadChapters");
+        htmx.trigger(modal.querySelector("#chapter-dropdown"), "loadChapters");
     }
 }
 
 function beforeMoveProblemsChaptersRequest() {
-    const chapter = document.getElementById("chapter-dropdown");
+    const modal = document.getElementById("move-problems-modal");
+    const chapter = modal.querySelector("#chapter-dropdown");
     chapter.innerHTML = '<option disabled selected>Loading chapters...</option>';
 
-    const topic = document.getElementById("topic-dropdown");
+    const topic = modal.querySelector("#topic-dropdown");
     topic.innerHTML = '<option value="" disabled selected>Select a chapter first</option>';
 
-    const modal = document.getElementById("move-problems-modal");
     modal.querySelector("#move-problems-btn").disabled = true;
 }
 
 function beforeMoveProblemsTopicsRequest() {
-    const topic = document.getElementById("topic-dropdown");
+    const modal = document.getElementById("move-problems-modal");
+    const topic = modal.querySelector("#topic-dropdown");
     topic.innerHTML = '<option disabled selected>Loading topics...</option>';
 }
 

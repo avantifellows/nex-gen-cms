@@ -64,7 +64,7 @@
                     <!-- Topic -->
                     <select id="topic-dropdown" name="topic_id"
                             class="form-select w-40" hx-get="/api/topics?view=dropdown" 
-                            hx-trigger="change from:#chapter-dropdown" hx-include="#chapter-dropdown, #curriculum-dropdown"
+                            hx-trigger="change from:#chapter-dropdown" hx-include="#chapter-dropdown, #addConceptModal #curriculum-dropdown"
                             hx-on::before-request="beforeTopicsRequest();">
                         <option disabled selected>Select a chapter first</option>
                     </select>
@@ -223,6 +223,13 @@
     }
 
     function afterConceptModalDropdownReq(dropdown) {
+        if (dropdown.id === 'grade-dropdown') {
+            const opt = document.createElement('option');
+            opt.value = '-1';
+            opt.textContent = 'Common';
+            dropdown.appendChild(opt);
+        }
+
         dropdown.dataset.loaded = "true";
 
         const modal = document.getElementById("addConceptModal");
@@ -232,8 +239,7 @@
             modal.querySelector("#subject-dropdown").dataset.loaded;
 
         if (allReady) {
-            // Fire once when all 3 have completed
-            htmx.trigger("#chapter-dropdown", "loadChapters");
+            htmx.trigger(modal.querySelector("#chapter-dropdown"), "loadChapters");
         }
     }
     
@@ -257,18 +263,20 @@
     }
 
     function beforeChaptersRequest() {
-        const chapterDropdown = document.getElementById("chapter-dropdown");
+        const modal = document.getElementById("addConceptModal");
+        const chapterDropdown = modal.querySelector("#chapter-dropdown");
         chapterDropdown.innerHTML = '<option disabled selected>Loading chapters...</option>';
-        const topicDropdown = document.getElementById("topic-dropdown");
+        const topicDropdown = modal.querySelector("#topic-dropdown");
         topicDropdown.innerHTML = '<option disabled selected>Select a chapter first</option>';
-        const conceptDropdown = document.getElementById("concept-dropdown");
+        const conceptDropdown = modal.querySelector("#concept-dropdown");
         conceptDropdown.innerHTML = '<option disabled>Select a topic first</option>';
     }
 
     function beforeTopicsRequest() {
-        const topicDropdown = document.getElementById("topic-dropdown");
+        const modal = document.getElementById("addConceptModal");
+        const topicDropdown = modal.querySelector("#topic-dropdown");
         topicDropdown.innerHTML = '<option disabled selected>Loading topics...</option>';
-        const conceptDropdown = document.getElementById("concept-dropdown");
+        const conceptDropdown = modal.querySelector("#concept-dropdown");
         conceptDropdown.innerHTML = '<option disabled>Select a topic first</option>';        
     }
 

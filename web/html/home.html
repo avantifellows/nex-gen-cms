@@ -43,6 +43,13 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script>
         function afterDropdownReq(dropdown, selectedValue) {
+            if (dropdown.id === 'grade-dropdown') {
+                const opt = document.createElement('option');
+                opt.value = '-1';
+                opt.textContent = 'Common';
+                dropdown.appendChild(opt);
+            }
+
             // update dropdown value to last selected value from session storage
             var sessionStorageKey;
             switch (dropdown.id) {

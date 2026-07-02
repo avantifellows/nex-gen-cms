@@ -11,6 +11,7 @@ type Resource struct {
 	StatusID         int8               `json:"cms_status_id,omitempty"`
 	ChapterID        int16              `json:"chapter_id,omitempty"`
 	TopicID          int16              `json:"topic_id,omitempty"`
+	SubjectID        int8               `json:"subject_id,omitempty"`
 	CurriculumGrades []CurriculumGrade  `json:"curriculum_grades,omitempty"`
 	TypeParams       ResourceTypeParams `json:"type_params,omitempty"`
 }
@@ -19,12 +20,13 @@ type ResourceTypeParams struct {
 	SrcLink string `json:"src_link,omitempty"`
 }
 
-func NewResource(code string, name string, resourceType string, subtype string, srcLink string, chapterID int16, curriculumID int16, gradeID int8) *Resource {
+func NewResource(code string, name string, resourceType string, subtype string, srcLink string, chapterID int16, curriculumID int16, gradeID int8, subjectID int8) *Resource {
 	resource := &Resource{
 		Code:      code,
 		Name:      []ResName{{LangCode: "en", Resource: name}},
 		Type:      resourceType,
 		ChapterID: chapterID,
+		SubjectID: subjectID,
 		CurriculumGrades: []CurriculumGrade{
 			{
 				CurriculumID: curriculumID,
