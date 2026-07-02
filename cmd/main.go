@@ -37,6 +37,7 @@ func main() {
 		// Service-to-service JSON APIs — guarded by CMS_SERVICE_TOKEN instead (see setup()).
 		"/api/service/tests",
 		"/api/service/test",
+		"/api/service/test-pdf",
 	}
 
 	addr := "0.0.0.0:8080"
@@ -170,6 +171,9 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	// RequireLogin's exceptions in main().
 	muxHandler.HandleFunc("/api/service/tests", middleware.RequireServiceTokenFunc(testsHandler.GetTestsJSON))
 	muxHandler.HandleFunc("/api/service/test", middleware.RequireServiceTokenFunc(testsHandler.GetAssembledTestJSON))
+	// Service PDF: the same generator behind /download-pdf (type=questions|questions_with_answers|answers),
+	// exposed under the service token so af_lms can offer question/answer PDFs on CMS sessions.
+	muxHandler.HandleFunc("/api/service/test-pdf", middleware.RequireServiceTokenFunc(testsHandler.DownloadPdf))
 
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)
