@@ -63,6 +63,13 @@
 </div>
 <script>
 function afterMoveResourcesDropdownReq(dropdown) {
+    if (dropdown.id === 'grade-dropdown') {
+        const opt = document.createElement('option');
+        opt.value = 'common';
+        opt.textContent = 'Common';
+        dropdown.appendChild(opt);
+    }
+
     dropdown.dataset.loaded = "true";
 
     const modal = document.getElementById("move-resources-modal");
