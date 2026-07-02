@@ -225,7 +225,7 @@
     function afterConceptModalDropdownReq(dropdown) {
         if (dropdown.id === 'grade-dropdown') {
             const opt = document.createElement('option');
-            opt.value = 'common';
+            opt.value = '-1';
             opt.textContent = 'Common';
             dropdown.appendChild(opt);
         }

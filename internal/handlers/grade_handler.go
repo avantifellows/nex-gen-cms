@@ -10,7 +10,7 @@ import (
 )
 
 const GRADE_DROPDOWN_NAME = "grade-dropdown"
-const GRADE_COMMON_VALUE = "common"
+const GRADE_COMMON_VALUE int8 = -1
 
 const getGradesEndPoint = "grade"
 const gradesKey = "grades"
@@ -27,17 +27,11 @@ func NewGradesHandler(service *services.Service[models.Grade]) *GradesHandler {
 }
 
 func parseGradeFilter(gradeParam string) (gradeId int8, isCommon bool, ok bool) {
-	if gradeParam == "" {
-		return 0, false, false
-	}
-	if gradeParam == GRADE_COMMON_VALUE {
-		return 0, true, true
-	}
 	id, err := utils.StringToIntType[int8](gradeParam)
 	if err != nil || id == 0 {
 		return 0, false, false
 	}
-	return id, false, true
+	return id, id == GRADE_COMMON_VALUE, true
 }
 
 func appendGradeIDQueryParam(queryParams string, gradeParam string) (string, bool) {
