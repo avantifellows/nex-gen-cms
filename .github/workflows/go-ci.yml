@@ -1,0 +1,45 @@
+name: Go CI
+on:
+  push:
+    branches: [ main, release ]
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read   # only-new-issues reads the PR/push diff via the API
+
+jobs:
+  lint:
+    name: golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # v4+ of the lint action requires Go to be set up explicitly first.
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod   # single source of truth for the Go version
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12
+          # Gate only NEW/changed code so the pre-existing baseline doesn't block
+          # PRs. Quality ratchets forward without an upfront big-bang cleanup.
+          only-new-issues: true
+
+  test:
+    name: vet + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test -race ./...

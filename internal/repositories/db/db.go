@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/avantifellows/nex-gen-cms/config"
+	// pq registers the "postgres" driver with database/sql via its init().
 	_ "github.com/lib/pq"
+
+	"github.com/avantifellows/nex-gen-cms/config"
 )
 
 // Open returns a configured sql.DB. Caller is responsible for closing it on shutdown.

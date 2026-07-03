@@ -66,3 +66,23 @@ func (p *Problem) GetChapterNameByLang(langCode string) string {
 	}
 	return ""
 }
+
+// CopyTo returns a clone of p cleared for create in the destination topic.
+func (p *Problem) CopyTo(topic *Topic, curriculumID int16, gradeID int8, subjectID int8) Problem {
+	copied := *p
+	copied.ID = 0
+	copied.Code = ""
+	copied.TopicID = topic.ID
+	copied.ChapterID = topic.ChapterID
+	copied.CurriculumID = curriculumID
+	copied.GradeID = gradeID
+	copied.SubjectID = subjectID
+
+	if copied.Paragraph != nil {
+		paragraph := *copied.Paragraph
+		paragraph.ID = 0
+		copied.Paragraph = &paragraph
+	}
+
+	return copied
+}

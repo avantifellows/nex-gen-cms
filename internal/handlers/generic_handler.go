@@ -10,12 +10,10 @@ import (
 	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
+	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
-
-const CURRICULUM_DROPDOWN_NAME = "curriculum-dropdown"
-const GRADE_DROPDOWN_NAME = "grade-dropdown"
-const SUBJECT_DROPDOWN_NAME = "subject-dropdown"
 
 const baseTemplate = "home.html"
 
@@ -46,19 +44,23 @@ func GenericHandler(responseWriter http.ResponseWriter, request *http.Request) {
 	}
 }
 
+// renderEntityList fetches a cached list from the given endpoint and renders it
+// with the given template. On failure it writes a 500 referencing label (e.g.
+// "grades", "exams"). It backs the otherwise-identical simple list handlers.
+func renderEntityList[T any](responseWriter http.ResponseWriter, service *services.Service[T],
+	endpoint, cacheKey, tmpl, label string) {
+	items, err := service.GetList(endpoint, cacheKey, false, false)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching %s: %v", label, err), http.StatusInternalServerError)
+		return
+	}
+	views.ExecuteTemplate(tmpl, responseWriter, items, nil)
+}
+
 func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
 	// these query parameters can be queried by element names only, not ids
-	curriculumId, err := utils.StringToIntType[int16](urlValues.Get(CURRICULUM_DROPDOWN_NAME))
-	if err != nil {
-		fmt.Println("Selected Curriculum is invalid")
-	}
-	gradeId, err := utils.StringToIntType[int8](urlValues.Get(GRADE_DROPDOWN_NAME))
-	if err != nil {
-		fmt.Println("Selected Grade is invalid")
-	}
-	subjectId, err := utils.StringToIntType[int8](urlValues.Get(SUBJECT_DROPDOWN_NAME))
-	if err != nil {
-		fmt.Println("Selected Subject is invalid")
-	}
+	curriculumId, _ := utils.StringToIntType[int16](urlValues.Get(CURRICULUM_DROPDOWN_NAME))
+	gradeId, _ := utils.StringToIntType[int8](urlValues.Get(GRADE_DROPDOWN_NAME))
+	subjectId, _ := utils.StringToIntType[int8](urlValues.Get(SUBJECT_DROPDOWN_NAME))
 	return curriculumId, gradeId, subjectId
 }

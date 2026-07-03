@@ -1,5 +1,8 @@
 function getEditorHtml(editor) {
     const clone = editor.cloneNode(true);
+    clone.querySelectorAll('img.img-selected').forEach((img) => {
+        img.classList.remove('img-selected');
+    });
     if (typeof serializeMathFields === 'function') {
         serializeMathFields(clone);
     }
@@ -264,6 +267,8 @@ window.initializeRichTextEditors = function (root = document) {
 
     const dropdownBtn = toolbar.querySelector('.paragraphDropdownBtn');
     const dropdownMenu = toolbar.querySelector('.paragraphDropdownMenu');
+    const mathTemplateBtn = toolbar.querySelector('.mathTemplateBtn');
+    const mathTemplateDropdown = toolbar.querySelector('.mathTemplateDropdown');
 
     dropdownBtn.addEventListener('click', (e) => {
         e.stopPropagation(); // Prevent bubbling up
@@ -280,6 +285,7 @@ window.initializeRichTextEditors = function (root = document) {
     function closeToolbarMenus() {
         dropdownMenu.classList.add('hidden');
         if (olTypeDropdownMenu) olTypeDropdownMenu.classList.add('hidden');
+        if (mathTemplateDropdown) mathTemplateDropdown.classList.add('hidden');
     }
 
     // Close dropdowns when clicking outside this editor within the page form/content area
@@ -295,6 +301,9 @@ window.initializeRichTextEditors = function (root = document) {
         }
         if (olTypeDropdownMenu && !olTypeDropdownMenu.contains(e.target) && !olTypeDropdownBtn?.contains(e.target)) {
             olTypeDropdownMenu.classList.add('hidden');
+        }
+        if (mathTemplateDropdown && !mathTemplateDropdown.contains(e.target) && !mathTemplateBtn?.contains(e.target)) {
+            mathTemplateDropdown.classList.add('hidden');
         }
         if (!dropdownMenu.contains(e.target) && !dropdownBtn.contains(e.target)) {
             dropdownMenu.classList.add('hidden');
@@ -493,6 +502,7 @@ window.initializeRichTextEditors = function (root = document) {
         output.classList.toggle("hidden", !visible);
         editorWrapper.classList.toggle("w-full", !visible);
         editorWrapper.classList.toggle("w-1/2", visible);
+        if (visible) requestAnimationFrame(syncPreviewSize);
     }
 
     const codeViewBtn = toolbar.querySelector(".codeViewBtn");
@@ -502,6 +512,42 @@ window.initializeRichTextEditors = function (root = document) {
     });
 
     const codeView = editorWrapper.querySelector(".codeView");
+
+    function activeEditorSurface() {
+        return codeView.classList.contains("hidden") ? editor : codeView;
+    }
+
+    function applyResizableBounds() {
+        const previewVisible = isPreviewVisible && !output.classList.contains("hidden");
+        const gap = parseFloat(getComputedStyle(container).columnGap || getComputedStyle(container).gap || '0') || 0;
+        const maxWidth = Math.floor((container.clientWidth - (previewVisible ? gap : 0)) / (previewVisible ? 2 : 1));
+
+        [editor, codeView, editorWrapper, output].forEach((el) => {
+            el.style.maxWidth = maxWidth + 'px';
+        });
+    }
+
+    function syncPreviewSize() {
+        applyResizableBounds();
+        if (!isPreviewVisible || output.classList.contains("hidden")) return;
+
+        const surface = activeEditorSurface();
+        const rect = surface.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+
+        output.style.height = rect.height + 'px';
+        if (surface.style.width) {
+            editorWrapper.style.width = rect.width + 'px';
+            output.style.width = rect.width + 'px';
+            output.style.flex = '0 0 ' + rect.width + 'px';
+        }
+    }
+
+    const resizeObserver = new ResizeObserver(syncPreviewSize);
+    resizeObserver.observe(editor);
+    resizeObserver.observe(codeView);
+    window.addEventListener('resize', syncPreviewSize);
+    syncPreviewSize();
 
     function toggleCodeView() {
         if (codeView.classList.contains("hidden")) {
@@ -513,6 +559,7 @@ window.initializeRichTextEditors = function (root = document) {
             codeView.classList.add("hidden");
             editor.classList.remove("hidden");
         }
+        syncPreviewSize();
     }
 
     function formatHTML(html) {
@@ -560,6 +607,23 @@ window.initializeRichTextEditors = function (root = document) {
     toolbar.querySelector('.mathBtn').addEventListener('click', () => {
         insertMath(editor);
     });
+
+    if (mathTemplateBtn && mathTemplateDropdown) {
+        mathTemplateBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            mathTemplateDropdown.classList.toggle('hidden');
+        });
+
+        mathTemplateDropdown.querySelectorAll('button[data-math-template]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                restoreSelection();
+                insertMathTemplate(editor, btn.dataset.mathTemplate);
+                mathTemplateDropdown.classList.add('hidden');
+            });
+        });
+    }
 
     editor.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'h') {

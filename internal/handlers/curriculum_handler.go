@@ -10,6 +10,7 @@ import (
 )
 
 const QUERY_PARAM_CURRICULUM_ID = "curriculum_id"
+const CURRICULUM_DROPDOWN_NAME = "curriculum-dropdown"
 
 const getCurriculumsEndPoint = "curriculum"
 const curriculumsKey = "curriculums"
@@ -25,7 +26,7 @@ func NewCurriculumsHandler(service *services.Service[models.Curriculum]) *Curric
 	}
 }
 
-func (h *CurriculumsHandler) GetCurriculums(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *CurriculumsHandler) GetCurriculums(responseWriter http.ResponseWriter, _ *http.Request) {
 	curriculums, err := h.service.GetList(getCurriculumsEndPoint, curriculumsKey, false, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching curriculums: %v", err), http.StatusInternalServerError)

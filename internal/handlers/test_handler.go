@@ -16,6 +16,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/cdproto/runtime"
+	"github.com/chromedp/chromedp"
+	"github.com/thoas/go-funk"
+
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
@@ -23,10 +28,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
-	"github.com/chromedp/cdproto/page"
-	"github.com/chromedp/cdproto/runtime"
-	"github.com/chromedp/chromedp"
-	"github.com/thoas/go-funk"
 )
 
 const TESTTYPE_DROPDOWN_NAME = "testtype-dropdown"
@@ -239,57 +240,72 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string, curriculumMap map[int16]string,
 	gradeMap map[int8]int8) {
 	slices.SortStableFunc(testPtrs, func(t1, t2 *models.Test) int {
-		var sortResult int
-		switch sortColumn {
-		case "1":
-			sortResult = strings.Compare(t1.Code, t2.Code)
-		case "2":
-			sortResult = strings.Compare(t1.Name[0].Resource, t2.Name[0].Resource)
-		case "3":
-			if curriculumMap != nil {
-				// Search case: sort by curriculum name
-				var c1, c2 string
-				if len(t1.CurriculumGrades) > 0 {
-					c1 = curriculumMap[t1.CurriculumGrades[0].CurriculumID]
-				}
-				if len(t2.CurriculumGrades) > 0 {
-					c2 = curriculumMap[t2.CurriculumGrades[0].CurriculumID]
-				}
-				sortResult = strings.Compare(c1, c2)
-			} else {
-				// Normal case: sort by problem count
-				sortResult = int(t1.ProblemCount() - t2.ProblemCount())
-			}
-		case "4":
-			if gradeMap != nil {
-				// Search case: sort by grade number
-				var g1, g2 int8
-				if len(t1.CurriculumGrades) > 0 {
-					g1 = gradeMap[t1.CurriculumGrades[0].GradeID]
-				}
-				if len(t2.CurriculumGrades) > 0 {
-					g2 = gradeMap[t2.CurriculumGrades[0].GradeID]
-				}
-				sortResult = int(g1 - g2)
-			} else {
-				// Normal case: sort by marks
-				sortResult = int(t1.TypeParams.Marks - t2.TypeParams.Marks)
-			}
-		case "5":
-			if curriculumMap != nil {
-				sortResult = strings.Compare(t1.DisplaySubtype(), t2.DisplaySubtype())
-			} else {
-				sortResult = int(utils.StringToInt(t1.TypeParams.Duration) - utils.StringToInt(t2.TypeParams.Duration))
-			}
-		default:
-			sortResult = 0
-		}
-
+		sortResult := compareTestsByColumn(t1, t2, sortColumn, curriculumMap, gradeMap)
 		if constants.SortOrder(sortOrder) == constants.SortOrderDesc {
-			sortResult = -sortResult
+			return -sortResult
 		}
 		return sortResult
 	})
+}
+
+// compareTestsByColumn returns the ascending ordering of t1 vs t2 for the given
+// sort column. A non-nil curriculumMap/gradeMap signals the search view, which
+// sorts some columns differently from the normal list view.
+func compareTestsByColumn(t1, t2 *models.Test, sortColumn string, curriculumMap map[int16]string,
+	gradeMap map[int8]int8) int {
+	switch sortColumn {
+	case "1":
+		return strings.Compare(t1.Code, t2.Code)
+	case "2":
+		return strings.Compare(t1.Name[0].Resource, t2.Name[0].Resource)
+	case "3":
+		return compareByCurriculumOrProblemCount(t1, t2, curriculumMap)
+	case "4":
+		return compareByGradeOrMarks(t1, t2, gradeMap)
+	case "5":
+		return compareBySubtypeOrDuration(t1, t2, curriculumMap)
+	default:
+		return 0
+	}
+}
+
+func compareByCurriculumOrProblemCount(t1, t2 *models.Test, curriculumMap map[int16]string) int {
+	if curriculumMap == nil {
+		// Normal case: sort by problem count
+		return t1.ProblemCount() - t2.ProblemCount()
+	}
+	// Search case: sort by curriculum name
+	var c1, c2 string
+	if len(t1.CurriculumGrades) > 0 {
+		c1 = curriculumMap[t1.CurriculumGrades[0].CurriculumID]
+	}
+	if len(t2.CurriculumGrades) > 0 {
+		c2 = curriculumMap[t2.CurriculumGrades[0].CurriculumID]
+	}
+	return strings.Compare(c1, c2)
+}
+
+func compareByGradeOrMarks(t1, t2 *models.Test, gradeMap map[int8]int8) int {
+	if gradeMap == nil {
+		// Normal case: sort by marks
+		return int(t1.TypeParams.Marks - t2.TypeParams.Marks)
+	}
+	// Search case: sort by grade number
+	var g1, g2 int8
+	if len(t1.CurriculumGrades) > 0 {
+		g1 = gradeMap[t1.CurriculumGrades[0].GradeID]
+	}
+	if len(t2.CurriculumGrades) > 0 {
+		g2 = gradeMap[t2.CurriculumGrades[0].GradeID]
+	}
+	return int(g1 - g2)
+}
+
+func compareBySubtypeOrDuration(t1, t2 *models.Test, curriculumMap map[int16]string) int {
+	if curriculumMap != nil {
+		return strings.Compare(t1.DisplaySubtype(), t2.DisplaySubtype())
+	}
+	return utils.StringToInt(t1.TypeParams.Duration) - utils.StringToInt(t2.TypeParams.Duration)
 }
 
 func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -639,7 +655,7 @@ func (h *TestsHandler) CreateTest(responseWriter http.ResponseWriter, request *h
 
 	_, err = h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error adding test: %v", err), http.StatusInternalServerError)
+		handlerutils.WriteRemoteAPIError(responseWriter, "Error adding test", err)
 		return
 	}
 }
@@ -715,7 +731,7 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 			return (*test).ID == testId
 		})
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error updating test: %v", err), http.StatusInternalServerError)
+		handlerutils.WriteRemoteAPIError(responseWriter, "Error updating test", err)
 		return
 	}
 }
@@ -826,7 +842,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 	}, addTestModalTemplate, testTypeOptionsTemplate, curriculumGradeSelectsTemplate)
 }
 
-func (h *TestsHandler) AddCurriculumGradeDropdowns(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *TestsHandler) AddCurriculumGradeDropdowns(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, addCurriculumGradeSelectsTemplate, curriculumGradeSelectsTemplate)
 }
 
@@ -842,7 +858,7 @@ func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRu
 		}
 	}
 
-	return nil, fmt.Errorf("no matching test rule found for examID=%d and testType=%s", examId, testType)
+	return nil, nil
 }
 
 func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *http.Request) {
@@ -860,37 +876,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	pdfType := request.URL.Query().Get("type") // "questions", "questions_with_answers", or "answers"
 
-	var pdfTemplate, headerTxt, pdfSuffix string
-	var testRule *models.TestRule
-	if pdfType == "questions" {
-		pdfTemplate = questionPaperTemplate
-		headerTxt = selectedTestPtr.DisplaySubtype()
-		pdfSuffix = "Question Paper"
-
-		if len(selectedTestPtr.ExamIDs) > 0 {
-			testRule, err = h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-		}
-
-	} else if pdfType == "questions_with_answers" {
-		pdfTemplate = questionPaperWithAnswersTemplate
-		headerTxt = selectedTestPtr.DisplaySubtype() + " - Questions & Answers"
-		pdfSuffix = "Question Paper with Answers"
-
-		if len(selectedTestPtr.ExamIDs) > 0 {
-			testRule, err = h.getTestRule(selectedTestPtr.Subtype, selectedTestPtr.ExamIDs[0])
-			if err != nil {
-				fmt.Println(err.Error())
-			}
-		}
-
-	} else if pdfType == "answers" {
-		pdfTemplate = answerSolutionSheetTemplate
-		headerTxt = selectedTestPtr.DisplaySubtype() + " - Answer Sheet"
-		pdfSuffix = "Answer Sheet"
-	}
+	pdfTemplate, headerTxt, pdfSuffix, testRule := h.resolvePdfParams(selectedTestPtr, pdfType)
 
 	if pdfTemplate == "" {
 		http.Error(responseWriter, `Invalid type: use "questions", "questions_with_answers", or "answers"`, http.StatusBadRequest)
@@ -909,6 +895,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		"getSectionName": views.GetSectionName,
 		"stringToInt":    utils.StringToInt,
 		"trim":           strings.TrimSpace,
+		"isEmptyHTML":    utils.IsEmptyHTML,
 		"getChapterName": getProblemChapterName,
 	}).ParseFiles(sharedTmplPath, tmplPath)
 	if err != nil {
@@ -937,7 +924,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		return
 	}
 	// output.css sets html/body to the app warm beige; question papers need a white page.
-	pdfPageStyle := `<style>html,body{background:#fff!important;background-color:#fff!important;min-height:auto!important}</style>`
+	pdfPageStyle := `<style>html,body{background:#fff!important;background-color:#fff!important;min-height:auto!important}mjx-num{padding-bottom:0.1em!important}mjx-den{padding-top:0.1em!important}</style>`
 	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style>"+pdfPageStyle+"</head>", 1)
 
 	headerHTML := fmt.Sprintf(`
@@ -982,10 +969,63 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	defer cancel()
 
 	var pdfData []byte
+	tasks := buildPdfTasks(htmlContent, headerHTML, pdfType, &pdfData)
 
-	// Load HTML via CDP SetDocumentContent instead of a data: URL. Chrome aborts navigation
-	// (net::ERR_ABORTED) when the encoded data URL exceeds ~2MB;
-	tasks := chromedp.Tasks{
+	if err := chromedp.Run(ctx, tasks); err != nil {
+		http.Error(responseWriter, "PDF generation failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Send as response
+	responseWriter.Header().Set("Content-Type", "application/pdf")
+	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - %s.pdf"`,
+		selectedTestPtr.GetNameByLang("en"), pdfSuffix))
+	_, _ = responseWriter.Write(pdfData)
+}
+
+// resolvePdfParams maps a pdfType ("questions", "questions_with_answers",
+// "answers") to its template, header text and filename suffix, plus the test
+// rule used by question papers. An unknown pdfType yields an empty pdfTemplate,
+// which the caller treats as a bad request.
+func (h *TestsHandler) resolvePdfParams(test *models.Test, pdfType string) (pdfTemplate, headerTxt,
+	pdfSuffix string, testRule *models.TestRule) {
+	switch pdfType {
+	case "questions":
+		pdfTemplate = questionPaperTemplate
+		headerTxt = test.DisplaySubtype()
+		pdfSuffix = "Question Paper"
+		testRule = h.ruleForTest(test)
+	case "questions_with_answers":
+		pdfTemplate = questionPaperWithAnswersTemplate
+		headerTxt = test.DisplaySubtype() + " - Questions & Answers"
+		pdfSuffix = "Question Paper with Answers"
+		testRule = h.ruleForTest(test)
+	case "answers":
+		pdfTemplate = answerSolutionSheetTemplate
+		headerTxt = test.DisplaySubtype() + " - Answer Sheet"
+		pdfSuffix = "Answer Sheet"
+	}
+	return
+}
+
+// ruleForTest fetches the test rule for the test's first exam, returning nil
+// (and logging) when there is no exam or the lookup fails.
+func (h *TestsHandler) ruleForTest(test *models.Test) *models.TestRule {
+	if len(test.ExamIDs) == 0 {
+		return nil
+	}
+	testRule, err := h.getTestRule(test.Subtype, test.ExamIDs[0])
+	if err != nil {
+		fmt.Println(err.Error())
+		return nil
+	}
+	return testRule
+}
+
+// buildPdfTasks builds the chromedp pipeline that loads htmlContent, waits for
+// MathJax typesetting and fonts to settle, then renders an A4 PDF into *pdfData.
+func buildPdfTasks(htmlContent, headerHTML, pdfType string, pdfData *[]byte) chromedp.Tasks {
+	return chromedp.Tasks{
 		chromedp.Navigate("about:blank"),
 		// Set page content
 		chromedp.ActionFunc(func(ctx context.Context) error {
@@ -1026,7 +1066,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		// Generate PDF using CDP low-level API
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var err error
-			pdfData, _, err = page.PrintToPDF().
+			*pdfData, _, err = page.PrintToPDF().
 				WithPrintBackground(true).
 				WithPaperWidth(8.27).   // A4 width in inches
 				WithPaperHeight(11.69). // A4 height in inches
@@ -1052,17 +1092,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			return err
 		}),
 	}
-
-	if err := chromedp.Run(ctx, tasks); err != nil {
-		http.Error(responseWriter, "PDF generation failed: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Send as response
-	responseWriter.Header().Set("Content-Type", "application/pdf")
-	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - %s.pdf"`,
-		selectedTestPtr.GetNameByLang("en"), pdfSuffix))
-	_, _ = responseWriter.Write(pdfData)
 }
 
 func evalAwaitPromise(p *runtime.EvaluateParams) *runtime.EvaluateParams {
@@ -1126,7 +1155,9 @@ func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request 
 	}
 
 	responseWriter.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(responseWriter).Encode(data)
+	if err := json.NewEncoder(responseWriter).Encode(data); err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func getProblemChapterName(p models.Problem, lang string) string {

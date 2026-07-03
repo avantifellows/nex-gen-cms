@@ -894,6 +894,16 @@
         document.getElementById("total-marks").textContent = totalMarks;
     }
 
+    function readResponseOrThrow(res) {
+        return res.text().then(text => {
+            if (!res.ok) {
+                const detail = text.trim();
+                throw new Error(detail || `Request failed (HTTP ${res.status})`);
+            }
+            return text;
+        });
+    }
+
     function createTest(event, testId, subtype, curriculumGrades, examId) {
         event?.preventDefault();  // Cancel the request
 
@@ -922,14 +932,7 @@
                     'HX-Request': 'true'  // so that your server can detect HTMX if needed
                 }
 
-            }).then(res => {
-                  if (!res.ok) {
-                      // Turn HTTP error into a real JS error to trigger .catch
-                      throw new Error(`HTTP error! status: ${res.status}`);
-                  }
-                  return res.text(); // if OK, read body
-
-              }).then(html => {
+            }).then(readResponseOrThrow).then(() => {
                   // go back to remove add/edit test screen
                   goBackAfterDelay(0);
                   if (mode === "new") {
@@ -939,12 +942,19 @@
 
               }).catch(err => {
                   console.error(mode === "edit" ? "Error during test updation:" : "Error during test creation:", err);
+                  const message = err && err.message
+                      ? err.message
+                      : "There was an error while saving the test.";
+                  alert(message);
+
                   // Re-enable the Continue button on error (copy flow disables it before calling createTest)
-                  const submitBtn = document.querySelector('#add-test-right-div button[type="submit"]');
                   if (mode === "copy") {
-                      submitBtn.disabled = false;
-                      submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                      submitBtn.textContent = "Continue";
+                    const continueBtn = document.getElementById('continue-btn');
+                    if (continueBtn) {
+                        continueBtn.disabled = false;
+                        continueBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        continueBtn.textContent = 'Continue';
+                    }
                   }
               });
         }
@@ -1465,7 +1475,7 @@
 
     function renumberSerials() {
         let sr = 0;
-        document.querySelectorAll("#questions-table-body tr").forEach(row => {
+        document.querySelectorAll("#questions-table-body > tr").forEach(row => {
             const firstTd = row.querySelector("td");
             if (!firstTd || firstTd.hasAttribute("colspan")) return;
             sr++;

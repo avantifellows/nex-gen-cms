@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/thoas/go-funk"
+
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
@@ -14,7 +16,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
-	"github.com/thoas/go-funk"
 )
 
 const chaptersEndPoint = "chapter"
@@ -42,18 +43,22 @@ func NewChaptersHandler(chaptersService *services.Service[models.Chapter],
 	}
 }
 
-func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ChaptersHandler) LoadChapters(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, chaptersTemplate)
 }
 
 func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlVals)
-	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+	curriculumId, _, subjectId := getCurriculumGradeSubjectIds(urlVals)
+	if curriculumId == 0 || subjectId == 0 {
 		return
 	}
 
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&subject_id=%d", curriculumId, gradeId, subjectId)
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&subject_id=%d", curriculumId, subjectId)
+	queryParams, ok := appendGradeIDQueryParam(queryParams, urlVals.Get(GRADE_DROPDOWN_NAME))
+	if !ok {
+		return
+	}
 	chapters, err := h.chaptersService.GetList(chaptersEndPoint+queryParams, chaptersKey, false, true)
 
 	if err != nil {
@@ -178,9 +183,9 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
 		return
 	}
-	gradeIdStr := request.FormValue(GRADE_DROPDOWN_NAME)
-	gradeId, err := utils.StringToIntType[int8](gradeIdStr)
-	if err != nil {
+	gradeParam := request.FormValue(GRADE_DROPDOWN_NAME)
+	gradeId, _, gradeOk := parseGradeFilter(gradeParam)
+	if !gradeOk {
 		http.Error(responseWriter, "Invalid Grade ID", http.StatusBadRequest)
 		return
 	}
@@ -286,8 +291,12 @@ func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.URL.Query())
-	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+	urlVals := request.URL.Query()
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlVals)
+	if curriculumId == 0 || subjectId == 0 {
+		return
+	}
+	if _, _, gradeOk := parseGradeFilter(urlVals.Get(GRADE_DROPDOWN_NAME)); !gradeOk {
 		return
 	}
 
@@ -324,11 +333,12 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	urlVals := request.URL.Query()
 	view := urlVals.Get("view")
 	var filename string
-	if view == "list" {
+	switch view {
+	case "list":
 		filename = topicRowTemplate
-	} else if view == "dropdown-optional" {
+	case "dropdown-optional":
 		filename = topicDropdownOptionalTemplate
-	} else {
+	default:
 		filename = topicDropdownTemplate
 	}
 

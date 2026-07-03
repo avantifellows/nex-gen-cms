@@ -43,6 +43,7 @@ const problemAnswerNumericalTemplate = "problem_answer_numerical.html"
 const inputTagsTemplate = "input_tags.html"
 const problemTestAssociationTemplate = "problem_test_association_modal.html"
 const moveProblemsTemplate = "move_problems_modal.html"
+const copyProblemModalTemplate = "copy_problem_modal.html"
 
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
@@ -100,21 +101,41 @@ func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int
 	skills, err := h.skillsService.GetList(skillsEndPoint, skillsKey, false, false)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching skills: %v", err)
-	} else {
-		// Create a map to quickly lookup skills by their ID
-		skillPtrsMap := make(map[int16]*models.Skill)
-
-		// Fill the map with the address of each skill
-		for _, skillPtr := range *skills {
-			skillPtrsMap[skillPtr.ID] = skillPtr
-		}
-
-		// Loop through skill ids and add corresponding skills
-		for _, skillId := range selectedProblemPtr.SkillIDs {
-			selectedProblemPtr.Skills = append(selectedProblemPtr.Skills, *skillPtrsMap[skillId])
-		}
-		return selectedProblemPtr, http.StatusOK, nil
 	}
+
+	// Create a map to quickly lookup skills by their ID
+	skillPtrsMap := make(map[int16]*models.Skill)
+
+	// Fill the map with the address of each skill
+	for _, skillPtr := range *skills {
+		skillPtrsMap[skillPtr.ID] = skillPtr
+	}
+
+	// Loop through skill ids and add corresponding skills
+	for _, skillId := range selectedProblemPtr.SkillIDs {
+		selectedProblemPtr.Skills = append(selectedProblemPtr.Skills, *skillPtrsMap[skillId])
+	}
+
+	if err = h.enrichProblemTagNames(selectedProblemPtr); err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	return selectedProblemPtr, http.StatusOK, nil
+}
+
+func (h *ProblemsHandler) enrichProblemTagNames(problem *models.Problem) error {
+	if len(problem.TagIDs) == 0 || len(problem.TagNames) > 0 {
+		return nil
+	}
+
+	tagsMap, err := h.getTagsMap()
+	if err != nil {
+		return err
+	}
+
+	for _, tagId := range problem.TagIDs {
+		problem.TagNames = append(problem.TagNames, tagsMap[tagId])
+	}
+	return nil
 }
 
 func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
@@ -241,7 +262,7 @@ func filterProblems(problems *[]*models.Problem, levels []string, ptype string, 
 	*problems = ps[:n]
 }
 
-func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, problemsTemplate)
 }
 
@@ -273,7 +294,7 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 		editorTemplate, problemAnswerNumericalTemplate, inputTagsTemplate)
 }
 
-func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, request *http.Request) {
+func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, addConceptModalTemplate, curriculumGradeSelectsTemplate)
 }
 
@@ -445,7 +466,10 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 }
 
 func (h *ProblemsHandler) LoadTestAssociations(responseWriter http.ResponseWriter, request *http.Request) {
-	request.ParseForm()
+	if err := request.ParseForm(); err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error parsing form: %v", err), http.StatusBadRequest)
+		return
+	}
 	problemIDsStr := request.Form["select-problem"]
 	problemIDs := utils.StringSliceToIntSlice(problemIDsStr)
 
@@ -467,6 +491,77 @@ func (h *ProblemsHandler) LoadMoveProblems(responseWriter http.ResponseWriter, r
 	views.ExecuteTemplate(moveProblemsTemplate, responseWriter, idsStr, nil)
 }
 
+func (h *ProblemsHandler) LoadCopyProblemDialog(responseWriter http.ResponseWriter, request *http.Request) {
+	problemIdStr := request.URL.Query().Get("id")
+	sourceCurriculumIdStr := request.URL.Query().Get(QUERY_PARAM_CURRICULUM_ID)
+	if problemIdStr == "" || sourceCurriculumIdStr == "" {
+		http.Error(responseWriter, "Missing problem ID or curriculum ID", http.StatusBadRequest)
+		return
+	}
+
+	data := dto.CopyProblemModalData{
+		ProblemID:          problemIdStr,
+		SourceCurriculumID: sourceCurriculumIdStr,
+	}
+	views.ExecuteTemplate(copyProblemModalTemplate, responseWriter, data, nil)
+}
+
+func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, request *http.Request) {
+	urlValues := request.URL.Query()
+
+	sourceCurriculumIdStr := urlValues.Get("source_curriculum_id")
+	if sourceCurriculumIdStr == "" {
+		http.Error(responseWriter, "Missing source curriculum ID", http.StatusBadRequest)
+		return
+	}
+
+	problemQuery := url.Values{}
+	problemQuery.Set("id", urlValues.Get("id"))
+	problemQuery.Set(QUERY_PARAM_CURRICULUM_ID, sourceCurriculumIdStr)
+
+	selectedProblemPtr, code, err := h.getProblem(problemQuery)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	topicIdStr := urlValues.Get(QUERY_PARAM_TOPIC_ID)
+	selectedTopicPtr, code, err := handlerutils.GetTopicById(topicIdStr, h.topicsService)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
+	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlValues)
+	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
+		http.Error(responseWriter, "Invalid curriculum, grade or subject ID", http.StatusBadRequest)
+		return
+	}
+
+	copiedProblem := selectedProblemPtr.CopyTo(selectedTopicPtr, curriculumId, gradeId, subjectId)
+
+	data := dto.ProblemData{
+		HomeData: dto.HomeData{
+			CurriculumID: curriculumId,
+			GradeID:      gradeId,
+			SubjectID:    subjectId,
+		},
+		ProblemPtr: &copiedProblem,
+		TopicPtr:   selectedTopicPtr,
+	}
+
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"joinInt16":        utils.JoinInt16,
+		"add":              utils.Add,
+		"stringToInt":      utils.StringToInt,
+		"toJson":           utils.ToJson,
+		"getConceptName":   getConceptName,
+		"dict":             utils.Dict,
+		"emptyStringSlice": utils.EmptyStringSlice,
+	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate,
+		problemAnswerNumericalTemplate, inputTagsTemplate)
+}
+
 func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	err := request.ParseForm()
 	if err != nil {
@@ -476,7 +571,7 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 
 	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(request.Form)
 	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
-		http.Error(responseWriter, fmt.Sprint("Invalid curriculum, grade or subject ID"), http.StatusBadRequest)
+		http.Error(responseWriter, "Invalid curriculum, grade or subject ID", http.StatusBadRequest)
 		return
 	}
 

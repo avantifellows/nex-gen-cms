@@ -14,19 +14,18 @@ func StringToInt(s string) int {
 	// Convert string to integer using strconv.Atoi
 	num, err := strconv.Atoi(s)
 	if err != nil {
-		fmt.Println("Error:", err)
 		return 0 // Return zero
 	}
 	return num // Return the converted integer
 }
 
 // StringToIntOrDefault converts string to int with validation and fallback
-func StringToIntOrDefault(val string, defaultVal int, min int) int {
+func StringToIntOrDefault(val string, defaultVal int, minVal int) int {
 	if val == "" {
 		return defaultVal
 	}
 
-	if v, err := strconv.Atoi(val); err == nil && v >= min {
+	if v, err := strconv.Atoi(val); err == nil && v >= minVal {
 		return v
 	}
 
@@ -42,7 +41,6 @@ func StringToIntType[T IntType](str string) (T, error) {
 	// Parse the string as an int64
 	num, err := strconv.ParseInt(str, 10, 32)
 	if err != nil {
-		fmt.Println("Error:", err)
 		return 0, err
 	}
 
@@ -85,7 +83,7 @@ func ExtractNumericSuffix(s string) int {
 }
 
 func JoinInt16(intArr []int16, separator string) string {
-	var stringArr []string
+	stringArr := make([]string, 0, len(intArr))
 	for _, integer := range intArr {
 		stringArr = append(stringArr, strconv.Itoa(int(integer)))
 	}
@@ -123,7 +121,7 @@ func Dict(values ...any) map[string]any {
 func ToJson(v any) template.JS {
 	b, err := json.Marshal(v)
 	if err != nil {
-		log.Printf("Error marshalling to JSON: %v", err)
+		log.Printf("Error marshaling to JSON: %v", err)
 		return template.JS("[]") // fallback to empty JSON array
 	}
 	return template.JS(b)
@@ -142,6 +140,17 @@ func Capitalize(s string) string {
 		return s
 	}
 	return strings.ToUpper(string(s[0])) + s[1:]
+}
+
+// IsEmptyHTML returns true if s contains no visible content after stripping HTML tags.
+// Handles cases like "<div><br></div>" that are visually empty but non-empty strings.
+// Images are treated as visible content.
+func IsEmptyHTML(s string) bool {
+	if strings.Contains(s, "<img") {
+		return false
+	}
+	stripped := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(s, "")
+	return strings.TrimSpace(stripped) == ""
 }
 
 func Append[T any](slice []T, v T) []T {
