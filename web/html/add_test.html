@@ -918,7 +918,7 @@
             if (mode === "edit") {
                 url = `/update-test?id=${testId}`;
                 method = 'PATCH';
-                
+
             } else {
                 url = '/create-test';
                 method = 'POST';
@@ -1033,6 +1033,23 @@
             neg_marks: getMarksArray(negChips),
             subjects: subjects
         };
+        // chapter_id is only meaningful for chapter tests. A chapter test belongs to a single
+        // chapter, so derive it from the problem rows (each stamped with data-chapter-id) and
+        // set it only when they all resolve to exactly one chapter — mirroring the backfill's
+        // "single unambiguous chapter" rule.
+        if (subtype === "chapter_test") {
+            const chapterIdSet = new Set();
+            document.querySelectorAll('#questions-table-body tr[data-chapter-id]')
+                .forEach(row => {
+                    const parsed = parseInt(row.dataset.chapterId, 10);
+                    if (!Number.isNaN(parsed) && parsed > 0) {
+                        chapterIdSet.add(parsed);
+                    }
+                });
+            if (chapterIdSet.size === 1) {
+                typeParams.chapter_id = Array.from(chapterIdSet)[0];
+            }
+        }
         // Only persist instructions when they differ from the test-rule default (omit to let the rule apply; avoids redundant storage).
         if (shouldIncludeTestInstructionsInPayload()) {
             typeParams.instructions = getCurrentInstructions();
