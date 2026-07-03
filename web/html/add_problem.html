@@ -2,7 +2,7 @@
 {{ $isCopy := and .TopicPtr .ProblemPtr }}
 {{ $isEdit := and .ProblemPtr (not $isCopy) }}
 {{ $prefill := or $isEdit $isCopy }}
-<form class="card card-pad max-w-6xl mx-auto" onsubmit="createProblem(event,
+<form class="card card-pad w-full" onsubmit="createProblem(event,
         {{if .TopicPtr}}
         <!-- add or copy problem -->
             {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}, null
