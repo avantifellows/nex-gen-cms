@@ -123,6 +123,10 @@ function latexSpanFromText(latex) {
     return span;
 }
 
+const mathTemplates = {
+    piecewise: 'f(x)=\\begin{cases}#? & #? \\\\ #? & #?\\end{cases}',
+};
+
 function getLatexFromMathJaxContainer(container) {
     const dataTex = container.getAttribute('data-tex');
     if (dataTex) return dataTex;
@@ -225,15 +229,7 @@ function insertInlineMathDelimiters(editor) {
     renderMath(editor);
 }
 
-// Insert an editable inline math field at the cursor
-function insertMath(editor) {
-    const mathfield = createMathField();
-
-    // Insert at caret position
-    const range = window.getSelection().getRangeAt(0);
-    range.insertNode(mathfield);
-    mathfield.focus();
-
+function commitMathFieldOnEnter(mathfield, editor) {
     mathfield.addEventListener('keydown', (e) => {
         if (e.key !== 'Enter') return;
         e.preventDefault();
@@ -241,10 +237,8 @@ function insertMath(editor) {
         const latex = mathfield.getValue('latex')?.trim() || '';
         const replacement = latex ? latexSpanFromText(latex) : document.createTextNode('');
 
-        // Replace the mathfield with the LaTeX span directly in #editor
         mathfield.replaceWith(replacement);
 
-        // Place caret after the span
         const selection = window.getSelection();
         const after = document.createRange();
         after.setStartAfter(replacement);
@@ -252,10 +246,38 @@ function insertMath(editor) {
         selection.removeAllRanges();
         selection.addRange(after);
 
-        // Update preview
         renderMath(editor);
     });
 }
+
+function insertMathFieldAtCursor(editor, latex = '') {
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+
+    const mathfield = createMathField();
+
+    const range = selection.getRangeAt(0);
+    range.insertNode(mathfield);
+    mathfield.focus();
+
+    if (latex) {
+        mathfield.insert(latex, { selectionMode: 'placeholder' });
+    }
+
+    commitMathFieldOnEnter(mathfield, editor);
+}
+
+// Insert an editable inline math field at the cursor
+function insertMath(editor) {
+    insertMathFieldAtCursor(editor);
+}
+
+function insertMathTemplate(editor, templateName) {
+    const latex = mathTemplates[templateName];
+    if (!latex) return;
+    insertMathFieldAtCursor(editor, latex);
+}
+window.insertMathTemplate = insertMathTemplate;
 
 function renderMath(editor) {
     const container = editor.closest('.container');
