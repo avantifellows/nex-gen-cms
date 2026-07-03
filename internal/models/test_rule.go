@@ -1,6 +1,9 @@
 package models
 
-import "html/template"
+import (
+	"encoding/json"
+	"html/template"
+)
 
 type TestRule struct {
 	ExamID   int8   `json:"exam_id"`
@@ -44,4 +47,43 @@ type Difficulty struct {
 type MarkingScheme struct {
 	PosMarks []int `json:"pos_marks"`
 	NegMarks []int `json:"neg_marks"`
+}
+
+// UnmarshalJSON migrates old subject_ids array format to new subject_id scalar format.
+// Remove once all DB records are migrated to the new format.
+func (c *Config) UnmarshalJSON(data []byte) error {
+	type Alias Config
+	var raw struct {
+		Alias
+		Subjects []struct {
+			SubjectIDs   []int8        `json:"subject_ids"`
+			SubjectID    int8          `json:"subject_id"`
+			Rules        RuleDetails   `json:"rules"`
+			Instructions template.HTML `json:"instructions,omitempty"`
+		} `json:"subjects"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*c = Config(raw.Alias)
+
+	isOldFormat := false
+	var subjects []SubjectRule
+	for _, s := range raw.Subjects {
+		if len(s.SubjectIDs) > 0 {
+			isOldFormat = true
+			for _, id := range s.SubjectIDs {
+				subjects = append(subjects, SubjectRule{SubjectID: id, Rules: s.Rules, Instructions: s.Instructions})
+			}
+		} else {
+			subjects = append(subjects, SubjectRule{SubjectID: s.SubjectID, Rules: s.Rules, Instructions: s.Instructions})
+		}
+	}
+	c.Subjects = subjects
+
+	// In the old format, a single subjects[] entry implicitly meant single-subject
+	if isOldFormat && len(raw.Subjects) == 1 {
+		c.SingleSubject = true
+	}
+	return nil
 }
