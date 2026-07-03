@@ -460,6 +460,26 @@
 
         initSortableForSections();
         updateSubjectArrowStates();
+
+        // In edit mode the subject row is pre-rendered by the server, so the
+        // src_problem_row path that calls applySubjectInstructions never runs.
+        // In copy mode the original test's instructions are already server-rendered.
+        if (mode === "edit") {
+            setTimeout(function () {
+                const ctx = JSON.parse(document.getElementById("test-context-json").textContent);
+                const testRule = ctx.testRule;
+                if (testRule?.config?.single_subject && testRule.config.subjects?.length > 0) {
+                    const firstSubjectRow = document.querySelector("#questions-table-body tr[id^='subject-']");
+                    if (firstSubjectRow) {
+                        const subjectId = parseInt(firstSubjectRow.id.replace("subject-", ""), 10);
+                        const subjectRule = testRule.config.subjects.find(s => s.subject_id === subjectId);
+                        if (subjectRule?.instructions) {
+                            applySubjectInstructions(subjectRule.instructions);
+                        }
+                    }
+                }
+            }, 0);
+        }
     })();
 
     function setElementFromStorage(elementId, storageKey) {
