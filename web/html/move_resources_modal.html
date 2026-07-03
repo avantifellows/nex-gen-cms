@@ -41,7 +41,7 @@
 
                 <select id="topic-dropdown" name="topic_id" class="form-select"
                     hx-get="/api/topics?view=dropdown-optional" hx-trigger="change from:#chapter-dropdown"
-                    hx-target="this" hx-swap="innerHTML" hx-include="#chapter-dropdown, #curriculum-dropdown"
+                    hx-target="this" hx-swap="innerHTML" hx-include="#chapter-dropdown, #move-resources-modal #curriculum-dropdown"
                     hx-on::before-request="beforeMoveResourcesTopicsRequest()" hx-on::after-request="toggleMoveResourceButton()">
                     <option value="" selected hidden>Select Topic (Optional)</option>
                 </select>
@@ -63,6 +63,13 @@
 </div>
 <script>
 function afterMoveResourcesDropdownReq(dropdown) {
+    if (dropdown.id === 'grade-dropdown') {
+        const opt = document.createElement('option');
+        opt.value = '-1';
+        opt.textContent = 'Common';
+        dropdown.appendChild(opt);
+    }
+
     dropdown.dataset.loaded = "true";
 
     const modal = document.getElementById("move-resources-modal");
@@ -72,23 +79,24 @@ function afterMoveResourcesDropdownReq(dropdown) {
         modal.querySelector("#subject-dropdown").dataset.loaded;
 
     if (allReady) {
-        htmx.trigger("#chapter-dropdown", "loadChapters");
+        htmx.trigger(modal.querySelector("#chapter-dropdown"), "loadChapters");
     }
 }
 
 function beforeMoveResourcesChaptersRequest() {
-    const chapter = document.getElementById("chapter-dropdown");
+    const modal = document.getElementById("move-resources-modal");
+    const chapter = modal.querySelector("#chapter-dropdown");
     chapter.innerHTML = '<option disabled selected>Loading chapters...</option>';
 
-    const topic = document.getElementById("topic-dropdown");
+    const topic = modal.querySelector("#topic-dropdown");
     topic.innerHTML = '<option value="" selected hidden>Select Topic (Optional)</option>';
 
-    const modal = document.getElementById("move-resources-modal");
     modal.querySelector("#move-resource-btn").disabled = true;
 }
 
 function beforeMoveResourcesTopicsRequest() {
-    const topic = document.getElementById("topic-dropdown");
+    const modal = document.getElementById("move-resources-modal");
+    const topic = modal.querySelector("#topic-dropdown");
     topic.innerHTML = '<option disabled selected>Loading topics...</option>';
 }
 

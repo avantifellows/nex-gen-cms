@@ -14,7 +14,6 @@ func StringToInt(s string) int {
 	// Convert string to integer using strconv.Atoi
 	num, err := strconv.Atoi(s)
 	if err != nil {
-		fmt.Println("Error:", err)
 		return 0 // Return zero
 	}
 	return num // Return the converted integer
@@ -42,7 +41,6 @@ func StringToIntType[T IntType](str string) (T, error) {
 	// Parse the string as an int64
 	num, err := strconv.ParseInt(str, 10, 32)
 	if err != nil {
-		fmt.Println("Error:", err)
 		return 0, err
 	}
 
@@ -142,6 +140,17 @@ func Capitalize(s string) string {
 		return s
 	}
 	return strings.ToUpper(string(s[0])) + s[1:]
+}
+
+// IsEmptyHTML returns true if s contains no visible content after stripping HTML tags.
+// Handles cases like "<div><br></div>" that are visually empty but non-empty strings.
+// Images are treated as visible content.
+func IsEmptyHTML(s string) bool {
+	if strings.Contains(s, "<img") {
+		return false
+	}
+	stripped := regexp.MustCompile(`<[^>]*>`).ReplaceAllString(s, "")
+	return strings.TrimSpace(stripped) == ""
 }
 
 func Append[T any](slice []T, v T) []T {

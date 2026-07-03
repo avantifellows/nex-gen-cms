@@ -655,7 +655,7 @@ func (h *TestsHandler) CreateTest(responseWriter http.ResponseWriter, request *h
 
 	_, err = h.testsService.AddObject(testObj, testsKey, resourcesEndPoint)
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error adding test: %v", err), http.StatusInternalServerError)
+		handlerutils.WriteRemoteAPIError(responseWriter, "Error adding test", err)
 		return
 	}
 }
@@ -731,7 +731,7 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 			return (*test).ID == testId
 		})
 	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error updating test: %v", err), http.StatusInternalServerError)
+		handlerutils.WriteRemoteAPIError(responseWriter, "Error updating test", err)
 		return
 	}
 }
@@ -858,7 +858,7 @@ func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRu
 		}
 	}
 
-	return nil, fmt.Errorf("no matching test rule found for examID=%d and testType=%s", examId, testType)
+	return nil, nil
 }
 
 func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *http.Request) {
@@ -895,6 +895,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		"getSectionName": views.GetSectionName,
 		"stringToInt":    utils.StringToInt,
 		"trim":           strings.TrimSpace,
+		"isEmptyHTML":    utils.IsEmptyHTML,
 		"getChapterName": getProblemChapterName,
 	}).ParseFiles(sharedTmplPath, tmplPath)
 	if err != nil {
@@ -923,7 +924,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		return
 	}
 	// output.css sets html/body to the app warm beige; question papers need a white page.
-	pdfPageStyle := `<style>html,body{background:#fff!important;background-color:#fff!important;min-height:auto!important}</style>`
+	pdfPageStyle := `<style>html,body{background:#fff!important;background-color:#fff!important;min-height:auto!important}mjx-num{padding-bottom:0.1em!important}mjx-den{padding-top:0.1em!important}</style>`
 	htmlContent = strings.Replace(htmlContent, "</head>", "<style>"+string(cssBytes)+"</style>"+pdfPageStyle+"</head>", 1)
 
 	headerHTML := fmt.Sprintf(`

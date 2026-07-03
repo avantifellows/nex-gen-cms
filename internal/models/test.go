@@ -17,7 +17,7 @@ type Test struct {
 
 type CurriculumGrade struct {
 	CurriculumID int16 `json:"curriculum_id"`
-	GradeID      int8  `json:"grade_id"`
+	GradeID      int8  `json:"grade_id,omitempty"`
 }
 
 type ResName struct {
