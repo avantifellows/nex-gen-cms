@@ -50,14 +50,17 @@ type ProblemsHandler struct {
 	skillsService   *services.Service[models.Skill]
 	subjectsService *services.Service[models.Subject]
 	topicsService   *services.Service[models.Topic]
+	chaptersService *services.Service[models.Chapter]
 	tagsService     *services.Service[models.Tag]
 }
 
 func NewProblemsHandler(problemsService *services.Service[models.Problem],
 	skillsService *services.Service[models.Skill], subjectsService *services.Service[models.Subject],
-	topicsService *services.Service[models.Topic], tagsService *services.Service[models.Tag]) *ProblemsHandler {
+	topicsService *services.Service[models.Topic], chaptersService *services.Service[models.Chapter],
+	tagsService *services.Service[models.Tag]) *ProblemsHandler {
 	return &ProblemsHandler{problemsService: problemsService, skillsService: skillsService,
-		subjectsService: subjectsService, topicsService: topicsService, tagsService: tagsService}
+		subjectsService: subjectsService, topicsService: topicsService, chaptersService: chaptersService,
+		tagsService: tagsService}
 }
 
 func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -67,6 +70,15 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		return
 	}
 
+	topicIdStr := strconv.Itoa(int(selectedProblemPtr.TopicID))
+	selectedTopicPtr, _, _ := handlerutils.GetTopicById(topicIdStr, h.topicsService)
+
+	var selectedChapterPtr *models.Chapter
+	if selectedTopicPtr != nil {
+		chapterIdStr := strconv.Itoa(int(selectedTopicPtr.ChapterID))
+		selectedChapterPtr, _, _ = handlerutils.GetChapterById(chapterIdStr, h.chaptersService)
+	}
+
 	data := dto.ProblemData{
 		HomeData: dto.HomeData{
 			CurriculumID: selectedProblemPtr.CurriculumID,
@@ -74,6 +86,8 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 			SubjectID:    selectedProblemPtr.SubjectID,
 		},
 		ProblemPtr: selectedProblemPtr,
+		TopicPtr:   selectedTopicPtr,
+		ChapterPtr: selectedChapterPtr,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{

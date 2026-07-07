@@ -26,12 +26,14 @@ const topicDropdownTemplate = "topic_dropdown.html"
 const topicTemplate = "topic.html"
 
 type TopicsHandler struct {
-	service *services.Service[models.Topic]
+	service         *services.Service[models.Topic]
+	chaptersService *services.Service[models.Chapter]
 }
 
-func NewTopicsHandler(service *services.Service[models.Topic]) *TopicsHandler {
+func NewTopicsHandler(service *services.Service[models.Topic], chaptersService *services.Service[models.Chapter]) *TopicsHandler {
 	return &TopicsHandler{
-		service: service,
+		service:         service,
+		chaptersService: chaptersService,
 	}
 }
 
@@ -192,13 +194,17 @@ func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *ht
 		http.Error(responseWriter, "Invalid grade ID", http.StatusBadRequest)
 		return
 	}
+	chapterIdStr := fmt.Sprintf("%d", selectedTopicPtr.ChapterID)
+	selectedChapterPtr, _, _ := handlerutils.GetChapterById(chapterIdStr, h.chaptersService)
+
 	data := dto.TopicData{
 		HomeData: dto.HomeData{
 			CurriculumID: curriculumId,
 			GradeID:      gradeId,
 			SubjectID:    subjectId,
 		},
-		TopicPtr: selectedTopicPtr,
+		TopicPtr:   selectedTopicPtr,
+		ChapterPtr: selectedChapterPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getTopicName,
