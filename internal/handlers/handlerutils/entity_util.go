@@ -7,7 +7,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/services"
 )
 
-func GetEntityById[T any, ID comparable](
+func GetEntityByID[T any, ID comparable](
 	idStr string,
 	service *services.Service[T],
 	cacheKey string,

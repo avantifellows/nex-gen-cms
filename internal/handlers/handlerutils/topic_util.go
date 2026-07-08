@@ -10,7 +10,7 @@ const TopicsEndPoint = "topic"
 const TopicsKey = "topics"
 
 func GetTopicByID(topicIDStr string, topicsService *services.Service[models.Topic]) (*models.Topic, int, error) {
-	return GetEntityById(
+	return GetEntityByID(
 		topicIDStr,
 		topicsService,
 		TopicsKey,

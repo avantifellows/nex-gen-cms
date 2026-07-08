@@ -10,7 +10,7 @@ const ChaptersEndPoint = "chapter"
 const ChaptersKey = "chapters"
 
 func GetChapterByID(chapterIDStr string, chaptersService *services.Service[models.Chapter]) (*models.Chapter, int, error) {
-	return GetEntityById(
+	return GetEntityByID(
 		chapterIDStr,
 		chaptersService,
 		ChaptersKey,
