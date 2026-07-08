@@ -2,7 +2,7 @@
 {{with .Problem}}
 {{ $difficulty := or $.DifficultyLevel .DifficultyLevel }}
 <tr id="problem-{{.ID}}" data-subject="subject-{{(getParentId .Subject)}}" data-subtype="subtype-{{$.SectionSubtype}}"
-    data-skill-ids="{{joinInt16 .SkillIDs ","}}" data-difficulty="{{$difficulty}}" data-mathjax="true" 
+    data-skill-ids="{{joinInt16 .SkillIDs ","}}" data-difficulty="{{$difficulty}}" data-chapter-id="{{.ChapterID}}" data-mathjax="true"
     class="cursor-move">
     <td class="p-2">{{if $.SrNo}}{{$.SrNo}}{{end}}</td>
     <td class="p-2 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 

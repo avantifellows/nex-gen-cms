@@ -34,6 +34,10 @@ func main() {
 		"/auth/google/start",
 		"/auth/google/callback",
 		"/dev-login",
+		// Service-to-service JSON APIs — guarded by CMS_SERVICE_TOKEN instead (see setup()).
+		"/api/service/tests",
+		"/api/service/test",
+		"/api/service/test-pdf",
 	}
 
 	addr := "0.0.0.0:8080"
@@ -114,6 +118,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/create-chapter", admin(chaptersHandler.AddChapter))
 	muxHandler.HandleFunc("/archive-chapter", admin(chaptersHandler.ArchiveChapter))
 	muxHandler.HandleFunc("/chapter", chaptersHandler.GetChapter)
+	muxHandler.HandleFunc("/chapter/tests", chaptersHandler.LoadChapterTests)
 	muxHandler.HandleFunc("/topics", chaptersHandler.LoadTopics)
 	muxHandler.HandleFunc("/api/topics", chaptersHandler.GetTopics)
 	muxHandler.HandleFunc("/chapter/resources", chaptersHandler.LoadResources)
@@ -143,6 +148,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	testsHandler := appComponentPtr.TestsHandler
 	muxHandler.HandleFunc("/tests", testsHandler.LoadTests)
 	muxHandler.HandleFunc("/api/tests", testsHandler.GetTests)
+	muxHandler.HandleFunc("/api/chapter-tests", testsHandler.GetChapterTests)
 	muxHandler.HandleFunc("/api/search-tests", testsHandler.GetSearchTests)
 	muxHandler.HandleFunc("/test", testsHandler.GetTest)
 	muxHandler.HandleFunc("/api/test/problems", testsHandler.GetTestProblems)
@@ -159,6 +165,15 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/download-pdf", testsHandler.DownloadPdf)
 	muxHandler.HandleFunc("/tests/copy-test", editor(testsHandler.CopyTest))
 	muxHandler.HandleFunc("/tests/validate-test", testsHandler.ValidateTest)
+
+	// Service-to-service JSON APIs for session creation (af_lms, quiz-creator). Guarded by
+	// CMS_SERVICE_TOKEN (bearer), not the Google-OIDC session — so they are also listed in
+	// RequireLogin's exceptions in main().
+	muxHandler.HandleFunc("/api/service/tests", middleware.RequireServiceTokenFunc(testsHandler.GetTestsJSON))
+	muxHandler.HandleFunc("/api/service/test", middleware.RequireServiceTokenFunc(testsHandler.GetAssembledTestJSON))
+	// Service PDF: the same generator behind /download-pdf (type=questions|questions_with_answers|answers),
+	// exposed under the service token so af_lms can offer question/answer PDFs on CMS sessions.
+	muxHandler.HandleFunc("/api/service/test-pdf", middleware.RequireServiceTokenFunc(testsHandler.DownloadPdf))
 
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)

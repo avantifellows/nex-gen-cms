@@ -26,10 +26,15 @@ type ResName struct {
 }
 
 type ResTypeParams struct {
-	Duration     string        `json:"duration"`
-	Marks        int16         `json:"marks"`
-	PosMarks     []int8        `json:"pos_marks,omitempty"`
-	NegMarks     []int8        `json:"neg_marks,omitempty"`
+	Duration string `json:"duration"`
+	Marks    int16  `json:"marks"`
+	PosMarks []int8 `json:"pos_marks,omitempty"`
+	NegMarks []int8 `json:"neg_marks,omitempty"`
+	// ChapterID links a chapter_test to its chapter (only meaningful for chapter_test;
+	// stored in type_params rather than a shared resource column, and consumed by the
+	// service list route so af_lms can filter "tests for a chapter"). Nullable: orphan
+	// tests whose problems don't resolve to a single chapter leave it unset.
+	ChapterID    *int16        `json:"chapter_id,omitempty"`
 	Subjects     []ResSubject  `json:"subjects,omitempty"`
 	Instructions template.HTML `json:"instructions,omitempty"`
 }

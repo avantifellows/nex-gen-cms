@@ -1,2 +1,22 @@
-<h2>Chapter Tests Content</h2>
-<p>This is the content of Chapter Tests.</p>
+<div>
+    <div class="card overflow-x-auto">
+        <table class="app-table">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th class="text-center">Questions</th>
+                    <th class="text-center">Marks</th>
+                    <th class="text-center">Duration</th>
+                    <th></th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="chapterTestsBody" class="text-ink-muted text-sm"
+                hx-get="/api/chapter-tests?chapterId={{.ChapterId}}&curriculum_id={{.CurriculumId}}&grade_id={{.GradeId}}"
+                hx-trigger="load">
+                <!-- Chapter-test rows are inserted here (test_row.html), filtered by chapter. -->
+            </tbody>
+        </table>
+    </div>
+</div>
