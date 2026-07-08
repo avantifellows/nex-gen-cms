@@ -26,12 +26,14 @@ const topicDropdownTemplate = "topic_dropdown.html"
 const topicTemplate = "topic.html"
 
 type TopicsHandler struct {
-	service *services.Service[models.Topic]
+	service         *services.Service[models.Topic]
+	chaptersService *services.Service[models.Chapter]
 }
 
-func NewTopicsHandler(service *services.Service[models.Topic]) *TopicsHandler {
+func NewTopicsHandler(service *services.Service[models.Topic], chaptersService *services.Service[models.Chapter]) *TopicsHandler {
 	return &TopicsHandler{
-		service: service,
+		service:         service,
+		chaptersService: chaptersService,
 	}
 }
 
@@ -112,7 +114,7 @@ func (h *TopicsHandler) ArchiveTopic(responseWriter http.ResponseWriter, request
 }
 
 func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedTopicPtr, code, err := handlerutils.GetTopicById(request.URL.Query().Get("id"), h.service)
+	selectedTopicPtr, code, err := handlerutils.GetTopicByID(request.URL.Query().Get("id"), h.service)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -176,7 +178,7 @@ func sortTopics(topics []*models.Topic, sortColumn string, sortOrder string) {
 }
 
 func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedTopicPtr, code, err := handlerutils.GetTopicById(request.URL.Query().Get("id"), h.service)
+	selectedTopicPtr, code, err := handlerutils.GetTopicByID(request.URL.Query().Get("id"), h.service)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -192,13 +194,17 @@ func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *ht
 		http.Error(responseWriter, "Invalid grade ID", http.StatusBadRequest)
 		return
 	}
+	chapterIDStr := fmt.Sprintf("%d", selectedTopicPtr.ChapterID)
+	selectedChapterPtr, _, _ := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
+
 	data := dto.TopicData{
 		HomeData: dto.HomeData{
 			CurriculumID: curriculumId,
 			GradeID:      gradeId,
 			SubjectID:    subjectId,
 		},
-		TopicPtr: selectedTopicPtr,
+		TopicPtr:   selectedTopicPtr,
+		ChapterPtr: selectedChapterPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getTopicName,
