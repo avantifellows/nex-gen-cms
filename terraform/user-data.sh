@@ -220,6 +220,7 @@ server {
         proxy_request_buffering off;
         proxy_http_version 1.1;
         proxy_intercept_errors on;
+        client_max_body_size 10m;
     }
 }
 EOF
@@ -246,6 +247,7 @@ server {
         proxy_request_buffering off;
         proxy_http_version 1.1;
         proxy_intercept_errors on;
+        client_max_body_size 10m;
     }
 }
 EOF
@@ -333,6 +335,7 @@ server {
         proxy_request_buffering off;
         proxy_http_version 1.1;
         proxy_intercept_errors on;
+        client_max_body_size 10m;
     }
 }
 EOF
