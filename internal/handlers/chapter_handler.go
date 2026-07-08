@@ -264,7 +264,7 @@ func (h *ChaptersHandler) getChapter(request *http.Request) (*models.Chapter, in
 	if chapterIdStr == "" {
 		chapterIdStr = urlVals.Get("chapter-dropdown")
 	}
-	return handlerutils.GetChapterById(chapterIdStr, h.chaptersService)
+	return handlerutils.GetChapterByID(chapterIdStr, h.chaptersService)
 }
 
 func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request *http.Request) {

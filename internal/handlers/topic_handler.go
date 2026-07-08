@@ -114,7 +114,7 @@ func (h *TopicsHandler) ArchiveTopic(responseWriter http.ResponseWriter, request
 }
 
 func (h *TopicsHandler) EditTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedTopicPtr, code, err := handlerutils.GetTopicById(request.URL.Query().Get("id"), h.service)
+	selectedTopicPtr, code, err := handlerutils.GetTopicByID(request.URL.Query().Get("id"), h.service)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -178,7 +178,7 @@ func sortTopics(topics []*models.Topic, sortColumn string, sortOrder string) {
 }
 
 func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedTopicPtr, code, err := handlerutils.GetTopicById(request.URL.Query().Get("id"), h.service)
+	selectedTopicPtr, code, err := handlerutils.GetTopicByID(request.URL.Query().Get("id"), h.service)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -194,8 +194,8 @@ func (h *TopicsHandler) GetTopic(responseWriter http.ResponseWriter, request *ht
 		http.Error(responseWriter, "Invalid grade ID", http.StatusBadRequest)
 		return
 	}
-	chapterIdStr := fmt.Sprintf("%d", selectedTopicPtr.ChapterID)
-	selectedChapterPtr, _, _ := handlerutils.GetChapterById(chapterIdStr, h.chaptersService)
+	chapterIDStr := fmt.Sprintf("%d", selectedTopicPtr.ChapterID)
+	selectedChapterPtr, _, _ := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 
 	data := dto.TopicData{
 		HomeData: dto.HomeData{

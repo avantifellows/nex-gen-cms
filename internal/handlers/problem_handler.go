@@ -70,13 +70,13 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	topicIdStr := strconv.Itoa(int(selectedProblemPtr.TopicID))
-	selectedTopicPtr, _, _ := handlerutils.GetTopicById(topicIdStr, h.topicsService)
+	topicIDStr := strconv.Itoa(int(selectedProblemPtr.TopicID))
+	selectedTopicPtr, _, _ := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
 
 	var selectedChapterPtr *models.Chapter
 	if selectedTopicPtr != nil {
-		chapterIdStr := strconv.Itoa(int(selectedTopicPtr.ChapterID))
-		selectedChapterPtr, _, _ = handlerutils.GetChapterById(chapterIdStr, h.chaptersService)
+		chapterIDStr := strconv.Itoa(int(selectedTopicPtr.ChapterID))
+		selectedChapterPtr, _, _ = handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 	}
 
 	data := dto.ProblemData{
@@ -286,8 +286,8 @@ func (h *ProblemsHandler) LoadTopicProblems(responseWriter http.ResponseWriter, 
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	selectedTopicPtr, code, err := handlerutils.GetTopicById(topicIdStr, h.topicsService)
+	topicIDStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
+	selectedTopicPtr, code, err := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -539,8 +539,8 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	topicIdStr := urlValues.Get(QUERY_PARAM_TOPIC_ID)
-	selectedTopicPtr, code, err := handlerutils.GetTopicById(topicIdStr, h.topicsService)
+	topicIDStr := urlValues.Get(QUERY_PARAM_TOPIC_ID)
+	selectedTopicPtr, code, err := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
