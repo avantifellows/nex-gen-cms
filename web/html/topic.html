@@ -4,12 +4,9 @@
         <button class="btn-ghost btn-sm" onclick="window.history.back()">
             <i class="fa-solid fa-chevron-left"></i> Back
         </button>
-        <div class="ml-4">
-            <h3 class="text-lg font-bold uppercase tracking-wide text-ink">{{ .TopicPtr.Code }} — {{ getName .TopicPtr "en" }}</h3>
-            {{ if .ChapterPtr }}
-            <p class="text-sm text-ink-muted mt-0.5">Chapter: {{ .ChapterPtr.Code }} — {{ .ChapterPtr.GetNameByLang "en" }}</p>
-            {{ end }}
-        </div>
+        <h3 class="ml-4 text-lg font-bold tracking-wide text-ink">
+            {{ if .ChapterPtr }}<span class="text-ink-muted font-normal">{{ .ChapterPtr.Code }} — {{ .ChapterPtr.GetNameByLang "en" }}</span> / {{ end }}{{ .TopicPtr.Code }} — {{ getName .TopicPtr "en" }}
+        </h3>
     </div>
     <div class="flex flex-wrap gap-3 py-2 border-b border-border">
         <button id="topic-concepts-tab" data-toggle="sub-tab" class="sub-tab active" onclick="onTopicTabClick(this)"
