@@ -73,7 +73,7 @@ func NewAppComponent() (*AppComponent, error) {
 	adminUsersHandler := handlers.NewAdminUsersHandler(usersRepo)
 	chaptersHandler := handlers.NewChaptersHandler(chaptersService, topicsService)
 	resourcesHandler := handlers.NewResourcesHandler(resourcesService)
-	topicsHandler := handlers.NewTopicsHandler(topicsService)
+	topicsHandler := handlers.NewTopicsHandler(topicsService, chaptersService)
 	conceptsHandler := handlers.NewConceptsHandler(conceptsService)
 	curriculumsHandler := handlers.NewCurriculumsHandler(curriculumsService)
 	gradesHandler := handlers.NewGradesHandler(gradesService)
@@ -82,7 +82,7 @@ func NewAppComponent() (*AppComponent, error) {
 	testsHandler := handlers.NewTestsHandler(testsService, subjectsService, problemsService, testRulesService,
 		curriculumsService, gradesService, examsService)
 	problemsHandler := handlers.NewProblemsHandler(problemsService, skillsService, subjectsService, topicsService,
-		tagsService)
+		chaptersService, tagsService)
 	tagsHandler := handlers.NewTagsHandler(tagsService)
 	examsHandler := handlers.NewExamsHandler(examsService)
 

@@ -6,6 +6,7 @@ type ProblemData struct {
 	HomeData
 	ProblemPtr *models.Problem
 	TopicPtr   *models.Topic
+	ChapterPtr *models.Chapter
 }
 
 type CopyProblemModalData struct {

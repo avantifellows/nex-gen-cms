@@ -18,10 +18,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
 
-const chaptersEndPoint = "chapter"
-
-const chaptersKey = "chapters"
-
 const chaptersTemplate = "chapters.html"
 const chapterRowTemplate = "chapter_row.html"
 const editChapterTemplate = "edit_chapter.html"
@@ -60,7 +56,7 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 	if !ok {
 		return
 	}
-	chapters, err := h.chaptersService.GetList(chaptersEndPoint+queryParams, chaptersKey, false, true)
+	chapters, err := h.chaptersService.GetList(handlerutils.ChaptersEndPoint+queryParams, handlerutils.ChaptersKey, false, true)
 
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching chapters: %v", err), http.StatusInternalServerError)
@@ -163,7 +159,7 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 	dummyChapterPtr := &models.Chapter{}
 	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName)
 
-	_, err = h.chaptersService.UpdateObject(chapterIdStr, chaptersEndPoint, chapterMap, chaptersKey,
+	_, err = h.chaptersService.UpdateObject(chapterIdStr, handlerutils.ChaptersEndPoint, chapterMap, handlerutils.ChaptersKey,
 		func(chapter *models.Chapter) bool {
 			return (*chapter).ID == chapterId
 		})
@@ -198,7 +194,7 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 	}
 	newChapterPtr := models.NewChapter(chapterCode, chapterName, curriculumId, gradeId, subjectId)
 
-	newChapterPtr, err = h.chaptersService.AddObject(newChapterPtr, chaptersKey, chaptersEndPoint)
+	newChapterPtr, err = h.chaptersService.AddObject(newChapterPtr, handlerutils.ChaptersKey, handlerutils.ChaptersEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error adding chapter: %v", err), http.StatusInternalServerError)
 		return
@@ -222,7 +218,7 @@ func (h *ChaptersHandler) ArchiveChapter(responseWriter http.ResponseWriter, req
 		"cms_status_id": constants.StatusArchived,
 	}
 
-	err = h.chaptersService.ArchiveObject(chapterIdStr, chaptersEndPoint, chapterMap, chaptersKey,
+	err = h.chaptersService.ArchiveObject(chapterIdStr, handlerutils.ChaptersEndPoint, chapterMap, handlerutils.ChaptersKey,
 		func(chapter *models.Chapter) bool {
 			return (*chapter).ID != chapterId
 		})
@@ -265,24 +261,10 @@ func sortChapters(chapterPtrs []*models.Chapter, sortColumn string, sortOrder st
 func (h *ChaptersHandler) getChapter(request *http.Request) (*models.Chapter, int, error) {
 	urlVals := request.URL.Query()
 	chapterIdStr := urlVals.Get("id")
-
 	if chapterIdStr == "" {
 		chapterIdStr = urlVals.Get("chapter-dropdown")
 	}
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
-	if err != nil {
-		return nil, http.StatusBadRequest, fmt.Errorf("invalid Chapter ID: %w", err)
-	}
-
-	selectedChapterPtr, err := h.chaptersService.GetObject(chapterIdStr,
-		func(chapter *models.Chapter) bool {
-			return (*chapter).ID == chapterId
-		}, chaptersKey, chaptersEndPoint)
-	if err != nil {
-		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching chapter: %v", err)
-	}
-
-	return selectedChapterPtr, http.StatusOK, nil
+	return handlerutils.GetChapterByID(chapterIdStr, h.chaptersService)
 }
 
 func (h *ChaptersHandler) GetChapter(responseWriter http.ResponseWriter, request *http.Request) {

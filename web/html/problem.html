@@ -18,6 +18,16 @@
             </button>
         </div>
     </div>
+    {{ if or .ChapterPtr .TopicPtr }}
+    <div class="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-sm text-ink-muted">
+        {{ if .ChapterPtr }}
+        <span><span class="font-semibold text-ink">Chapter:</span> {{ .ChapterPtr.Code }} — {{ .ChapterPtr.GetNameByLang "en" }}</span>
+        {{ end }}
+        {{ if .TopicPtr }}
+        <span><span class="font-semibold text-ink">Topic:</span> {{ .TopicPtr.Code }} — {{ .TopicPtr.GetNameByLang "en" }}</span>
+        {{ end }}
+    </div>
+    {{ end }}
     <div class="card card-pad" data-mathjax="true">
         {{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }}
         <h2 class="section-title">Paragraph</h2>
