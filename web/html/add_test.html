@@ -404,7 +404,7 @@
             <label class="text-sm font-medium">Duration (mins):</label>
             <input id="duration" type="number" class="w-1/4 border rounded-sm p-2" placeholder="60"
                 value="{{ $duration }}" 
-                {{ if .TestRule }}readonly{{ end }}
+                {{ if and .TestRule .TestRule.Config.Duration }}readonly{{ end }}
                 onchange="sessionStorage.setItem('selectedDuration', this.value);">
             <label class="text-sm font-medium">Total Marks:</label>
             <label id="total-marks" class="p-2">{{if .Problems}}{{.TestPtr.TypeParams.Marks}}{{else}}0{{end}}</label>
