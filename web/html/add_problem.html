@@ -93,11 +93,16 @@
     <!-- Question editor -->
     <div id="questionDiv" class="mb-6">
         <p class="form-label mb-2">Text</p>
-        {{ if $prefill }}
-        {{ template "editor" .ProblemPtr.MetaData.Question }}
-        {{ else }}
-        {{ template "editor" }}
-        {{ end }}
+        <div class="lang-content" data-lang="en">
+            {{ if $prefill }}
+            {{ template "editor" .ProblemPtr.MetaData.Question }}
+            {{ else }}
+            {{ template "editor" }}
+            {{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="hi">{{ template "editor" }}</div>
+        <div class="lang-content hidden" data-lang="gu">{{ template "editor" }}</div>
+        <div class="lang-content hidden" data-lang="ta">{{ template "editor" }}</div>
     </div>
 
     <!-- Options -->
@@ -127,11 +132,16 @@
     <!-- Solution -->
     <div class="mb-6" id="solutionDiv">
         <p class="form-label mb-2">Solution</p>
-        {{ if and $prefill (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
-        {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
-        {{ else }}
-        {{ template "editor" }}
-        {{ end }}
+        <div class="lang-content" data-lang="en">
+            {{ if and $prefill (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
+            {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
+            {{ else }}
+            {{ template "editor" }}
+            {{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="hi">{{ template "editor" }}</div>
+        <div class="lang-content hidden" data-lang="gu">{{ template "editor" }}</div>
+        <div class="lang-content hidden" data-lang="ta">{{ template "editor" }}</div>
     </div>
 
     <!-- Tags -->
@@ -306,6 +316,34 @@
         let activeLang = 'en';
 
         const langTabsEl = document.getElementById('langTabs');
+        const initializedLangs = new Set(['en']); // en is initialized by bootRichTextEditors
+
+        function switchLangEditors(langCode) {
+            // Save MCQ options for the current language before switching
+            saveCurrentContent();
+            tabContent = tabContentByLang[langCode];
+
+            // Show/hide question and solution editors
+            ['questionDiv', 'solutionDiv'].forEach(divId => {
+                const div = document.getElementById(divId);
+                if (!div) return;
+                div.querySelectorAll('.lang-content').forEach(el => {
+                    el.classList.toggle('hidden', el.dataset.lang !== langCode);
+                });
+            });
+
+            // Lazily initialize question/solution editors on first switch to this language
+            if (!initializedLangs.has(langCode) && window.initializeRichTextEditors) {
+                ['questionDiv', 'solutionDiv'].forEach(divId => {
+                    const container = document.querySelector(`#${divId} .lang-content[data-lang="${langCode}"]`);
+                    if (container) window.initializeRichTextEditors(container);
+                });
+                initializedLangs.add(langCode);
+            }
+
+            // Reload the active MCQ tab's content for the new language
+            loadActiveContent();
+        }
 
         function renderLangTabs() {
             langTabsEl.innerHTML = '';
@@ -318,6 +356,7 @@
                 btn.addEventListener('click', () => {
                     if (code === activeLang) return;
                     activeLang = code;
+                    switchLangEditors(code);
                     renderLangTabs();
                 });
                 langTabsEl.appendChild(btn);
@@ -652,17 +691,22 @@
         const editor = optionsDiv.querySelector('.editor');
         const preview = optionsDiv.querySelector('.output');
 
-        // Initial setup
-        const tabContent = [
-            {{ if $prefill }}
-                {{ range .ProblemPtr.MetaData.Options }}
-                    { html: `{{ . }}`, preview: `{{ . }}` },
-                {{ end }}
-            {{ else }}
-                // Default empty tabs
-                ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
-            {{ end }}
-        ];
+        // Per-language MCQ option content
+        const tabContentByLang = {};
+        SUPPORTED_LANGUAGES.forEach(({ code }) => {
+            tabContentByLang[code] = code === 'en'
+                ? [
+                    {{ if $prefill }}
+                        {{ range .ProblemPtr.MetaData.Options }}
+                            { html: `{{ . }}`, preview: `{{ . }}` },
+                        {{ end }}
+                    {{ else }}
+                        ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
+                    {{ end }}
+                  ]
+                : Array.from({ length: tabs.length }, () => ({ html: '', preview: '' }));
+        });
+        let tabContent = tabContentByLang['en'];
 
         // Initial rendering of options & answers for mcq & matrix match only
         function bootMcqTabsIfNeeded() {
