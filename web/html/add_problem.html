@@ -1142,13 +1142,28 @@
                 topicId,
                 chapterId,
                 difficulty,
-                question,
-                options: null,
+                langVersions: [{ lang_code: 'en', question, options: null, solution }],
                 answers,
-                solution,
                 conceptIds: selectedConceptIds,
                 tags,
             });
+        }
+
+        // Returns lang_versions for the main (non-comprehension) problem.
+        // Skips non-English languages whose question editor is empty.
+        function getLangVersionsForMain(subtype) {
+            const isMCQ = subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer';
+            const versions = [];
+            SUPPORTED_LANGUAGES.forEach(({ code }) => {
+                const questionEl = document.querySelector(`#questionDiv .lang-content[data-lang="${code}"] .editor`);
+                const question = questionEl ? getEditorHtml(questionEl) : '';
+                if (code !== 'en' && !question.trim()) return;
+                const solutionEl = document.querySelector(`#solutionDiv .lang-content[data-lang="${code}"] .editor`);
+                const solution = solutionEl ? getEditorHtml(solutionEl) : '';
+                const options = isMCQ ? tabContentByLang[code].map(item => item.html) : null;
+                versions.push({ lang_code: code, question, options, solution });
+            });
+            return versions;
         }
 
         function buildProblemPayload({
@@ -1160,15 +1175,12 @@
             topicId,
             chapterId,
             difficulty,
-            question,
-            options,
+            langVersions,
             answers,
-            solution,
             conceptIds,
             tags
         }) {
             return {
-                lang_code: "en",
                 type: "problem",
                 subtype: subtype,
                 skill_ids: skillIds,
@@ -1185,17 +1197,15 @@
                 topic_id: topicId,
                 chapter_id: chapterId,
                 difficulty_level: difficulty,
-                meta_data: {
-                    text: question,
-                    options: options,
-                    answer: answers,
-                    solutions: [
-                        {
-                            type: "text",
-                            value: solution
-                        }
-                    ]
-                },
+                lang_versions: langVersions.map(({ lang_code, question, options, solution }) => ({
+                    lang_code,
+                    meta_data: {
+                        text: question,
+                        options: options,
+                        answer: answers,
+                        solutions: [{ type: "text", value: solution }]
+                    }
+                })),
                 concept_ids: conceptIds,
                 tags: tags
             };
@@ -1213,12 +1223,8 @@
 
             const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
 
-            const question = getEditorHtml(document.getElementById('questionDiv').querySelector('.editor'));
-
-            let options = null;
             let answers = [];
             if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
-                options = tabContent.map(item => item.html);
                 // Convert the labels to their number indexes (+1), sort in ascending order and then convert to strings
                 answers = Array.from(answerLabels)
                     .map(label => labelPool.indexOf(label) + 1)
@@ -1241,7 +1247,8 @@
                 // integer_type
                 answers = [document.getElementById("answerInput").value];
             }
-            const solution = getEditorHtml(document.getElementById('solutionDiv').querySelector('.editor'));
+
+            const langVersions = getLangVersionsForMain(subtype);
 
             const conceptsDropdown = document.getElementById("concepts-dropdown");
             const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
@@ -1255,10 +1262,8 @@
                 topicId,
                 chapterId,
                 difficulty,
-                question,
-                options,
+                langVersions,
                 answers,
-                solution,
                 conceptIds: selectedConceptIds,
                 tags: getTagsForSection(mainTagsRoot),
             });
