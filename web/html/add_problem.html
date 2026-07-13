@@ -85,6 +85,11 @@
         </div>
     </div>
 
+    <!-- Language Tabs -->
+    <div class="mb-1">
+        <div class="nav nav-tabs" id="langTabs"></div>
+    </div>
+
     <!-- Question editor -->
     <div id="questionDiv" class="mb-6">
         <p class="form-label mb-2">Text</p>
@@ -290,6 +295,37 @@
 
         const mainTagsRoot = document.querySelector('#main-problem-tags .problem-tags-section');
         initProblemTagsSection(mainTagsRoot);
+
+        // --- Language tabs ---
+        const SUPPORTED_LANGUAGES = [
+            { code: 'en', label: 'English' },
+            { code: 'hi', label: 'Hindi' },
+            { code: 'gu', label: 'Gujarati' },
+            { code: 'ta', label: 'Tamil' },
+        ];
+        let activeLang = 'en';
+
+        const langTabsEl = document.getElementById('langTabs');
+
+        function renderLangTabs() {
+            langTabsEl.innerHTML = '';
+            SUPPORTED_LANGUAGES.forEach(({ code, label }) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'nav-link' + (code === activeLang ? ' active' : '');
+                btn.dataset.lang = code;
+                btn.textContent = label + (code === 'en' ? ' *' : '');
+                btn.addEventListener('click', () => {
+                    if (code === activeLang) return;
+                    activeLang = code;
+                    renderLangTabs();
+                });
+                langTabsEl.appendChild(btn);
+            });
+        }
+
+        renderLangTabs();
+        // --- End language tabs ---
 
         let skillsOptionsHtml = '';
         let topicsOptionsHtml = '';
