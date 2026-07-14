@@ -3,6 +3,13 @@
 window.MathJax = {
   startup: {
     pageReady: () => {
+      // Force display-style fractions in inline math so numerator/denominator
+      // render at the same size as single-line equations, not shrunk by TeX's textstyle rules.
+      MathJax.startup.document.inputJax[0].preFilters.add(({math}) => {
+        if (!math.display) {
+          math.math = '\\displaystyle{' + math.math + '}';
+        }
+      });
       return MathJax.startup.defaultPageReady().then(() => {
         document.getElementById('mathjax-done').textContent = 'true';
       });
@@ -83,7 +90,7 @@ window.MathJax = {
         </div>
     </div>
     {{ end }}
-    <div class="flex items-start mb-2">
+    <div class="flex items-baseline mb-2">
         <div class="w-6 font-semibold">Q{{ .Counter }}.</div>
         <div class="flex-1 pl-5">{{ .Problem.MetaData.Question }}</div>
     </div>
