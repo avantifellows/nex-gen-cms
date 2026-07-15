@@ -363,18 +363,34 @@
                 if (code === 'en') {
                     btn.textContent = label + ' *';
                 } else {
+                    const isEnabled = enabledLangs.has(code);
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
-                    checkbox.checked = enabledLangs.has(code);
+                    checkbox.checked = isEnabled;
                     checkbox.title = `Include ${label}`;
                     checkbox.style.marginRight = '6px';
                     checkbox.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        if (checkbox.checked) enabledLangs.add(code);
-                        else enabledLangs.delete(code);
+                        if (checkbox.checked) {
+                            enabledLangs.add(code);
+                        } else {
+                            enabledLangs.delete(code);
+                            // Switch back to English if this tab was active
+                            if (activeLang === code) {
+                                activeLang = 'en';
+                                switchLangEditors('en');
+                            }
+                        }
+                        renderLangTabs();
                     });
                     btn.appendChild(checkbox);
                     btn.appendChild(document.createTextNode(label));
+
+                    if (!isEnabled) {
+                        btn.style.pointerEvents = 'none';
+                        btn.style.opacity = '0.5';
+                        checkbox.style.pointerEvents = 'auto';
+                    }
                 }
 
                 langTabsEl.appendChild(btn);
@@ -911,6 +927,7 @@
                 toggleButton(saveBtn, false, 'Save')
                 return false;
             }
+
             
             const subtype = document.getElementById('problem-type-dropdown').value;
             const isComprehensionCreate = !isEditPage && subtype === 'comprehension';
@@ -1068,18 +1085,17 @@
             }
 
             if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
-                if (typeof tabContent !== 'undefined' && Array.isArray(tabContent)) {
-                    for (let i = 0; i < tabContent.length; i++) {
-                        const optionLabel = String.fromCharCode(65 + i); // A, B, C...
-                        const optionText = tabContent[i]?.html?.trim();
-                        if (!optionText) {
-                            alert(`Option ${optionLabel} is empty. Please fill it out before submitting.`);
-                            return false;
-                        }
-                    }
-                } else {
+                if (typeof tabContentByLang === 'undefined' || !Array.isArray(tabContentByLang['en'])) {
                     alert('Options are not available.');
                     return false;
+                }
+                const enOptions = tabContentByLang['en'];
+                for (let i = 0; i < enOptions.length; i++) {
+                    const optionLabel = String.fromCharCode(65 + i); // A, B, C...
+                    if (!enOptions[i]?.html?.trim()) {
+                        alert(`Option ${optionLabel} is empty. Please fill it out before submitting.`);
+                        return false;
+                    }
                 }
 
                 if (answerLabels.size === 0) {
