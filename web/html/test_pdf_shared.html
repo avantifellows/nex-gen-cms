@@ -3,6 +3,13 @@
 window.MathJax = {
   startup: {
     pageReady: () => {
+      // Force display-style fractions in inline math so numerator/denominator
+      // render at the same size as single-line equations, not shrunk by TeX's textstyle rules.
+      MathJax.startup.document.inputJax[0].preFilters.add(({math}) => {
+        if (!math.display) {
+          math.math = '\\displaystyle{' + math.math + '}';
+        }
+      });
       return MathJax.startup.defaultPageReady().then(() => {
         document.getElementById('mathjax-done').textContent = 'true';
       });
@@ -68,7 +75,7 @@ window.MathJax = {
 {{ end }}
 
 {{ define "pdf_section_header" }}
-<div class="text-center font-semibold text-lg bg-gray-100 border-t-2 border-t-gray-500 border-b border-b-gray-300 py-1 mb-4">
+<div class="text-center font-semibold text-lg bg-gray-100 border-t-2 border-t-gray-500 border-b border-b-gray-300 py-1 mb-4" style="break-after: avoid;">
     {{ capitalize .SubjectName }} - {{ getSectionName .SectionType .SectionName }}
 </div>
 {{ end }}
@@ -83,7 +90,7 @@ window.MathJax = {
         </div>
     </div>
     {{ end }}
-    <div class="flex items-start mb-2">
+    <div class="flex items-baseline mb-2">
         <div class="w-6 font-semibold">Q{{ .Counter }}.</div>
         <div class="flex-1 pl-5">{{ .Problem.MetaData.Question }}</div>
     </div>
