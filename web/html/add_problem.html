@@ -314,6 +314,7 @@
             { code: 'ta', label: 'Tamil' },
         ];
         let activeLang = 'en';
+        const enabledLangs = new Set(['en']);
 
         const langTabsEl = document.getElementById('langTabs');
         const initializedLangs = new Set(['en']); // en is initialized by bootRichTextEditors
@@ -352,13 +353,30 @@
                 btn.type = 'button';
                 btn.className = 'nav-link' + (code === activeLang ? ' active' : '');
                 btn.dataset.lang = code;
-                btn.textContent = label + (code === 'en' ? ' *' : '');
                 btn.addEventListener('click', () => {
                     if (code === activeLang) return;
                     activeLang = code;
                     switchLangEditors(code);
                     renderLangTabs();
                 });
+
+                if (code === 'en') {
+                    btn.textContent = label + ' *';
+                } else {
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = enabledLangs.has(code);
+                    checkbox.title = `Include ${label}`;
+                    checkbox.style.marginRight = '6px';
+                    checkbox.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (checkbox.checked) enabledLangs.add(code);
+                        else enabledLangs.delete(code);
+                    });
+                    btn.appendChild(checkbox);
+                    btn.appendChild(document.createTextNode(label));
+                }
+
                 langTabsEl.appendChild(btn);
             });
         }
@@ -817,7 +835,7 @@
             saveCurrentContent(); // Save current tab before adding new
 
             tabs.push(null);
-            tabContent.push({ html: '', preview: '' });
+            Object.values(tabContentByLang).forEach(arr => arr.push({ html: '', preview: '' }));
             activeIndex = tabs.length - 1;
 
             renderTabs();
@@ -832,7 +850,7 @@
             }
 
             tabs.splice(index, 1);
-            tabContent.splice(index, 1);
+            Object.values(tabContentByLang).forEach(arr => arr.splice(index, 1));
 
             const removedLabel = getLabel(index); // label like 'A', 'B'
             // Also remove this label from answerLabels set
@@ -1150,14 +1168,14 @@
         }
 
         // Returns lang_versions for the main (non-comprehension) problem.
-        // Skips non-English languages whose question editor is empty.
+        // Only includes languages the user has enabled via the language tab checkboxes.
         function getLangVersionsForMain(subtype) {
             const isMCQ = subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer';
             const versions = [];
             SUPPORTED_LANGUAGES.forEach(({ code }) => {
+                if (!enabledLangs.has(code)) return;
                 const questionEl = document.querySelector(`#questionDiv .lang-content[data-lang="${code}"] .editor`);
                 const question = questionEl ? getEditorHtml(questionEl) : '';
-                if (code !== 'en' && !question.trim()) return;
                 const solutionEl = document.querySelector(`#solutionDiv .lang-content[data-lang="${code}"] .editor`);
                 const solution = solutionEl ? getEditorHtml(solutionEl) : '';
                 const options = isMCQ ? tabContentByLang[code].map(item => item.html) : null;
