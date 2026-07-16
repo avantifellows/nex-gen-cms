@@ -85,7 +85,7 @@ window.MathJax = {
     {{ end }}
     <div class="flex items-start mb-2">
         <div class="w-6 font-semibold">Q{{ .Counter }}.</div>
-        <div class="flex-1 pl-5">{{ .Problem.MetaData.Question }}</div>
+        <div class="flex-1 pl-5">{{ (.Problem.GetLangVersion "en").MetaData.Question }}</div>
     </div>
 
     {{ if or (eq .Problem.Subtype "mcq_single_answer") (eq .Problem.Subtype "mcq_multiple_answer") (eq .Problem.Subtype "matrix_match") }}
@@ -103,7 +103,7 @@ window.MathJax = {
         {{ end }}
 
         <div class="grid gap-x-4 gap-y-1 {{ $gridClass }}">
-            {{ range $index, $option := .Problem.MetaData.Options }}
+            {{ range $index, $option := (.Problem.GetLangVersion "en").MetaData.Options }}
             <div class="flex items-baseline">
                 <div class="font-semibold mr-2">{{ index labels $index }}</div>
                 <div class="flex-1 whitespace-pre-wrap">{{ $option }}</div>

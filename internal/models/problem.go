@@ -53,6 +53,15 @@ type ProblemParagraph struct {
 	Body template.HTML `json:"body"`
 }
 
+func (p *Problem) GetLangVersion(langCode string) *LangVersion {
+	for i := range p.LangVersions {
+		if p.LangVersions[i].LangCode == langCode {
+			return &p.LangVersions[i]
+		}
+	}
+	return nil
+}
+
 func (p Problem) DisplayDifficulty() int8 {
 	switch p.DifficultyLevel {
 	case "hard":

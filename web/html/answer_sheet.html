@@ -29,7 +29,7 @@
                         <tr>
                             <td class="answer-pdf-table-row">{{ $Counter }}.</td>
                             <td class="answer-pdf-table-row">
-                                {{ template "pdf_answer_value" (dict "Subtype" $p.Subtype "Answers" $p.MetaData.Answers) }}
+                                {{ template "pdf_answer_value" (dict "Subtype" $p.Subtype "Answers" ($p.GetLangVersion "en").MetaData.Answers) }}
                             </td>
                             <td class="answer-pdf-table-row">{{ capitalize $p.DifficultyLevel }}</td>
                             <td class="answer-pdf-table-row">{{ getChapterName $p "en" }}</td>
@@ -50,10 +50,11 @@
                 {{ range $prob := $section.Compulsory.Problems }}
                     {{ $p := index $.ProblemsMap $prob.ID }}
                     {{ $Counter = add $Counter 1 }}
-                    {{ if and (gt (len $p.MetaData.Solutions) 0) (not (isEmptyHTML (printf "%s" (index $p.MetaData.Solutions 0).Value))) }}
+                    {{ $enLang := $p.GetLangVersion "en" }}
+                    {{ if and (gt (len $enLang.MetaData.Solutions) 0) (not (isEmptyHTML (printf "%s" (index $enLang.MetaData.Solutions 0).Value))) }}
                         <div class="mb-4 flex">
                             <span class="font-semibold">Q{{ $Counter }}.</span>
-                            <div class="ml-5 flex-1 solution-content">{{ (index $p.MetaData.Solutions 0).Value }}</div>
+                            <div class="ml-5 flex-1 solution-content">{{ (index $enLang.MetaData.Solutions 0).Value }}</div>
                         </div>
                     {{ end }}
                 {{ end }}
