@@ -355,6 +355,9 @@
                 btn.dataset.lang = code;
                 btn.addEventListener('click', () => {
                     if (code === activeLang) return;
+                    if (code !== 'en' && !enabledLangs.has(code)) {
+                        enabledLangs.add(code);
+                    }
                     activeLang = code;
                     switchLangEditors(code);
                     renderLangTabs();
@@ -373,6 +376,8 @@
                         e.stopPropagation();
                         if (checkbox.checked) {
                             enabledLangs.add(code);
+                            activeLang = code;
+                            switchLangEditors(code);
                         } else {
                             enabledLangs.delete(code);
                             // Switch back to English if this tab was active
@@ -387,9 +392,7 @@
                     btn.appendChild(document.createTextNode(label));
 
                     if (!isEnabled) {
-                        btn.style.pointerEvents = 'none';
                         btn.style.opacity = '0.5';
-                        checkbox.style.pointerEvents = 'auto';
                     }
                 }
 
