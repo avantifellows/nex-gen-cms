@@ -5,6 +5,13 @@
             <i class="fa-solid fa-chevron-left"></i> Back
         </button>
         <h3 class="ml-4 text-lg font-bold uppercase tracking-wide text-ink font-mono">{{.ProblemPtr.Code}}</h3>
+        {{ if gt (len .ProblemPtr.LangVersions) 1 }}
+        <select id="lang-select" class="ml-4 border border-border rounded px-2 py-1 text-sm bg-bg-card" onchange="switchLang(this.value)">
+            {{ range .ProblemPtr.LangVersions }}
+            <option value="{{ .LangCode }}">{{ langName .LangCode }}</option>
+            {{ end }}
+        </select>
+        {{ end }}
         <div class="flex space-x-4 ml-auto pr-4">
             <button class="action-button"
                 hx-get="/problems/edit-problem?id={{.ProblemPtr.ID}}&curriculum_id={{.ProblemPtr.CurriculumID}}&topic_id={{.ProblemPtr.TopicID}}"
@@ -36,9 +43,9 @@
         </p>
         {{ end }}
         <h2 class="section-title{{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }} mt-6{{ end }}">Statement / Text</h2>
-        <p class="mt-2 text-ink">
-            {{ (.ProblemPtr.GetLangVersion "en").MetaData.Question }}
-        </p>
+        {{ range .ProblemPtr.LangVersions }}
+        <p class="lang-panel mt-2 text-ink" data-lang="{{ .LangCode }}" {{ if ne .LangCode "en" }}style="display:none"{{ end }}>{{ .MetaData.Question }}</p>
+        {{ end }}
         {{ if .ProblemPtr.Concepts }}
         <h2 class="section-title mt-6">Concepts</h2>
         <p class="mt-2 text-ink">
@@ -53,20 +60,22 @@
                 {{- if $index }}, {{ end -}}{{ $skill.Name }}
             {{- end -}}
         </p>
-        {{ $enLang := .ProblemPtr.GetLangVersion "en" }}
-        {{ if $enLang.MetaData.Options }}
-        <h2 class="section-title mt-6">Options</h2>
-        <div class="mt-2 rounded-lg border border-border overflow-hidden">
-            {{ range $index, $option := $enLang.MetaData.Options }}
-            <div class="flex items-center border-b border-border/40 p-4 last:border-b-0 bg-bg-card">
-                <span class="mr-6 font-mono font-bold text-accent w-6">
-                    {{ printf "%c" (add 65 $index) }}    <!-- Convert ASCII to letter -->
-                </span>
-                <p class="text-ink">{{ $option }}</p>
+        {{ range .ProblemPtr.LangVersions }}
+        {{ if .MetaData.Options }}
+        <div class="lang-panel" data-lang="{{ .LangCode }}" {{ if ne .LangCode "en" }}style="display:none"{{ end }}>
+            <h2 class="section-title mt-6">Options</h2>
+            <div class="mt-2 rounded-lg border border-border overflow-hidden">
+                {{ range $index, $option := .MetaData.Options }}
+                <div class="flex items-center border-b border-border/40 p-4 last:border-b-0 bg-bg-card">
+                    <span class="mr-6 font-mono font-bold text-accent w-6">{{ printf "%c" (add 65 $index) }}</span>
+                    <p class="text-ink">{{ $option }}</p>
+                </div>
+                {{ end }}
             </div>
-            {{ end }}
         </div>
         {{ end }}
+        {{ end }}
+        {{ $enLang := .ProblemPtr.GetLangVersion "en" }}
         <h2 class="section-title mt-6">Answer</h2>
         <p class="mt-2 text-ink font-mono">
             {{ if or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") }}
@@ -86,14 +95,18 @@
                 {{ end }}
             {{ end }}
         </p>
-        <h2 class="section-title mt-6">Solution</h2>
-        <div class="mt-2 text-ink solution-content">
-            {{ if gt (len $enLang.MetaData.Solutions) 0 }}
-                {{ (index $enLang.MetaData.Solutions 0).Value }}
-            {{ else }}
-                <span class="text-ink-muted italic">No solution available.</span>
-            {{ end }}
+        {{ range .ProblemPtr.LangVersions }}
+        <div class="lang-panel" data-lang="{{ .LangCode }}" {{ if ne .LangCode "en" }}style="display:none"{{ end }}>
+            <h2 class="section-title mt-6">Solution</h2>
+            <div class="mt-2 text-ink solution-content">
+                {{ if gt (len .MetaData.Solutions) 0 }}
+                    {{ (index .MetaData.Solutions 0).Value }}
+                {{ else }}
+                    <span class="text-ink-muted italic">No solution available.</span>
+                {{ end }}
+            </div>
         </div>
+        {{ end }}
         <h2 class="section-title mt-6">Difficulty</h2>
         <div class="mt-2 flex items-center text-brand-gold">
             {{ range $i := seq 1 3 }}
@@ -108,6 +121,12 @@
     </div>
 </div>
 <script>
+    function switchLang(langCode) {
+        document.querySelectorAll('.lang-panel').forEach(p => {
+            p.style.display = p.dataset.lang === langCode ? '' : 'none';
+        });
+    }
+
     document.querySelector(PROBLEM_DIV_SELECTOR).addEventListener(BACK_TO_PROBLEM_EVT, () => {
         sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
         const refreshUrl = sessionStorage.getItem(REFRESH_PROBLEM_URL_KEY);
