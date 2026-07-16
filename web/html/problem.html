@@ -37,7 +37,7 @@
         {{ end }}
         <h2 class="section-title{{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }} mt-6{{ end }}">Statement / Text</h2>
         <p class="mt-2 text-ink">
-            {{.ProblemPtr.MetaData.Question}}
+            {{ (.ProblemPtr.GetLangVersion "en").MetaData.Question }}
         </p>
         {{ if .ProblemPtr.Concepts }}
         <h2 class="section-title mt-6">Concepts</h2>
@@ -53,10 +53,11 @@
                 {{- if $index }}, {{ end -}}{{ $skill.Name }}
             {{- end -}}
         </p>
-        {{ if .ProblemPtr.MetaData.Options }}
+        {{ $enLang := .ProblemPtr.GetLangVersion "en" }}
+        {{ if $enLang.MetaData.Options }}
         <h2 class="section-title mt-6">Options</h2>
         <div class="mt-2 rounded-lg border border-border overflow-hidden">
-            {{ range $index, $option := .ProblemPtr.MetaData.Options }}
+            {{ range $index, $option := $enLang.MetaData.Options }}
             <div class="flex items-center border-b border-border/40 p-4 last:border-b-0 bg-bg-card">
                 <span class="mr-6 font-mono font-bold text-accent w-6">
                     {{ printf "%c" (add 65 $index) }}    <!-- Convert ASCII to letter -->
@@ -69,26 +70,26 @@
         <h2 class="section-title mt-6">Answer</h2>
         <p class="mt-2 text-ink font-mono">
             {{ if or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") }}
-                {{ range .ProblemPtr.MetaData.Answers }}
+                {{ range $enLang.MetaData.Answers }}
                     {{ printf "%c" (add 64 (stringToInt .)) }}
                 {{ end }}
             {{ else if eq .ProblemPtr.Subtype "mcq_multiple_answer" }}
-                {{ range $i, $ans := .ProblemPtr.MetaData.Answers }}
+                {{ range $i, $ans := $enLang.MetaData.Answers }}
                     {{- if $i }}, {{ end }}
                     {{ printf "%c" (add 64 (stringToInt $ans)) -}}
                 {{ end }}
-            {{ else if and (or (eq .ProblemPtr.Subtype "numerical_answer") (eq .ProblemPtr.Subtype "comprehension")) (eq (len .ProblemPtr.MetaData.Answers) 2) }}
-                [{{ index .ProblemPtr.MetaData.Answers 0 }} to {{ index .ProblemPtr.MetaData.Answers 1 }}]
+            {{ else if and (or (eq .ProblemPtr.Subtype "numerical_answer") (eq .ProblemPtr.Subtype "comprehension")) (eq (len $enLang.MetaData.Answers) 2) }}
+                [{{ index $enLang.MetaData.Answers 0 }} to {{ index $enLang.MetaData.Answers 1 }}]
             {{ else }}
-                {{ range .ProblemPtr.MetaData.Answers }}
+                {{ range $enLang.MetaData.Answers }}
                     {{ . }}
                 {{ end }}
             {{ end }}
         </p>
         <h2 class="section-title mt-6">Solution</h2>
         <div class="mt-2 text-ink solution-content">
-            {{ if gt (len .ProblemPtr.MetaData.Solutions) 0 }}
-                {{ (index .ProblemPtr.MetaData.Solutions 0).Value }}
+            {{ if gt (len $enLang.MetaData.Solutions) 0 }}
+                {{ (index $enLang.MetaData.Solutions 0).Value }}
             {{ else }}
                 <span class="text-ink-muted italic">No solution available.</span>
             {{ end }}
