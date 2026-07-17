@@ -1,5 +1,10 @@
 package utils
 
+import (
+	"maps"
+	"slices"
+)
+
 var langNames = map[string]string{
 	"en": "English",
 	"hi": "Hindi",
@@ -12,4 +17,8 @@ func LangName(code string) string {
 		return name
 	}
 	return code
+}
+
+func LangCodes() []string {
+	return slices.Collect(maps.Keys(langNames))
 }

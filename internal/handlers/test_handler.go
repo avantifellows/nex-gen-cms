@@ -371,7 +371,10 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 		TestPtr: selectedTestPtr,
 	}
 
-	views.ExecuteTemplates(responseWriter, data, nil, baseTemplate, testTemplate)
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"langName":  utils.LangName,
+		"langCodes": utils.LangCodes,
+	}, baseTemplate, testTemplate)
 }
 
 func (h *TestsHandler) GetSubjectwiseTestProblems(responseWriter http.ResponseWriter, request *http.Request) {
