@@ -47,17 +47,20 @@
                         hx-target="body" hx-push-url="true">
                         <i class="fa-solid fa-pen"></i>
                     </button>
-                    <a href="/download-pdf?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions" 
-                        target="_blank" class="action-button" title="Download Questions PDF">
-                            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
+                    <a class="action-button cursor-pointer" title="Download Questions PDF"
+                        hx-get="/tests/download-modal?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions"
+                        hx-target="#download-modal-container" hx-swap="innerHTML">
+                        <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
                     </a>
-                    <a href="/download-pdf?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=answers"  
-                        target="_blank"class="action-button" title="Download Answers PDF">
-                            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
+                    <a class="action-button cursor-pointer" title="Download Answers PDF"
+                        hx-get="/tests/download-modal?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=answers"
+                        hx-target="#download-modal-container" hx-swap="innerHTML">
+                        <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
                     </a>
-                    <a href="/download-pdf?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions_with_answers" 
-                        target="_blank" class="action-button" title="Download Questions with Answers PDF">
-                            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q+A</span>
+                    <a class="action-button cursor-pointer" title="Download Questions with Answers PDF"
+                        hx-get="/tests/download-modal?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions_with_answers"
+                        hx-target="#download-modal-container" hx-swap="innerHTML">
+                        <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q+A</span>
                     </a>
                     <button class="action-button" hx-get="/tests/copy-test?id={{ $test.ID }}&curriculum_id={{$curriculumId}}" 
                         hx-target="body" title="Copy Test" hx-push-url="true">

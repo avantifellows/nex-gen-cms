@@ -40,6 +40,7 @@ const testSearchRowTemplate = "test_search_row.html"
 const addTestSearchRowTemplate = "add_test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
+const testDownloadModalTemplate = "test_download_modal.html"
 const addTestTemplate = "add_test.html"
 const testTypeOptionsTemplate = "test_type_options.html"
 const testChipEditorTemplate = "test_chip_editor.html"
@@ -464,6 +465,24 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 			testPtr.TypeParams.Subjects[i].Name = subjectIdToNameMap[testSubject.SubjectID]
 		}
 	}
+}
+
+func (h *TestsHandler) GetDownloadModal(responseWriter http.ResponseWriter, request *http.Request) {
+	problems := h.getTestProblems(responseWriter, request)
+	if problems == nil {
+		return
+	}
+	regionalLangs := map[string]bool{}
+	for _, p := range *problems {
+		for _, lv := range p.LangVersions {
+			if lv.LangCode != "en" {
+				regionalLangs[lv.LangCode] = true
+			}
+		}
+	}
+	views.ExecuteTemplate(testDownloadModalTemplate, responseWriter, regionalLangs, template.FuncMap{
+		"langName": utils.LangName,
+	})
 }
 
 func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, request *http.Request) {
