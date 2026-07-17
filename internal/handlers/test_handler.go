@@ -480,6 +480,13 @@ func (h *TestsHandler) GetDownloadModal(responseWriter http.ResponseWriter, requ
 			}
 		}
 	}
+	if len(regionalLangs) == 0 {
+		urlVals := request.URL.Query()
+		downloadURL := fmt.Sprintf("/download-pdf?id=%s&curriculum_id=%s&grade_id=%s&type=%s",
+			urlVals.Get("id"), urlVals.Get(QUERY_PARAM_CURRICULUM_ID), urlVals.Get("grade_id"), urlVals.Get("type"))
+		fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');</script>`, downloadURL)
+		return
+	}
 	views.ExecuteTemplate(testDownloadModalTemplate, responseWriter, regionalLangs, template.FuncMap{
 		"langName": utils.LangName,
 	})
