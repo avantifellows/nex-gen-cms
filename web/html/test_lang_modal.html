@@ -1,9 +1,10 @@
-<div id="download-pdf-modal"
+<div id="lang-modal"
     class="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
-    data-base-url="{{ .BaseDownloadURL }}"
-    onclick="if (event.target === this) closeDownloadModal()">
+    data-base-url="{{ .BaseURL }}"
+    data-action="{{ .Action }}"
+    onclick="if (event.target === this) closeLangModal()">
     <div class="card shadow-xl rounded-xl w-full max-w-sm p-6">
-        <h2 class="page-title mb-6">Download PDF</h2>
+        <h2 class="page-title mb-6">{{ .Title }}</h2>
         <div class="space-y-4">
             <div>
                 <span class="form-label">Primary Language</span>
@@ -11,8 +12,8 @@
             </div>
             {{ if .RegionalLangs }}
             <div>
-                <label for="regional-lang-select" class="form-label">Regional Language <span class="text-ink-muted font-normal">(optional)</span></label>
-                <select id="regional-lang-select" class="mt-1 w-full border border-border rounded px-2 py-1 text-sm bg-bg-card">
+                <label for="lang-modal-select" class="form-label">Regional Language <span class="text-ink-muted font-normal">(optional)</span></label>
+                <select id="lang-modal-select" class="mt-1 w-full border border-border rounded px-2 py-1 text-sm bg-bg-card">
                     <option value="">None</option>
                     {{ range $code, $_ := .RegionalLangs }}
                     <option value="{{ $code }}">{{ langName $code }}</option>
@@ -22,23 +23,27 @@
             {{ end }}
         </div>
         <div class="mt-6 flex justify-end gap-3">
-            <button type="button" class="btn-secondary" onclick="closeDownloadModal()">Cancel</button>
-            <button type="button" class="btn-primary" onclick="confirmDownload()">Download</button>
+            <button type="button" class="btn-secondary" onclick="closeLangModal()">Cancel</button>
+            <button type="button" class="btn-primary" onclick="confirmLangModal()">{{ .ConfirmLabel }}</button>
         </div>
     </div>
 </div>
 <script>
-    window.closeDownloadModal = function() {
+    window.closeLangModal = function() {
         document.getElementById('download-modal-container').innerHTML = '';
     };
-    window.confirmDownload = function() {
-        const modal = document.getElementById('download-pdf-modal');
+    window.confirmLangModal = function() {
+        const modal = document.getElementById('lang-modal');
         let url = modal.dataset.baseUrl;
-        const langSelect = document.getElementById('regional-lang-select');
+        const langSelect = document.getElementById('lang-modal-select');
         if (langSelect && langSelect.value) {
             url += '&lang_code=' + encodeURIComponent(langSelect.value);
         }
-        closeDownloadModal();
-        window.open(url, '_blank');
+        closeLangModal();
+        if (modal.dataset.action === 'download') {
+            window.open(url, '_blank');
+        } else {
+            copyToClipboard(window.location.origin + url);
+        }
     };
 </script>

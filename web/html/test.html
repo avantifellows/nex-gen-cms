@@ -61,7 +61,17 @@
             select.querySelectorAll('option').forEach(opt => {
                 if (!codes.has(opt.value)) opt.remove();
             });
-            if (select.options.length > 1) select.style.display = '';
+            if (select.options.length > 1) {
+                select.style.display = '';
+                const urlLang = new URLSearchParams(window.location.search).get('lang_code');
+                if (urlLang && [...select.options].some(o => o.value === urlLang)) {
+                    select.value = urlLang;
+                    switchLang(urlLang);
+                } else {
+                    select.value = 'en';
+                    switchLang('en');
+                }
+            }
         };
     })();
 </script>

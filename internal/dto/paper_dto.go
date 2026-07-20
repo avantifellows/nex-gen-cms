@@ -9,7 +9,10 @@ type PaperData struct {
 	RegionalLangCode string
 }
 
-type DownloadModalData struct {
-	RegionalLangs   map[string]bool
-	BaseDownloadURL string
+type LangModalData struct {
+	RegionalLangs map[string]bool
+	BaseURL       string
+	Title         string
+	ConfirmLabel  string
+	Action        string // "download" | "copy"
 }

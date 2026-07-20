@@ -40,7 +40,7 @@ const testSearchRowTemplate = "test_search_row.html"
 const addTestSearchRowTemplate = "add_test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
-const testDownloadModalTemplate = "test_download_modal.html"
+const testLangModalTemplate = "test_lang_modal.html"
 const addTestTemplate = "add_test.html"
 const testTypeOptionsTemplate = "test_type_options.html"
 const testChipEditorTemplate = "test_chip_editor.html"
@@ -468,6 +468,20 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 }
 
 func (h *TestsHandler) GetDownloadModal(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	baseURL := fmt.Sprintf("/download-pdf?id=%s&curriculum_id=%s&grade_id=%s&type=%s",
+		urlVals.Get("id"), urlVals.Get(QUERY_PARAM_CURRICULUM_ID), urlVals.Get("grade_id"), urlVals.Get("type"))
+	h.renderLangModal(responseWriter, request, baseURL, "Download PDF", "Download", "download")
+}
+
+func (h *TestsHandler) GetCopyLinkModal(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	baseURL := fmt.Sprintf("/test?id=%s&curriculum_id=%s&grade_id=%s",
+		urlVals.Get("id"), urlVals.Get(QUERY_PARAM_CURRICULUM_ID), urlVals.Get("grade_id"))
+	h.renderLangModal(responseWriter, request, baseURL, "Copy Link", "Copy", "copy")
+}
+
+func (h *TestsHandler) renderLangModal(responseWriter http.ResponseWriter, request *http.Request, baseURL, title, confirmLabel, action string) {
 	problems := h.getTestProblems(responseWriter, request)
 	if problems == nil {
 		return
@@ -480,16 +494,20 @@ func (h *TestsHandler) GetDownloadModal(responseWriter http.ResponseWriter, requ
 			}
 		}
 	}
-	urlVals := request.URL.Query()
-	baseURL := fmt.Sprintf("/download-pdf?id=%s&curriculum_id=%s&grade_id=%s&type=%s",
-		urlVals.Get("id"), urlVals.Get(QUERY_PARAM_CURRICULUM_ID), urlVals.Get("grade_id"), urlVals.Get("type"))
 	if len(regionalLangs) == 0 {
-		fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');</script>`, baseURL)
+		if action == "download" {
+			fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');</script>`, baseURL)
+		} else {
+			fmt.Fprintf(responseWriter, `<script>copyToClipboard(window.location.origin+'%s');document.getElementById('download-modal-container').innerHTML='';</script>`, baseURL)
+		}
 		return
 	}
-	views.ExecuteTemplate(testDownloadModalTemplate, responseWriter, dto.DownloadModalData{
-		RegionalLangs:   regionalLangs,
-		BaseDownloadURL: baseURL,
+	views.ExecuteTemplate(testLangModalTemplate, responseWriter, dto.LangModalData{
+		RegionalLangs: regionalLangs,
+		BaseURL:       baseURL,
+		Title:         title,
+		ConfirmLabel:  confirmLabel,
+		Action:        action,
 	}, template.FuncMap{
 		"langName": utils.LangName,
 	})

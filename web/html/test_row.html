@@ -34,7 +34,12 @@
             <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q+A</span>
         </a>
             
-        <button class="action-button" hx-get="/tests/copy-test?id={{.ID}}&curriculum_id={{$curriculumId}}" 
+        <a class="action-button cursor-pointer" title="Copy Link"
+            hx-get="/tests/copy-link-modal?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
+            hx-target="#download-modal-container" hx-swap="innerHTML">
+            <i class="fa-solid fa-link"></i>
+        </a>
+        <button class="action-button" hx-get="/tests/copy-test?id={{.ID}}&curriculum_id={{$curriculumId}}"
             hx-target="body" title="Copy Test" hx-push-url="true">
             <i class="fa-solid fa-copy"></i>
         </button>

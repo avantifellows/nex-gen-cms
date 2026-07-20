@@ -153,6 +153,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/test", testsHandler.GetTest)
 	muxHandler.HandleFunc("/api/test/problems", testsHandler.GetTestProblems)
 	muxHandler.HandleFunc("/tests/download-modal", testsHandler.GetDownloadModal)
+	muxHandler.HandleFunc("/tests/copy-link-modal", testsHandler.GetCopyLinkModal)
 	muxHandler.HandleFunc("/api/test/subjectwise-problems", testsHandler.GetSubjectwiseTestProblems)
 	muxHandler.HandleFunc("/tests/add-test", editor(testsHandler.AddTest))
 	muxHandler.HandleFunc("/add-question-to-test", editor(testsHandler.AddQuestionToTest))
