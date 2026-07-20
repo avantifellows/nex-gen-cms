@@ -480,14 +480,17 @@ func (h *TestsHandler) GetDownloadModal(responseWriter http.ResponseWriter, requ
 			}
 		}
 	}
+	urlVals := request.URL.Query()
+	baseURL := fmt.Sprintf("/download-pdf?id=%s&curriculum_id=%s&grade_id=%s&type=%s",
+		urlVals.Get("id"), urlVals.Get(QUERY_PARAM_CURRICULUM_ID), urlVals.Get("grade_id"), urlVals.Get("type"))
 	if len(regionalLangs) == 0 {
-		urlVals := request.URL.Query()
-		downloadURL := fmt.Sprintf("/download-pdf?id=%s&curriculum_id=%s&grade_id=%s&type=%s",
-			urlVals.Get("id"), urlVals.Get(QUERY_PARAM_CURRICULUM_ID), urlVals.Get("grade_id"), urlVals.Get("type"))
-		fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');</script>`, downloadURL)
+		fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');</script>`, baseURL)
 		return
 	}
-	views.ExecuteTemplate(testDownloadModalTemplate, responseWriter, regionalLangs, template.FuncMap{
+	views.ExecuteTemplate(testDownloadModalTemplate, responseWriter, dto.DownloadModalData{
+		RegionalLangs:   regionalLangs,
+		BaseDownloadURL: baseURL,
+	}, template.FuncMap{
 		"langName": utils.LangName,
 	})
 }
@@ -951,7 +954,8 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		problemsMap[p.ID] = p
 	}
 
-	pdfType := request.URL.Query().Get("type") // "questions", "questions_with_answers", or "answers"
+	urlVals := request.URL.Query()
+	pdfType := urlVals.Get("type") // "questions", "questions_with_answers", or "answers"
 
 	pdfTemplate, headerTxt, pdfSuffix, testRule := h.resolvePdfParams(selectedTestPtr, pdfType)
 
@@ -981,9 +985,10 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	}
 
 	data := dto.PaperData{
-		TestPtr:     selectedTestPtr,
-		ProblemsMap: problemsMap,
-		TestRule:    testRule,
+		TestPtr:          selectedTestPtr,
+		ProblemsMap:      problemsMap,
+		TestRule:         testRule,
+		RegionalLangCode: urlVals.Get("lang_code"),
 	}
 
 	// Render HTML to buffer

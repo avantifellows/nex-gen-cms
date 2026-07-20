@@ -1,5 +1,6 @@
 <div id="download-pdf-modal"
     class="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+    data-base-url="{{ .BaseDownloadURL }}"
     onclick="if (event.target === this) closeDownloadModal()">
     <div class="card shadow-xl rounded-xl w-full max-w-sm p-6">
         <h2 class="page-title mb-6">Download PDF</h2>
@@ -8,12 +9,12 @@
                 <span class="form-label">Primary Language</span>
                 <span class="mt-1 inline-block px-3 py-1 rounded bg-bg-card-alt text-ink text-sm font-medium">English</span>
             </div>
-            {{ if . }}
+            {{ if .RegionalLangs }}
             <div>
                 <label for="regional-lang-select" class="form-label">Regional Language <span class="text-ink-muted font-normal">(optional)</span></label>
                 <select id="regional-lang-select" class="mt-1 w-full border border-border rounded px-2 py-1 text-sm bg-bg-card">
                     <option value="">None</option>
-                    {{ range $code, $_ := . }}
+                    {{ range $code, $_ := .RegionalLangs }}
                     <option value="{{ $code }}">{{ langName $code }}</option>
                     {{ end }}
                 </select>
@@ -31,6 +32,13 @@
         document.getElementById('download-modal-container').innerHTML = '';
     };
     window.confirmDownload = function() {
+        const modal = document.getElementById('download-pdf-modal');
+        let url = modal.dataset.baseUrl;
+        const langSelect = document.getElementById('regional-lang-select');
+        if (langSelect && langSelect.value) {
+            url += '&lang_code=' + encodeURIComponent(langSelect.value);
+        }
         closeDownloadModal();
+        window.open(url, '_blank');
     };
 </script>

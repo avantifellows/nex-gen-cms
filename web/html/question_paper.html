@@ -21,7 +21,7 @@
             {{ $p := index $.ProblemsMap $prob.ID }}
             {{ $Counter = add $Counter 1 }}
 
-            {{ template "pdf_question_options" (dict "Counter" $Counter "Problem" $p "OptionLayout" $prob.OptionLayout) }}
+            {{ template "pdf_question_options" (dict "Counter" $Counter "Problem" $p "OptionLayout" $prob.OptionLayout "RegionalLangCode" $.RegionalLangCode) }}
         {{ end }}
     {{ end }}
 {{ end }}

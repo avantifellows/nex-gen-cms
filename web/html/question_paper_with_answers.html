@@ -21,7 +21,7 @@
             {{ $Counter = add $Counter 1 }}
 
             <div class="mb-6">
-                {{ template "pdf_question_options" (dict "Counter" $Counter "Problem" $p "OptionLayout" $prob.OptionLayout) }}
+                {{ template "pdf_question_options" (dict "Counter" $Counter "Problem" $p "OptionLayout" $prob.OptionLayout "RegionalLangCode" $.RegionalLangCode) }}
 
                 <!-- Answer aligned with question text start -->
                 <div class="flex items-start mt-3">
