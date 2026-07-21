@@ -61,7 +61,7 @@ const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
 const pdfSharedTemplate = "test_pdf_shared.html"
 
-const testProblemsEndPoint = "resource/test/%d/problems?lang_code=en&" + QUERY_PARAM_CURRICULUM_ID + "=%s"
+const testProblemsEndPoint = "resource/test/%d/problems?" + QUERY_PARAM_CURRICULUM_ID + "=%s"
 const testRulesEndPoint = "test-rule"
 
 const testsKey = "tests"

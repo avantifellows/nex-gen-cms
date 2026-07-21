@@ -23,7 +23,7 @@ import (
 const problemsKey = "problems"
 
 const problemsEndPoint = "problems"
-const problemEndPoint = "resource/problem/%d/en/%s"
+const problemEndPoint = "resource/problem/%d/%s"
 const searchProblemsEndPoint = "problems/search"
 const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
 const batchProblemsEndPoint = "resources/problems/batch"
@@ -164,7 +164,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%s&topic_id=%d&lang_code=en", urlValues.Get(CURRICULUM_DROPDOWN_NAME), topicId)
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%s&topic_id=%d", urlValues.Get(CURRICULUM_DROPDOWN_NAME), topicId)
 	if urlValues.Has(includeParagraphSiblingsParam) {
 		queryParams += "&" + includeParagraphSiblingsParam + "=" + urlValues.Get(includeParagraphSiblingsParam)
 	}
@@ -415,7 +415,7 @@ func (h *ProblemsHandler) GetSearchProblems(responseWriter http.ResponseWriter, 
 
 	limit := utils.StringToIntOrDefault(urlVals.Get("limit"), 10, 1)  // min = 1
 	offset := utils.StringToIntOrDefault(urlVals.Get("offset"), 0, 0) // min = 0
-	queryParams := "?lang_code=en&search=" + url.QueryEscape(search) + "&limit=" + strconv.Itoa(limit) + "&offset=" + strconv.Itoa(offset)
+	queryParams := "?search=" + url.QueryEscape(search) + "&limit=" + strconv.Itoa(limit) + "&offset=" + strconv.Itoa(offset)
 
 	subjectId := utils.StringToInt(urlVals.Get("problems-subject-dropdown"))
 	if subjectId != 0 {
