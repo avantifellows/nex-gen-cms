@@ -2,6 +2,16 @@
 {{ $isCopy := and .TopicPtr .ProblemPtr }}
 {{ $isEdit := and .ProblemPtr (not $isCopy) }}
 {{ $prefill := or $isEdit $isCopy }}
+{{ $enLang := false }}
+{{ $hiLang := false }}
+{{ $guLang := false }}
+{{ $taLang := false }}
+{{ if $prefill }}
+    {{ $enLang = .ProblemPtr.GetLangVersion "en" }}
+    {{ $hiLang = .ProblemPtr.GetLangVersion "hi" }}
+    {{ $guLang = .ProblemPtr.GetLangVersion "gu" }}
+    {{ $taLang = .ProblemPtr.GetLangVersion "ta" }}
+{{ end }}
 <form class="card card-pad w-full" onsubmit="createProblem(event,
         {{if .TopicPtr}}
         <!-- add or copy problem -->
@@ -94,15 +104,17 @@
     <div id="questionDiv" class="mb-6">
         <p class="form-label mb-2">Text</p>
         <div class="lang-content" data-lang="en">
-            {{ if $prefill }}
-            {{ template "editor" .ProblemPtr.MetaData.Question }}
-            {{ else }}
-            {{ template "editor" }}
-            {{ end }}
+            {{ if $prefill }}{{ with $enLang }}{{ template "editor" .MetaData.Question }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
         </div>
-        <div class="lang-content hidden" data-lang="hi">{{ template "editor" }}</div>
-        <div class="lang-content hidden" data-lang="gu">{{ template "editor" }}</div>
-        <div class="lang-content hidden" data-lang="ta">{{ template "editor" }}</div>
+        <div class="lang-content hidden" data-lang="hi">
+            {{ if $prefill }}{{ with $hiLang }}{{ template "editor" .MetaData.Question }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="gu">
+            {{ if $prefill }}{{ with $guLang }}{{ template "editor" .MetaData.Question }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="ta">
+            {{ if $prefill }}{{ with $taLang }}{{ template "editor" .MetaData.Question }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
     </div>
 
     <!-- Options -->
@@ -133,15 +145,17 @@
     <div class="mb-6" id="solutionDiv">
         <p class="form-label mb-2">Solution</p>
         <div class="lang-content" data-lang="en">
-            {{ if and $prefill (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
-            {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
-            {{ else }}
-            {{ template "editor" }}
-            {{ end }}
+            {{ if $prefill }}{{ with $enLang }}{{ with .MetaData.Solutions }}{{ template "editor" (index . 0).Value }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
         </div>
-        <div class="lang-content hidden" data-lang="hi">{{ template "editor" }}</div>
-        <div class="lang-content hidden" data-lang="gu">{{ template "editor" }}</div>
-        <div class="lang-content hidden" data-lang="ta">{{ template "editor" }}</div>
+        <div class="lang-content hidden" data-lang="hi">
+            {{ if $prefill }}{{ with $hiLang }}{{ with .MetaData.Solutions }}{{ template "editor" (index . 0).Value }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="gu">
+            {{ if $prefill }}{{ with $guLang }}{{ with .MetaData.Solutions }}{{ template "editor" (index . 0).Value }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="ta">
+            {{ if $prefill }}{{ with $taLang }}{{ with .MetaData.Solutions }}{{ template "editor" (index . 0).Value }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
     </div>
 
     <!-- Tags -->
@@ -272,9 +286,7 @@
 
 <template id="tmplAnsNumeric">
     {{ $meta := (dict "Answers" nil) }}
-    {{ if $prefill }}
-        {{ $meta = .ProblemPtr.MetaData }}
-    {{ end }}
+    {{ if $prefill }}{{ with $enLang }}{{ $meta = .MetaData }}{{ end }}{{ end }}
 
     {{ template "problem_answer_numerical" $meta }}
 </template>
@@ -314,7 +326,13 @@
             { code: 'ta', label: 'Tamil' },
         ];
         let activeLang = 'en';
-        const enabledLangs = new Set(['en']);
+        const enabledLangs = new Set(['en'
+            {{ if $prefill }}
+                {{ range .ProblemPtr.LangVersions }}
+                    {{ if ne .LangCode "en" }}, '{{ .LangCode }}'{{ end }}
+                {{ end }}
+            {{ end }}
+        ]);
 
         const langTabsEl = document.getElementById('langTabs');
         const initializedLangs = new Set(['en']); // en is initialized by bootRichTextEditors
@@ -416,22 +434,14 @@
         // keep 4 tabs so that while editing such problem if type is changed to mcq
         // then 4 option tabs will be visible by default
         let tabs = new Array(
-            {{ if and $prefill (gt (len .ProblemPtr.MetaData.Options) 0) }}
-                {{ len .ProblemPtr.MetaData.Options }}
-            {{ else }}
-                4
-            {{ end }}
+            {{ if $prefill }}{{ with $enLang }}{{ if gt (len .MetaData.Options) 0 }}{{ len .MetaData.Options }}{{ else }}4{{ end }}{{ else }}4{{ end }}{{ else }}4{{ end }}
         ).fill(null);
 
         let activeIndex = 0;
 
         const answerLabels = new Set([
             {{ if and $prefill (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
-                {{ range .ProblemPtr.MetaData.Answers }}
-                    {{ if . }}
-                        '{{ printf "%c" (add 64 (stringToInt .)) }}',
-                    {{ end }}
-                {{ end }}
+                {{ with $enLang }}{{ range .MetaData.Answers }}{{ if . }}'{{ printf "%c" (add 64 (stringToInt .)) }}',{{ end }}{{ end }}{{ end }}
             {{ end }}
         ]); // <=== tracks checked answer labels
 
@@ -631,12 +641,7 @@
 
             } else {
                 // Integer type fallback (simple input)
-                let answer = 
-                    {{ if $prefill }}
-                        '{{ index .ProblemPtr.MetaData.Answers 0 }}'
-                    {{ else }}
-                        ''
-                    {{ end }}; 
+                let answer = {{ if $prefill }}{{ with $enLang }}{{ if gt (len .MetaData.Answers) 0 }}'{{ index .MetaData.Answers 0 }}'{{ else }}''{{ end }}{{ else }}''{{ end }}{{ else }}''{{ end }};
 
                 // if problem type is changed from numerical to integer for edit problem case, 
                 // where answer already contains decimal point
@@ -733,16 +738,23 @@
         SUPPORTED_LANGUAGES.forEach(({ code }) => {
             tabContentByLang[code] = code === 'en'
                 ? [
-                    {{ if $prefill }}
-                        {{ range .ProblemPtr.MetaData.Options }}
-                            { html: `{{ . }}`, preview: `{{ . }}` },
-                        {{ end }}
+                    {{ if $prefill }}{{ with $enLang }}
+                        {{ range .MetaData.Options }}{ html: `{{ . }}`, preview: `{{ . }}` },{{ end }}
                     {{ else }}
+                        ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
+                    {{ end }}{{ else }}
                         ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
                     {{ end }}
                   ]
                 : Array.from({ length: tabs.length }, () => ({ html: '', preview: '' }));
         });
+        {{ if $prefill }}
+        {{ range .ProblemPtr.LangVersions }}{{ if ne .LangCode "en" }}
+        tabContentByLang['{{ .LangCode }}'] = [
+            {{ range .MetaData.Options }}{ html: `{{ . }}`, preview: `{{ . }}` },{{ end }}
+        ].concat(Array.from({ length: Math.max(0, tabs.length - {{ len .MetaData.Options }}) }, () => ({ html: '', preview: '' })));
+        {{ end }}{{ end }}
+        {{ end }}
         let tabContent = tabContentByLang['en'];
 
         // Initial rendering of options & answers for mcq & matrix match only
