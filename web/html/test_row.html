@@ -11,7 +11,7 @@
     <td class="text-center">{{.TypeParams.Marks}}</td>
     <td class="text-center">{{.TypeParams.Duration}}</td>
     <td></td>
-    <td class="text-center space-x-4">
+    <td class="text-center space-x-4 whitespace-nowrap">
         <!-- target is kept body instead of #content, because using #content as target will not work when
          directly edit url is entered in browser -->
         <button class="action-button" hx-get="/tests/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"

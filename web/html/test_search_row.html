@@ -40,7 +40,7 @@
                         {{ $test.Subtype }}
                     {{ end }}
                 </td>
-                <td class="text-center space-x-4" rowspan="{{ $total }}">
+                <td class="text-center space-x-4 whitespace-nowrap" rowspan="{{ $total }}">
                     <!-- target is kept body instead of #content, because using #content as target will not work when
                     directly edit url is entered in browser -->
                     <button class="action-button" hx-get="/tests/edit-test?id={{ $test.ID }}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
