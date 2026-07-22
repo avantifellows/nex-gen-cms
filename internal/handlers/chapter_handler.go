@@ -70,8 +70,6 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		chapterPtr.CurriculumID = curriculumId
 	}
 
-	h.getTopics(responseWriter, *chapters)
-
 	sortColumn := urlVals.Get("sortColumn")
 	sortOrder := urlVals.Get("sortOrder")
 	sortChapters(*chapters, sortColumn, sortOrder)
@@ -246,7 +244,7 @@ func sortChapters(chapterPtrs []*models.Chapter, sortColumn string, sortOrder st
 		case "2":
 			sortResult = strings.Compare(c1.GetNameByLang("en"), c2.GetNameByLang("en"))
 		case "3":
-			sortResult = int(c1.TopicCount() - c2.TopicCount())
+			sortResult = int(c1.TopicCount - c2.TopicCount)
 		default:
 			sortResult = 0
 		}
