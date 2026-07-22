@@ -29,7 +29,7 @@ window.MathJax = {
 {{ define "pdf_test_header" }}
 <div id="mathjax-done" style="display:none"></div>
 <div class="flex flex-wrap justify-between mb-3 w-full gap-y-1">
-    <h2 class="text-lg font-bold">{{ getName .TestPtr "en" }}</h2>
+    <h2 class="text-lg font-bold">{{ getName .TestPtr "en" }}{{ if .RegionalLangCode }} - {{ langName .RegionalLangCode }}{{ end }}</h2>
     <h2 class="text-lg font-bold shrink-0">Test Code: {{ .TestPtr.Code }}</h2>
 </div>
 {{ end }}
@@ -90,7 +90,7 @@ window.MathJax = {
         <div class="flex-1 pl-5">
             <div>{{ $enLV.MetaData.Question }}</div>
             {{ if and .RegionalLangCode $regLV }}
-            <div class="mt-1 text-gray-600">{{ $regLV.MetaData.Question }}</div>
+            <div class="mt-1 text-gray-800">{{ $regLV.MetaData.Question }}</div>
             {{ end }}
         </div>
     </div>
@@ -113,7 +113,7 @@ window.MathJax = {
             {{ range $index, $option := $enLV.MetaData.Options }}
             <div class="flex items-baseline">
                 <div class="font-semibold mr-2">{{ index labels $index }}</div>
-                <div class="flex-1 whitespace-pre-wrap">{{- $option -}}{{- if and $.RegionalLangCode $regLV -}}{{- $regOptions := $regLV.MetaData.Options -}}{{- if lt $index (len $regOptions) -}}<span class="text-gray-500 ml-2">{{ index $regOptions $index }}</span>{{- end -}}{{- end -}}</div>
+                <div class="flex-1 whitespace-pre-wrap">{{- $option -}}{{- if and $.RegionalLangCode $regLV -}}{{- $regOptions := $regLV.MetaData.Options -}}{{- if lt $index (len $regOptions) -}}<span class="text-gray-800 ml-2">{{ index $regOptions $index }}</span>{{- end -}}{{- end -}}</div>
             </div>
             {{ end }}
         </div>

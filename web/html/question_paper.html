@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>{{ getName .TestPtr "en" }}</title>
+<title>{{ getName .TestPtr "en" }}{{ if .RegionalLangCode }} - {{ langName .RegionalLangCode }}{{ end }}</title>
 {{ template "pdf_mathjax_head" . }}
 </head>
 <body class="font-sans text-[14px] m-5 mt-0">

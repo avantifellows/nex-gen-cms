@@ -996,17 +996,19 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		"trim":           strings.TrimSpace,
 		"isEmptyHTML":    utils.IsEmptyHTML,
 		"getChapterName": getProblemChapterName,
+		"langName":       utils.LangName,
 	}).ParseFiles(sharedTmplPath, tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	regionalLangCode := urlVals.Get("lang_code")
 	data := dto.PaperData{
 		TestPtr:          selectedTestPtr,
 		ProblemsMap:      problemsMap,
 		TestRule:         testRule,
-		RegionalLangCode: urlVals.Get("lang_code"),
+		RegionalLangCode: regionalLangCode,
 	}
 
 	// Render HTML to buffer
@@ -1078,8 +1080,11 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	// Send as response
 	responseWriter.Header().Set("Content-Type", "application/pdf")
-	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - %s.pdf"`,
-		selectedTestPtr.GetNameByLang("en"), pdfSuffix))
+	filename := fmt.Sprintf(`"%s - %s.pdf"`, selectedTestPtr.GetNameByLang("en"), pdfSuffix)
+	if regionalLangCode != "" {
+		filename = fmt.Sprintf(`"%s - %s - %s.pdf"`, selectedTestPtr.GetNameByLang("en"), pdfSuffix, utils.LangName(regionalLangCode))
+	}
+	responseWriter.Header().Set("Content-Disposition", "attachment; filename="+filename)
 	_, _ = responseWriter.Write(pdfData)
 }
 
