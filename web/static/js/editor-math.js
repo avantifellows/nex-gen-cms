@@ -123,9 +123,10 @@ function latexSpanFromText(latex) {
     return span;
 }
 
-const mathTemplates = {
-    piecewise: 'f(x)=\\begin{cases}#? & #? \\\\ #? & #?\\end{cases}',
-};
+function buildPiecewiseLatex(rows) {
+    const rowLatex = Array.from({ length: rows }, () => '#? & #?').join(' \\\\ ');
+    return `f(x)=\\begin{cases}${rowLatex}\\end{cases}`;
+}
 
 function getLatexFromMathJaxContainer(container) {
     const dataTex = container.getAttribute('data-tex');
@@ -272,8 +273,11 @@ function insertMath(editor) {
     insertMathFieldAtCursor(editor);
 }
 
-function insertMathTemplate(editor, templateName) {
-    const latex = mathTemplates[templateName];
+function insertMathTemplate(editor, templateName, rows) {
+    let latex;
+    if (templateName === 'piecewise') {
+        latex = buildPiecewiseLatex(Math.max(2, parseInt(rows) || 2));
+    }
     if (!latex) return;
     insertMathFieldAtCursor(editor, latex);
 }
