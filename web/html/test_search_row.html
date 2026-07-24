@@ -23,8 +23,8 @@
                 <td class="py-4 px-6" rowspan="{{ $total }}">{{ $test.Code }}</td>
 
                 <td class="px-6 text-accent hover:text-accent-hover hover:underline font-medium" rowspan="{{ $total }}">
-                    <a href="/test?id={{ $test.ID }}&curriculum_id={{ $curriculumId }}&grade_id={{ $gradeId }}"
-                       hx-get="/test?id={{ $test.ID }}&curriculum_id={{ $curriculumId }}&grade_id={{ $gradeId }}"
+                    <a href="/test?id={{ $test.ID }}"
+                       hx-get="/test?id={{ $test.ID }}" hx-include="unset"
                        hx-target="body" hx-push-url="true">
                        {{ (index $test.Name 0).Resource }}
                     </a>

@@ -364,6 +364,13 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 		return
 	}
 
+	// curriculum_id/grade_id are no longer passed in the /test URL, so the test's own
+	// curriculum-grade association is the only source; a test without one can't be rendered
+	if len(selectedTestPtr.CurriculumGrades) == 0 {
+		http.Error(responseWriter, "test has no curriculum/grade association", http.StatusUnprocessableEntity)
+		return
+	}
+
 	data := dto.TestData{
 		HomeData: dto.HomeData{
 			CurriculumID: selectedTestPtr.CurriculumGrades[0].CurriculumID,
@@ -475,9 +482,7 @@ func (h *TestsHandler) GetDownloadModal(responseWriter http.ResponseWriter, requ
 }
 
 func (h *TestsHandler) GetCopyLinkModal(responseWriter http.ResponseWriter, request *http.Request) {
-	urlVals := request.URL.Query()
-	baseURL := fmt.Sprintf("/test?id=%s&curriculum_id=%s&grade_id=%s",
-		urlVals.Get("id"), urlVals.Get(QUERY_PARAM_CURRICULUM_ID), urlVals.Get("grade_id"))
+	baseURL := fmt.Sprintf("/test?id=%s", request.URL.Query().Get("id"))
 	h.renderLangModal(responseWriter, request, baseURL, "Copy Link", "Copy", "copy")
 }
 
