@@ -4,7 +4,7 @@
     <td class="p-2 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
         hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">{{.Code}}
     </a></td>
-    <td class="p-2">{{.MetaData.Question}}</td>
+    <td class="p-2">{{(.GetLangVersion "en").MetaData.Question}}</td>
     <td class="p-2 text-center"><button class="px-2 bg-success text-white rounded-sm" data-id="{{.ID}}"
             data-subject="{{.Subject.ID}}" data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
             data-curriculum="{{.CurriculumID}}" data-subject-parent="{{if .Subject.ParentID}}{{.Subject.ParentID}}{{end}}" 

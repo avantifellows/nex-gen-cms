@@ -6,6 +6,10 @@
             hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body"
             hx-push-url="true">{{.Code}}</a>
     </td>
-    <td class="w-auto px-4 text-left">{{.MetaData.Question}}</td>
+    <td class="w-auto px-4 text-left">
+        {{ range .LangVersions }}
+        <span class="lang-panel" data-lang="{{ .LangCode }}" {{ if ne .LangCode "en" }}style="display:none"{{ end }}>{{ .MetaData.Question }}</span>
+        {{ end }}
+    </td>
 </tr>
 {{ end }}

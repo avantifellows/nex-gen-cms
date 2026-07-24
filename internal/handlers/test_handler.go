@@ -40,6 +40,7 @@ const testSearchRowTemplate = "test_search_row.html"
 const addTestSearchRowTemplate = "add_test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
+const testLangModalTemplate = "test_lang_modal.html"
 const addTestTemplate = "add_test.html"
 const testTypeOptionsTemplate = "test_type_options.html"
 const testChipEditorTemplate = "test_chip_editor.html"
@@ -60,7 +61,7 @@ const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
 const pdfSharedTemplate = "test_pdf_shared.html"
 
-const testProblemsEndPoint = "resource/test/%d/problems?lang_code=en&" + QUERY_PARAM_CURRICULUM_ID + "=%s"
+const testProblemsEndPoint = "resource/test/%d/problems?" + QUERY_PARAM_CURRICULUM_ID + "=%s"
 const testRulesEndPoint = "test-rule"
 
 const testsKey = "tests"
@@ -363,6 +364,13 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 		return
 	}
 
+	// curriculum_id/grade_id are no longer passed in the /test URL, so the test's own
+	// curriculum-grade association is the only source; a test without one can't be rendered
+	if len(selectedTestPtr.CurriculumGrades) == 0 {
+		http.Error(responseWriter, "test has no curriculum/grade association", http.StatusUnprocessableEntity)
+		return
+	}
+
 	data := dto.TestData{
 		HomeData: dto.HomeData{
 			CurriculumID: selectedTestPtr.CurriculumGrades[0].CurriculumID,
@@ -371,7 +379,10 @@ func (h *TestsHandler) GetTest(responseWriter http.ResponseWriter, request *http
 		TestPtr: selectedTestPtr,
 	}
 
-	views.ExecuteTemplates(responseWriter, data, nil, baseTemplate, testTemplate)
+	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
+		"langName":  utils.LangName,
+		"langCodes": utils.LangCodes,
+	}, baseTemplate, testTemplate)
 }
 
 func (h *TestsHandler) GetSubjectwiseTestProblems(responseWriter http.ResponseWriter, request *http.Request) {
@@ -461,6 +472,50 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 			testPtr.TypeParams.Subjects[i].Name = subjectIdToNameMap[testSubject.SubjectID]
 		}
 	}
+}
+
+func (h *TestsHandler) GetDownloadModal(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	baseURL := fmt.Sprintf("/download-pdf?id=%s&curriculum_id=%s&grade_id=%s&type=%s",
+		urlVals.Get("id"), urlVals.Get(QUERY_PARAM_CURRICULUM_ID), urlVals.Get("grade_id"), urlVals.Get("type"))
+	h.renderLangModal(responseWriter, request, baseURL, "Download PDF", "Download", "download")
+}
+
+func (h *TestsHandler) GetCopyLinkModal(responseWriter http.ResponseWriter, request *http.Request) {
+	baseURL := fmt.Sprintf("/test?id=%s", request.URL.Query().Get("id"))
+	h.renderLangModal(responseWriter, request, baseURL, "Copy Link", "Copy", "copy")
+}
+
+func (h *TestsHandler) renderLangModal(responseWriter http.ResponseWriter, request *http.Request, baseURL, title, confirmLabel, action string) {
+	problems := h.getTestProblems(responseWriter, request)
+	if problems == nil {
+		return
+	}
+	regionalLangs := map[string]bool{}
+	for _, p := range *problems {
+		for _, lv := range p.LangVersions {
+			if lv.LangCode != "en" {
+				regionalLangs[lv.LangCode] = true
+			}
+		}
+	}
+	if len(regionalLangs) == 0 {
+		if action == "download" {
+			fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');</script>`, baseURL)
+		} else {
+			fmt.Fprintf(responseWriter, `<script>copyToClipboard(window.location.origin+'%s');document.getElementById('download-modal-container').innerHTML='';</script>`, baseURL)
+		}
+		return
+	}
+	views.ExecuteTemplate(testLangModalTemplate, responseWriter, dto.LangModalData{
+		RegionalLangs: regionalLangs,
+		BaseURL:       baseURL,
+		Title:         title,
+		ConfirmLabel:  confirmLabel,
+		Action:        action,
+	}, template.FuncMap{
+		"langName": utils.LangName,
+	})
 }
 
 func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, request *http.Request) {
@@ -922,7 +977,8 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		problemsMap[p.ID] = p
 	}
 
-	pdfType := request.URL.Query().Get("type") // "questions", "questions_with_answers", or "answers"
+	urlVals := request.URL.Query()
+	pdfType := urlVals.Get("type") // "questions", "questions_with_answers", or "answers"
 
 	pdfTemplate, headerTxt, pdfSuffix, testRule := h.resolvePdfParams(selectedTestPtr, pdfType)
 
@@ -945,16 +1001,19 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		"trim":           strings.TrimSpace,
 		"isEmptyHTML":    utils.IsEmptyHTML,
 		"getChapterName": getProblemChapterName,
+		"langName":       utils.LangName,
 	}).ParseFiles(sharedTmplPath, tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	regionalLangCode := urlVals.Get("lang_code")
 	data := dto.PaperData{
-		TestPtr:     selectedTestPtr,
-		ProblemsMap: problemsMap,
-		TestRule:    testRule,
+		TestPtr:          selectedTestPtr,
+		ProblemsMap:      problemsMap,
+		TestRule:         testRule,
+		RegionalLangCode: regionalLangCode,
 	}
 
 	// Render HTML to buffer
@@ -1028,8 +1087,11 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	// Send as response
 	responseWriter.Header().Set("Content-Type", "application/pdf")
-	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s - %s.pdf"`,
-		selectedTestPtr.GetNameByLang("en"), pdfSuffix))
+	filename := fmt.Sprintf(`"%s - %s.pdf"`, selectedTestPtr.GetNameByLang("en"), pdfSuffix)
+	if regionalLangCode != "" {
+		filename = fmt.Sprintf(`"%s - %s - %s.pdf"`, selectedTestPtr.GetNameByLang("en"), pdfSuffix, utils.LangName(regionalLangCode))
+	}
+	responseWriter.Header().Set("Content-Disposition", "attachment; filename="+filename)
 	_, _ = responseWriter.Write(pdfData)
 }
 

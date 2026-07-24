@@ -4,34 +4,42 @@
 {{ $gradeId := $curriculumGrade.GradeID }}
 <tr class="border-b border-border/40 hover:bg-bg-hover transition-colors">
     <td class="py-4 px-6">{{.Code}}</td>
-    <td class="px-6 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}" 
-        hx-get="/test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}" hx-target="body"
+    <td class="px-6 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/test?id={{.ID}}"
+        hx-get="/test?id={{.ID}}" hx-include="unset" hx-target="body"
         hx-push-url="true">{{ (index .Name 0).Resource }}</a></td>
     <td class="px-6 text-center text-accent hover:text-accent-hover hover:underline font-medium">{{.ProblemCount}}</td>
     <td class="text-center">{{.TypeParams.Marks}}</td>
     <td class="text-center">{{.TypeParams.Duration}}</td>
     <td></td>
-    <td class="text-center space-x-4">
+    <td class="text-center space-x-4 whitespace-nowrap">
         <!-- target is kept body instead of #content, because using #content as target will not work when
          directly edit url is entered in browser -->
         <button class="action-button" hx-get="/tests/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
             hx-target="body" hx-push-url="true">
             <i class="fa-solid fa-pen"></i>
         </button>
-        <a href="/download-pdf?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions" 
-            target="_blank" class="action-button" title="Download Questions PDF">
-                <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
+        <a class="action-button cursor-pointer" title="Download Questions PDF"
+            hx-get="/tests/download-modal?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions"
+            hx-target="#download-modal-container" hx-swap="innerHTML">
+            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
         </a>
-        <a href="/download-pdf?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=answers"  
-            target="_blank"class="action-button" title="Download Answers PDF">
-                <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
+        <a class="action-button cursor-pointer" title="Download Answers PDF"
+            hx-get="/tests/download-modal?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=answers"
+            hx-target="#download-modal-container" hx-swap="innerHTML">
+            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
         </a>
-        <a href="/download-pdf?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions_with_answers" 
-            target="_blank" class="action-button" title="Download Questions with Answers PDF">
-                <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q+A</span>
+        <a class="action-button cursor-pointer" title="Download Questions with Answers PDF"
+            hx-get="/tests/download-modal?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions_with_answers"
+            hx-target="#download-modal-container" hx-swap="innerHTML">
+            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q+A</span>
         </a>
             
-        <button class="action-button" hx-get="/tests/copy-test?id={{.ID}}&curriculum_id={{$curriculumId}}" 
+        <a class="action-button cursor-pointer" title="Copy Link"
+            hx-get="/tests/copy-link-modal?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
+            hx-target="#download-modal-container" hx-swap="innerHTML">
+            <i class="fa-solid fa-link"></i>
+        </a>
+        <button class="action-button" hx-get="/tests/copy-test?id={{.ID}}&curriculum_id={{$curriculumId}}"
             hx-target="body" title="Copy Test" hx-push-url="true">
             <i class="fa-solid fa-copy"></i>
         </button>

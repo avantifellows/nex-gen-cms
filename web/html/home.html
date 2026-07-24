@@ -42,6 +42,21 @@
     <script src="/web/static/js/table-sort.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script>
+        function copyToClipboard(text) {
+            if (navigator.clipboard && document.hasFocus()) {
+                navigator.clipboard.writeText(text).then(() => showToast('Link copied!', 'success'));
+                return;
+            }
+            const el = document.createElement('textarea');
+            el.value = text;
+            el.style.cssText = 'position:fixed;opacity:0';
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            showToast('Link copied!', 'success');
+        }
+
         function afterDropdownReq(dropdown, selectedValue) {
             if (dropdown.id === 'grade-dropdown') {
                 const opt = document.createElement('option');
