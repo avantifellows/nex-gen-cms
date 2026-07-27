@@ -2,6 +2,16 @@
 {{ $isCopy := and .TopicPtr .ProblemPtr }}
 {{ $isEdit := and .ProblemPtr (not $isCopy) }}
 {{ $prefill := or $isEdit $isCopy }}
+{{ $enLang := false }}
+{{ $hiLang := false }}
+{{ $guLang := false }}
+{{ $taLang := false }}
+{{ if $prefill }}
+    {{ $enLang = .ProblemPtr.GetLangVersion "en" }}
+    {{ $hiLang = .ProblemPtr.GetLangVersion "hi" }}
+    {{ $guLang = .ProblemPtr.GetLangVersion "gu" }}
+    {{ $taLang = .ProblemPtr.GetLangVersion "ta" }}
+{{ end }}
 <form class="card card-pad w-full" onsubmit="createProblem(event,
         {{if .TopicPtr}}
         <!-- add or copy problem -->
@@ -85,14 +95,26 @@
         </div>
     </div>
 
+    <!-- Language Tabs -->
+    <div class="mb-1">
+        <div class="nav nav-tabs" id="langTabs"></div>
+    </div>
+
     <!-- Question editor -->
     <div id="questionDiv" class="mb-6">
         <p class="form-label mb-2">Text</p>
-        {{ if $prefill }}
-        {{ template "editor" .ProblemPtr.MetaData.Question }}
-        {{ else }}
-        {{ template "editor" }}
-        {{ end }}
+        <div class="lang-content" data-lang="en">
+            {{ if $prefill }}{{ with $enLang }}{{ template "editor" .MetaData.Question }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="hi">
+            {{ if $prefill }}{{ with $hiLang }}{{ template "editor" .MetaData.Question }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="gu">
+            {{ if $prefill }}{{ with $guLang }}{{ template "editor" .MetaData.Question }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="ta">
+            {{ if $prefill }}{{ with $taLang }}{{ template "editor" .MetaData.Question }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
     </div>
 
     <!-- Options -->
@@ -122,11 +144,18 @@
     <!-- Solution -->
     <div class="mb-6" id="solutionDiv">
         <p class="form-label mb-2">Solution</p>
-        {{ if and $prefill (gt (len .ProblemPtr.MetaData.Solutions) 0) }}
-        {{ template "editor" (index .ProblemPtr.MetaData.Solutions 0).Value }}
-        {{ else }}
-        {{ template "editor" }}
-        {{ end }}
+        <div class="lang-content" data-lang="en">
+            {{ if $prefill }}{{ with $enLang }}{{ with .MetaData.Solutions }}{{ template "editor" (index . 0).Value }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="hi">
+            {{ if $prefill }}{{ with $hiLang }}{{ with .MetaData.Solutions }}{{ template "editor" (index . 0).Value }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="gu">
+            {{ if $prefill }}{{ with $guLang }}{{ with .MetaData.Solutions }}{{ template "editor" (index . 0).Value }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
+        <div class="lang-content hidden" data-lang="ta">
+            {{ if $prefill }}{{ with $taLang }}{{ with .MetaData.Solutions }}{{ template "editor" (index . 0).Value }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}{{ else }}{{ template "editor" }}{{ end }}
+        </div>
     </div>
 
     <!-- Tags -->
@@ -257,9 +286,7 @@
 
 <template id="tmplAnsNumeric">
     {{ $meta := (dict "Answers" nil) }}
-    {{ if $prefill }}
-        {{ $meta = .ProblemPtr.MetaData }}
-    {{ end }}
+    {{ if $prefill }}{{ with $enLang }}{{ $meta = .MetaData }}{{ end }}{{ end }}
 
     {{ template "problem_answer_numerical" $meta }}
 </template>
@@ -291,6 +318,109 @@
         const mainTagsRoot = document.querySelector('#main-problem-tags .problem-tags-section');
         initProblemTagsSection(mainTagsRoot);
 
+        // --- Language tabs ---
+        const SUPPORTED_LANGUAGES = [
+            { code: 'en', label: 'English' },
+            { code: 'hi', label: 'Hindi' },
+            { code: 'gu', label: 'Gujarati' },
+            { code: 'ta', label: 'Tamil' },
+        ];
+        let activeLang = 'en';
+        const enabledLangs = new Set(['en'
+            {{ if $prefill }}
+                {{ range .ProblemPtr.LangVersions }}
+                    {{ if ne .LangCode "en" }}, '{{ .LangCode }}'{{ end }}
+                {{ end }}
+            {{ end }}
+        ]);
+
+        const langTabsEl = document.getElementById('langTabs');
+        const initializedLangs = new Set(['en']); // en is initialized by bootRichTextEditors
+
+        function switchLangEditors(langCode) {
+            // Save MCQ options for the current language before switching
+            saveCurrentContent();
+            tabContent = tabContentByLang[langCode];
+
+            // Show/hide question and solution editors
+            ['questionDiv', 'solutionDiv'].forEach(divId => {
+                const div = document.getElementById(divId);
+                if (!div) return;
+                div.querySelectorAll('.lang-content').forEach(el => {
+                    el.classList.toggle('hidden', el.dataset.lang !== langCode);
+                });
+            });
+
+            // Lazily initialize question/solution editors on first switch to this language
+            if (!initializedLangs.has(langCode) && window.initializeRichTextEditors) {
+                ['questionDiv', 'solutionDiv'].forEach(divId => {
+                    const container = document.querySelector(`#${divId} .lang-content[data-lang="${langCode}"]`);
+                    if (container) window.initializeRichTextEditors(container);
+                });
+                initializedLangs.add(langCode);
+            }
+
+            // Reload the active MCQ tab's content for the new language
+            loadActiveContent();
+        }
+
+        function renderLangTabs() {
+            langTabsEl.innerHTML = '';
+            SUPPORTED_LANGUAGES.forEach(({ code, label }) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'nav-link' + (code === activeLang ? ' active' : '');
+                btn.dataset.lang = code;
+                btn.addEventListener('click', () => {
+                    if (code === activeLang) return;
+                    if (code !== 'en' && !enabledLangs.has(code)) {
+                        enabledLangs.add(code);
+                    }
+                    activeLang = code;
+                    switchLangEditors(code);
+                    renderLangTabs();
+                });
+
+                if (code === 'en') {
+                    btn.textContent = label + ' *';
+                } else {
+                    const isEnabled = enabledLangs.has(code);
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = isEnabled;
+                    checkbox.title = `Include ${label}`;
+                    checkbox.style.marginRight = '6px';
+                    checkbox.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (checkbox.checked) {
+                            enabledLangs.add(code);
+                            activeLang = code;
+                            switchLangEditors(code);
+                        } else {
+                            enabledLangs.delete(code);
+                            // Switch back to English if this tab was active
+                            if (activeLang === code) {
+                                activeLang = 'en';
+                                switchLangEditors('en');
+                            }
+                        }
+                        renderLangTabs();
+                    });
+                    btn.appendChild(checkbox);
+                    btn.appendChild(document.createTextNode(label));
+
+                    if (!isEnabled) {
+                        btn.style.opacity = '0.5';
+                    }
+                }
+
+                langTabsEl.appendChild(btn);
+            });
+        }
+
+        renderLangTabs();
+        // --- End language tabs ---
+
         let skillsOptionsHtml = '';
         let topicsOptionsHtml = '';
         const conceptsOptionsByTopic = new Map();
@@ -304,22 +434,14 @@
         // keep 4 tabs so that while editing such problem if type is changed to mcq
         // then 4 option tabs will be visible by default
         let tabs = new Array(
-            {{ if and $prefill (gt (len .ProblemPtr.MetaData.Options) 0) }}
-                {{ len .ProblemPtr.MetaData.Options }}
-            {{ else }}
-                4
-            {{ end }}
+            {{ if $prefill }}{{ with $enLang }}{{ if gt (len .MetaData.Options) 0 }}{{ len .MetaData.Options }}{{ else }}4{{ end }}{{ else }}4{{ end }}{{ else }}4{{ end }}
         ).fill(null);
 
         let activeIndex = 0;
 
         const answerLabels = new Set([
             {{ if and $prefill (or (eq .ProblemPtr.Subtype "mcq_single_answer") (eq .ProblemPtr.Subtype "matrix_match") (eq .ProblemPtr.Subtype "mcq_multiple_answer")) }}
-                {{ range .ProblemPtr.MetaData.Answers }}
-                    {{ if . }}
-                        '{{ printf "%c" (add 64 (stringToInt .)) }}',
-                    {{ end }}
-                {{ end }}
+                {{ with $enLang }}{{ range .MetaData.Answers }}{{ if . }}'{{ printf "%c" (add 64 (stringToInt .)) }}',{{ end }}{{ end }}{{ end }}
             {{ end }}
         ]); // <=== tracks checked answer labels
 
@@ -519,12 +641,7 @@
 
             } else {
                 // Integer type fallback (simple input)
-                let answer = 
-                    {{ if $prefill }}
-                        '{{ index .ProblemPtr.MetaData.Answers 0 }}'
-                    {{ else }}
-                        ''
-                    {{ end }}; 
+                let answer = {{ if $prefill }}{{ with $enLang }}{{ if gt (len .MetaData.Answers) 0 }}'{{ index .MetaData.Answers 0 }}'{{ else }}''{{ end }}{{ else }}''{{ end }}{{ else }}''{{ end }};
 
                 // if problem type is changed from numerical to integer for edit problem case, 
                 // where answer already contains decimal point
@@ -616,17 +733,29 @@
         const editor = optionsDiv.querySelector('.editor');
         const preview = optionsDiv.querySelector('.output');
 
-        // Initial setup
-        const tabContent = [
-            {{ if $prefill }}
-                {{ range .ProblemPtr.MetaData.Options }}
-                    { html: `{{ . }}`, preview: `{{ . }}` },
-                {{ end }}
-            {{ else }}
-                // Default empty tabs
-                ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
-            {{ end }}
-        ];
+        // Per-language MCQ option content
+        const tabContentByLang = {};
+        SUPPORTED_LANGUAGES.forEach(({ code }) => {
+            tabContentByLang[code] = code === 'en'
+                ? [
+                    {{ if $prefill }}{{ with $enLang }}
+                        {{ range .MetaData.Options }}{ html: `{{ . }}`, preview: `{{ . }}` },{{ end }}
+                    {{ else }}
+                        ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
+                    {{ end }}{{ else }}
+                        ...Array.from({ length: 4 }, () => ({ html: '', preview: '' }))
+                    {{ end }}
+                  ]
+                : Array.from({ length: tabs.length }, () => ({ html: '', preview: '' }));
+        });
+        {{ if $prefill }}
+        {{ range .ProblemPtr.LangVersions }}{{ if ne .LangCode "en" }}
+        tabContentByLang['{{ .LangCode }}'] = [
+            {{ range .MetaData.Options }}{ html: `{{ . }}`, preview: `{{ . }}` },{{ end }}
+        ].concat(Array.from({ length: Math.max(0, tabs.length - {{ len .MetaData.Options }}) }, () => ({ html: '', preview: '' })));
+        {{ end }}{{ end }}
+        {{ end }}
+        let tabContent = tabContentByLang['en'];
 
         // Initial rendering of options & answers for mcq & matrix match only
         function bootMcqTabsIfNeeded() {
@@ -737,7 +866,7 @@
             saveCurrentContent(); // Save current tab before adding new
 
             tabs.push(null);
-            tabContent.push({ html: '', preview: '' });
+            Object.values(tabContentByLang).forEach(arr => arr.push({ html: '', preview: '' }));
             activeIndex = tabs.length - 1;
 
             renderTabs();
@@ -752,7 +881,7 @@
             }
 
             tabs.splice(index, 1);
-            tabContent.splice(index, 1);
+            Object.values(tabContentByLang).forEach(arr => arr.splice(index, 1));
 
             const removedLabel = getLabel(index); // label like 'A', 'B'
             // Also remove this label from answerLabels set
@@ -813,6 +942,7 @@
                 toggleButton(saveBtn, false, 'Save')
                 return false;
             }
+
             
             const subtype = document.getElementById('problem-type-dropdown').value;
             const isComprehensionCreate = !isEditPage && subtype === 'comprehension';
@@ -970,18 +1100,17 @@
             }
 
             if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
-                if (typeof tabContent !== 'undefined' && Array.isArray(tabContent)) {
-                    for (let i = 0; i < tabContent.length; i++) {
-                        const optionLabel = String.fromCharCode(65 + i); // A, B, C...
-                        const optionText = tabContent[i]?.html?.trim();
-                        if (!optionText) {
-                            alert(`Option ${optionLabel} is empty. Please fill it out before submitting.`);
-                            return false;
-                        }
-                    }
-                } else {
+                if (typeof tabContentByLang === 'undefined' || !Array.isArray(tabContentByLang['en'])) {
                     alert('Options are not available.');
                     return false;
+                }
+                const enOptions = tabContentByLang['en'];
+                for (let i = 0; i < enOptions.length; i++) {
+                    const optionLabel = String.fromCharCode(65 + i); // A, B, C...
+                    if (!enOptions[i]?.html?.trim()) {
+                        alert(`Option ${optionLabel} is empty. Please fill it out before submitting.`);
+                        return false;
+                    }
                 }
 
                 if (answerLabels.size === 0) {
@@ -1062,13 +1191,28 @@
                 topicId,
                 chapterId,
                 difficulty,
-                question,
-                options: null,
+                langVersions: [{ lang_code: 'en', question, options: null, solution }],
                 answers,
-                solution,
                 conceptIds: selectedConceptIds,
                 tags,
             });
+        }
+
+        // Returns lang_versions for the main (non-comprehension) problem.
+        // Only includes languages the user has enabled via the language tab checkboxes.
+        function getLangVersionsForMain(subtype) {
+            const isMCQ = subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer';
+            const versions = [];
+            SUPPORTED_LANGUAGES.forEach(({ code }) => {
+                if (!enabledLangs.has(code)) return;
+                const questionEl = document.querySelector(`#questionDiv .lang-content[data-lang="${code}"] .editor`);
+                const question = questionEl ? getEditorHtml(questionEl) : '';
+                const solutionEl = document.querySelector(`#solutionDiv .lang-content[data-lang="${code}"] .editor`);
+                const solution = solutionEl ? getEditorHtml(solutionEl) : '';
+                const options = isMCQ ? tabContentByLang[code].map(item => item.html) : null;
+                versions.push({ lang_code: code, question, options, solution });
+            });
+            return versions;
         }
 
         function buildProblemPayload({
@@ -1080,15 +1224,12 @@
             topicId,
             chapterId,
             difficulty,
-            question,
-            options,
+            langVersions,
             answers,
-            solution,
             conceptIds,
             tags
         }) {
             return {
-                lang_code: "en",
                 type: "problem",
                 subtype: subtype,
                 skill_ids: skillIds,
@@ -1105,17 +1246,15 @@
                 topic_id: topicId,
                 chapter_id: chapterId,
                 difficulty_level: difficulty,
-                meta_data: {
-                    text: question,
-                    options: options,
-                    answer: answers,
-                    solutions: [
-                        {
-                            type: "text",
-                            value: solution
-                        }
-                    ]
-                },
+                lang_versions: langVersions.map(({ lang_code, question, options, solution }) => ({
+                    lang_code,
+                    meta_data: {
+                        text: question,
+                        options: options,
+                        answer: answers,
+                        solutions: [{ type: "text", value: solution }]
+                    }
+                })),
                 concept_ids: conceptIds,
                 tags: tags
             };
@@ -1133,12 +1272,8 @@
 
             const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
 
-            const question = getEditorHtml(document.getElementById('questionDiv').querySelector('.editor'));
-
-            let options = null;
             let answers = [];
             if (subtype === 'mcq_single_answer' || subtype === 'matrix_match' || subtype === 'mcq_multiple_answer') {
-                options = tabContent.map(item => item.html);
                 // Convert the labels to their number indexes (+1), sort in ascending order and then convert to strings
                 answers = Array.from(answerLabels)
                     .map(label => labelPool.indexOf(label) + 1)
@@ -1161,7 +1296,8 @@
                 // integer_type
                 answers = [document.getElementById("answerInput").value];
             }
-            const solution = getEditorHtml(document.getElementById('solutionDiv').querySelector('.editor'));
+
+            const langVersions = getLangVersionsForMain(subtype);
 
             const conceptsDropdown = document.getElementById("concepts-dropdown");
             const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
@@ -1175,10 +1311,8 @@
                 topicId,
                 chapterId,
                 difficulty,
-                question,
-                options,
+                langVersions,
                 answers,
-                solution,
                 conceptIds: selectedConceptIds,
                 tags: getTagsForSection(mainTagsRoot),
             });

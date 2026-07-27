@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>{{ getName .TestPtr "en" }}</title>
+<title>{{ getName .TestPtr "en" }}{{ if .RegionalLangCode }} - {{ langName .RegionalLangCode }}{{ end }}</title>
 {{ template "pdf_mathjax_head" . }}
 </head>
 <body class="font-sans text-[14px] m-5 mt-0" style="font-family: Arial, 'Liberation Sans', sans-serif; font-size: 14px;">
@@ -21,7 +21,7 @@
             {{ $p := index $.ProblemsMap $prob.ID }}
             {{ $Counter = add $Counter 1 }}
 
-            {{ template "pdf_question_options" (dict "Counter" $Counter "Problem" $p "OptionLayout" $prob.OptionLayout) }}
+            {{ template "pdf_question_options" (dict "Counter" $Counter "Problem" $p "OptionLayout" $prob.OptionLayout "RegionalLangCode" $.RegionalLangCode) }}
         {{ end }}
     {{ end }}
 {{ end }}

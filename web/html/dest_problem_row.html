@@ -16,7 +16,7 @@
             <option value="hard"   {{if eq $difficulty "hard"}}selected{{end}}>3</option>        
         </select>        
     </td>
-    <td class="p-2">{{ .MetaData.Question }}</td>
+    <td class="p-2">{{ (.GetLangVersion "en").MetaData.Question }}</td>
     <!-- if we pass . instead of empty dictionary, then it will throw error - "can't evaluate field PosMarks 
      in type *models.Problem" -->
     {{ template "chip_box_cells" (dict "PosMarks" $.PosMarks "NegMarks" $.NegMarks "ReadOnlyMarks" $.ReadOnlyMarks) }}

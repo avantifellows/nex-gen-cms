@@ -5,6 +5,11 @@
             <i class="fa-solid fa-chevron-left"></i> Back
         </button>
         <h3 class="ml-4 text-lg font-bold uppercase tracking-wide text-ink">{{ (index .TestPtr.Name 0).Resource }}</h3>
+        <select id="lang-select" class="ml-4 border border-border rounded px-2 py-1 text-sm bg-bg-card" onchange="switchLang(this.value)" style="display:none">
+            {{ range langCodes }}
+            <option value="{{ . }}">{{ langName . }}</option>
+            {{ end }}
+        </select>
         <div class="ml-auto flex items-center gap-6 text-sm">
             <div>
                 <span class="form-label mb-0">Duration</span>
@@ -30,11 +35,44 @@
                 </tr>
             </thead>
             <tbody hx-get="/api/test/problems?id={{$.TestPtr.ID}}&curriculum_id={{(index $.TestPtr.CurriculumGrades 0).CurriculumID}}&subject_id={{$subject.SubjectID}}"
-                hx-trigger="load" data-mathjax="true">
+                hx-trigger="load" data-mathjax="true" hx-on::after-swap="onSubjectLoaded()">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
     </div>
     {{ end }}
 </div>
+<script>
+    (function() {
+        let pendingSubjects = {{ len .TestPtr.TypeParams.Subjects }};
+
+        window.switchLang = function(langCode) {
+            document.querySelectorAll('.lang-panel').forEach(p => {
+                p.style.display = p.dataset.lang === langCode ? '' : 'none';
+            });
+        };
+
+        window.onSubjectLoaded = function() {
+            if (--pendingSubjects > 0) return;
+            const codes = new Set();
+            document.querySelectorAll('.lang-panel').forEach(p => codes.add(p.dataset.lang));
+
+            const select = document.getElementById('lang-select');
+            select.querySelectorAll('option').forEach(opt => {
+                if (!codes.has(opt.value)) opt.remove();
+            });
+            if (select.options.length > 1) {
+                select.style.display = '';
+                const urlLang = new URLSearchParams(window.location.search).get('lang_code');
+                if (urlLang && [...select.options].some(o => o.value === urlLang)) {
+                    select.value = urlLang;
+                    switchLang(urlLang);
+                } else {
+                    select.value = 'en';
+                    switchLang('en');
+                }
+            }
+        };
+    })();
+</script>
 {{ end }}

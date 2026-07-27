@@ -10,6 +10,7 @@ type Problem struct {
 	Paragraph       *ProblemParagraph `json:"paragraph,omitempty"`
 	TypeParams      ProbTypeParams    `json:"type_params"`
 	MetaData        ProbMetaData      `json:"meta_data"`
+	LangVersions    []LangVersion     `json:"lang_versions"`
 	SkillIDs        []int16           `json:"skill_ids"`
 	Skills          []Skill
 	CurriculumID    int16 `json:"curriculum_id"` // used with only get call
@@ -24,6 +25,11 @@ type Problem struct {
 	TagIDs          []int         `json:"tag_ids"`
 	TagNames        []string
 	StatusID        int8 `json:"cms_status_id"`
+}
+
+type LangVersion struct {
+	LangCode string       `json:"lang_code"`
+	MetaData ProbMetaData `json:"meta_data"`
 }
 
 type ProbTypeParams struct {
@@ -45,6 +51,15 @@ type Solution struct {
 type ProblemParagraph struct {
 	ID   int           `json:"id"`
 	Body template.HTML `json:"body"`
+}
+
+func (p *Problem) GetLangVersion(langCode string) *LangVersion {
+	for i := range p.LangVersions {
+		if p.LangVersions[i].LangCode == langCode {
+			return &p.LangVersions[i]
+		}
+	}
+	return nil
 }
 
 func (p Problem) DisplayDifficulty() int8 {
