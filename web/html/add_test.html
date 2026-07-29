@@ -226,7 +226,7 @@
                 <option value="" selected disabled hidden>Select Program</option>
                 {{ end }}
             
-                {{range $opt := (slice "JN" "HP" "MH" "GJ" "TN" "PN" "UK" "OR" "DL" "X")}}
+                {{range $opt := (slice "AF" "DL" "GJ" "GN" "HP" "JN" "MH" "MS" "ON" "OR" "PN" "TN" "UK" "X" "Y" "Z")}}
                 <option {{if eq $program $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
