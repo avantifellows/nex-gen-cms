@@ -6,7 +6,7 @@
             hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-params="none" hx-target="body"
             hx-push-url="true">{{.Code}}
         </a></td>
-    <td class="p-2 overflow-hidden text-ellipsis">{{.MetaData.Question}}</td>
+    <td class="p-2 overflow-hidden text-ellipsis">{{(.GetLangVersion "en").MetaData.Question}}</td>
     <td class="p-2 text-center space-x-4 whitespace-nowrap">
         <button class="action-button"
             hx-get="/problems/edit-problem?id={{.ID}}&curriculum_id={{.CurriculumID}}&topic_id={{.TopicID}}"
