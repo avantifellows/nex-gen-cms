@@ -44,7 +44,7 @@
         {{ end }}
         <h2 class="section-title{{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }} mt-6{{ end }}">Statement / Text</h2>
         {{ range .ProblemPtr.LangVersions }}
-        <p class="lang-panel mt-2 text-ink" data-lang="{{ .LangCode }}" {{ if ne .LangCode "en" }}style="display:none"{{ end }}>{{ .MetaData.Question }}</p>
+        <div class="lang-panel mt-2 text-ink" data-lang="{{ .LangCode }}" {{ if ne .LangCode "en" }}style="display:none"{{ end }}>{{ .MetaData.Question }}</div>
         {{ end }}
         {{ if .ProblemPtr.Concepts }}
         <h2 class="section-title mt-6">Concepts</h2>
