@@ -116,11 +116,19 @@ window.MathJax = {
             {{ $gridClass = "grid-cols-4" }}
         {{ end }}
 
-        <div class="grid gap-x-4 gap-y-1 {{ $gridClass }}">
+        <div class="grid gap-x-4 gap-y-2 {{ $gridClass }}">
             {{ range $index, $option := $enLV.MetaData.Options }}
-            <div class="flex items-baseline">
+            <div class="flex items-start">
                 <div class="font-semibold mr-2">{{ index labels $index }}</div>
-                <div class="flex-1 whitespace-pre-wrap"><span class="!text-ink [&_*]:!text-ink">{{- $option -}}</span>{{- if and $.RegionalLangCode $regLV -}}{{- $regOptions := $regLV.MetaData.Options -}}{{- if lt $index (len $regOptions) -}}<span class="!text-gray-800 [&_*]:!text-gray-800 ml-2">{{ index $regOptions $index }}</span>{{- end -}}{{- end -}}</div>
+                <div class="flex-1">
+                    <div class="whitespace-pre-wrap !text-ink [&_*]:!text-ink">{{ $option }}</div>
+                    {{- if and $.RegionalLangCode $regLV -}}
+                    {{- $regOptions := $regLV.MetaData.Options -}}
+                    {{- if lt $index (len $regOptions) }}
+                    <div class="whitespace-pre-wrap mt-1 !text-gray-800 [&_*]:!text-gray-800">{{ index $regOptions $index }}</div>
+                    {{- end -}}
+                    {{- end }}
+                </div>
             </div>
             {{ end }}
         </div>
