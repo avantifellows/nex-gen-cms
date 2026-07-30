@@ -95,7 +95,7 @@ window.MathJax = {
     <div class="flex items-baseline mb-2">
         <div class="w-6 font-semibold">Q{{ .Counter }}.</div>
         <div class="flex-1 pl-5">
-            <div>{{ $enLV.MetaData.Question }}</div>
+            <div class="!text-ink [&_*]:!text-ink">{{ $enLV.MetaData.Question }}</div>
             {{ if and .RegionalLangCode $regLV }}
             <div class="mt-1 !text-gray-800 [&_*]:!text-gray-800">{{ $regLV.MetaData.Question }}</div>
             {{ end }}
@@ -120,7 +120,7 @@ window.MathJax = {
             {{ range $index, $option := $enLV.MetaData.Options }}
             <div class="flex items-baseline">
                 <div class="font-semibold mr-2">{{ index labels $index }}</div>
-                <div class="flex-1 whitespace-pre-wrap">{{- $option -}}{{- if and $.RegionalLangCode $regLV -}}{{- $regOptions := $regLV.MetaData.Options -}}{{- if lt $index (len $regOptions) -}}<span class="!text-gray-800 [&_*]:!text-gray-800 ml-2">{{ index $regOptions $index }}</span>{{- end -}}{{- end -}}</div>
+                <div class="flex-1 whitespace-pre-wrap"><span class="!text-ink [&_*]:!text-ink">{{- $option -}}</span>{{- if and $.RegionalLangCode $regLV -}}{{- $regOptions := $regLV.MetaData.Options -}}{{- if lt $index (len $regOptions) -}}<span class="!text-gray-800 [&_*]:!text-gray-800 ml-2">{{ index $regOptions $index }}</span>{{- end -}}{{- end -}}</div>
             </div>
             {{ end }}
         </div>
