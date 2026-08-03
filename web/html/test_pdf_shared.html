@@ -7,7 +7,9 @@ window.MathJax = {
       // render at the same size as single-line equations, not shrunk by TeX's textstyle rules.
       MathJax.startup.document.inputJax[0].preFilters.add(({math}) => {
         if (!math.display) {
-          math.math = '\\displaystyle{' + math.math + '}';
+          // Closing brace goes on its own line so a stray unescaped '%' in the
+          // source (which starts a TeX comment through end-of-line) can't eat it.
+          math.math = '\\displaystyle{' + math.math + '\n}';
         }
       });
       return MathJax.startup.defaultPageReady().then(() => {
