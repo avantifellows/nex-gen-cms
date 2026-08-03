@@ -23,7 +23,12 @@ dnf update -y
 dnf install -y git nginx golang certbot python3-certbot-nginx firewalld
 
 log "Installing system fonts required for PDF generation (MathJax, Chromium)"
-sudo dnf install -y \
+# google-noto-sans-fonts only covers Latin/Greek/Cyrillic, so without the per-script Noto packages
+# below, Chrome has no glyphs for Hindi/Gujarati/Tamil and prints boxes ("tofu") instead of text.
+# --allowerasing: AL2023's split google-noto-sans-* packages have a known cross-package version
+# conflict on google-noto-fonts-common (amazonlinux/amazon-linux-2023#982); let dnf resolve it
+# instead of aborting the whole boot script.
+sudo dnf install -y --allowerasing \
   fontconfig \
   dejavu-sans-fonts \
   dejavu-serif-fonts \
@@ -31,7 +36,10 @@ sudo dnf install -y \
   liberation-fonts \
   google-noto-sans-fonts \
   google-noto-serif-fonts \
-  google-noto-sans-math-fonts
+  google-noto-sans-math-fonts \
+  google-noto-sans-devanagari-fonts \
+  google-noto-sans-gujarati-fonts \
+  google-noto-sans-tamil-fonts
 
 log "Rebuilding font cache"
 # fontconfig is now installed explicitly above; earlier AMI baselines apparently shipped it
