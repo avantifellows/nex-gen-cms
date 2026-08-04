@@ -598,6 +598,8 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"toJson":                   utils.ToJson,
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
+		"defaultInstructionsMap":   defaultInstructionsMap,
+		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
 		testInstructionsModalTemplate, editorTemplate)
@@ -810,6 +812,8 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"toJson":                   utils.ToJson,
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
+		"defaultInstructionsMap":   defaultInstructionsMap,
+		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
 		testInstructionsModalTemplate, editorTemplate)
@@ -905,6 +909,41 @@ func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *
 
 func getTestName(t models.Test, lang string) string {
 	return t.GetNameByLang(lang)
+}
+
+// defaultInstructionsMap returns the test rule's instructions per language code, omitting
+// languages with no content. Used to prefill the instructions modal and to detect whether
+// a test has customized instructions away from the rule's default.
+func defaultInstructionsMap(rule *models.TestRule) map[string]string {
+	m := map[string]string{}
+	if rule == nil {
+		return m
+	}
+	for _, code := range utils.LangCodes() {
+		if v := models.ResolveInstructions(rule.Config.Instructions, rule.Config.InstructionLangVersions, code); v != "" {
+			m[code] = string(v)
+		}
+	}
+	return m
+}
+
+// currentInstructionsMap returns the test's own instructions per language, falling back to
+// the test rule's default for any language the test hasn't overridden yet.
+func currentInstructionsMap(test *models.Test, rule *models.TestRule) map[string]string {
+	m := map[string]string{}
+	for _, code := range utils.LangCodes() {
+		v := ""
+		if test != nil {
+			v = string(models.ResolveInstructions(test.TypeParams.Instructions, test.TypeParams.InstructionLangVersions, code))
+		}
+		if v == "" && rule != nil {
+			v = string(models.ResolveInstructions(rule.Config.Instructions, rule.Config.InstructionLangVersions, code))
+		}
+		if v != "" {
+			m[code] = v
+		}
+	}
+	return m
 }
 
 func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request *http.Request) {
@@ -1252,6 +1291,8 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		"toJson":                   utils.ToJson,
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
+		"defaultInstructionsMap":   defaultInstructionsMap,
+		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
 		testInstructionsModalTemplate, editorTemplate)
