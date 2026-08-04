@@ -48,10 +48,10 @@ window.MathJax = {
 {{ if $instructions.English }}
 <div class="border border-black p-4 mb-5">
     <h3 class="text-base font-semibold mb-2">Instructions:</h3>
-    {{ $instructions.English }}
+    <div class="!text-ink [&_*]:!text-ink">{{ $instructions.English }}</div>
     {{ if $instructions.Regional }}
     <hr class="my-3 border-black">
-    {{ $instructions.Regional }}
+    <div class="!text-gray-800 [&_*]:!text-gray-800">{{ $instructions.Regional }}</div>
     {{ end }}
 </div>
 {{ end }}
