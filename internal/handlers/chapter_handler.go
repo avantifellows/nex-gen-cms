@@ -93,7 +93,7 @@ func getChapterName(ch models.Chapter, lang string) string {
 }
 
 func (h *ChaptersHandler) getTopics(responseWriter http.ResponseWriter, chapterPtrs []*models.Chapter) {
-	topics, err := h.topicsService.GetList(handlerutils.TopicsEndPoint, handlerutils.TopicsKey, false, false)
+	topics, err := h.topicsService.GetList(handlerutils.TopicsEndPoint+"?limit=5000", handlerutils.TopicsKey, false, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
 	} else {

@@ -3,6 +3,15 @@
 window.MathJax = {
   startup: {
     pageReady: () => {
+      // Force display-style fractions in inline math so numerator/denominator
+      // render at the same size as single-line equations, not shrunk by TeX's textstyle rules.
+      MathJax.startup.document.inputJax[0].preFilters.add(({math}) => {
+        if (!math.display) {
+          // Closing brace goes on its own line so a stray unescaped '%' in the
+          // source (which starts a TeX comment through end-of-line) can't eat it.
+          math.math = '\\displaystyle{' + math.math + '\n}';
+        }
+      });
       return MathJax.startup.defaultPageReady().then(() => {
         document.getElementById('mathjax-done').textContent = 'true';
       });
@@ -59,7 +68,7 @@ window.MathJax = {
 {{ end }}
 
 {{ define "pdf_section_header" }}
-<div class="text-center font-semibold text-lg bg-gray-100 border-t-2 border-t-gray-500 border-b border-b-gray-300 py-1 mb-4">
+<div class="text-center font-semibold text-lg bg-gray-100 border-t-2 border-t-gray-500 border-b border-b-gray-300 py-1 mb-4" style="break-after: avoid;">
     {{ capitalize .SubjectName }} - {{ getSectionName .SectionType .SectionName }}
 </div>
 {{ end }}
@@ -76,12 +85,12 @@ window.MathJax = {
         </div>
     </div>
     {{ end }}
-    <div class="flex items-start mb-2">
+    <div class="flex items-baseline mb-2">
         <div class="w-6 font-semibold">Q{{ .Counter }}.</div>
         <div class="flex-1 pl-5">
-            <div>{{ $enLV.MetaData.Question }}</div>
+            <div class="!text-ink [&_*]:!text-ink">{{ $enLV.MetaData.Question }}</div>
             {{ if and .RegionalLangCode $regLV }}
-            <div class="mt-1 text-gray-800">{{ $regLV.MetaData.Question }}</div>
+            <div class="mt-1 !text-gray-800 [&_*]:!text-gray-800">{{ $regLV.MetaData.Question }}</div>
             {{ end }}
         </div>
     </div>
@@ -100,11 +109,19 @@ window.MathJax = {
             {{ $gridClass = "grid-cols-4" }}
         {{ end }}
 
-        <div class="grid gap-x-4 gap-y-1 {{ $gridClass }}">
+        <div class="grid gap-x-4 gap-y-2 {{ $gridClass }}">
             {{ range $index, $option := $enLV.MetaData.Options }}
-            <div class="flex items-baseline">
+            <div class="flex items-start">
                 <div class="font-semibold mr-2">{{ index labels $index }}</div>
-                <div class="flex-1 whitespace-pre-wrap">{{- $option -}}{{- if and $.RegionalLangCode $regLV -}}{{- $regOptions := $regLV.MetaData.Options -}}{{- if lt $index (len $regOptions) -}}<span class="text-gray-800 ml-2">{{ index $regOptions $index }}</span>{{- end -}}{{- end -}}</div>
+                <div class="flex-1">
+                    <div class="whitespace-pre-wrap !text-ink [&_*]:!text-ink">{{ $option }}</div>
+                    {{- if and $.RegionalLangCode $regLV -}}
+                    {{- $regOptions := $regLV.MetaData.Options -}}
+                    {{- if lt $index (len $regOptions) }}
+                    <div class="whitespace-pre-wrap mt-1 !text-gray-800 [&_*]:!text-gray-800">{{ index $regOptions $index }}</div>
+                    {{- end -}}
+                    {{- end }}
+                </div>
             </div>
             {{ end }}
         </div>

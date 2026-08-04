@@ -6,8 +6,9 @@
 
         <!-- Toolbar with icons -->
         <div class="toolbar bg-bg-card-alt border-b border-border flex flex-wrap gap-2 p-2">
+            {{/* Font family hidden — PDF overrides all inline font styles via CSS. Remove 'hidden' to re-enable. */}}
             <select title="Font Family"
-                class="fontSelector border border-border rounded-sm px-2 py-1 text-sm cursor-pointer">
+                class="fontSelector hidden border border-border rounded-sm px-2 py-1 text-sm cursor-pointer">
                 <option value="Arial" style="font-family: Arial;">Arial</option>
                 <option value="'Courier New', monospace" style="font-family: 'Courier New', monospace;">Courier New
                 </option>
@@ -29,9 +30,10 @@
                         class="fas fa-underline"></i></button>
             </div>
 
+            {{/* Font size hidden — PDF overrides all inline font sizes via CSS. Remove 'hidden' to re-enable. */}}
             <!-- Font Size Selector -->
             <select title="Font Size"
-                class="fontSizeSelector border border-border rounded-sm px-2 py-1 text-sm cursor-pointer">
+                class="fontSizeSelector hidden border border-border rounded-sm px-2 py-1 text-sm cursor-pointer">
                 <option value="8px">8</option>
                 <option value="9px">9</option>
                 <option value="10px">10</option>
