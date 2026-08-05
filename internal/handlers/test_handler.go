@@ -501,7 +501,7 @@ func (h *TestsHandler) renderLangModal(responseWriter http.ResponseWriter, reque
 	}
 	if len(regionalLangs) == 0 {
 		if action == "download" {
-			fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');</script>`, baseURL)
+			fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');document.getElementById('download-modal-container').innerHTML='';</script>`, baseURL)
 		} else {
 			fmt.Fprintf(responseWriter, `<script>copyToClipboard(window.location.origin+'%s');document.getElementById('download-modal-container').innerHTML='';</script>`, baseURL)
 		}
