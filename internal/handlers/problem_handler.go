@@ -23,7 +23,7 @@ import (
 const problemsKey = "problems"
 
 const problemsEndPoint = "problems"
-const problemEndPoint = "resource/problem/%d/%s"
+const problemEndPoint = "resource/problem/%d"
 const searchProblemsEndPoint = "problems/search"
 const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
 const batchProblemsEndPoint = "resources/problems/batch"
@@ -102,7 +102,7 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int, error) {
 	problemIdStr := urlValues.Get("id")
 	problemId := utils.StringToInt(problemIdStr)
-	endPointWithId := fmt.Sprintf(problemEndPoint, problemId, urlValues.Get(QUERY_PARAM_CURRICULUM_ID))
+	endPointWithId := fmt.Sprintf(problemEndPoint, problemId)
 
 	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
 	selectedProblemPtr, err := h.problemsService.GetObject("",
@@ -164,7 +164,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		return
 	}
 
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%s&topic_id=%d", urlValues.Get(CURRICULUM_DROPDOWN_NAME), topicId)
+	queryParams := fmt.Sprintf("?topic_id=%d", topicId)
 	if urlValues.Has(includeParagraphSiblingsParam) {
 		queryParams += "&" + includeParagraphSiblingsParam + "=" + urlValues.Get(includeParagraphSiblingsParam)
 	}
@@ -508,31 +508,19 @@ func (h *ProblemsHandler) LoadMoveProblems(responseWriter http.ResponseWriter, r
 
 func (h *ProblemsHandler) LoadCopyProblemDialog(responseWriter http.ResponseWriter, request *http.Request) {
 	problemIdStr := request.URL.Query().Get("id")
-	sourceCurriculumIdStr := request.URL.Query().Get(QUERY_PARAM_CURRICULUM_ID)
-	if problemIdStr == "" || sourceCurriculumIdStr == "" {
-		http.Error(responseWriter, "Missing problem ID or curriculum ID", http.StatusBadRequest)
+	if problemIdStr == "" {
+		http.Error(responseWriter, "Missing problem ID", http.StatusBadRequest)
 		return
 	}
 
-	data := dto.CopyProblemModalData{
-		ProblemID:          problemIdStr,
-		SourceCurriculumID: sourceCurriculumIdStr,
-	}
-	views.ExecuteTemplate(copyProblemModalTemplate, responseWriter, data, nil)
+	views.ExecuteTemplate(copyProblemModalTemplate, responseWriter, problemIdStr, nil)
 }
 
 func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, request *http.Request) {
 	urlValues := request.URL.Query()
 
-	sourceCurriculumIdStr := urlValues.Get("source_curriculum_id")
-	if sourceCurriculumIdStr == "" {
-		http.Error(responseWriter, "Missing source curriculum ID", http.StatusBadRequest)
-		return
-	}
-
 	problemQuery := url.Values{}
 	problemQuery.Set("id", urlValues.Get("id"))
-	problemQuery.Set(QUERY_PARAM_CURRICULUM_ID, sourceCurriculumIdStr)
 
 	selectedProblemPtr, code, err := h.getProblem(problemQuery)
 	if err != nil {
