@@ -1,20 +1,46 @@
+function compressImage(dataUrl, { maxDimension = 1200, quality = 0.90 } = {}) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = function () {
+            let { width, height } = img;
+            if (width > maxDimension || height > maxDimension) {
+                if (width >= height) {
+                    height = Math.round(height * maxDimension / width);
+                    width = maxDimension;
+                } else {
+                    width = Math.round(width * maxDimension / height);
+                    height = maxDimension;
+                }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/webp', quality));
+        };
+        img.src = dataUrl;
+    });
+}
+
 function insertImage(event, editor) {
     const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = function (e) {
-        const img = document.createElement('img');
-        img.src = e.target.result;
+        compressImage(e.target.result).then(compressedSrc => {
+            const img = document.createElement('img');
+            img.src = compressedSrc;
 
-        const range = window.getSelection().getRangeAt(0);
-        const block = buildFloatBlock(img, 'left', editor);
-        applyImageSize(img, 100);
+            const range = window.getSelection().getRangeAt(0);
+            const block = buildFloatBlock(img, 'left', editor);
+            applyImageSize(img, 100);
 
-        range.insertNode(block);
-        placeCaretAfterImage(img);
+            range.insertNode(block);
+            placeCaretAfterImage(img);
 
-        renderMath(editor);
+            renderMath(editor);
+        });
     };
     reader.readAsDataURL(file);
 
