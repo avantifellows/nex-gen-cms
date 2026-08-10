@@ -465,3 +465,29 @@ mjx-container[jax="CHTML"] mjx-math {
 mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
   white-space: nowrap !important;
 }
+
+/* -----------------------------------------------------------------------------
+ * Option row overrides (PDF + the single-problem view) — unlayered so they
+ * beat the items-baseline utility (Tailwind's utilities layer always wins
+ * over @layer components, regardless of selector specificity).
+ * --------------------------------------------------------------------------- */
+
+/*
+ * The option row uses items-baseline so multi-line/equation option text
+ * aligns its first line with the label - correct for text, since that's a
+ * genuine text baseline. A default (non-inline) option image is wrapped in
+ * a floated editor-img-float paragraph with no inline content, so it has
+ * no real baseline either - flexbox synthesizes one from the image's
+ * bottom edge, making the label look bottom-aligned. Fix: render default
+ * option images exactly like an explicitly "inline with text" image (same
+ * properties applyInlineImage() sets in editor-image.js): un-float it so
+ * the paragraph has a genuine inline baseline, positioned identically to
+ * the manual case. Scoped to .option-row so the question image above (which
+ * does rely on floating, with text wrapping beside it) is untouched.
+ */
+.option-row p.editor-img-float img {
+  float: none !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
+}

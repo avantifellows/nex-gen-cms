@@ -118,9 +118,16 @@ window.MathJax = {
             {{ $gridClass = "grid-cols-4" }}
         {{ end }}
 
-        <div class="grid gap-x-4 gap-y-2 {{ $gridClass }}">
+        <!-- items-baseline: without it, sibling options in the same grid row (e.g. A & B)
+             can render at different heights, since each option's own baseline depends on
+             its own content (see .option-row rule in input.css) - this syncs them to a
+             shared baseline per row. -->
+        <div class="grid items-baseline gap-x-4 gap-y-2 {{ $gridClass }}">
             {{ range $index, $option := $enLV.MetaData.Options }}
-            <div class="flex items-start">
+            <!-- items-baseline + option-row: aligns the label with the option's first text
+                 line, or with a default (non-inline) image's vertical center via the
+                 .option-row rule in input.css - see that rule for why. -->
+            <div class="flex items-baseline option-row">
                 <div class="font-semibold mr-2">{{ index labels $index }}</div>
                 <div class="flex-1">
                     <div class="whitespace-pre-wrap !text-ink [&_*]:!text-ink">{{ $option }}</div>
