@@ -219,6 +219,16 @@
     margin: 0.5em 0;
     float: none;
   }
+  .editor p.editor-img-center,
+  .output p.editor-img-center {
+    margin: 0.5em 0;
+  }
+  .editor p.editor-img-center > img,
+  .output p.editor-img-center > img {
+    display: block;
+    margin: 0.5em auto;
+    float: none;
+  }
 
   /* --- Image editing toolbar (appears above selected image) ----------- */
   .img-edit-toolbar {

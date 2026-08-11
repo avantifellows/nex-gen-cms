@@ -178,7 +178,7 @@ function initImageEditing(editor, editorWrapper) {
 }
 
 function getImageBlock(img) {
-    return img.closest('.editor-img-float, .editor-img-row, .editor-img-justify');
+    return img.closest('.editor-img-float, .editor-img-row, .editor-img-justify, .editor-img-center');
 }
 
 /** Unwrap legacy flex span so text flows naturally in the paragraph. */
@@ -195,21 +195,53 @@ function flattenTextSpan(block) {
     block.style.flexDirection = '';
 }
 
+/**
+ * Move img (and everything after it in its current parent) into `block`, then
+ * place `block` as a sibling of that parent — instead of nesting `block` inside
+ * it — so an image sitting amid other paragraph text doesn't produce a <p>
+ * nested inside another <p>.
+ */
+function relocateImageIntoBlock(img, editor, block) {
+    const parent = img.parentElement;
+    if (!parent) {
+        block.appendChild(img);
+        return block;
+    }
+
+    if (parent === editor) {
+        editor.insertBefore(block, img);
+        block.appendChild(img);
+        return block;
+    }
+
+    let node = img;
+    while (node) {
+        const next = node.nextSibling;
+        block.appendChild(node);
+        node = next;
+    }
+
+    parent.after(block);
+    if (parent.childNodes.length === 0 && parent.tagName === 'P') {
+        parent.remove();
+    }
+    return block;
+}
+
 function buildFloatBlock(img, align, editor) {
-    const block = document.createElement('p');
+    /* Reuse an existing image block (float/justify/center) in place rather than
+       wrapping a fresh <p> around it, which would nest paragraphs. */
+    let block = getImageBlock(img);
+    if (block) {
+        flattenTextSpan(block);
+        block.style.margin = '';
+    } else {
+        block = document.createElement('p');
+        relocateImageIntoBlock(img, editor, block);
+    }
+
     block.className = 'editor-img-float';
     block.classList.add(align === 'right' ? 'editor-img-right' : 'editor-img-left');
-
-    const parent = img.parentElement;
-    if (parent && parent !== block) {
-        parent.insertBefore(block, img);
-        block.appendChild(img);
-        if (parent !== editor && parent.childNodes.length === 0 && parent.tagName === 'P') {
-            parent.remove();
-        }
-    } else {
-        block.appendChild(img);
-    }
 
     applyFloatStyles(img, align);
     ensureTextAfterImage(img);
@@ -226,18 +258,7 @@ function ensureImageBlock(img, editor) {
     block = document.createElement('p');
     block.className = 'editor-img-float';
     block.style.margin = '0.5em 0';
-
-    const parent = img.parentElement;
-    if (parent === editor) {
-        editor.insertBefore(block, img);
-        block.appendChild(img);
-    } else if (parent) {
-        parent.insertBefore(block, img);
-        block.appendChild(img);
-        if (parent !== editor && parent.childNodes.length === 0 && parent.tagName === 'P') {
-            parent.remove();
-        }
-    }
+    relocateImageIntoBlock(img, editor, block);
 
     return block;
 }
@@ -297,6 +318,26 @@ function applyImageAlign(img, align, editor) {
     if (align === 'inline') {
         applyInlineImage(img);
         placeCaretAfterImage(img);
+        return;
+    }
+
+    if (align === 'center') {
+        clearInlineImageStyles(img);
+        let block = getImageBlock(img);
+        flattenTextSpan(block || img.parentElement);
+
+        if (!block || !block.classList.contains('editor-img-center')) {
+            block = ensureImageBlock(img, editor);
+            block.className = 'editor-img-center';
+            block.style.margin = '0.5em 0';
+        }
+
+        img.style.float = 'none';
+        img.style.display = 'block';
+        img.style.margin = '0.5em auto';
+        if (!img.style.width) {
+            applyImageSize(img, 100);
+        }
         return;
     }
 
