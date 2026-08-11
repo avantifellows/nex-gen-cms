@@ -8,6 +8,7 @@ type Chapter struct {
 	GradeID      int8          `json:"grade_id,omitempty"`
 	SubjectID    int8          `json:"subject_id"`
 	StatusID     int8          `json:"cms_status_id,omitempty"`
+	TopicCount int `json:"topic_count"`
 	/**
 	 * []*Topic is used instead of []Topic so that updates applied in centrally cached Topic objects
 	 * are also visible inside these Topic objects
@@ -28,10 +29,6 @@ func NewChapter(code string, name string, curriculum_id int16, grade_id int8, su
 		GradeID:      grade_id,
 		SubjectID:    subject_id,
 	}
-}
-
-func (chapter Chapter) TopicCount() int8 {
-	return int8(len(chapter.Topics))
 }
 
 func (chapterPtr *Chapter) BuildMap(code string, name string) map[string]any {
