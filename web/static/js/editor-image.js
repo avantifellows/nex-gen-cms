@@ -50,6 +50,7 @@ function insertImage(event, editor) {
 function initImageEditing(editor, editorWrapper) {
     const imgToolbar = editorWrapper.querySelector('.img-edit-toolbar');
     const resizeOverlay = editorWrapper.querySelector('.img-resize-overlay');
+    const resizeDims = resizeOverlay?.querySelector('.img-resize-dims');
     if (!imgToolbar || !resizeOverlay) return;
 
     let selectedImg = null;
@@ -68,6 +69,10 @@ function initImageEditing(editor, editorWrapper) {
         const toolbarTop = top - toolbarH - 4;
         imgToolbar.style.top  = (toolbarTop < 0 ? top + iRect.height + 4 : toolbarTop) + 'px';
         imgToolbar.style.left = (iRect.left - wRect.left) + 'px';
+
+        if (resizeDims) {
+            resizeDims.textContent = `${Math.round(iRect.width)} × ${Math.round(iRect.height)}`;
+        }
     }
 
     function selectImage(img) {
@@ -75,6 +80,7 @@ function initImageEditing(editor, editorWrapper) {
         img.classList.add('img-selected');
         resizeOverlay.classList.add('active');
         imgToolbar.classList.add('active');
+        resizeDims?.classList.add('active');
         positionUI(img);
     }
 
@@ -83,6 +89,7 @@ function initImageEditing(editor, editorWrapper) {
         selectedImg = null;
         resizeOverlay.classList.remove('active');
         imgToolbar.classList.remove('active');
+        resizeDims?.classList.remove('active');
     }
 
     editor.addEventListener('click', (e) => {

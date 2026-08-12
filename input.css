@@ -284,6 +284,22 @@
     box-sizing: border-box;
     pointer-events: all;
   }
+  .img-resize-dims {
+    display: none;
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    color: var(--color-bg-card);
+    background: var(--color-ink);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  .img-resize-dims.active { display: block; }
+
   .img-resize-nw { top: -5px; left: -5px;   cursor: nw-resize; }
   .img-resize-ne { top: -5px; right: -5px;  cursor: ne-resize; }
   .img-resize-se { bottom: -5px; right: -5px; cursor: se-resize; }
