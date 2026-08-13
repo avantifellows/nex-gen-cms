@@ -619,7 +619,8 @@ window.initializeRichTextEditors = function (root = document) {
                 e.preventDefault();
                 e.stopPropagation();
                 restoreSelection();
-                insertMathTemplate(editor, btn.dataset.mathTemplate);
+                const rows = btn.closest('div')?.querySelector('.piecewise-rows')?.value;
+                insertMathTemplate(editor, btn.dataset.mathTemplate, rows);
                 mathTemplateDropdown.classList.add('hidden');
             });
         });

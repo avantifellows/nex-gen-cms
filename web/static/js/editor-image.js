@@ -1,20 +1,46 @@
+function compressImage(dataUrl, { maxDimension = 1200, quality = 0.90 } = {}) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = function () {
+            let { width, height } = img;
+            if (width > maxDimension || height > maxDimension) {
+                if (width >= height) {
+                    height = Math.round(height * maxDimension / width);
+                    width = maxDimension;
+                } else {
+                    width = Math.round(width * maxDimension / height);
+                    height = maxDimension;
+                }
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/webp', quality));
+        };
+        img.src = dataUrl;
+    });
+}
+
 function insertImage(event, editor) {
     const file = event.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = function (e) {
-        const img = document.createElement('img');
-        img.src = e.target.result;
+        compressImage(e.target.result).then(compressedSrc => {
+            const img = document.createElement('img');
+            img.src = compressedSrc;
 
-        const range = window.getSelection().getRangeAt(0);
-        const block = buildFloatBlock(img, 'left', editor);
-        applyImageSize(img, 100);
+            const range = window.getSelection().getRangeAt(0);
+            const block = buildFloatBlock(img, 'left', editor);
+            applyImageSize(img, 100);
 
-        range.insertNode(block);
-        placeCaretAfterImage(img);
+            range.insertNode(block);
+            placeCaretAfterImage(img);
 
-        renderMath(editor);
+            renderMath(editor);
+        });
     };
     reader.readAsDataURL(file);
 
@@ -24,6 +50,7 @@ function insertImage(event, editor) {
 function initImageEditing(editor, editorWrapper) {
     const imgToolbar = editorWrapper.querySelector('.img-edit-toolbar');
     const resizeOverlay = editorWrapper.querySelector('.img-resize-overlay');
+    const resizeDims = resizeOverlay?.querySelector('.img-resize-dims');
     if (!imgToolbar || !resizeOverlay) return;
 
     let selectedImg = null;
@@ -42,6 +69,10 @@ function initImageEditing(editor, editorWrapper) {
         const toolbarTop = top - toolbarH - 4;
         imgToolbar.style.top  = (toolbarTop < 0 ? top + iRect.height + 4 : toolbarTop) + 'px';
         imgToolbar.style.left = (iRect.left - wRect.left) + 'px';
+
+        if (resizeDims) {
+            resizeDims.textContent = `${Math.round(iRect.width)} × ${Math.round(iRect.height)}`;
+        }
     }
 
     function selectImage(img) {
@@ -49,6 +80,7 @@ function initImageEditing(editor, editorWrapper) {
         img.classList.add('img-selected');
         resizeOverlay.classList.add('active');
         imgToolbar.classList.add('active');
+        resizeDims?.classList.add('active');
         positionUI(img);
     }
 
@@ -57,6 +89,7 @@ function initImageEditing(editor, editorWrapper) {
         selectedImg = null;
         resizeOverlay.classList.remove('active');
         imgToolbar.classList.remove('active');
+        resizeDims?.classList.remove('active');
     }
 
     editor.addEventListener('click', (e) => {
@@ -152,7 +185,7 @@ function initImageEditing(editor, editorWrapper) {
 }
 
 function getImageBlock(img) {
-    return img.closest('.editor-img-float, .editor-img-row, .editor-img-justify');
+    return img.closest('.editor-img-float, .editor-img-row, .editor-img-justify, .editor-img-center');
 }
 
 /** Unwrap legacy flex span so text flows naturally in the paragraph. */
@@ -169,21 +202,53 @@ function flattenTextSpan(block) {
     block.style.flexDirection = '';
 }
 
+/**
+ * Move img (and everything after it in its current parent) into `block`, then
+ * place `block` as a sibling of that parent — instead of nesting `block` inside
+ * it — so an image sitting amid other paragraph text doesn't produce a <p>
+ * nested inside another <p>.
+ */
+function relocateImageIntoBlock(img, editor, block) {
+    const parent = img.parentElement;
+    if (!parent) {
+        block.appendChild(img);
+        return block;
+    }
+
+    if (parent === editor) {
+        editor.insertBefore(block, img);
+        block.appendChild(img);
+        return block;
+    }
+
+    let node = img;
+    while (node) {
+        const next = node.nextSibling;
+        block.appendChild(node);
+        node = next;
+    }
+
+    parent.after(block);
+    if (parent.childNodes.length === 0 && parent.tagName === 'P') {
+        parent.remove();
+    }
+    return block;
+}
+
 function buildFloatBlock(img, align, editor) {
-    const block = document.createElement('p');
+    /* Reuse an existing image block (float/justify/center) in place rather than
+       wrapping a fresh <p> around it, which would nest paragraphs. */
+    let block = getImageBlock(img);
+    if (block) {
+        flattenTextSpan(block);
+        block.style.margin = '';
+    } else {
+        block = document.createElement('p');
+        relocateImageIntoBlock(img, editor, block);
+    }
+
     block.className = 'editor-img-float';
     block.classList.add(align === 'right' ? 'editor-img-right' : 'editor-img-left');
-
-    const parent = img.parentElement;
-    if (parent && parent !== block) {
-        parent.insertBefore(block, img);
-        block.appendChild(img);
-        if (parent !== editor && parent.childNodes.length === 0 && parent.tagName === 'P') {
-            parent.remove();
-        }
-    } else {
-        block.appendChild(img);
-    }
 
     applyFloatStyles(img, align);
     ensureTextAfterImage(img);
@@ -200,18 +265,7 @@ function ensureImageBlock(img, editor) {
     block = document.createElement('p');
     block.className = 'editor-img-float';
     block.style.margin = '0.5em 0';
-
-    const parent = img.parentElement;
-    if (parent === editor) {
-        editor.insertBefore(block, img);
-        block.appendChild(img);
-    } else if (parent) {
-        parent.insertBefore(block, img);
-        block.appendChild(img);
-        if (parent !== editor && parent.childNodes.length === 0 && parent.tagName === 'P') {
-            parent.remove();
-        }
-    }
+    relocateImageIntoBlock(img, editor, block);
 
     return block;
 }
@@ -271,6 +325,26 @@ function applyImageAlign(img, align, editor) {
     if (align === 'inline') {
         applyInlineImage(img);
         placeCaretAfterImage(img);
+        return;
+    }
+
+    if (align === 'center') {
+        clearInlineImageStyles(img);
+        let block = getImageBlock(img);
+        flattenTextSpan(block || img.parentElement);
+
+        if (!block || !block.classList.contains('editor-img-center')) {
+            block = ensureImageBlock(img, editor);
+            block.className = 'editor-img-center';
+            block.style.margin = '0.5em 0';
+        }
+
+        img.style.float = 'none';
+        img.style.display = 'block';
+        img.style.margin = '0.5em auto';
+        if (!img.style.width) {
+            applyImageSize(img, 100);
+        }
         return;
     }
 
