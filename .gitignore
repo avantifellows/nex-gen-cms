@@ -22,3 +22,7 @@ terraform/terraform.prod.tfvars
 
 # Local working notes (not for the repo)
 TODO.md
+
+# Screenshots captured while verifying changes — kept locally so they can be
+# attached to a PR, not committed to the repo.
+/verification-screenshots/
