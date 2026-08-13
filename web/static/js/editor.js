@@ -642,3 +642,7 @@ window.initializeRichTextEditors = function (root = document) {
     }
     });
 };
+
+// Process any scheduleEditorBoot() calls that came in while this script was still loading.
+// See window.scheduleEditorBoot in home.html for why the queue itself has to live there.
+window.flushEditorBootQueue?.();
