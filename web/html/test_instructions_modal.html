@@ -30,10 +30,7 @@
 <script src="/web/static/js/editor.js"></script>
 <script>
     (function () {
-        const wrapper = document.getElementById("test-instructions-editor-wrapper");
-        if (window.initializeRichTextEditors && wrapper) {
-            window.initializeRichTextEditors(wrapper);
-        }
+        scheduleEditorBoot(document.getElementById("test-instructions-editor-wrapper"));
     })();
 
     function getCurrentInstructions() {

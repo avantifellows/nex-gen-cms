@@ -97,6 +97,23 @@
                 inheritMarkingScheme(tableBody, newlyInsertedRow);
                 updateTotalMarks();
 
+                // Typeset only the newly inserted row (it's the one marked [data-mathjax-manual]
+                // in add_test.html, so the global mathJaxLoader extension skips it) - re-typesetting
+                // the whole, ever-growing questions table on every single addition is what caused
+                // the slowdown/forced-reflow warnings when adding many problems one by one.
+                //
+                // Deferred a frame: MathJax's own font-metric measurement for the new equation
+                // needs a layout read, which - run synchronously here, right after the DOM writes
+                // above - is exactly what triggers a *forced* reflow console warning, e.g.
+                // "[Violation] Forced reflow while executing JavaScript took 35ms". Running it on
+                // the next frame lets the browser fold that layout work into its normal render
+                // pass instead.
+                if (window.MathJax) {
+                    requestAnimationFrame(() => {
+                        MathJax.typesetPromise([newlyInsertedRow]).catch(console.error);
+                    });
+                }
+
                 initSortableForSections();
                 updateSubjectArrowStates();
 

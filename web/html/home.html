@@ -15,18 +15,86 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <script src="https://unpkg.com/mathlive"></script>
     <script>
+        /**
+         * editor.js (which defines window.initializeRichTextEditors) is loaded per-screen, not
+         * from this base template - on an htmx body swap, its re-inserted <script src> tag loads
+         * asynchronously, so a screen's own inline init script can run before it's ready. This
+         * queue lives here (in the base template, always loaded before any per-screen script)
+         * so scheduleEditorBoot() is always safely callable, and queues the boot request instead
+         * of throwing if editor.js hasn't finished loading yet - editor.js flushes the queue
+         * itself once window.initializeRichTextEditors is defined. Classic async-script-ready-
+         * queue pattern (same idea as window.dataLayer.push in GTM's snippet).
+         */
+        window._editorBootQueue = [];
+        window.scheduleEditorBoot = function (root) {
+            function tryBoot() {
+                if (!root?.querySelector('.container')) return false;
+                if (!window.initializeRichTextEditors) return false;
+                window.initializeRichTextEditors(root);
+                return true;
+            }
+            if (tryBoot()) return;
+            if (window.initializeRichTextEditors) {
+                // editor.js is loaded, but this root's .container isn't in the DOM yet - retry next frame
+                requestAnimationFrame(() => window.scheduleEditorBoot(root));
+            } else {
+                // editor.js hasn't finished loading yet - queue for when it flushes
+                window._editorBootQueue.push(tryBoot);
+            }
+        };
+        window.flushEditorBootQueue = function () {
+            const pending = window._editorBootQueue;
+            window._editorBootQueue = [];
+            pending.forEach((tryBoot) => tryBoot());
+        };
+
         window.MathJax = {
             options: {
                 renderActions: {
                     addSourceTex: [
-                        151,
+                        /**
+                         * Must run AFTER MathJax's own "update" stage (STATE.INSERTED = 200),
+                         * which is what actually swaps the constructed <mjx-container> output
+                         * into the live document (the earlier "typeset" stage, STATE.TYPESET =
+                         * 150, only builds that output detached from the document). Below 200,
+                         * math.typesetRoot exists but isn't attached to the document yet, so
+                         * .closest('.container') always returns null regardless of whether the
+                         * math is really inside an editor or not.
+                         */
+                        201,
                         (doc) => {
+                            /**
+                             * The problem this whole feature fixes: legacy problems had rendered
+                             * MathJax markup (mjx-container) stored instead of \( \) LaTeX, so their
+                             * equations weren't editable on the edit-problem screen. The primary fix
+                             * is the MathML walker in getLatexFromMathJaxContainer() (editor-math.js),
+                             * which reconstructs LaTeX from a math node's assistive MathML - but
+                             * that's a lossy approximation. data-tex is an exact fallback checked
+                             * before the walker, stamped opportunistically (not just on .editor
+                             * content, but also on the .output preview - see renderMath() in
+                             * editor-math.js) since preview-rendered markup can end up back in the
+                             * editor later; having the exact source cached avoids ever needing the
+                             * lossy reconstruction for it. getLatexFromMathJaxContainer() is only
+                             * ever called for math inside a rich-text editor instance (.container,
+                             * which wraps both .editor and .output) - never for read-only display
+                             * areas (Question Bank, Questions Table, problem preview, etc) - so
+                             * data-tex is only useful there; tagging math anywhere else would be
+                             * pointless.
+                             *
+                             * This loop itself still runs over doc.math - every math item ever
+                             * typeset on the whole page across all typesetPromise() calls, not
+                             * just the ones from the call that triggered this one. E.g. on
+                             * add_test.html, which has no editor of its own, adding one problem
+                             * would still walk and re-tag every equation already sitting in the
+                             * left Question Bank and the right Questions Table, every single
+                             * time, without the closest('.container') check below.
+                             */
                             for (const math of doc.math) {
-                                doc.adaptor.setAttribute(math.typesetRoot, 'data-tex', math.math);
+                                const root = math.typesetRoot;
+                                if (!root.closest('.container')) continue;
+                                if (doc.adaptor.getAttribute(root, 'data-tex') === math.math) continue;
+                                doc.adaptor.setAttribute(root, 'data-tex', math.math);
                             }
-                        },
-                        (math, doc) => {
-                            doc.adaptor.setAttribute(math.typesetRoot, 'data-tex', math.math);
                         },
                     ],
                 },
@@ -279,6 +347,31 @@
             }
 
             document.body.addEventListener("htmx:afterSettle", debounceUpdate);
+
+            /**
+             * This app never does a real page reload - navigation is htmx swapping
+             * document.body's content, so window.MathJax (and its internal doc.math list of
+             * every equation ever typeset) is a singleton that lives for the whole tab's
+             * session, not per screen. A body-targeted swap means the whole screen is being
+             * replaced, so clear MathJax's tracking before the old content (and its math) is
+             * removed - otherwise doc.math grows for as long as the tab stays open, and every
+             * later typesetPromise() call keeps paying the cost of walking all of it.
+             *
+             * Two separate hooks are needed: htmx:beforeSwap only fires for a fresh,
+             * request-driven navigation (clicking a link/button). Browser back/forward
+             * restores a screen from htmx's history cache instead, which is a completely
+             * different code path that never fires beforeSwap - htmx:historyRestore is the
+             * event for that one.
+             */
+            document.body.addEventListener("htmx:beforeSwap", (event) => {
+                if (event.detail.target === document.body) {
+                    window.MathJax?.typesetClear?.();
+                }
+            });
+
+            document.addEventListener("htmx:historyRestore", () => {
+                window.MathJax?.typesetClear?.();
+            });
         });
 
         // Function to go back after delay
@@ -312,14 +405,26 @@
                 if ((name === "htmx:afterSwap" || name === "htmx:oobAfterSwap") && window.MathJax) {
                     let targetElement = event.detail.target;
 
+                    /**
+                     * Elements under a [data-mathjax-manual] container (e.g. the growing questions
+                     * table in add_test.html) typeset themselves precisely at the point a row is
+                     * inserted - see addQuestionToTest()/createAfterRequestHandler() in
+                     * src_problem_row.html. Skip them here, otherwise every single row added would
+                     * re-typeset the whole (ever-growing) table via targetElement.parentElement below,
+                     * which gets slower the more rows already exist.
+                     */
+                    if (targetElement.closest("[data-mathjax-manual]")) {
+                        return;
+                    }
+
                     // Check if the target element itself has data-mathjax
                     let hasMathJax = targetElement.hasAttribute("data-mathjax");
-                    
+
                     // Check if any nested elements have data-mathjax
                     if (!hasMathJax) {
                         hasMathJax = targetElement.querySelector('[data-mathjax]') !== null;
                     }
-                    
+
                     // Apply MathJax.typesetPromise() only if at least one element has data-mathjax
                     if (hasMathJax) {
                         /**
