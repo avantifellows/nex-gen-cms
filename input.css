@@ -374,8 +374,18 @@
   }
   #searched-test-results { display: block; }
   #searched-test-results.htmx-request { display: none; }
-  #move-problems-form.htmx-request .btn-text { display: none; }
-  #move-problems-form.htmx-request .btn-loader { display: inline; }
+  #move-problems-form .btn-loader,
+  #move-resources-form .btn-loader {
+    display: none;
+  }
+  #move-problems-form.htmx-request .btn-text,
+  #move-resources-form.htmx-request .btn-text {
+    display: none;
+  }
+  #move-problems-form.htmx-request .btn-loader,
+  #move-resources-form.htmx-request .btn-loader {
+    display: inline;
+  }
 }
 
 /* -----------------------------------------------------------------------------
