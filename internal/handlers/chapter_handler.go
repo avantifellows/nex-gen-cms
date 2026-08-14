@@ -20,12 +20,14 @@ import (
 
 const chaptersTemplate = "chapters.html"
 const chapterRowTemplate = "chapter_row.html"
+const addChapterTemplate = "add_chapter.html"
 const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
 const chapterTestsTemplate = "chapter_tests.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
 const topicDropdownOptionalTemplate = "topic_dropdown_optional.html"
+const chapterPriorityOptionsTemplate = "chapter_priority_options.html"
 
 type ChaptersHandler struct {
 	chaptersService *services.Service[models.Chapter]
@@ -142,7 +144,11 @@ func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, reques
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getChapterName,
-	}, baseTemplate, editChapterTemplate)
+	}, baseTemplate, editChapterTemplate, chapterPriorityOptionsTemplate)
+}
+
+func (h *ChaptersHandler) OpenAddChapter(responseWriter http.ResponseWriter, _ *http.Request) {
+	views.ExecuteTemplates(responseWriter, nil, nil, addChapterTemplate, chapterPriorityOptionsTemplate)
 }
 
 func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, request *http.Request) {
@@ -155,9 +161,10 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 
 	chapterName := request.FormValue("name")
 	chapterCode := request.FormValue("code")
+	priorityText := request.FormValue("priority_text")
 
 	dummyChapterPtr := &models.Chapter{}
-	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName)
+	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName, priorityText)
 
 	_, err = h.chaptersService.UpdateObject(chapterIdStr, handlerutils.ChaptersEndPoint, chapterMap, handlerutils.ChaptersKey,
 		func(chapter *models.Chapter) bool {
@@ -192,7 +199,8 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 		http.Error(responseWriter, "Invalid Subject ID", http.StatusBadRequest)
 		return
 	}
-	newChapterPtr := models.NewChapter(chapterCode, chapterName, curriculumId, gradeId, subjectId)
+	priorityText := request.FormValue("priority_text")
+	newChapterPtr := models.NewChapter(chapterCode, chapterName, curriculumId, gradeId, subjectId, priorityText)
 
 	newChapterPtr, err = h.chaptersService.AddObject(newChapterPtr, handlerutils.ChaptersKey, handlerutils.ChaptersEndPoint)
 	if err != nil {

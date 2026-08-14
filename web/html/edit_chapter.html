@@ -17,6 +17,12 @@
       <label class="form-label" for="code">Chapter Code</label>
       <input type="text" id="code" name="code" class="form-input font-mono" value="{{.ChapterPtr.Code}}">
     </div>
+    <div>
+      <label class="form-label" for="priority_text">Priority</label>
+      <select id="priority_text" name="priority_text" class="form-select">
+        {{ template "chapter_priority_options" .ChapterPtr.PriorityText }}
+      </select>
+    </div>
     <div class="flex gap-3 justify-end pt-2">
       <button type="button" class="btn-secondary" onclick="window.history.back()">Cancel</button>
       <button type="submit" class="btn-primary">Save Changes</button>
