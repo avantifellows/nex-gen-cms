@@ -70,6 +70,8 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 
 	for _, chapterPtr := range *chapters {
 		chapterPtr.CurriculumID = curriculumId
+		chapterPtr.PriorityText = chapterPtr.PriorityTextForCurriculum(curriculumId)
+		chapterPtr.Priority = models.PriorityFromText(chapterPtr.PriorityText)
 	}
 
 	h.getTopics(responseWriter, *chapters)
@@ -162,9 +164,14 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 	chapterName := request.FormValue("name")
 	chapterCode := request.FormValue("code")
 	priorityText := request.FormValue("priority_text")
+	curriculumId, err := utils.StringToIntType[int16](request.FormValue(QUERY_PARAM_CURRICULUM_ID))
+	if err != nil {
+		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
+		return
+	}
 
 	dummyChapterPtr := &models.Chapter{}
-	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName, priorityText)
+	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName, priorityText, curriculumId)
 
 	_, err = h.chaptersService.UpdateObject(chapterIdStr, handlerutils.ChaptersEndPoint, chapterMap, handlerutils.ChaptersKey,
 		func(chapter *models.Chapter) bool {
