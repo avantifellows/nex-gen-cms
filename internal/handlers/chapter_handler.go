@@ -88,7 +88,8 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		filename = chapterDropdownTemplate
 	}
 	views.ExecuteTemplate(filename, responseWriter, chapters, template.FuncMap{
-		"getName": getChapterName,
+		"getName":    getChapterName,
+		"capitalize": utils.Capitalize,
 	})
 }
 
@@ -214,10 +215,16 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 		http.Error(responseWriter, fmt.Sprintf("Error adding chapter: %v", err), http.StatusInternalServerError)
 		return
 	}
+	// Like the get API, the create response carries priority per curriculum in Curriculums
+	// rather than flat, so resolve it against the curriculum the chapter was just created for.
+	newChapterPtr.CurriculumID = curriculumId
+	newChapterPtr.PriorityText = newChapterPtr.PriorityTextForCurriculum(curriculumId)
+	newChapterPtr.Priority = models.PriorityFromText(newChapterPtr.PriorityText)
 
 	chapterPtrs := []*models.Chapter{newChapterPtr}
 	views.ExecuteTemplate(chapterRowTemplate, responseWriter, chapterPtrs, template.FuncMap{
-		"getName": getChapterName,
+		"getName":    getChapterName,
+		"capitalize": utils.Capitalize,
 	})
 }
 
