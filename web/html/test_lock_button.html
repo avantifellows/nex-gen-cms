@@ -1,0 +1,13 @@
+{{ if eq .StatusID 2 }}
+<button class="action-button group" title="Unlock Test"
+    hx-post="/lock-test?id={{.ID}}&locked=false" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="this">
+    <i class="fa-solid fa-lock-open group-[.htmx-request]:hidden!"></i>
+    <i class="fa-solid fa-spinner fa-spin hidden! group-[.htmx-request]:inline-block!"></i>
+</button>
+{{ else }}
+<button class="action-button group" title="Lock Test"
+    hx-post="/lock-test?id={{.ID}}&locked=true" hx-target="this" hx-swap="outerHTML" hx-disabled-elt="this">
+    <i class="fa-solid fa-lock group-[.htmx-request]:hidden!"></i>
+    <i class="fa-solid fa-spinner fa-spin hidden! group-[.htmx-request]:inline-block!"></i>
+</button>
+{{ end }}

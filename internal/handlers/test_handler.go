@@ -37,6 +37,7 @@ const testsFilterViewTemplate = "tests_filter_view.html"
 const testsSearchViewTemplate = "tests_search_view.html"
 const testRowTemplate = "test_row.html"
 const testSearchRowTemplate = "test_search_row.html"
+const testLockButtonTemplate = "test_lock_button.html"
 const addTestSearchRowTemplate = "add_test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
@@ -129,7 +130,7 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
-	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
+	views.ExecuteTemplates(responseWriter, tests, nil, testRowTemplate, testLockButtonTemplate)
 }
 
 // listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the
@@ -184,7 +185,7 @@ func (h *TestsHandler) GetChapterTests(responseWriter http.ResponseWriter, reque
 	}
 	*tests = filtered
 
-	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
+	views.ExecuteTemplates(responseWriter, tests, nil, testRowTemplate, testLockButtonTemplate)
 }
 
 // removes archived tests from the slice
@@ -281,9 +282,15 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		Curriculums: curriculumMap,
 		Grades:      gradeMap,
 	}
-	views.ExecuteTemplate(tmpl, responseWriter, data, template.FuncMap{
-		"dict": utils.Dict,
-	})
+	if tmpl == testSearchRowTemplate {
+		views.ExecuteTemplates(responseWriter, data, template.FuncMap{
+			"dict": utils.Dict,
+		}, tmpl, testLockButtonTemplate)
+	} else {
+		views.ExecuteTemplate(tmpl, responseWriter, data, template.FuncMap{
+			"dict": utils.Dict,
+		})
+	}
 }
 
 func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string, curriculumMap map[int16]string,
@@ -901,6 +908,33 @@ func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *
 		http.Error(responseWriter, fmt.Sprintf("Error archiving test: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *TestsHandler) LockTest(responseWriter http.ResponseWriter, request *http.Request) {
+	testIdStr := request.URL.Query().Get("id")
+	testId := utils.StringToInt(testIdStr)
+	locked := request.URL.Query().Get("locked") == "true"
+
+	// blank/null clears the lock status back out, mirroring how archive sets cms_status_id
+	var statusValue any
+	if locked {
+		statusValue = constants.StatusLocked
+	}
+
+	body := map[string]any{
+		"cms_status_id": statusValue,
+	}
+
+	updated, err := h.testsService.UpdateObject(testIdStr, resourcesEndPoint, body, testsKey,
+		func(test *models.Test) bool {
+			return test.ID == testId
+		})
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error updating test lock status: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	views.ExecuteTemplate(testLockButtonTemplate, responseWriter, updated, nil)
 }
 
 func getTestName(t models.Test, lang string) string {
