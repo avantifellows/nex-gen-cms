@@ -319,12 +319,7 @@
         initProblemTagsSection(mainTagsRoot);
 
         // --- Language tabs ---
-        const SUPPORTED_LANGUAGES = [
-            { code: 'en', label: 'English' },
-            { code: 'hi', label: 'Hindi' },
-            { code: 'gu', label: 'Gujarati' },
-            { code: 'ta', label: 'Tamil' },
-        ];
+        const SUPPORTED_LANGUAGES = window.SUPPORTED_LANGUAGES;
         let activeLang = 'en';
         const enabledLangs = new Set(['en'
             {{ if $prefill }}

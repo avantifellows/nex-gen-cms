@@ -49,8 +49,8 @@
             // For single-subject tests, apply per-subject instructions when a new subject row is created
             const subjectRule = testRule?.config?.subjects?.find(s => s.subject_id === subjectId);
             const newSubjectInstructions = (testRule?.config?.single_subject && subjectProblemRows.length === 0)
-                ? (subjectRule?.instructions ?? "")
-                : "";
+                ? buildInstructionsLangMap(subjectRule)
+                : {};
 
             // Hook a one-time global listener that just closes over this specific button's data
             const handler = createAfterRequestHandler(difficulty, insertAfterId, questionsTableBody, resolve, newSubjectInstructions);
@@ -100,7 +100,7 @@
                 initSortableForSections();
                 updateSubjectArrowStates();
 
-                if (newSubjectInstructions && typeof applySubjectInstructions === "function") {
+                if (Object.keys(newSubjectInstructions).length > 0 && typeof applySubjectInstructions === "function") {
                     applySubjectInstructions(newSubjectInstructions);
                 }
             }

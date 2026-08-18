@@ -501,7 +501,7 @@ func (h *TestsHandler) renderLangModal(responseWriter http.ResponseWriter, reque
 	}
 	if len(regionalLangs) == 0 {
 		if action == "download" {
-			fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');</script>`, baseURL)
+			fmt.Fprintf(responseWriter, `<script>window.open('%s', '_blank');document.getElementById('download-modal-container').innerHTML='';</script>`, baseURL)
 		} else {
 			fmt.Fprintf(responseWriter, `<script>copyToClipboard(window.location.origin+'%s');document.getElementById('download-modal-container').innerHTML='';</script>`, baseURL)
 		}
@@ -598,6 +598,8 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"toJson":                   utils.ToJson,
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
+		"defaultInstructionsMap":   defaultInstructionsMap,
+		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
 		testInstructionsModalTemplate, editorTemplate)
@@ -810,6 +812,8 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"toJson":                   utils.ToJson,
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
+		"defaultInstructionsMap":   defaultInstructionsMap,
+		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
 		testInstructionsModalTemplate, editorTemplate)
@@ -907,6 +911,91 @@ func getTestName(t models.Test, lang string) string {
 	return t.GetNameByLang(lang)
 }
 
+// defaultInstructionsMap returns the test rule's instructions per language code, omitting
+// languages with no content. Used to prefill the instructions modal and to detect whether
+// a test has customized instructions away from the rule's default.
+func defaultInstructionsMap(rule *models.TestRule) map[string]string {
+	m := map[string]string{}
+	if rule == nil {
+		return m
+	}
+	for _, code := range utils.LangCodes() {
+		if v := models.ResolveInstructions(rule.Config.Instructions, rule.Config.InstructionLangVersions, code); v != "" {
+			m[code] = string(v)
+		}
+	}
+	return m
+}
+
+// currentInstructionsMap returns the test's own instructions per language, falling back to
+// the test rule's default for any language the test hasn't overridden yet.
+func currentInstructionsMap(test *models.Test, rule *models.TestRule) map[string]string {
+	m := map[string]string{}
+	for _, code := range utils.LangCodes() {
+		v := ""
+		if test != nil {
+			v = string(models.ResolveInstructions(test.TypeParams.Instructions, test.TypeParams.InstructionLangVersions, code))
+		}
+		if v == "" && rule != nil {
+			v = string(models.ResolveInstructions(rule.Config.Instructions, rule.Config.InstructionLangVersions, code))
+		}
+		if v != "" {
+			m[code] = v
+		}
+	}
+	return m
+}
+
+// ResolvedTestInstructions is the English + regional instructions text to render in a
+// test's PDF, for a given RegionalLangCode (empty if no regional language was requested).
+type ResolvedTestInstructions struct {
+	English  template.HTML
+	Regional template.HTML
+}
+
+// resolveTestInstructions decides which instructions a test's PDF should show. If the test
+// has any instructions of its own (legacy or per-language), it owns its instructions outright
+// — resolved purely from the test, with no cascade, so a language missing from the test's own
+// data renders blank rather than silently picking up the rule's default. Only when the test
+// has no instructions at all does it cascade to the matching SubjectRule (for single-subject
+// tests) and then the TestRule's own default, for every language.
+func resolveTestInstructions(test *models.Test, rule *models.TestRule, regionalLangCode string) ResolvedTestInstructions {
+	if test == nil {
+		return ResolvedTestInstructions{}
+	}
+
+	hasOwnInstructions := test.TypeParams.Instructions != "" || len(test.TypeParams.InstructionLangVersions) > 0
+	if hasOwnInstructions {
+		return ResolvedTestInstructions{
+			English:  models.ResolveInstructions(test.TypeParams.Instructions, test.TypeParams.InstructionLangVersions, "en"),
+			Regional: models.ResolveInstructions(test.TypeParams.Instructions, test.TypeParams.InstructionLangVersions, regionalLangCode),
+		}
+	}
+	if rule == nil {
+		return ResolvedTestInstructions{}
+	}
+
+	if rule.Config.SingleSubject && len(test.TypeParams.Subjects) > 0 {
+		subjectID := test.TypeParams.Subjects[0].SubjectID
+		for _, subjectRule := range rule.Config.Subjects {
+			if subjectRule.SubjectID != subjectID {
+				continue
+			}
+			if subjectRule.Instructions != "" || len(subjectRule.InstructionLangVersions) > 0 {
+				return ResolvedTestInstructions{
+					English:  models.ResolveInstructions(subjectRule.Instructions, subjectRule.InstructionLangVersions, "en"),
+					Regional: models.ResolveInstructions(subjectRule.Instructions, subjectRule.InstructionLangVersions, regionalLangCode),
+				}
+			}
+		}
+	}
+
+	return ResolvedTestInstructions{
+		English:  models.ResolveInstructions(rule.Config.Instructions, rule.Config.InstructionLangVersions, "en"),
+		Regional: models.ResolveInstructions(rule.Config.Instructions, rule.Config.InstructionLangVersions, regionalLangCode),
+	}
+}
+
 func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request *http.Request) {
 	var data dto.AddTestDialogData
 
@@ -991,17 +1080,18 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	tmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfTemplate)
 	sharedTmplPath := filepath.Join(constants.GetHtmlFolderPath(), pdfSharedTemplate)
 	tmpl, err := template.New(pdfTemplate).Funcs(template.FuncMap{
-		"getName":        getTestName,
-		"add":            utils.Add,
-		"labels":         optionLabels,
-		"dict":           utils.Dict,
-		"capitalize":     utils.Capitalize,
-		"getSectionName": views.GetSectionName,
-		"stringToInt":    utils.StringToInt,
-		"trim":           strings.TrimSpace,
-		"isEmptyHTML":    utils.IsEmptyHTML,
-		"getChapterName": getProblemChapterName,
-		"langName":       utils.LangName,
+		"getName":                 getTestName,
+		"add":                     utils.Add,
+		"labels":                  optionLabels,
+		"dict":                    utils.Dict,
+		"capitalize":              utils.Capitalize,
+		"getSectionName":          views.GetSectionName,
+		"stringToInt":             utils.StringToInt,
+		"trim":                    strings.TrimSpace,
+		"isEmptyHTML":             utils.IsEmptyHTML,
+		"getChapterName":          getProblemChapterName,
+		"langName":                utils.LangName,
+		"resolveTestInstructions": resolveTestInstructions,
 	}).ParseFiles(sharedTmplPath, tmplPath)
 	if err != nil {
 		http.Error(responseWriter, "Template parsing error: "+err.Error(), http.StatusInternalServerError)
@@ -1256,6 +1346,8 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		"toJson":                   utils.ToJson,
 		"getParentId":              getParentSubjectId,
 		"currentYear":              utils.GetCurrentYearLast2Digits,
+		"defaultInstructionsMap":   defaultInstructionsMap,
+		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
 		testInstructionsModalTemplate, editorTemplate)
