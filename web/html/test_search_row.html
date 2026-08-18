@@ -40,6 +40,7 @@
                         {{ $test.Subtype }}
                     {{ end }}
                 </td>
+                <td class="text-center" id="test-status-{{ $test.ID }}" rowspan="{{ $total }}">{{ if eq $test.StatusID 2 }}Final{{ else }}Draft{{ end }}</td>
                 <td class="text-center space-x-4 whitespace-nowrap" rowspan="{{ $total }}">
                     <!-- target is kept body instead of #content, because using #content as target will not work when
                     directly edit url is entered in browser -->

@@ -38,6 +38,7 @@ const testsSearchViewTemplate = "tests_search_view.html"
 const testRowTemplate = "test_row.html"
 const testSearchRowTemplate = "test_search_row.html"
 const testLockButtonTemplate = "test_lock_button.html"
+const testLockResponseTemplate = "test_lock_response.html"
 const addTestSearchRowTemplate = "add_test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
@@ -934,7 +935,7 @@ func (h *TestsHandler) LockTest(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
-	views.ExecuteTemplate(testLockButtonTemplate, responseWriter, updated, nil)
+	views.ExecuteTemplates(responseWriter, updated, nil, testLockResponseTemplate, testLockButtonTemplate)
 }
 
 func getTestName(t models.Test, lang string) string {
