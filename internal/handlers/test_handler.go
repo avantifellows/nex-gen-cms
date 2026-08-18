@@ -976,9 +976,9 @@ func resolveTestInstructions(test *models.Test, rule *models.TestRule, regionalL
 	}
 
 	if rule.Config.SingleSubject && len(test.TypeParams.Subjects) > 0 {
-		subjectId := test.TypeParams.Subjects[0].SubjectID
+		subjectID := test.TypeParams.Subjects[0].SubjectID
 		for _, subjectRule := range rule.Config.Subjects {
-			if subjectRule.SubjectID != subjectId {
+			if subjectRule.SubjectID != subjectID {
 				continue
 			}
 			if subjectRule.Instructions != "" || len(subjectRule.InstructionLangVersions) > 0 {
