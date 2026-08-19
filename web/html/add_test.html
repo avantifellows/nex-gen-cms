@@ -954,8 +954,9 @@
                 }
 
             }).then(readResponseOrThrow).then(() => {
-                  // go back to remove add/edit test screen
-                  goBackAfterDelay(0);
+                  // go back to remove add/edit test screen; shows a toast only if there's
+                  // no previous screen to go back to (e.g. edit-test opened in a new tab)
+                  goBackAfterDelay(0, mode === "edit" ? "Test updated successfully" : undefined);
                   if (mode === "new") {
                       // remove add test dialog
                       goBackAfterDelay(0);
