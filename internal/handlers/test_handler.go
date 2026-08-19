@@ -861,9 +861,9 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 
 // isTestLocked reports whether the test is currently locked, for handlers that block edits
 // on a locked test but don't otherwise need to fetch the full existing object.
-func (h *TestsHandler) isTestLocked(testIdStr string, testId int) (bool, error) {
-	existing, err := h.testsService.GetObject(testIdStr,
-		func(test *models.Test) bool { return test.ID == testId },
+func (h *TestsHandler) isTestLocked(testIDStr string, testID int) (bool, error) {
+	existing, err := h.testsService.GetObject(testIDStr,
+		func(test *models.Test) bool { return test.ID == testID },
 		testsKey, resourcesEndPoint)
 	if err != nil {
 		return false, err
@@ -941,8 +941,8 @@ func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *
 }
 
 func (h *TestsHandler) LockTest(responseWriter http.ResponseWriter, request *http.Request) {
-	testIdStr := request.URL.Query().Get("id")
-	testId := utils.StringToInt(testIdStr)
+	testIDStr := request.URL.Query().Get("id")
+	testID := utils.StringToInt(testIDStr)
 	locked := request.URL.Query().Get("locked") == "true"
 
 	// blank/null clears the lock status back out, mirroring how archive sets cms_status_id
@@ -955,9 +955,9 @@ func (h *TestsHandler) LockTest(responseWriter http.ResponseWriter, request *htt
 		"cms_status_id": statusValue,
 	}
 
-	updated, err := h.testsService.UpdateObject(testIdStr, resourcesEndPoint, body, testsKey,
+	updated, err := h.testsService.UpdateObject(testIDStr, resourcesEndPoint, body, testsKey,
 		func(test *models.Test) bool {
-			return test.ID == testId
+			return test.ID == testID
 		})
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating test lock status: %v", err), http.StatusInternalServerError)

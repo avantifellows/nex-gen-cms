@@ -141,8 +141,8 @@ func (t Test) ProblemCount() int {
 
 // IsLocked reports whether the test is locked (read-only), used by handlers to block edits
 // and by templates to render the Draft/Final status and disable edit controls.
-func (test *Test) IsLocked() bool {
-	return test.StatusID == constants.StatusLocked
+func (t *Test) IsLocked() bool {
+	return t.StatusID == constants.StatusLocked
 }
 
 func (test *Test) GetNameByLang(langCode string) string {
