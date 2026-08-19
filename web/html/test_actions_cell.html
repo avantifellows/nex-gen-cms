@@ -1,26 +1,26 @@
 <td class="text-center space-x-4 whitespace-nowrap"{{ if .Rowspan }} rowspan="{{ .Rowspan }}"{{ end }}>
-    {{ template "test_edit_button.html" (dict "Test" .Test "CurriculumId" .CurriculumId "GradeId" .GradeId) }}
+    {{ template "test_edit_button.html" (dict "Test" .Test) }}
     <a class="action-button" title="Download Questions PDF"
-        hx-get="/tests/download-modal?id={{.Test.ID}}&curriculum_id={{.CurriculumId}}&grade_id={{.GradeId}}&type=questions"
+        hx-get="/tests/download-modal?id={{.Test.ID}}&type=questions"
         hx-target="#download-modal-container" hx-swap="innerHTML">
         <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
     </a>
     <a class="action-button" title="Download Answers PDF"
-        hx-get="/tests/download-modal?id={{.Test.ID}}&curriculum_id={{.CurriculumId}}&grade_id={{.GradeId}}&type=answers"
+        hx-get="/tests/download-modal?id={{.Test.ID}}&type=answers"
         hx-target="#download-modal-container" hx-swap="innerHTML">
         <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
     </a>
     <a class="action-button" title="Download Questions with Answers PDF"
-        hx-get="/tests/download-modal?id={{.Test.ID}}&curriculum_id={{.CurriculumId}}&grade_id={{.GradeId}}&type=questions_with_answers"
+        hx-get="/tests/download-modal?id={{.Test.ID}}&type=questions_with_answers"
         hx-target="#download-modal-container" hx-swap="innerHTML">
         <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q+A</span>
     </a>
     <a class="action-button" title="Copy Link"
-        hx-get="/tests/copy-link-modal?id={{.Test.ID}}&curriculum_id={{.CurriculumId}}&grade_id={{.GradeId}}"
+        hx-get="/tests/copy-link-modal?id={{.Test.ID}}"
         hx-target="#download-modal-container" hx-swap="innerHTML">
         <i class="fa-solid fa-link"></i>
     </a>
-    <button class="action-button" hx-get="/tests/copy-test?id={{.Test.ID}}&curriculum_id={{.CurriculumId}}"
+    <button class="action-button" hx-get="/tests/copy-test?id={{.Test.ID}}"
         hx-target="body" title="Copy Test" hx-push-url="true">
         <i class="fa-solid fa-copy"></i>
     </button>
