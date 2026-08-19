@@ -4,6 +4,7 @@
   <h1 class="page-title mb-4">Edit Chapter</h1>
   <form hx-patch="/update-chapter?id={{.ChapterPtr.ID}}" class="space-y-4"
         hx-on::after-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">
+    <input type="hidden" name="curriculum_id" value="{{.ChapterPtr.CurriculumID}}">
     <div>
       <label class="form-label" for="name">Chapter Title</label>
       <input type="text" id="name" name="name" class="form-input" value="{{ getName .ChapterPtr "en" }}">
@@ -16,6 +17,12 @@
     <div>
       <label class="form-label" for="code">Chapter Code</label>
       <input type="text" id="code" name="code" class="form-input font-mono" value="{{.ChapterPtr.Code}}">
+    </div>
+    <div>
+      <label class="form-label" for="priority_text">Priority</label>
+      <select id="priority_text" name="priority_text" class="form-select">
+        {{ template "chapter_priority_options" .ChapterPtr.PriorityText }}
+      </select>
     </div>
     <div class="flex gap-3 justify-end pt-2">
       <button type="button" class="btn-secondary" onclick="window.history.back()">Cancel</button>
