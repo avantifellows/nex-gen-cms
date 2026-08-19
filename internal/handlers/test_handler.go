@@ -659,15 +659,15 @@ func (h *TestsHandler) resolveJeeAdvancedExamID() int16 {
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
-	problemIdStr := request.FormValue("id")
-	problemId := utils.StringToInt(problemIdStr)
+	problemIDStr := request.FormValue("id")
+	problemID := utils.StringToInt(problemIDStr)
 
-	endPointWithID := fmt.Sprintf(problemEndPoint, problemId)
+	endPointWithID := fmt.Sprintf(problemEndPoint, problemID)
 
 	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
 	problemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
-			return problem.ID == problemId
+			return problem.ID == problemID
 		}, problemsKey, endPointWithID)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
