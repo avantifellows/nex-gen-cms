@@ -102,13 +102,13 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int, error) {
 	problemIdStr := urlValues.Get("id")
 	problemId := utils.StringToInt(problemIdStr)
-	endPointWithId := fmt.Sprintf(problemEndPoint, problemId)
+	endPointWithID := fmt.Sprintf(problemEndPoint, problemId)
 
 	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
 	selectedProblemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemId
-		}, problemsKey, endPointWithId)
+		}, problemsKey, endPointWithID)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching problem: %v", err)
 	}

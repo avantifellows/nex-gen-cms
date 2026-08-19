@@ -537,8 +537,8 @@ func (h *TestsHandler) getTestProblems(responseWriter http.ResponseWriter, reque
 	testIdStr := urlVals.Get("id")
 	testId := utils.StringToInt(testIdStr)
 
-	endPointWithId := fmt.Sprintf(testProblemsEndPoint, testId)
-	problems, err := h.problemsService.GetList(endPointWithId, problemsKey, false, true)
+	endPointWithID := fmt.Sprintf(testProblemsEndPoint, testId)
+	problems, err := h.problemsService.GetList(endPointWithID, problemsKey, false, true)
 
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
@@ -662,13 +662,13 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	problemIdStr := request.FormValue("id")
 	problemId := utils.StringToInt(problemIdStr)
 
-	endPointWithId := fmt.Sprintf(problemEndPoint, problemId)
+	endPointWithID := fmt.Sprintf(problemEndPoint, problemId)
 
 	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
 	problemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemId
-		}, problemsKey, endPointWithId)
+		}, problemsKey, endPointWithID)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
