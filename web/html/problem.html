@@ -14,7 +14,7 @@
         {{ end }}
         <div class="flex space-x-4 ml-auto pr-4">
             <button class="action-button"
-                hx-get="/problems/edit-problem?id={{.ProblemPtr.ID}}&curriculum_id={{.ProblemPtr.CurriculumID}}&topic_id={{.ProblemPtr.TopicID}}"
+                hx-get="/problems/edit-problem?id={{.ProblemPtr.ID}}"
                 hx-on::before-request="sessionStorage.setItem(REFRESH_PROBLEM_ON_BACK_KEY, '1')"
                 hx-target="body" hx-push-url="true" title="Edit problem">
                 <i class="fa-solid fa-pen"></i>

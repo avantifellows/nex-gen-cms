@@ -1,7 +1,4 @@
 {{ range . }}
-{{ $curriculumGrade := (index .CurriculumGrades 0) }}
-{{ $curriculumId := $curriculumGrade.CurriculumID }}
-{{ $gradeId := $curriculumGrade.GradeID }}
 <tr class="border-b border-border/40 hover:bg-bg-hover transition-colors">
     <td class="py-4 px-6">{{.Code}}</td>
     <td class="px-6 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/test?id={{.ID}}"
@@ -14,32 +11,32 @@
     <td class="text-center space-x-4 whitespace-nowrap">
         <!-- target is kept body instead of #content, because using #content as target will not work when
          directly edit url is entered in browser -->
-        <button class="action-button" hx-get="/tests/edit-test?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
+        <button class="action-button" hx-get="/tests/edit-test?id={{.ID}}"
             hx-target="body" hx-push-url="true">
             <i class="fa-solid fa-pen"></i>
         </button>
         <a class="action-button cursor-pointer" title="Download Questions PDF"
-            hx-get="/tests/download-modal?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions"
+            hx-get="/tests/download-modal?id={{.ID}}&type=questions"
             hx-target="#download-modal-container" hx-swap="innerHTML">
             <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
         </a>
         <a class="action-button cursor-pointer" title="Download Answers PDF"
-            hx-get="/tests/download-modal?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=answers"
+            hx-get="/tests/download-modal?id={{.ID}}&type=answers"
             hx-target="#download-modal-container" hx-swap="innerHTML">
             <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
         </a>
         <a class="action-button cursor-pointer" title="Download Questions with Answers PDF"
-            hx-get="/tests/download-modal?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}&type=questions_with_answers"
+            hx-get="/tests/download-modal?id={{.ID}}&type=questions_with_answers"
             hx-target="#download-modal-container" hx-swap="innerHTML">
             <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q+A</span>
         </a>
             
         <a class="action-button cursor-pointer" title="Copy Link"
-            hx-get="/tests/copy-link-modal?id={{.ID}}&curriculum_id={{$curriculumId}}&grade_id={{$gradeId}}"
+            hx-get="/tests/copy-link-modal?id={{.ID}}"
             hx-target="#download-modal-container" hx-swap="innerHTML">
             <i class="fa-solid fa-link"></i>
         </a>
-        <button class="action-button" hx-get="/tests/copy-test?id={{.ID}}&curriculum_id={{$curriculumId}}"
+        <button class="action-button" hx-get="/tests/copy-test?id={{.ID}}"
             hx-target="body" title="Copy Test" hx-push-url="true">
             <i class="fa-solid fa-copy"></i>
         </button>

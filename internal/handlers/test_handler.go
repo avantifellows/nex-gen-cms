@@ -61,7 +61,7 @@ const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
 const pdfSharedTemplate = "test_pdf_shared.html"
 
-const testProblemsEndPoint = "resource/test/%d/problems?" + QUERY_PARAM_CURRICULUM_ID + "=%s"
+const testProblemsEndPoint = "resource/test/%d/problems"
 const testRulesEndPoint = "test-rule"
 
 const testsKey = "tests"
@@ -436,14 +436,6 @@ func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching test: %v", err)
 	}
 
-	curriculumId, err := utils.StringToIntType[int16](urlVals.Get(QUERY_PARAM_CURRICULUM_ID))
-	if err == nil {
-		gradeId, err := utils.StringToIntType[int8](urlVals.Get("grade_id"))
-		if err == nil {
-			selectedTestPtr.SetCurriculumGrade(curriculumId, gradeId)
-		}
-	}
-
 	// Fill subject names in test
 	h.fillSubjectNames(responseWriter, selectedTestPtr)
 
@@ -476,8 +468,7 @@ func (h *TestsHandler) fillSubjectNames(responseWriter http.ResponseWriter, test
 
 func (h *TestsHandler) GetDownloadModal(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
-	baseURL := fmt.Sprintf("/download-pdf?id=%s&curriculum_id=%s&grade_id=%s&type=%s",
-		urlVals.Get("id"), urlVals.Get(QUERY_PARAM_CURRICULUM_ID), urlVals.Get("grade_id"), urlVals.Get("type"))
+	baseURL := fmt.Sprintf("/download-pdf?id=%s&type=%s", urlVals.Get("id"), urlVals.Get("type"))
 	h.renderLangModal(responseWriter, request, baseURL, "Download PDF", "Download", "download")
 }
 
@@ -546,8 +537,8 @@ func (h *TestsHandler) getTestProblems(responseWriter http.ResponseWriter, reque
 	testIdStr := urlVals.Get("id")
 	testId := utils.StringToInt(testIdStr)
 
-	endPointWithId := fmt.Sprintf(testProblemsEndPoint, testId, urlVals.Get(QUERY_PARAM_CURRICULUM_ID))
-	problems, err := h.problemsService.GetList(endPointWithId, problemsKey, false, true)
+	endPointWithID := fmt.Sprintf(testProblemsEndPoint, testId)
+	problems, err := h.problemsService.GetList(endPointWithID, problemsKey, false, true)
 
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
@@ -670,16 +661,16 @@ func (h *TestsHandler) resolveJeeAdvancedExamID() int16 {
 }
 
 func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, request *http.Request) {
-	problemIdStr := request.FormValue("id")
-	problemId := utils.StringToInt(problemIdStr)
+	problemIDStr := request.FormValue("id")
+	problemID := utils.StringToInt(problemIDStr)
 
-	endPointWithId := fmt.Sprintf(problemEndPoint, problemId, request.FormValue("curriculum-id"))
+	endPointWithID := fmt.Sprintf(problemEndPoint, problemID)
 
 	// In problemEndPoint problem id is already included in path segment, hence passing blank as first argument
 	problemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
-			return problem.ID == problemId
-		}, problemsKey, endPointWithId)
+			return problem.ID == problemID
+		}, problemsKey, endPointWithID)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
