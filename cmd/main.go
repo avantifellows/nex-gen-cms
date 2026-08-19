@@ -164,6 +164,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/update-test", editor(testsHandler.UpdateTest))
 	muxHandler.HandleFunc("/update-test-subject", editor(testsHandler.UpdateTestSubject))
 	muxHandler.HandleFunc("/archive-test", admin(testsHandler.ArchiveTest))
+	muxHandler.HandleFunc("/lock-test", admin(testsHandler.LockTest))
 	muxHandler.HandleFunc("/download-pdf", testsHandler.DownloadPdf)
 	muxHandler.HandleFunc("/tests/copy-test", editor(testsHandler.CopyTest))
 	muxHandler.HandleFunc("/tests/validate-test", testsHandler.ValidateTest)

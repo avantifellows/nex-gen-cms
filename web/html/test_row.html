@@ -8,43 +8,7 @@
     <td class="text-center">{{.TypeParams.Marks}}</td>
     <td class="text-center">{{.TypeParams.Duration}}</td>
     <td></td>
-    <td class="text-center space-x-4 whitespace-nowrap">
-        <!-- target is kept body instead of #content, because using #content as target will not work when
-         directly edit url is entered in browser -->
-        <button class="action-button" hx-get="/tests/edit-test?id={{.ID}}"
-            hx-target="body" hx-push-url="true">
-            <i class="fa-solid fa-pen"></i>
-        </button>
-        <a class="action-button cursor-pointer" title="Download Questions PDF"
-            hx-get="/tests/download-modal?id={{.ID}}&type=questions"
-            hx-target="#download-modal-container" hx-swap="innerHTML">
-            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q</span>
-        </a>
-        <a class="action-button cursor-pointer" title="Download Answers PDF"
-            hx-get="/tests/download-modal?id={{.ID}}&type=answers"
-            hx-target="#download-modal-container" hx-swap="innerHTML">
-            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">A</span>
-        </a>
-        <a class="action-button cursor-pointer" title="Download Questions with Answers PDF"
-            hx-get="/tests/download-modal?id={{.ID}}&type=questions_with_answers"
-            hx-target="#download-modal-container" hx-swap="innerHTML">
-            <i class="fa-solid fa-download"></i><span class="text-xs ml-1">Q+A</span>
-        </a>
-            
-        <a class="action-button cursor-pointer" title="Copy Link"
-            hx-get="/tests/copy-link-modal?id={{.ID}}"
-            hx-target="#download-modal-container" hx-swap="innerHTML">
-            <i class="fa-solid fa-link"></i>
-        </a>
-        <button class="action-button" hx-get="/tests/copy-test?id={{.ID}}"
-            hx-target="body" title="Copy Test" hx-push-url="true">
-            <i class="fa-solid fa-copy"></i>
-        </button>
-
-        <button class="action-button" hx-delete="/archive-test?id={{.ID}}"
-            hx-confirm="Are you sure you want to delete test {{(index .Name 0).Resource}}?" hx-target="closest tr">
-            <i class="fa-solid fa-trash"></i>
-        </button>
-    </td>
+    <td class="text-center" id="test-status-{{.ID}}">{{ if .IsLocked }}Final{{ else }}Draft{{ end }}</td>
+    {{ template "test_actions_cell.html" (dict "Test" .) }}
 </tr>
 {{ end }}
