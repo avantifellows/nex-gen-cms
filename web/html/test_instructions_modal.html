@@ -11,8 +11,23 @@
             </button>
         </div>
 
+        <div class="mb-1">
+            <div class="nav nav-tabs" id="instructionsLangTabs"></div>
+        </div>
+
         <div id="test-instructions-editor-wrapper" class="flex-1 overflow-y-auto">
-            {{ template "editor" }}
+            <div class="lang-content" data-lang="en">
+                {{ template "editor" }}
+            </div>
+            <div class="lang-content hidden" data-lang="hi">
+                {{ template "editor" }}
+            </div>
+            <div class="lang-content hidden" data-lang="gu">
+                {{ template "editor" }}
+            </div>
+            <div class="lang-content hidden" data-lang="ta">
+                {{ template "editor" }}
+            </div>
         </div>
 
         <div class="mt-4 flex justify-end gap-3">
@@ -30,48 +45,173 @@
 <script src="/web/static/js/editor.js"></script>
 <script>
     (function () {
+        const SUPPORTED_LANGUAGES = window.SUPPORTED_LANGUAGES;
+
         const wrapper = document.getElementById("test-instructions-editor-wrapper");
-        if (window.initializeRichTextEditors && wrapper) {
-            window.initializeRichTextEditors(wrapper);
+        const langTabsEl = document.getElementById("instructionsLangTabs");
+
+        let activeLang = 'en';
+        const enabledLangs = new Set(['en']);
+        const initializedLangs = new Set();
+
+        function getInstructionsEditor(langCode) {
+            return wrapper?.querySelector(`.lang-content[data-lang="${langCode}"] .editor`);
         }
-    })();
 
-    function getCurrentInstructions() {
-        const hiddenInput = document.getElementById("test-instructions");
-        return hiddenInput?.value || "";
-    }
-
-    function getInstructionsEditor() {
-        const wrapper = document.getElementById("test-instructions-editor-wrapper");
-        return wrapper?.querySelector(".editor");
-    }
-
-    function openInstructionsModal() {
-        const modal = document.getElementById("test-instructions-modal");
-        const editor = getInstructionsEditor();
-        const initialInstructions = getCurrentInstructions() || "";
-
-        if (editor) {
-            editor.innerHTML = initialInstructions;
-            if (typeof renderMath === "function") {
-                renderMath(editor);
+        function initLangEditor(langCode) {
+            if (initializedLangs.has(langCode) || !window.initializeRichTextEditors) {
+                return;
             }
-            editor.focus();
+            const container = wrapper.querySelector(`.lang-content[data-lang="${langCode}"]`);
+            if (container) {
+                window.initializeRichTextEditors(container);
+                initializedLangs.add(langCode);
+            }
         }
 
-        modal.classList.remove("hidden");
-    }
+        function switchLangEditors(langCode) {
+            wrapper.querySelectorAll('.lang-content').forEach(el => {
+                el.classList.toggle('hidden', el.dataset.lang !== langCode);
+            });
+            initLangEditor(langCode);
+        }
 
-    function closeInstructionsModal() {
-        const modal = document.getElementById("test-instructions-modal");
-        modal.classList.add("hidden");
-    }
+        function renderLangTabs() {
+            langTabsEl.innerHTML = '';
+            SUPPORTED_LANGUAGES.forEach(({ code, label }) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'nav-link' + (code === activeLang ? ' active' : '');
+                btn.dataset.lang = code;
+                btn.addEventListener('click', () => {
+                    if (code === activeLang) return;
+                    if (code !== 'en' && !enabledLangs.has(code)) {
+                        enabledLangs.add(code);
+                    }
+                    activeLang = code;
+                    switchLangEditors(code);
+                    renderLangTabs();
+                });
 
-    function saveInstructionsModal() {
-        const hiddenInput = document.getElementById("test-instructions");
-        const editor = getInstructionsEditor();
-        hiddenInput.value = editor ? getEditorHtml(editor) : "";
-        closeInstructionsModal();
-    }
+                if (code === 'en') {
+                    btn.textContent = label + ' *';
+                } else {
+                    const isEnabled = enabledLangs.has(code);
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = isEnabled;
+                    checkbox.title = `Include ${label}`;
+                    checkbox.style.marginRight = '6px';
+                    checkbox.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (checkbox.checked) {
+                            enabledLangs.add(code);
+                            activeLang = code;
+                            switchLangEditors(code);
+                        } else {
+                            enabledLangs.delete(code);
+                            if (activeLang === code) {
+                                activeLang = 'en';
+                                switchLangEditors('en');
+                            }
+                        }
+                        renderLangTabs();
+                    });
+                    btn.appendChild(checkbox);
+                    btn.appendChild(document.createTextNode(label));
+
+                    if (!isEnabled) {
+                        btn.style.opacity = '0.5';
+                    }
+                }
+
+                langTabsEl.appendChild(btn);
+            });
+        }
+
+        initLangEditor('en');
+        renderLangTabs();
+
+        // --- Backing stores (hidden inputs rendered by add_test.html hold the source of truth) ---
+
+        function readMapStore(elementId) {
+            const el = document.getElementById(elementId);
+            try {
+                return JSON.parse(el?.value || "{}") || {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function writeMapStore(elementId, map) {
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.value = JSON.stringify(map);
+            }
+        }
+
+        window.getCurrentInstructionsMap = function () {
+            return readMapStore("test-instructions-current-store");
+        };
+
+        window.setCurrentInstructionsMap = function (map) {
+            writeMapStore("test-instructions-current-store", map);
+        };
+
+        window.getDefaultInstructionsMap = function () {
+            return readMapStore("test-instructions-default-store");
+        };
+
+        window.setDefaultInstructionsMap = function (map) {
+            writeMapStore("test-instructions-default-store", map);
+        };
+
+        // --- Modal lifecycle ---
+
+        window.openInstructionsModal = function () {
+            const modal = document.getElementById("test-instructions-modal");
+            const current = getCurrentInstructionsMap();
+
+            enabledLangs.clear();
+            enabledLangs.add('en');
+            SUPPORTED_LANGUAGES.forEach(({ code }) => {
+                if (code !== 'en' && (current[code] || "").trim()) {
+                    enabledLangs.add(code);
+                }
+            });
+            activeLang = 'en';
+
+            SUPPORTED_LANGUAGES.forEach(({ code }) => {
+                const editor = getInstructionsEditor(code);
+                if (editor) {
+                    editor.innerHTML = current[code] || "";
+                    if (typeof renderMath === "function") {
+                        renderMath(editor);
+                    }
+                }
+            });
+
+            switchLangEditors('en');
+            renderLangTabs();
+            modal.classList.remove("hidden");
+            getInstructionsEditor('en')?.focus();
+        };
+
+        window.closeInstructionsModal = function () {
+            document.getElementById("test-instructions-modal").classList.add("hidden");
+        };
+
+        window.saveInstructionsModal = function () {
+            const updated = {};
+            SUPPORTED_LANGUAGES.forEach(({ code }) => {
+                if (!enabledLangs.has(code)) return;
+                const editor = getInstructionsEditor(code);
+                updated[code] = editor ? getEditorHtml(editor) : "";
+            });
+
+            setCurrentInstructionsMap(updated);
+            closeInstructionsModal();
+        };
+    })();
 </script>
 {{ end }}

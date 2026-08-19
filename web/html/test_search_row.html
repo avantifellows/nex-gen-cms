@@ -41,7 +41,7 @@
                     {{ end }}
                 </td>
                 <td class="text-center" id="test-status-{{ $test.ID }}" rowspan="{{ $total }}">{{ if $test.IsLocked }}Final{{ else }}Draft{{ end }}</td>
-                {{ template "test_actions_cell.html" (dict "Test" $test "CurriculumId" $curriculumId "GradeId" $gradeId "Rowspan" $total) }}
+                {{ template "test_actions_cell.html" (dict "Test" $test "Rowspan" $total) }}
             {{ end }}
         </tr>
     {{ end }}

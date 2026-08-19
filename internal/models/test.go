@@ -41,6 +41,38 @@ type ResTypeParams struct {
 	ChapterID    *int16        `json:"chapter_id,omitempty"`
 	Subjects     []ResSubject  `json:"subjects,omitempty"`
 	Instructions template.HTML `json:"instructions,omitempty"`
+	// InstructionLangVersions is the source of truth going forward, and includes an "en"
+	// entry alongside any regional ones. Instructions above is kept in sync for now so
+	// older consumers still work; once everything reads from the array it can be dropped.
+	InstructionLangVersions []InstructionLangVersion `json:"instruction_lang_versions,omitempty"`
+}
+
+// InstructionLangVersion holds one language's instructions text, including English.
+type InstructionLangVersion struct {
+	LangCode     string        `json:"lang_code"`
+	Instructions template.HTML `json:"instructions"`
+}
+
+// FindInstructionLangVersion returns the version matching langCode, or nil if absent.
+func FindInstructionLangVersion(versions []InstructionLangVersion, langCode string) *InstructionLangVersion {
+	for i := range versions {
+		if versions[i].LangCode == langCode {
+			return &versions[i]
+		}
+	}
+	return nil
+}
+
+// ResolveInstructions looks up langCode in versions; if not found, falls back to the
+// legacy singular field for "en" only (covers rows not yet migrated to the array).
+func ResolveInstructions(legacy template.HTML, versions []InstructionLangVersion, langCode string) template.HTML {
+	if v := FindInstructionLangVersion(versions, langCode); v != nil {
+		return v.Instructions
+	}
+	if langCode == "en" {
+		return legacy
+	}
+	return ""
 }
 
 type ResSubject struct {
@@ -120,29 +152,6 @@ func (test *Test) GetNameByLang(langCode string) string {
 		}
 	}
 	return ""
-}
-
-func (test *Test) SetCurriculumGrade(curriculumID int16, gradeID int8) {
-	newPair := CurriculumGrade{
-		CurriculumID: curriculumID,
-		GradeID:      gradeID,
-	}
-
-	// If nil or empty, initialize with the new pair
-	if len(test.CurriculumGrades) == 0 {
-		test.CurriculumGrades = []CurriculumGrade{newPair}
-		return
-	}
-
-	// Check if the pair already exists
-	for _, cg := range test.CurriculumGrades {
-		if cg.CurriculumID == curriculumID && cg.GradeID == gradeID {
-			return // Already exists, do nothing
-		}
-	}
-
-	// Append if not found
-	test.CurriculumGrades = append(test.CurriculumGrades, newPair)
 }
 
 func (t *Test) DisplaySubtype() string {
