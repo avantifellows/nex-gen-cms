@@ -982,10 +982,9 @@
                 
                 } else {
                     if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {
-                        const curriculumId = document.getElementById("curriculum-dropdown").value;
                         sessionStorage.setItem(
                             REFRESH_PROBLEM_URL_KEY,
-                            `/problem?id=${problemId}&curriculum_id=${curriculumId}`
+                            `/problem?id=${problemId}`
                         );
                         sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
                     }

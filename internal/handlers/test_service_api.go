@@ -45,7 +45,7 @@ func (h *TestsHandler) GetTestsJSON(responseWriter http.ResponseWriter, request 
 // GetAssembledTestJSON returns a single test with all its problems inlined — the input
 // contract for quiz-backend ingest. It reuses the same resolution the PDF/detail views use
 // (getTest + getTestProblems), so the assembled shape stays in lockstep with what the CMS
-// renders. Query params: id (test id), curriculum_id, grade_id.
+// renders. Query params: id (test id).
 func (h *TestsHandler) GetAssembledTestJSON(responseWriter http.ResponseWriter, request *http.Request) {
 	if request.URL.Query().Get("id") == "" {
 		http.Error(responseWriter, "id is required", http.StatusBadRequest)
