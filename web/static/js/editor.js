@@ -398,7 +398,7 @@ window.initializeRichTextEditors = function (root = document) {
             for (let j = 0; j < selectedCols; j++) {
                 const td = document.createElement("td");
                 td.textContent = " ";
-                td.className = "border border-black w-16 h-8 text-center";
+                td.className = "border border-black w-16 h-8";
                 tr.appendChild(td);
             }
             table.appendChild(tr);
