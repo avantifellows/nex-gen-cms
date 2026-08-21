@@ -24,7 +24,10 @@
                 <tbody>
                     {{range .}}
                     <tr class="border-b border-border/40">
-                        <td class="font-mono">{{.Code}}</td>
+                        <td class="font-mono">
+                            <a href="/problem?id={{.ID}}" target="_blank" rel="noopener noreferrer"
+                                class="text-accent hover:text-accent-hover hover:underline">{{.Code}}</a>
+                        </td>
                         <td>{{langName .LangCode}}</td>
                         <td class="font-mono">{{.MatchPercent}}%</td>
                     </tr>
