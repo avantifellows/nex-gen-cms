@@ -330,7 +330,7 @@ func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, requ
 	var problem models.Problem
 	_ = json.Unmarshal(reqBodyBytes, &problem) // best-effort: an unparsable body just skips the similarity check
 
-	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem)) {
+	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), 0) {
 		return
 	}
 
@@ -358,7 +358,7 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 	for _, problem := range batch.Problems {
 		languages = append(languages, extractSimilarityLanguages(problem)...)
 	}
-	if h.duplicatesFound(responseWriter, request, languages) {
+	if h.duplicatesFound(responseWriter, request, languages, 0) {
 		return
 	}
 
@@ -374,8 +374,12 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 // matches turn up, writes the 409 + confirmation-modal response itself. Returns true when it has
 // written a response — the caller should return without saving. Also writes an error response
 // and returns true if the check itself fails, so a flaky similarity check never masks the save.
+//
+// excludeProblemID drops a match against that problem's own id — needed on edit, where the
+// problem's own already-saved text otherwise self-matches at ~100%. Pass 0 on create, where
+// there's no id yet.
 func (h *ProblemsHandler) duplicatesFound(responseWriter http.ResponseWriter, request *http.Request,
-	languages []dto.SimilarSearchLanguage) bool {
+	languages []dto.SimilarSearchLanguage, excludeProblemID int) bool {
 	if request.URL.Query().Get(confirmDuplicatesParam) == "true" || len(languages) == 0 {
 		return false
 	}
@@ -385,11 +389,18 @@ func (h *ProblemsHandler) duplicatesFound(responseWriter http.ResponseWriter, re
 		http.Error(responseWriter, fmt.Sprintf("Error checking similar problems: %v", err), http.StatusInternalServerError)
 		return true
 	}
-	if len(resp.Problems) == 0 {
+
+	matches := make([]dto.SimilarProblemMatch, 0, len(resp.Problems))
+	for _, match := range resp.Problems {
+		if match.ID != excludeProblemID {
+			matches = append(matches, match)
+		}
+	}
+	if len(matches) == 0 {
 		return false
 	}
 
-	renderDuplicateProblemsModal(responseWriter, resp.Problems)
+	renderDuplicateProblemsModal(responseWriter, matches)
 	return true
 }
 
@@ -466,6 +477,13 @@ func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, requ
 
 	problemIdStr := request.URL.Query().Get("id")
 	problemId := utils.StringToInt(problemIdStr)
+
+	var problem models.Problem
+	_ = json.Unmarshal(reqBodyBytes, &problem) // best-effort: an unparsable body just skips the similarity check
+
+	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problemId) {
+		return
+	}
 
 	_, err = h.problemsService.UpdateObject(problemIdStr, resourcesEndPoint, reqBodyBytes, problemsKey,
 		func(problem *models.Problem) bool {
