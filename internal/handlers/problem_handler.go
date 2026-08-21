@@ -27,6 +27,7 @@ const problemEndPoint = "resource/problem/%d"
 const searchProblemsEndPoint = "problems/search"
 const testsContainingProblemsEndPoint = "resources/tests-containing-problems"
 const batchProblemsEndPoint = "resources/problems/batch"
+const similarSearchEndPoint = "problems/similar-search"
 
 const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
@@ -44,6 +45,12 @@ const inputTagsTemplate = "input_tags.html"
 const problemTestAssociationTemplate = "problem_test_association_modal.html"
 const moveProblemsTemplate = "move_problems_modal.html"
 const copyProblemModalTemplate = "copy_problem_modal.html"
+const duplicateProblemsModalTemplate = "duplicate_problems_modal.html"
+
+// confirmDuplicatesParam, when set to "true" on a save request, skips the similarity check and
+// saves directly — used when the editor has already seen the duplicate-warning modal and chose
+// to save anyway.
+const confirmDuplicatesParam = "confirmDuplicates"
 
 type ProblemsHandler struct {
 	problemsService *services.Service[models.Problem]
@@ -320,6 +327,13 @@ func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, requ
 		return
 	}
 
+	var problem models.Problem
+	_ = json.Unmarshal(reqBodyBytes, &problem) // best-effort: an unparsable body just skips the similarity check
+
+	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem)) {
+		return
+	}
+
 	_, err = h.problemsService.AddObject(reqBodyBytes, problemsKey, resourcesEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error adding problem: %v", err), http.StatusInternalServerError)
@@ -335,12 +349,84 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 	}
 
 	// Endpoint expects a JSON object with "problems" array & "paragraph".
+	var batch struct {
+		Problems []models.Problem `json:"problems"`
+	}
+	_ = json.Unmarshal(reqBodyBytes, &batch) // best-effort: an unparsable body just skips the similarity check
+
+	var languages []dto.SimilarSearchLanguage
+	for _, problem := range batch.Problems {
+		languages = append(languages, extractSimilarityLanguages(problem)...)
+	}
+	if h.duplicatesFound(responseWriter, request, languages) {
+		return
+	}
+
 	var result any
 	err = h.problemsService.Post(batchProblemsEndPoint, json.RawMessage(reqBodyBytes), &result)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error adding problems: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+// duplicatesFound runs the similarity check (unless bypassed by confirmDuplicatesParam) and, if
+// matches turn up, writes the 409 + confirmation-modal response itself. Returns true when it has
+// written a response — the caller should return without saving. Also writes an error response
+// and returns true if the check itself fails, so a flaky similarity check never masks the save.
+func (h *ProblemsHandler) duplicatesFound(responseWriter http.ResponseWriter, request *http.Request,
+	languages []dto.SimilarSearchLanguage) bool {
+	if request.URL.Query().Get(confirmDuplicatesParam) == "true" || len(languages) == 0 {
+		return false
+	}
+
+	var resp dto.SimilarSearchResponse
+	if err := h.problemsService.Post(similarSearchEndPoint, dto.SimilarSearchRequest{Languages: languages}, &resp); err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error checking similar problems: %v", err), http.StatusInternalServerError)
+		return true
+	}
+	if len(resp.Problems) == 0 {
+		return false
+	}
+
+	renderDuplicateProblemsModal(responseWriter, resp.Problems)
+	return true
+}
+
+// extractSimilarityLanguages returns the {lang_code, text} pairs the similarity check needs from
+// a problem's language versions, skipping any with blank question text.
+func extractSimilarityLanguages(problem models.Problem) []dto.SimilarSearchLanguage {
+	languages := make([]dto.SimilarSearchLanguage, 0, len(problem.LangVersions))
+	for _, langVersion := range problem.LangVersions {
+		text := string(langVersion.MetaData.Question)
+		if text == "" {
+			continue
+		}
+		languages = append(languages, dto.SimilarSearchLanguage{
+			LangCode: langVersion.LangCode,
+			Text:     text,
+		})
+	}
+	return languages
+}
+
+// renderDuplicateProblemsModal writes a 409 so the frontend's fetch handler can tell this apart
+// from a successful save, then renders the confirmation modal as the response body.
+func renderDuplicateProblemsModal(responseWriter http.ResponseWriter, matches []dto.SimilarProblemMatch) {
+	duplicateMatches := make([]dto.DuplicateProblemMatch, len(matches))
+	for i, match := range matches {
+		duplicateMatches[i] = dto.DuplicateProblemMatch{
+			ID:           match.ID,
+			Code:         match.Code,
+			LangCode:     match.LangCode,
+			MatchPercent: int(match.MatchScore*100 + 0.5),
+		}
+	}
+
+	responseWriter.WriteHeader(http.StatusConflict)
+	views.ExecuteTemplate(duplicateProblemsModalTemplate, responseWriter, duplicateMatches, template.FuncMap{
+		"langName": utils.LangName,
+	})
 }
 
 func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, request *http.Request) {
