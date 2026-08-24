@@ -37,13 +37,17 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <!-- In before-request, condition is added to only clear the tbody 
+            <!-- In before-request, condition is added to only clear the tbody
              when the request comes from the tbody itself (its own refresh on load);
              otherwise it reloads even on just clicking copy problem button for any row -->
+            <!-- hx-disinherit="hx-indicator" keeps #topic-problems-loader scoped to this tbody's own
+                 bulk reload; without it, row actions (Edit/Copy/Delete/Code link in topic_problem_row.html)
+                 inherit it too, so e.g. clicking Edit was incorrectly starting the whole table's loading
+                 spinner instead of just navigating to the edit screen. -->
             <tbody id="problemTableBody" class="text-ink-muted text-sm"
                 hx-trigger="refreshProblems"
                 hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
-                hx-indicator="#topic-problems-loader"
+                hx-indicator="#topic-problems-loader" hx-disinherit="hx-indicator"
                 hx-on::before-request="if (event.detail.elt === this) this.innerHTML=''"
                 hx-on::after-swap="updateHeaderState()" data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->
