@@ -211,7 +211,7 @@ func sortChapters(chapterPtrs []*models.Chapter, sortColumn string, sortOrder st
 		case "2":
 			sortResult = strings.Compare(c1.GetNameByLang("en"), c2.GetNameByLang("en"))
 		case "3":
-			sortResult = int(c1.TopicCount - c2.TopicCount)
+			sortResult = c1.TopicCount - c2.TopicCount
 		default:
 			sortResult = 0
 		}
