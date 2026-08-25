@@ -476,7 +476,7 @@
    .border-black so it doesn't affect other tables in the app. */
 td.border-black,
 th.border-black {
-  @apply px-2 py-1;
+  @apply px-1 py-1;
 }
 
 @utility badge {
