@@ -118,8 +118,10 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 		return
 	}
 
-	chapterName := request.FormValue("name")
-	chapterCode := request.FormValue("code")
+	chapterCode, chapterName, ok := parseCodeAndName(responseWriter, request, "Chapter")
+	if !ok {
+		return
+	}
 
 	dummyChapterPtr := &models.Chapter{}
 	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName)
@@ -137,8 +139,10 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 }
 
 func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterCode := request.FormValue("code")
-	chapterName := request.FormValue("name")
+	chapterCode, chapterName, ok := parseCodeAndName(responseWriter, request, "Chapter")
+	if !ok {
+		return
+	}
 	curriculumIdStr := request.FormValue(CURRICULUM_DROPDOWN_NAME)
 	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
 	if err != nil {

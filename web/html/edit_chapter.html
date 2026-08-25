@@ -6,7 +6,7 @@
         hx-on::after-request="sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false')">
     <div>
       <label class="form-label" for="name">Chapter Title</label>
-      <input type="text" id="name" name="name" class="form-input" value="{{ getName .ChapterPtr "en" }}">
+      <input type="text" id="name" name="name" class="form-input" value="{{ getName .ChapterPtr "en" }}" required>
     </div>
     <div>
       <label class="form-label" for="description">Description</label>
@@ -15,7 +15,7 @@
     </div>
     <div>
       <label class="form-label" for="code">Chapter Code</label>
-      <input type="text" id="code" name="code" class="form-input font-mono" value="{{.ChapterPtr.Code}}">
+      <input type="text" id="code" name="code" class="form-input font-mono" value="{{.ChapterPtr.Code}}" required>
     </div>
     <div class="flex gap-3 justify-end pt-2">
       <button type="button" class="btn-secondary" onclick="window.history.back()">Cancel</button>

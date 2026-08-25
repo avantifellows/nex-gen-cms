@@ -4,11 +4,11 @@
     hx-on::after-request="if(event.detail.successful) { this.reset(); sessionStorage.setItem(window.CHAPTERS_LOADED_KEY, 'false'); document.body.dispatchEvent(new Event('topicAdded')); }">
     <div>
         <label class="form-label" for="add-topic-code">Code</label>
-        <input id="add-topic-code" type="text" name="code" placeholder="Topic code" class="form-input w-48 font-mono">
+        <input id="add-topic-code" type="text" name="code" placeholder="Topic code" class="form-input w-48 font-mono" required>
     </div>
     <div class="flex-1 min-w-[240px]">
         <label class="form-label" for="add-topic-name">Name</label>
-        <input id="add-topic-name" type="text" name="name" placeholder="Topic name" class="form-input">
+        <input id="add-topic-name" type="text" name="name" placeholder="Topic name" class="form-input" required>
     </div>
     <button type="submit" class="btn-primary">Create Topic</button>
 </form>
