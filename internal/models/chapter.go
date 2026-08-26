@@ -11,6 +11,7 @@ type Chapter struct {
 	StatusID     int8                `json:"cms_status_id,omitempty"`
 	Priority     *int8               `json:"priority,omitempty"`      // create/update API only
 	PriorityText string              `json:"priority_text,omitempty"` // create/update API only
+	TopicCount   int                 `json:"topic_count"`
 	/**
 	 * []*Topic is used instead of []Topic so that updates applied in centrally cached Topic objects
 	 * are also visible inside these Topic objects
@@ -55,10 +56,6 @@ func NewChapter(code string, name string, curriculum_id int16, grade_id int8, su
 		Priority:     PriorityFromText(priorityText),
 		PriorityText: priorityText,
 	}
-}
-
-func (chapter Chapter) TopicCount() int8 {
-	return int8(len(chapter.Topics))
 }
 
 func (chapterPtr *Chapter) BuildMap(code string, name string, priorityText string, curriculumID int16) map[string]any {
