@@ -9,7 +9,7 @@ type Chapter struct {
 	GradeID      int8                `json:"grade_id,omitempty"`
 	SubjectID    int8                `json:"subject_id"`
 	StatusID     int8                `json:"cms_status_id,omitempty"`
-	Priority     int8                `json:"priority,omitempty"`      // create/update API only
+	Priority     *int8               `json:"priority,omitempty"`      // create/update API only
 	PriorityText string              `json:"priority_text,omitempty"` // create/update API only
 	/**
 	 * []*Topic is used instead of []Topic so that updates applied in centrally cached Topic objects
@@ -32,8 +32,12 @@ var priorityByText = map[string]int8{
 	"low":    3,
 }
 
-func PriorityFromText(priorityText string) int8 {
-	return priorityByText[priorityText]
+func PriorityFromText(priorityText string) *int8 {
+	priority, ok := priorityByText[priorityText]
+	if !ok {
+		return nil
+	}
+	return &priority
 }
 
 type ChapterLang struct {
