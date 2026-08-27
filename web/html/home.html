@@ -375,7 +375,7 @@
         });
 
         // Function to go back after delay
-        function goBackAfterDelay(milliseconds) {
+        function goBackAfterDelay(milliseconds, successMessage) {
             var userNavigatedBack = false;  // Flag to track if the user pressed the back button
 
             // Listen for the browser's back button (popstate event)
@@ -385,7 +385,20 @@
 
             setTimeout(function () {
                 if (!userNavigatedBack) {
-                    history.back(); // Go back to the previous state
+                    if (history.length <= 1) {
+                        // Opened as the first page in this tab (e.g. via a target="_blank" link) -
+                        // there's no previous screen to go back to, so close the tab instead.
+                        // If a success message was given, show it as a toast first since the
+                        // tab closing would otherwise give no save feedback.
+                        if (successMessage) {
+                            showToast(successMessage, 'success');
+                            setTimeout(() => window.close(), 800);
+                        } else {
+                            window.close();
+                        }
+                    } else {
+                        history.back(); // Go back to the previous state
+                    }
                 }
             }, milliseconds);
         }

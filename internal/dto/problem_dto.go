@@ -8,8 +8,3 @@ type ProblemData struct {
 	TopicPtr   *models.Topic
 	ChapterPtr *models.Chapter
 }
-
-type CopyProblemModalData struct {
-	ProblemID          string
-	SourceCurriculumID string
-}

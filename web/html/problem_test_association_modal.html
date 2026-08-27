@@ -27,7 +27,9 @@
                         <td class="font-mono">{{.ProblemCode}}</td>
                         <td class="font-mono">
                             {{if .Tests}}
-                                {{range $i, $t := .Tests}}{{if $i}}, {{end}}{{$t.TestCode}}{{end}}
+                                {{range $i, $t := .Tests}}{{if $i}}, {{end}}<a
+                                    href="/tests/edit-test?id={{$t.TestID}}" target="_blank" rel="noopener"
+                                    class="text-accent hover:text-accent-hover underline">{{$t.TestCode}}</a>{{end}}
                             {{else}}
                                 <span class="text-ink-muted italic font-sans">No tests found</span>
                             {{end}}

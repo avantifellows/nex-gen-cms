@@ -195,28 +195,38 @@
   /* Image — show pointer to hint it's clickable */
   .editor img { cursor: pointer; }
 
-  /* Floated image: text beside, then full width below image (clearfix on paragraph) */
-  .editor p.editor-img-float,
-  .output p.editor-img-float {
+  /*
+   * Floated image: text beside, then full width below image (clearfix on paragraph).
+   * Not scoped to .editor/.output - this stored HTML also renders on read-only
+   * screens (e.g. the single problem view) that don't wrap content in either class.
+   */
+  p.editor-img-float {
     margin: 0.5em 0;
     overflow: visible;
   }
-  .editor p.editor-img-float::after,
-  .output p.editor-img-float::after {
+  p.editor-img-float::after {
     content: '';
     display: table;
     clear: both;
   }
-  .editor p.editor-img-justify,
-  .output p.editor-img-justify {
+  p.editor-img-justify {
     margin: 0.5em 0;
   }
-  .editor p.editor-img-justify > img,
-  .output p.editor-img-justify > img {
+  p.editor-img-justify > img {
     display: block;
     width: 100%;
     max-width: 100%;
     margin: 0.5em 0;
+    float: none;
+  }
+  .editor p.editor-img-center,
+  .output p.editor-img-center {
+    margin: 0.5em 0;
+  }
+  .editor p.editor-img-center > img,
+  .output p.editor-img-center > img {
+    display: block;
+    margin: 0.5em auto;
     float: none;
   }
 
@@ -274,6 +284,22 @@
     box-sizing: border-box;
     pointer-events: all;
   }
+  .img-resize-dims {
+    display: none;
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    color: var(--color-bg-card);
+    background: var(--color-ink);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  .img-resize-dims.active { display: block; }
+
   .img-resize-nw { top: -5px; left: -5px;   cursor: nw-resize; }
   .img-resize-ne { top: -5px; right: -5px;  cursor: ne-resize; }
   .img-resize-se { bottom: -5px; right: -5px; cursor: se-resize; }
@@ -348,8 +374,18 @@
   }
   #searched-test-results { display: block; }
   #searched-test-results.htmx-request { display: none; }
-  #move-problems-form.htmx-request .btn-text { display: none; }
-  #move-problems-form.htmx-request .btn-loader { display: inline; }
+  #move-problems-form .btn-loader,
+  #move-resources-form .btn-loader {
+    display: none;
+  }
+  #move-problems-form.htmx-request .btn-text,
+  #move-resources-form.htmx-request .btn-text {
+    display: none;
+  }
+  #move-problems-form.htmx-request .btn-loader,
+  #move-resources-form.htmx-request .btn-loader {
+    display: inline;
+  }
 }
 
 /* -----------------------------------------------------------------------------
@@ -464,4 +500,30 @@ mjx-container[jax="CHTML"] mjx-math {
 
 mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
   white-space: nowrap !important;
+}
+
+/* -----------------------------------------------------------------------------
+ * Option row overrides (PDF + the single-problem view) — unlayered so they
+ * beat the items-baseline utility (Tailwind's utilities layer always wins
+ * over @layer components, regardless of selector specificity).
+ * --------------------------------------------------------------------------- */
+
+/*
+ * The option row uses items-baseline so multi-line/equation option text
+ * aligns its first line with the label - correct for text, since that's a
+ * genuine text baseline. A default (non-inline) option image is wrapped in
+ * a floated editor-img-float paragraph with no inline content, so it has
+ * no real baseline either - flexbox synthesizes one from the image's
+ * bottom edge, making the label look bottom-aligned. Fix: render default
+ * option images exactly like an explicitly "inline with text" image (same
+ * properties applyInlineImage() sets in editor-image.js): un-float it so
+ * the paragraph has a genuine inline baseline, positioned identically to
+ * the manual case. Scoped to .option-row so the question image above (which
+ * does rely on floating, with text wrapping beside it) is untouched.
+ */
+.option-row p.editor-img-float img {
+  float: none !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
 }

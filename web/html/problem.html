@@ -14,7 +14,7 @@
         {{ end }}
         <div class="flex space-x-4 ml-auto pr-4">
             <button class="action-button"
-                hx-get="/problems/edit-problem?id={{.ProblemPtr.ID}}&curriculum_id={{.ProblemPtr.CurriculumID}}&topic_id={{.ProblemPtr.TopicID}}"
+                hx-get="/problems/edit-problem?id={{.ProblemPtr.ID}}"
                 hx-on::before-request="sessionStorage.setItem(REFRESH_PROBLEM_ON_BACK_KEY, '1')"
                 hx-target="body" hx-push-url="true" title="Edit problem">
                 <i class="fa-solid fa-pen"></i>
@@ -38,9 +38,9 @@
     <div class="card card-pad" data-mathjax="true">
         {{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }}
         <h2 class="section-title">Paragraph</h2>
-        <p class="mt-2 text-ink">
+        <div class="mt-2 text-ink">
             {{ .ProblemPtr.Paragraph.Body }}
-        </p>
+        </div>
         {{ end }}
         <h2 class="section-title{{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }} mt-6{{ end }}">Statement / Text</h2>
         {{ range .ProblemPtr.LangVersions }}
@@ -66,9 +66,12 @@
             <h2 class="section-title mt-6">Options</h2>
             <div class="mt-2 rounded-lg border border-border overflow-hidden">
                 {{ range $index, $option := .MetaData.Options }}
-                <div class="flex items-center border-b border-border/40 p-4 last:border-b-0 bg-bg-card">
+                <!-- items-baseline + option-row: aligns the label with the option's first
+                     text line, or with a default (non-inline) image's vertical center via
+                     the .option-row rule in input.css. -->
+                <div class="flex items-baseline option-row border-b border-border/40 p-4 last:border-b-0 bg-bg-card">
                     <span class="mr-6 font-mono font-bold text-accent w-6">{{ printf "%c" (add 65 $index) }}</span>
-                    <p class="text-ink">{{ $option }}</p>
+                    <div class="text-ink">{{ $option }}</div>
                 </div>
                 {{ end }}
             </div>
