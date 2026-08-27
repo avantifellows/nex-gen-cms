@@ -3,12 +3,12 @@
 		<h3 class="text-base font-semibold">Selected Test</h3>
 		<div class="text-sm text-ink-muted">{{.TestPtr.Code}} — {{ (index .TestPtr.Name 0).Resource }}</div>
 	</div>
-	<table class="mt-2 w-full border text-left">
+	<table class="mt-2 w-full border text-left overflow-hidden">
 		<thead>
 			<tr class="bg-bg-card-alt">
+				<th class="p-2">Action</th>
 				<th class="p-2">Code</th>
 				<th class="p-2">Question</th>
-				<th class="p-2">Action</th>
 			</tr>
 		</thead>
 		<tbody data-mathjax="true">
