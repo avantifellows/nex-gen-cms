@@ -46,11 +46,11 @@ type ChapterLang struct {
 	LangCode    string `json:"lang_code"`
 }
 
-func NewChapter(code string, name string, curriculum_id int16, grade_id int8, subject_id int8, priorityText string) *Chapter {
+func NewChapter(code string, name string, curriculumID int16, grade_id int8, subject_id int8, priorityText string) *Chapter {
 	return &Chapter{
 		Code:         code,
 		Name:         []ChapterLang{{ChapterName: name, LangCode: "en"}},
-		CurriculumID: curriculum_id,
+		CurriculumID: curriculumID,
 		GradeID:      grade_id,
 		SubjectID:    subject_id,
 		Priority:     PriorityFromText(priorityText),
@@ -71,8 +71,8 @@ func (chapterPtr *Chapter) BuildMap(code string, name string, priorityText strin
 // PriorityTextForCurriculum looks up the priority text for the given curriculum from the
 // per-curriculum Curriculums array returned by the get API, since priority can differ per
 // curriculum for the same chapter.
-func (ch *Chapter) PriorityTextForCurriculum(curriculumID int16) string {
-	for _, curriculum := range ch.Curriculums {
+func (chapterPtr *Chapter) PriorityTextForCurriculum(curriculumID int16) string {
+	for _, curriculum := range chapterPtr.Curriculums {
 		if curriculum.CurriculumID == curriculumID && curriculum.PriorityText != nil {
 			return *curriculum.PriorityText
 		}

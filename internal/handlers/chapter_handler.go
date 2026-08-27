@@ -130,14 +130,14 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 	chapterName := request.FormValue("name")
 	chapterCode := request.FormValue("code")
 	priorityText := request.FormValue("priority_text")
-	curriculumId, err := utils.StringToIntType[int16](request.FormValue(QUERY_PARAM_CURRICULUM_ID))
+	curriculumID, err := utils.StringToIntType[int16](request.FormValue(QUERY_PARAM_CURRICULUM_ID))
 	if err != nil {
 		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
 		return
 	}
 
 	dummyChapterPtr := &models.Chapter{}
-	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName, priorityText, curriculumId)
+	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName, priorityText, curriculumID)
 
 	_, err = h.chaptersService.UpdateObject(chapterIdStr, handlerutils.ChaptersEndPoint, chapterMap, handlerutils.ChaptersKey,
 		func(chapter *models.Chapter) bool {
