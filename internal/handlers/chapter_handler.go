@@ -20,12 +20,14 @@ import (
 
 const chaptersTemplate = "chapters.html"
 const chapterRowTemplate = "chapter_row.html"
+const addChapterTemplate = "add_chapter.html"
 const editChapterTemplate = "edit_chapter.html"
 const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
 const chapterTestsTemplate = "chapter_tests.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
 const topicDropdownOptionalTemplate = "topic_dropdown_optional.html"
+const chapterPriorityOptionsTemplate = "chapter_priority_options.html"
 
 type ChaptersHandler struct {
 	chaptersService *services.Service[models.Chapter]
@@ -68,6 +70,8 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 
 	for _, chapterPtr := range *chapters {
 		chapterPtr.CurriculumID = curriculumId
+		chapterPtr.PriorityText = chapterPtr.PriorityTextForCurriculum(curriculumId)
+		chapterPtr.Priority = models.PriorityFromText(chapterPtr.PriorityText)
 	}
 
 	sortColumn := urlVals.Get("sortColumn")
@@ -82,7 +86,8 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		filename = chapterDropdownTemplate
 	}
 	views.ExecuteTemplate(filename, responseWriter, chapters, template.FuncMap{
-		"getName": getChapterName,
+		"getName":    getChapterName,
+		"capitalize": utils.Capitalize,
 	})
 }
 
@@ -107,7 +112,11 @@ func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, reques
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"getName": getChapterName,
-	}, baseTemplate, editChapterTemplate)
+	}, baseTemplate, editChapterTemplate, chapterPriorityOptionsTemplate)
+}
+
+func (h *ChaptersHandler) OpenAddChapter(responseWriter http.ResponseWriter, _ *http.Request) {
+	views.ExecuteTemplates(responseWriter, nil, nil, addChapterTemplate, chapterPriorityOptionsTemplate)
 }
 
 func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, request *http.Request) {
@@ -120,9 +129,15 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 
 	chapterName := request.FormValue("name")
 	chapterCode := request.FormValue("code")
+	priorityText := request.FormValue("priority_text")
+	curriculumID, err := utils.StringToIntType[int16](request.FormValue(QUERY_PARAM_CURRICULUM_ID))
+	if err != nil {
+		http.Error(responseWriter, "Invalid Curriculum ID", http.StatusBadRequest)
+		return
+	}
 
 	dummyChapterPtr := &models.Chapter{}
-	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName)
+	chapterMap := dummyChapterPtr.BuildMap(chapterCode, chapterName, priorityText, curriculumID)
 
 	_, err = h.chaptersService.UpdateObject(chapterIdStr, handlerutils.ChaptersEndPoint, chapterMap, handlerutils.ChaptersKey,
 		func(chapter *models.Chapter) bool {
@@ -157,17 +172,24 @@ func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request
 		http.Error(responseWriter, "Invalid Subject ID", http.StatusBadRequest)
 		return
 	}
-	newChapterPtr := models.NewChapter(chapterCode, chapterName, curriculumId, gradeId, subjectId)
+	priorityText := request.FormValue("priority_text")
+	newChapterPtr := models.NewChapter(chapterCode, chapterName, curriculumId, gradeId, subjectId, priorityText)
 
 	newChapterPtr, err = h.chaptersService.AddObject(newChapterPtr, handlerutils.ChaptersKey, handlerutils.ChaptersEndPoint)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error adding chapter: %v", err), http.StatusInternalServerError)
 		return
 	}
+	// Like the get API, the create response carries priority per curriculum in Curriculums
+	// rather than flat, so resolve it against the curriculum the chapter was just created for.
+	newChapterPtr.CurriculumID = curriculumId
+	newChapterPtr.PriorityText = newChapterPtr.PriorityTextForCurriculum(curriculumId)
+	newChapterPtr.Priority = models.PriorityFromText(newChapterPtr.PriorityText)
 
 	chapterPtrs := []*models.Chapter{newChapterPtr}
 	views.ExecuteTemplate(chapterRowTemplate, responseWriter, chapterPtrs, template.FuncMap{
-		"getName": getChapterName,
+		"getName":    getChapterName,
+		"capitalize": utils.Capitalize,
 	})
 }
 
