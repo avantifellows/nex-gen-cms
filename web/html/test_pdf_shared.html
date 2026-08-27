@@ -44,24 +44,15 @@ window.MathJax = {
 {{ end }}
 
 {{ define "pdf_test_meta" }}
-{{ $instructions := .TestPtr.TypeParams.Instructions }}
-{{ if and (not $instructions) .TestRule }}
-    {{ if and .TestRule.Config.SingleSubject .TestPtr.TypeParams.Subjects }}
-        {{ $subjectId := (index .TestPtr.TypeParams.Subjects 0).SubjectID }}
-        {{ range .TestRule.Config.Subjects }}
-            {{ if eq .SubjectID $subjectId }}
-                {{ $instructions = .Instructions }}
-            {{ end }}
-        {{ end }}
-    {{ end }}
-    {{ if not $instructions }}
-        {{ $instructions = .TestRule.Config.Instructions }}
-    {{ end }}
-{{ end }}
-{{ if $instructions }}
+{{ $instructions := resolveTestInstructions .TestPtr .TestRule .RegionalLangCode }}
+{{ if $instructions.English }}
 <div class="border border-black p-4 mb-5">
     <h3 class="text-base font-semibold mb-2">Instructions:</h3>
-    {{ $instructions }}
+    <div class="!text-ink [&_*]:!text-ink">{{ $instructions.English }}</div>
+    {{ if $instructions.Regional }}
+    <hr class="my-3 border-black">
+    <div class="!text-gray-800 [&_*]:!text-gray-800">{{ $instructions.Regional }}</div>
+    {{ end }}
 </div>
 {{ end }}
 
@@ -124,9 +115,6 @@ window.MathJax = {
              shared baseline per row. -->
         <div class="grid items-baseline gap-x-4 gap-y-2 {{ $gridClass }}">
             {{ range $index, $option := $enLV.MetaData.Options }}
-            <!-- items-baseline + option-row: aligns the label with the option's first text
-                 line, or with a default (non-inline) image's vertical center via the
-                 .option-row rule in input.css - see that rule for why. -->
             <div class="flex items-baseline option-row">
                 <div class="font-semibold mr-2">{{ index labels $index }}</div>
                 <div class="flex-1">

@@ -1,13 +1,13 @@
 {{ define "src_problem_row" }}
 {{ range . }}
 <tr class="border-b">
-    <td class="p-2 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" 
-        hx-get="/problem?id={{.ID}}&curriculum_id={{.CurriculumID}}" hx-target="body" hx-push-url="true">{{.Code}}
+    <td class="p-2 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/problem?id={{.ID}}"
+        hx-get="/problem?id={{.ID}}" hx-target="body" hx-push-url="true">{{.Code}}
     </a></td>
     <td class="p-2">{{(.GetLangVersion "en").MetaData.Question}}</td>
     <td class="p-2 text-center"><button class="px-2 bg-success text-white rounded-sm" data-id="{{.ID}}"
             data-subject="{{.Subject.ID}}" data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
-            data-curriculum="{{.CurriculumID}}" data-subject-parent="{{if .Subject.ParentID}}{{.Subject.ParentID}}{{end}}" 
+            data-subject-parent="{{if .Subject.ParentID}}{{.Subject.ParentID}}{{end}}"
             hx-on:click="addQuestionToTest(this)">+</button>
     </td>
 </tr>
@@ -49,8 +49,8 @@
             // For single-subject tests, apply per-subject instructions when a new subject row is created
             const subjectRule = testRule?.config?.subjects?.find(s => s.subject_id === subjectId);
             const newSubjectInstructions = (testRule?.config?.single_subject && subjectProblemRows.length === 0)
-                ? (subjectRule?.instructions ?? "")
-                : "";
+                ? buildInstructionsLangMap(subjectRule)
+                : {};
 
             // Hook a one-time global listener that just closes over this specific button's data
             const handler = createAfterRequestHandler(difficulty, insertAfterId, questionsTableBody, resolve, newSubjectInstructions);
@@ -61,7 +61,6 @@
                 swap: "delete",
                 values: {
                     "id": dataset.id,
-                    "curriculum-id": dataset.curriculum,
                     "subject-exists": subjectProblemRows.length > 0,
                     "subtype-exists": subtypeProblemRows.length > 0,
                     "insert-after-id": insertAfterId,
@@ -100,7 +99,7 @@
                 initSortableForSections();
                 updateSubjectArrowStates();
 
-                if (newSubjectInstructions && typeof applySubjectInstructions === "function") {
+                if (Object.keys(newSubjectInstructions).length > 0 && typeof applySubjectInstructions === "function") {
                     applySubjectInstructions(newSubjectInstructions);
                 }
             }

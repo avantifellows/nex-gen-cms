@@ -121,7 +121,7 @@
                         <!-- Rows will be dynamically inserted here -->
                     </tbody>
                 </table>
-                <div id="question-bank-loader" class="hidden flex justify-center py-4">
+                <div id="question-bank-loader" class="justify-center py-4">
                     <div class="w-6 h-6 border-4 border-border border-t-accent rounded-full animate-spin"></div>
                 </div>                
             </div>
@@ -147,7 +147,7 @@
                             </button>
 
                             <!-- loader -->
-                            <div id="search-btn-loader" class="hidden absolute inset-0 flex items-center justify-center">
+                            <div id="search-btn-loader" class="absolute inset-0 items-center justify-center">
                                 <div class="w-6 h-6 border-4 border-border border-t-accent rounded-full animate-spin"></div>
                             </div>
                         </div>
@@ -158,7 +158,7 @@
                          class="hidden absolute left-0 mt-1 border rounded-sm bg-bg-card shadow-sm z-10 w-full">
                     </div>
                 </div>         
-                <div id="searched-test-loader" class="hidden flex justify-center py-4">
+                <div id="searched-test-loader" class="justify-center py-4">
                     <div class="w-6 h-6 border-4 border-border border-t-accent rounded-full animate-spin"></div>
                 </div>                                   
                 <div id="searched-test-results" class="mt-4">
@@ -190,14 +190,6 @@
             hx-on::before-request='if (event.target === this) createTest(event, {{$id}}, {{$subtype}}, {{$curriculumGrades}}, {{index .TestPtr.ExamIDs 0}})'
         {{ end }}>
 
-        {{ $defaultInstructions := "" }}
-        {{ if and .TestRule .TestRule.Config.Instructions }}
-            {{ $defaultInstructions = printf "%s" .TestRule.Config.Instructions }}
-        {{ end }}
-        {{ $existingInstructions := "" }}
-        {{ if .TestPtr.TypeParams.Instructions }}
-            {{ $existingInstructions = printf "%s" .TestPtr.TypeParams.Instructions }}
-        {{ end }}
         <div class="flex items-center justify-between">
             <label class="font-semibold">Select Test Code</label>
             <button type="button" id="test-instructions-link"
@@ -262,10 +254,10 @@
                 {{end}}
             </select>
         </div>
-        <input type="hidden" id="test-instructions"
-            value='{{ if $existingInstructions }}{{ $existingInstructions }}{{ else }}{{ $defaultInstructions }}{{ end }}'>
-        <input type="hidden" id="test-instructions-default-from-rule"
-            value='{{ $defaultInstructions }}'>
+        <input type="hidden" id="test-instructions-current-store"
+            value='{{ currentInstructionsMap .TestPtr .TestRule | toJson }}'>
+        <input type="hidden" id="test-instructions-default-store"
+            value='{{ defaultInstructionsMap .TestRule | toJson }}'>
         {{ template "test_instructions_modal" }}
 
         <div class="flex items-center gap-2">
@@ -473,8 +465,9 @@
                     if (firstSubjectRow) {
                         const subjectId = parseInt(firstSubjectRow.id.replace("subject-", ""), 10);
                         const subjectRule = testRule.config.subjects.find(s => s.subject_id === subjectId);
-                        if (subjectRule?.instructions) {
-                            applySubjectInstructions(subjectRule.instructions);
+                        const subjectInstructionsMap = buildInstructionsLangMap(subjectRule);
+                        if (Object.keys(subjectInstructionsMap).length > 0) {
+                            applySubjectInstructions(subjectInstructionsMap);
                         }
                     }
                 }
@@ -954,8 +947,9 @@
                 }
 
             }).then(readResponseOrThrow).then(() => {
-                  // go back to remove add/edit test screen
-                  goBackAfterDelay(0);
+                  // go back to remove add/edit test screen; shows a toast only if there's
+                  // no previous screen to go back to (e.g. edit-test opened in a new tab)
+                  goBackAfterDelay(0, mode === "edit" ? "Test updated successfully" : undefined);
                   if (mode === "new") {
                       // remove add test dialog
                       goBackAfterDelay(0);
@@ -1073,7 +1067,8 @@
         }
         // Only persist instructions when they differ from the test-rule default (omit to let the rule apply; avoids redundant storage).
         if (shouldIncludeTestInstructionsInPayload()) {
-            typeParams.instructions = getCurrentInstructions();
+            typeParams.instruction_lang_versions = Object.entries(getCurrentInstructionsMap())
+                .map(([lang_code, instructions]) => ({ lang_code, instructions }));
         }
 
         return {
@@ -1094,21 +1089,38 @@
         };
     }
 
-    function applySubjectInstructions(instructionsHtml) {
-        const currentInstructions = getCurrentInstructions().trim();
-        const defaultFromRule = (document.getElementById('test-instructions-default-from-rule')?.value || "").trim();
+    // Builds a {lang_code: instructions} map from a test-rule object that carries the legacy
+    // "instructions" field and/or the "instruction_lang_versions" array (works for both the
+    // rule-level config and a single subject rule).
+    function buildInstructionsLangMap(obj) {
+        const map = {};
+        if (obj?.instructions) {
+            map['en'] = obj.instructions;
+        }
+        obj?.instruction_lang_versions?.forEach(v => {
+            if (v?.lang_code) {
+                map[v.lang_code] = v.instructions || '';
+            }
+        });
+        return map;
+    }
 
-        // Only update if the user hasn't manually overridden the instructions
-        if (currentInstructions === defaultFromRule) {
-            document.getElementById('test-instructions').value = instructionsHtml;
-            document.getElementById('test-instructions-default-from-rule').value = instructionsHtml;
+    function sortedMapJson(map) {
+        const sorted = {};
+        Object.keys(map).sort().forEach(k => { sorted[k] = map[k]; });
+        return JSON.stringify(sorted);
+    }
+
+    function applySubjectInstructions(instructionsMap) {
+        // Only update if the user hasn't manually overridden the instructions in any language
+        if (sortedMapJson(getCurrentInstructionsMap()) === sortedMapJson(getDefaultInstructionsMap())) {
+            setCurrentInstructionsMap(instructionsMap);
+            setDefaultInstructionsMap(instructionsMap);
         }
     }
 
     function shouldIncludeTestInstructionsInPayload() {
-        const current = (getCurrentInstructions() || "").trim();
-        const defaultFromRule = (document.getElementById('test-instructions-default-from-rule')?.value || "").trim();
-        return current !== defaultFromRule;
+        return sortedMapJson(getCurrentInstructionsMap()) !== sortedMapJson(getDefaultInstructionsMap());
     }
 
     function buildAllSubjectsJson() {

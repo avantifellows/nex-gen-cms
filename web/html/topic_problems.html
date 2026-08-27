@@ -50,7 +50,7 @@
             </tbody>
         </table>
     </div>
-    <div id="topic-problems-loader" class="flex justify-center py-4">
+    <div id="topic-problems-loader" class="justify-center py-4">
         <div class="w-6 h-6 border-4 border-border border-t-accent rounded-full animate-spin"></div>
     </div>
 </div>
@@ -68,6 +68,7 @@
         const subject = document.getElementById('subject-dropdown').value;
         if (!curriculum || !subject) return false;
         htmx.ajax('GET', `/api/topic/problems?topic-dropdown=${topicId}&curriculum-dropdown=${curriculum}&subject-dropdown=${subject}`, {
+            source: '#problemTableBody',
             target: '#problemTableBody',
             swap: 'innerHTML',
         });
