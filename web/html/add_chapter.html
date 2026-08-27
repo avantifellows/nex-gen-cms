@@ -5,11 +5,11 @@
     hx-on::after-request="if(event.detail.successful) this.reset()">
     <div>
         <label class="form-label" for="add-chapter-code">Code</label>
-        <input id="add-chapter-code" type="text" name="code" placeholder="e.g. MTH-11-JEE-17" class="form-input w-48 font-mono">
+        <input id="add-chapter-code" type="text" name="code" placeholder="e.g. MTH-11-JEE-17" class="form-input w-48 font-mono" required>
     </div>
     <div class="flex-1 min-w-[240px]">
         <label class="form-label" for="add-chapter-name">Name</label>
-        <input id="add-chapter-name" type="text" name="name" placeholder="Chapter name" class="form-input">
+        <input id="add-chapter-name" type="text" name="name" placeholder="Chapter name" class="form-input" required>
     </div>
     <div>
         <label class="form-label" for="add-chapter-priority">Priority</label>

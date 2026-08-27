@@ -127,8 +127,10 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 		return
 	}
 
-	chapterName := request.FormValue("name")
-	chapterCode := request.FormValue("code")
+	chapterCode, chapterName, ok := parseCodeAndName(responseWriter, request, "Chapter")
+	if !ok {
+		return
+	}
 	priorityText := request.FormValue("priority_text")
 	curriculumID, err := utils.StringToIntType[int16](request.FormValue(QUERY_PARAM_CURRICULUM_ID))
 	if err != nil {
@@ -152,8 +154,10 @@ func (h *ChaptersHandler) UpdateChapter(responseWriter http.ResponseWriter, requ
 }
 
 func (h *ChaptersHandler) AddChapter(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterCode := request.FormValue("code")
-	chapterName := request.FormValue("name")
+	chapterCode, chapterName, ok := parseCodeAndName(responseWriter, request, "Chapter")
+	if !ok {
+		return
+	}
 	curriculumIdStr := request.FormValue(CURRICULUM_DROPDOWN_NAME)
 	curriculumId, err := utils.StringToIntType[int16](curriculumIdStr)
 	if err != nil {
