@@ -9,17 +9,19 @@ type TestRule struct {
 }
 
 type Config struct {
-	Subjects      []SubjectRule `json:"subjects"`
-	Duration      int16         `json:"duration"`
-	MarkingScheme MarkingScheme `json:"marking_scheme"`
-	Instructions  template.HTML `json:"instructions"`
-	SingleSubject bool          `json:"single_subject,omitempty"`
+	Subjects                []SubjectRule            `json:"subjects"`
+	Duration                int16                    `json:"duration"`
+	MarkingScheme           MarkingScheme            `json:"marking_scheme"`
+	Instructions            template.HTML            `json:"instructions"`
+	InstructionLangVersions []InstructionLangVersion `json:"instruction_lang_versions,omitempty"`
+	SingleSubject           bool                     `json:"single_subject,omitempty"`
 }
 
 type SubjectRule struct {
-	SubjectID    int8          `json:"subject_id"`
-	Rules        RuleDetails   `json:"rules"`
-	Instructions template.HTML `json:"instructions,omitempty"`
+	SubjectID               int8                     `json:"subject_id"`
+	Rules                   RuleDetails              `json:"rules"`
+	Instructions            template.HTML            `json:"instructions,omitempty"`
+	InstructionLangVersions []InstructionLangVersion `json:"instruction_lang_versions,omitempty"`
 }
 
 type RuleDetails struct {

@@ -70,8 +70,6 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		chapterPtr.CurriculumID = curriculumId
 	}
 
-	h.getTopics(responseWriter, *chapters)
-
 	sortColumn := urlVals.Get("sortColumn")
 	sortOrder := urlVals.Get("sortOrder")
 	sortChapters(*chapters, sortColumn, sortOrder)
@@ -90,39 +88,6 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 
 func getChapterName(ch models.Chapter, lang string) string {
 	return ch.GetNameByLang(lang)
-}
-
-func (h *ChaptersHandler) getTopics(responseWriter http.ResponseWriter, chapterPtrs []*models.Chapter) {
-	topics, err := h.topicsService.GetList(handlerutils.TopicsEndPoint+"?limit=5000", handlerutils.TopicsKey, false, false)
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
-	} else {
-		*topics = funk.Filter(*topics, func(t *models.Topic) bool {
-			return t.StatusID != constants.StatusArchived
-		}).([]*models.Topic)
-
-		associateTopicsWithChapters(chapterPtrs, *topics)
-	}
-}
-
-func associateTopicsWithChapters(chapterPtrs []*models.Chapter, topicPtrs []*models.Topic) {
-	// Create a map to quickly lookup chapters by their ID
-	chapterPtrsMap := make(map[int16]*models.Chapter)
-
-	// Fill the map with the address of each chapter
-	for _, chapterPtr := range chapterPtrs {
-		chapterPtrsMap[chapterPtr.ID] = chapterPtr
-		// clear topics data, because it will be refilled in next step based on latest data
-		chapterPtr.Topics = chapterPtr.Topics[:0]
-	}
-
-	// Loop through each topic and assign it to the corresponding chapter
-	for _, topicPtr := range topicPtrs {
-		if chapterPtr, exists := chapterPtrsMap[topicPtr.ChapterID]; exists &&
-			topicPtr.HasCurriculumID(chapterPtr.CurriculumID) {
-			chapterPtr.Topics = append(chapterPtr.Topics, topicPtr)
-		}
-	}
 }
 
 func (h *ChaptersHandler) EditChapter(responseWriter http.ResponseWriter, request *http.Request) {
@@ -246,7 +211,7 @@ func sortChapters(chapterPtrs []*models.Chapter, sortColumn string, sortOrder st
 		case "2":
 			sortResult = strings.Compare(c1.GetNameByLang("en"), c2.GetNameByLang("en"))
 		case "3":
-			sortResult = int(c1.TopicCount() - c2.TopicCount())
+			sortResult = c1.TopicCount - c2.TopicCount
 		default:
 			sortResult = 0
 		}
@@ -361,7 +326,16 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	if curriculumId != 0 {
 		localChapter.CurriculumID = curriculumId
 	}
-	h.getTopics(responseWriter, []*models.Chapter{&localChapter})
+
+	queryParams := fmt.Sprintf("?chapter_id=%d", localChapter.ID)
+	topics, err := h.topicsService.GetList(handlerutils.TopicsEndPoint+queryParams, handlerutils.TopicsKey, false, true)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching topics: %v", err), http.StatusInternalServerError)
+		return
+	}
+	localChapter.Topics = funk.Filter(*topics, func(t *models.Topic) bool {
+		return t.StatusID != constants.StatusArchived && t.HasCurriculumID(localChapter.CurriculumID)
+	}).([]*models.Topic)
 
 	sortColumn := urlVals.Get("sortColumn")
 	sortOrder := urlVals.Get("sortOrder")

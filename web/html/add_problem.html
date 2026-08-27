@@ -319,12 +319,7 @@
         initProblemTagsSection(mainTagsRoot);
 
         // --- Language tabs ---
-        const SUPPORTED_LANGUAGES = [
-            { code: 'en', label: 'English' },
-            { code: 'hi', label: 'Hindi' },
-            { code: 'gu', label: 'Gujarati' },
-            { code: 'ta', label: 'Tamil' },
-        ];
+        const SUPPORTED_LANGUAGES = window.SUPPORTED_LANGUAGES;
         let activeLang = 'en';
         const enabledLangs = new Set(['en'
             {{ if $prefill }}
@@ -987,10 +982,9 @@
                 
                 } else {
                     if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {
-                        const curriculumId = document.getElementById("curriculum-dropdown").value;
                         sessionStorage.setItem(
                             REFRESH_PROBLEM_URL_KEY,
-                            `/problem?id=${problemId}&curriculum_id=${curriculumId}`
+                            `/problem?id=${problemId}`
                         );
                         sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
                     }
@@ -1318,34 +1312,7 @@
             });
         }
 
-        // editor.js may still be loading when this inline script runs (common on HTMX body swap)
-        function bootRichTextEditors() {
-            const form = document.querySelector('form.card');
-            if (!form?.querySelector('.container')) return false;
-            if (!window.initializeRichTextEditors) return false;
-            window.initializeRichTextEditors(form);
-            return true;
-        }
-
-        function scheduleEditorBoot() {
-            const boot = () => {
-                if (bootRichTextEditors()) return;
-                const editorScript = document.querySelector('script[src*="editor.js"]');
-                if (editorScript) {
-                    const run = () => { bootRichTextEditors(); };
-                    if (window.initializeRichTextEditors) {
-                        run();
-                    } else {
-                        editorScript.addEventListener('load', run, { once: true });
-                    }
-                } else {
-                    requestAnimationFrame(scheduleEditorBoot);
-                }
-            };
-
-            boot();
-        }
-        scheduleEditorBoot();
+        scheduleEditorBoot(document.querySelector('form.card'));
     })();
 </script>
 {{ end }}
