@@ -472,6 +472,13 @@
   @apply border-b border-border/40 hover:bg-bg-hover transition-colors;
 }
 
+/* Editor-inserted question tables (see editor.js's insertTableBtn handler) — scoped to
+   .border-black so it doesn't affect other tables in the app. */
+td.border-black,
+th.border-black {
+  @apply px-1 py-1;
+}
+
 @utility badge {
   @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide;
 }
