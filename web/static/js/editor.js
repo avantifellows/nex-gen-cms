@@ -397,8 +397,7 @@ window.initializeRichTextEditors = function (root = document) {
             const tr = document.createElement("tr");
             for (let j = 0; j < selectedCols; j++) {
                 const td = document.createElement("td");
-                td.textContent = " ";
-                td.className = "border border-black w-16 h-8 text-center";
+                td.className = "border border-black w-16 h-8";
                 tr.appendChild(td);
             }
             table.appendChild(tr);
@@ -409,6 +408,19 @@ window.initializeRichTextEditors = function (root = document) {
         const range = selection.getRangeAt(0);
         range.deleteContents();
         range.insertNode(table);
+
+        // insertNode leaves the range spanning the whole table instead of collapsed,
+        // which shows every cell as selected and skews the caret on the next click.
+        const firstCell = table.querySelector("td");
+        const caretRange = document.createRange();
+        if (firstCell) {
+            caretRange.setStart(firstCell, 0);
+        } else {
+            caretRange.setStartAfter(table);
+        }
+        caretRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(caretRange);
 
         gridPopup.classList.add("hidden");
     });
@@ -642,3 +654,7 @@ window.initializeRichTextEditors = function (root = document) {
     }
     });
 };
+
+// Process any scheduleEditorBoot() calls that came in while this script was still loading.
+// See window.scheduleEditorBoot in home.html for why the queue itself has to live there.
+window.flushEditorBootQueue?.();

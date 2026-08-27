@@ -11,5 +11,11 @@
         <label class="form-label" for="add-chapter-name">Name</label>
         <input id="add-chapter-name" type="text" name="name" placeholder="Chapter name" class="form-input" required>
     </div>
+    <div>
+        <label class="form-label" for="add-chapter-priority">Priority</label>
+        <select id="add-chapter-priority" name="priority_text" class="form-select">
+            {{ template "chapter_priority_options" "" }}
+        </select>
+    </div>
     <button type="submit" class="btn-primary">Create Chapter</button>
 </form>

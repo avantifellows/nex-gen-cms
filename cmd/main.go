@@ -96,7 +96,6 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/dev-login", loginHandler.DevLogin)
 
 	muxHandler.HandleFunc("/home", handlers.GenericHandler)
-	muxHandler.HandleFunc("/add-chapter", admin(handlers.GenericHandler))
 
 	// Admin user management
 	adminUsers := appComponentPtr.AdminUsersHandler
@@ -113,6 +112,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/api/skills", appComponentPtr.SkillsHandler.GetSkills)
 
 	muxHandler.HandleFunc("/api/chapters", chaptersHandler.GetChapters)
+	muxHandler.HandleFunc("/add-chapter", admin(chaptersHandler.OpenAddChapter))
 	muxHandler.Handle("/edit-chapter", middleware.RequireHTMX(middleware.RequireRole(auth.RoleAdmin, http.HandlerFunc(chaptersHandler.EditChapter))))
 	muxHandler.HandleFunc("/update-chapter", admin(chaptersHandler.UpdateChapter))
 	muxHandler.HandleFunc("/create-chapter", admin(chaptersHandler.AddChapter))

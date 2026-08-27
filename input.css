@@ -195,24 +195,24 @@
   /* Image — show pointer to hint it's clickable */
   .editor img { cursor: pointer; }
 
-  /* Floated image: text beside, then full width below image (clearfix on paragraph) */
-  .editor p.editor-img-float,
-  .output p.editor-img-float {
+  /*
+   * Floated image: text beside, then full width below image (clearfix on paragraph).
+   * Not scoped to .editor/.output - this stored HTML also renders on read-only
+   * screens (e.g. the single problem view) that don't wrap content in either class.
+   */
+  p.editor-img-float {
     margin: 0.5em 0;
     overflow: visible;
   }
-  .editor p.editor-img-float::after,
-  .output p.editor-img-float::after {
+  p.editor-img-float::after {
     content: '';
     display: table;
     clear: both;
   }
-  .editor p.editor-img-justify,
-  .output p.editor-img-justify {
+  p.editor-img-justify {
     margin: 0.5em 0;
   }
-  .editor p.editor-img-justify > img,
-  .output p.editor-img-justify > img {
+  p.editor-img-justify > img {
     display: block;
     width: 100%;
     max-width: 100%;
@@ -472,6 +472,13 @@
   @apply border-b border-border/40 hover:bg-bg-hover transition-colors;
 }
 
+/* Editor-inserted question tables (see editor.js's insertTableBtn handler) — scoped to
+   .border-black so it doesn't affect other tables in the app. */
+td.border-black,
+th.border-black {
+  @apply px-1 py-1;
+}
+
 @utility badge {
   @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide;
 }
@@ -500,4 +507,30 @@ mjx-container[jax="CHTML"] mjx-math {
 
 mjx-container[jax="CHTML"] mjx-math:has(mjx-mtable) {
   white-space: nowrap !important;
+}
+
+/* -----------------------------------------------------------------------------
+ * Option row overrides (PDF + the single-problem view) — unlayered so they
+ * beat the items-baseline utility (Tailwind's utilities layer always wins
+ * over @layer components, regardless of selector specificity).
+ * --------------------------------------------------------------------------- */
+
+/*
+ * The option row uses items-baseline so multi-line/equation option text
+ * aligns its first line with the label - correct for text, since that's a
+ * genuine text baseline. A default (non-inline) option image is wrapped in
+ * a floated editor-img-float paragraph with no inline content, so it has
+ * no real baseline either - flexbox synthesizes one from the image's
+ * bottom edge, making the label look bottom-aligned. Fix: render default
+ * option images exactly like an explicitly "inline with text" image (same
+ * properties applyInlineImage() sets in editor-image.js): un-float it so
+ * the paragraph has a genuine inline baseline, positioned identically to
+ * the manual case. Scoped to .option-row so the question image above (which
+ * does rely on floating, with text wrapping beside it) is untouched.
+ */
+.option-row p.editor-img-float img {
+  float: none !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 0 !important;
 }

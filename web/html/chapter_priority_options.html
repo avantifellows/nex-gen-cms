@@ -1,0 +1,6 @@
+{{ define "chapter_priority_options" }}
+<option value="" {{if eq . ""}}selected{{end}}>No Priority</option>
+<option value="low" {{if eq . "low"}}selected{{end}}>Low</option>
+<option value="medium" {{if eq . "medium"}}selected{{end}}>Medium</option>
+<option value="high" {{if eq . "high"}}selected{{end}}>High</option>
+{{ end }}
