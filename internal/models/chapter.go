@@ -46,13 +46,13 @@ type ChapterLang struct {
 	LangCode    string `json:"lang_code"`
 }
 
-func NewChapter(code string, name string, curriculumID int16, grade_id int8, subject_id int8, priorityText string) *Chapter {
+func NewChapter(code string, name string, curriculumID int16, gradeID int8, subjectID int8, priorityText string) *Chapter {
 	return &Chapter{
 		Code:         code,
 		Name:         []ChapterLang{{ChapterName: name, LangCode: "en"}},
 		CurriculumID: curriculumID,
-		GradeID:      grade_id,
-		SubjectID:    subject_id,
+		GradeID:      gradeID,
+		SubjectID:    subjectID,
 		Priority:     PriorityFromText(priorityText),
 		PriorityText: priorityText,
 	}
