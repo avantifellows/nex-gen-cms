@@ -57,6 +57,19 @@ func renderEntityList[T any](responseWriter http.ResponseWriter, service *servic
 	views.ExecuteTemplate(tmpl, responseWriter, items, nil)
 }
 
+// parseCodeAndName trims the "code" and "name" form values and writes a 400
+// error if either is blank. ok is false when validation failed, in which case
+// the caller should return without proceeding.
+func parseCodeAndName(responseWriter http.ResponseWriter, request *http.Request, entityLabel string) (code, name string, ok bool) {
+	code = strings.TrimSpace(request.FormValue("code"))
+	name = strings.TrimSpace(request.FormValue("name"))
+	if code == "" || name == "" {
+		http.Error(responseWriter, fmt.Sprintf("%s code and name cannot be blank", entityLabel), http.StatusBadRequest)
+		return code, name, false
+	}
+	return code, name, true
+}
+
 func getCurriculumGradeSubjectIds(urlValues url.Values) (int16, int8, int8) {
 	// these query parameters can be queried by element names only, not ids
 	curriculumId, _ := utils.StringToIntType[int16](urlValues.Get(CURRICULUM_DROPDOWN_NAME))

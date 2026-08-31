@@ -59,12 +59,12 @@
         }
 
         function initLangEditor(langCode) {
-            if (initializedLangs.has(langCode) || !window.initializeRichTextEditors) {
+            if (initializedLangs.has(langCode)) {
                 return;
             }
             const container = wrapper.querySelector(`.lang-content[data-lang="${langCode}"]`);
             if (container) {
-                window.initializeRichTextEditors(container);
+                scheduleEditorBoot(container);
                 initializedLangs.add(langCode);
             }
         }

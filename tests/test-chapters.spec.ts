@@ -18,7 +18,7 @@ test('verify that all table headers, add new chapter link are available and form
         'MOD',
         'CV',
         'CT',
-        'Status',
+        'Priority',
         'Actions'
     ];
 

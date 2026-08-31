@@ -1,15 +1,15 @@
 {{ define "src_problem_row" }}
 {{ range . }}
 <tr class="border-b">
-    <td class="p-2 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/problem?id={{.ID}}"
-        hx-get="/problem?id={{.ID}}" hx-target="body" hx-push-url="true">{{.Code}}
-    </a></td>
-    <td class="p-2">{{(.GetLangVersion "en").MetaData.Question}}</td>
-    <td class="p-2 text-center"><button class="px-2 bg-success text-white rounded-sm" data-id="{{.ID}}"
+    <td class="px-2! py-2 text-center"><button class="px-2 bg-success text-white rounded-sm" data-id="{{.ID}}"
             data-subject="{{.Subject.ID}}" data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
             data-subject-parent="{{if .Subject.ParentID}}{{.Subject.ParentID}}{{end}}"
             hx-on:click="addQuestionToTest(this)">+</button>
     </td>
+    <td class="px-2! py-2 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/problem?id={{.ID}}"
+        hx-get="/problem?id={{.ID}}" hx-target="body" hx-push-url="true">{{.Code}}
+    </a></td>
+    <td class="px-2! py-2">{{(.GetLangVersion "en").MetaData.Question}}</td>
 </tr>
 
 <script>
@@ -95,6 +95,23 @@
                 const newlyInsertedRow = updateSerialNumbers(insertAfterId, tableBody);
                 inheritMarkingScheme(tableBody, newlyInsertedRow);
                 updateTotalMarks();
+
+                // Typeset only the newly inserted row (it's the one marked [data-mathjax-manual]
+                // in add_test.html, so the global mathJaxLoader extension skips it) - re-typesetting
+                // the whole, ever-growing questions table on every single addition is what caused
+                // the slowdown/forced-reflow warnings when adding many problems one by one.
+                //
+                // Deferred a frame: MathJax's own font-metric measurement for the new equation
+                // needs a layout read, which - run synchronously here, right after the DOM writes
+                // above - is exactly what triggers a *forced* reflow console warning, e.g.
+                // "[Violation] Forced reflow while executing JavaScript took 35ms". Running it on
+                // the next frame lets the browser fold that layout work into its normal render
+                // pass instead.
+                if (window.MathJax) {
+                    requestAnimationFrame(() => {
+                        MathJax.typesetPromise([newlyInsertedRow]).catch(console.error);
+                    });
+                }
 
                 initSortableForSections();
                 updateSubjectArrowStates();

@@ -107,10 +107,10 @@
 
                 <table class="app-table mt-3 border border-border rounded-lg overflow-hidden">
                     <thead>
-                        <tr>
-                            <th>Code</th>
-                            <th>Question</th>
-                            <th>Action</th>
+                        <tr class="bg-bg-card-alt">
+                            <th class="px-2!">Action</th>
+                            <th class="px-2!">Code</th>
+                            <th class="px-2!">Question</th>
                         </tr>
                     </thead>
                     <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems?include_paragraph_siblings=true"
@@ -355,7 +355,7 @@
                     <th class="p-2 text-center">Action</th>
                 </tr>
             </thead>
-            <tbody id="questions-table-body" name="questions-table-body">
+            <tbody id="questions-table-body" name="questions-table-body" data-mathjax-manual="true">
                 <!-- if this is for edit/copy test -->
                 {{if .Problems}}
                     {{ $sr := 0 }}

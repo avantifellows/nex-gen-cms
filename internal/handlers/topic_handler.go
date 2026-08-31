@@ -53,8 +53,10 @@ func (h *TopicsHandler) OpenAddTopic(responseWriter http.ResponseWriter, request
 }
 
 func (h *TopicsHandler) AddTopic(responseWriter http.ResponseWriter, request *http.Request) {
-	topicCode := request.FormValue("code")
-	topicName := request.FormValue("name")
+	topicCode, topicName, ok := parseCodeAndName(responseWriter, request, "Topic")
+	if !ok {
+		return
+	}
 	chapterIdStr := request.FormValue("chapter_id")
 	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
 	if err != nil {
@@ -133,8 +135,10 @@ func (h *TopicsHandler) UpdateTopic(responseWriter http.ResponseWriter, request 
 		return
 	}
 
-	topicName := request.FormValue("name")
-	topicCode := request.FormValue("code")
+	topicCode, topicName, ok := parseCodeAndName(responseWriter, request, "Topic")
+	if !ok {
+		return
+	}
 
 	dummyTopicPtr := &models.Topic{}
 	topicMap := dummyTopicPtr.BuildMap(topicCode, topicName)
