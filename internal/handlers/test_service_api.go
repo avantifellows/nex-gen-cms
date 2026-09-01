@@ -32,7 +32,7 @@ func (h *TestsHandler) GetTestsJSON(responseWriter http.ResponseWriter, request 
 		return
 	}
 
-	tests, err := h.listTests(curriculumId, gradeId, urlVals.Get(TESTTYPE_DROPDOWN_NAME),
+	tests, err := h.listTests(curriculumId, gradeId, urlVals.Get(TESTTYPE_DROPDOWN_NAME), 0,
 		urlVals.Get("sortColumn"), urlVals.Get("sortOrder"))
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)

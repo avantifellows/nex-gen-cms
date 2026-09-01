@@ -1,6 +1,6 @@
 <table class="app-table" hx-ext="table-sort,tests-loader" data-sort-scope="tests">
     <!-- common hx-target and hx-include for all th tags -->
-    <thead hx-target="#test-table-body" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown">
+    <thead hx-target="#test-table-body" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown, #tests-subject-dropdown">
         <tr>
             <th>
                 <a href="#" class="hover:text-accent" hx-get="/api/tests?col=1">
@@ -36,7 +36,7 @@
         </tr>
     </thead>
     <tbody id="test-table-body" hx-get="/api/tests" hx-trigger="load"
-        hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown">
+        hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown, #tests-subject-dropdown">
         <!-- Rows will be dynamically inserted here -->
     </tbody>
 </table>

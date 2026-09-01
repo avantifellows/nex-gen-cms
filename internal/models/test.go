@@ -167,6 +167,18 @@ func (t *Test) DisplaySubtype() string {
 	}
 }
 
+// ChapterTestSubjectID returns the subject a chapter_test's problems belong to, derived from
+// TypeParams.Subjects rather than stored separately - a chapter_test's problems all come from
+// one chapter, and a chapter belongs to exactly one subject, so a well-formed chapter_test
+// should carry exactly one entry. Returns nil before any problems are added (Subjects is empty)
+// or if that single-subject invariant is ever violated, rather than guessing which one applies.
+func (t *Test) ChapterTestSubjectID() *int8 {
+	if len(t.TypeParams.Subjects) != 1 {
+		return nil
+	}
+	return &t.TypeParams.Subjects[0].SubjectID
+}
+
 func (t *Test) RecalculateTotalMarksFromSubjects() {
 	var total int16
 
