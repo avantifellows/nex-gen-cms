@@ -9,17 +9,19 @@
             coming back from single test to tests list screen -->
             <select id="testtype-dropdown" name="testtype-dropdown" hx-ext="tests-view-loader"
                 class="form-select-compact w-auto" hx-get="/tests?mode=filter"
-                hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown, #tests-subject-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown, #tests-subject-dropdown)"
-                hx-target="#test-table-wrapper" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown, #tests-subject-dropdown"
+                hx-trigger="change, change from:(#curriculum-dropdown, #grade-dropdown), onLoaded from:(#curriculum-dropdown, #grade-dropdown)"
+                hx-target="#test-table-wrapper" hx-include="#curriculum-dropdown, #grade-dropdown, #testtype-dropdown"
                 onchange="sessionStorage.setItem('selectedTesttype', this.value); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false'); toggleTestsSubjectDropdown(this.value);">
                 {{ template "test_type_options" }}
             </select>
 
-            <!-- Subject filter: only meaningful for Chapter Test, hidden otherwise -->
+            <!-- Subject filter: only meaningful for Chapter Test, hidden otherwise. Filters rows
+            client-side (see filterTestRowsBySubject below) rather than the server - it's never
+            included in any /tests or /api/tests request. -->
             <select id="tests-subject-dropdown" name="subject-dropdown" class="form-select-compact w-auto hidden"
                 hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend"
                 hx-on::after-request="afterSubjectDropdownReq(this)"
-                onchange="sessionStorage.setItem('selectedTestSubject', this.value); sessionStorage.setItem(window.TESTS_VIEW_LOADED_KEY, 'false');">
+                onchange="sessionStorage.setItem('selectedTestSubject', this.value); filterTestRowsBySubject(this.value);">
                 <option value="">All Subjects</option>
             </select>
 
@@ -85,17 +87,9 @@
                             } else {
                                 const storedCurriculum = sessionStorage.getItem("selectedCurriculum");
                                 const storedGrade = sessionStorage.getItem("selectedGrade");
-                                const storedTestSubject = sessionStorage.getItem("selectedTestSubject");
-                                const subjectDropdown = document.getElementById("tests-subject-dropdown");
-
-                                // if this is a chapter test and a subject was previously selected, wait for the
-                                // subject dropdown to catch up before proceeding - same reasoning as curriculum/grade below
-                                const subjectNotYetRestored = params["testtype-dropdown"] === "chapter_test" &&
-                                    storedTestSubject && subjectDropdown && subjectDropdown.value !== storedTestSubject;
 
                                 if ((storedCurriculum && storedCurriculum !== curriculum) ||
-                                    (storedGrade && storedGrade !== grade) ||
-                                    subjectNotYetRestored) {
+                                    (storedGrade && storedGrade !== grade)) {
                                     // at least 1 dropdown value is 1 (1st item value) and its correct value is yet to be retained from sessionStorage
                                     console.log("Skipping /tests request because dropdowns values are not yet retained.");
                                     event.preventDefault();
@@ -161,17 +155,16 @@
                 // htmx's history cache restores DOM structure (so #tests-subject-dropdown may
                 // already have its real <option>s from before) but not <select> selectedness,
                 // since picking an option only mutates the live .value, never the underlying
-                // HTML. Apply the stored subject directly, before firing the change trigger
-                // below, when its option is already present; if not (fresh server render, only
-                // the default option exists yet), afterSubjectDropdownReq() applies it once
-                // /api/subjects loads for real, and the beforeRequest guard defers the request
-                // on this page until then.
+                // HTML. Apply the stored subject directly when its option is already present; if
+                // not (fresh server render, only the default option exists yet),
+                // afterSubjectDropdownReq() applies it once /api/subjects loads for real.
                 const subjectDropdown = document.getElementById('tests-subject-dropdown');
                 const storedTestSubject = sessionStorage.getItem('selectedTestSubject');
                 if (subjectDropdown && storedTestSubject &&
                     subjectDropdown.querySelector(`option[value="${storedTestSubject}"]`)) {
                     subjectDropdown.value = storedTestSubject;
                 }
+                filterTestRowsBySubject(subjectDropdown ? subjectDropdown.value : '');
 
                 // Trigger native change event so HTMX picks it up
                 if (!searchRestored) {
@@ -180,29 +173,42 @@
             }
         }
 
-        // Shows the subject filter only for Chapter Test, since subject filtering (via
-        // Test.ChapterTestSubjectID on the backend) is only meaningful for that test type.
-        // Exposed on window since it's called from inline onchange/restoreState, both of which
-        // resolve names against the global scope, not this IIFE's closure.
+        // Shows the subject filter only for Chapter Test, since subject filtering is only
+        // meaningful for that test type. Exposed on window since it's called from inline
+        // onchange/restoreState, both of which resolve names against the global scope, not this
+        // IIFE's closure.
         window.toggleTestsSubjectDropdown = function (testtype) {
             const subjectDropdown = document.getElementById('tests-subject-dropdown');
             if (!subjectDropdown) return;
             subjectDropdown.classList.toggle('hidden', testtype !== 'chapter_test');
         };
 
+        // Shows/hides #test-table-body rows by their data-subject-id (set from
+        // Test.ChapterTestSubjectID in test_row.html) - the subject filter never triggers a
+        // server request, so this is the only place selecting a subject takes effect. Called on
+        // subject change, on restore, and after every /api/tests row swap (tests_filter_view.html's
+        // tests-loader extension, for initial load and sort clicks). Exposed on window for the
+        // same cross-scope reason as toggleTestsSubjectDropdown above.
+        window.filterTestRowsBySubject = function (subjectId) {
+            const tbody = document.getElementById('test-table-body');
+            if (!tbody) return;
+            tbody.querySelectorAll(':scope > tr').forEach(function (row) {
+                const matches = !subjectId || row.dataset.subjectId === subjectId;
+                row.classList.toggle('hidden', !matches);
+            });
+        };
+
         // hx-on::after-request handler for #tests-subject-dropdown: restores the last-selected
-        // subject once its real options have loaded, then fires 'onLoaded' so the testtype
-        // dropdown's request (deferred by the subjectNotYetRestored check above) can proceed -
-        // same pattern as home.html's afterDropdownReq for curriculum/grade/subject. Exposed on
-        // window since hx-on:: attributes resolve names against the global scope.
+        // subject once its real options have loaded (same idea as home.html's afterDropdownReq
+        // for curriculum/grade/subject), then re-applies the row filter in case rows already
+        // loaded first. Exposed on window since hx-on:: attributes resolve names against the
+        // global scope.
         window.afterSubjectDropdownReq = function (dropdown) {
             const storedSubject = sessionStorage.getItem('selectedTestSubject');
             if (storedSubject) {
                 dropdown.value = storedSubject;
             }
-            setTimeout(function () {
-                htmx.trigger('#' + dropdown.id, 'onLoaded');
-            }, 100);
+            filterTestRowsBySubject(dropdown.value);
         };
 
         htmx.defineExtension('search-store', {

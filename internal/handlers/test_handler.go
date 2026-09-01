@@ -117,12 +117,12 @@ func (h *TestsHandler) LoadTests(responseWriter http.ResponseWriter, request *ht
 func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
 
-	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlVals)
+	curriculumId, gradeId, _ := getCurriculumGradeSubjectIds(urlVals)
 	if curriculumId == 0 || gradeId == 0 {
 		return
 	}
 
-	tests, err := h.listTests(curriculumId, gradeId, urlVals.Get(TESTTYPE_DROPDOWN_NAME), subjectId,
+	tests, err := h.listTests(curriculumId, gradeId, urlVals.Get(TESTTYPE_DROPDOWN_NAME),
 		urlVals.Get("sortColumn"), urlVals.Get("sortOrder"))
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
@@ -133,11 +133,11 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 }
 
 // listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the
-// HTMX row view (GetTests) and the service JSON API (GetTestsJSON). subjectId, when non-zero,
-// further restricts chapter_test results to those resolving (via ChapterTestSubjectID) to that
-// subject - other test types can span multiple subjects, so the filter only applies to
-// chapter_test.
-func (h *TestsHandler) listTests(curriculumId int16, gradeId int8, testtype string, subjectId int8,
+// HTMX row view (GetTests) and the service JSON API (GetTestsJSON). Chapter tests always carry
+// every subject's tests together - the subject filter on the tests list screen is applied
+// client-side (via each row's data-subject-id, from Test.ChapterTestSubjectID) instead of here,
+// so a subject change never needs a fresh request.
+func (h *TestsHandler) listTests(curriculumId int16, gradeId int8, testtype,
 	sortColumn, sortOrder string) (*[]*models.Test, error) {
 	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
 
@@ -147,23 +147,8 @@ func (h *TestsHandler) listTests(curriculumId int16, gradeId int8, testtype stri
 	}
 
 	filterActiveTests(tests)
-	if testtype == "chapter_test" && subjectId != 0 {
-		filterChapterTestsBySubject(tests, subjectId)
-	}
 	sortTests(*tests, sortColumn, sortOrder, nil, nil)
 	return tests, nil
-}
-
-// filterChapterTestsBySubject keeps only chapter_tests whose ChapterTestSubjectID matches
-// subjectId, dropping those with no resolved subject yet (no problems added) or an ambiguous one.
-func filterChapterTestsBySubject(tests *[]*models.Test, subjectId int8) {
-	filtered := (*tests)[:0]
-	for _, t := range *tests {
-		if testSubjectId := t.ChapterTestSubjectID(); testSubjectId != nil && *testSubjectId == subjectId {
-			filtered = append(filtered, t)
-		}
-	}
-	*tests = filtered
 }
 
 // GetChapterTests renders the chapter tests belonging to a single chapter, for the chapter
@@ -188,7 +173,7 @@ func (h *TestsHandler) GetChapterTests(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	tests, err := h.listTests(curriculumId, gradeId, "chapter_test", 0, urlVals.Get("sortColumn"), urlVals.Get("sortOrder"))
+	tests, err := h.listTests(curriculumId, gradeId, "chapter_test", urlVals.Get("sortColumn"), urlVals.Get("sortOrder"))
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching tests: %v", err), http.StatusInternalServerError)
 		return
