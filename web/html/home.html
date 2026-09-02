@@ -174,7 +174,7 @@
     </script>
 </head>
 
-<body class="bg-bg text-ink min-h-screen" hx-ext="mathJaxLoader">
+<body class="bg-bg text-ink min-h-screen" hx-ext="mathJaxLoader,adminOnlyGating">
     <script src="/web/static/js/nav-tracker.js"></script>
     <div>
         <header class="bg-bg-card border-b border-border shadow-card">
@@ -451,7 +451,31 @@
                 }
             }
         })
-    
+
+        htmx.defineExtension('adminOnlyGating', {
+            onEvent: function (name, event) {
+                // htmx:load (not afterSwap) because for a self-targeting outerHTML swap
+                // (hx-target="this", as the lock/unlock button uses), afterSwap's
+                // event.detail.target still refers to the old, now-detached element -
+                // htmx:load's event.detail.elt correctly refers to the new one in the DOM.
+                if (name !== "htmx:load") return;
+
+                var roleMatch = document.cookie.match(/(?:^|;\s*)cms_role=([^;]+)/);
+                if (roleMatch && roleMatch[1] === "admin") return; // server-rendered markup is already correct for admins
+
+                var loadedElement = event.detail.elt;
+                var elements = Array.prototype.slice.call(loadedElement.querySelectorAll("[data-admin-only]"));
+                if (loadedElement.hasAttribute && loadedElement.hasAttribute("data-admin-only")) {
+                    elements.push(loadedElement);
+                }
+
+                elements.forEach(function (el) {
+                    el.disabled = true;
+                    el.title = el.getAttribute("data-admin-only");
+                });
+            }
+        })
+
         window.addEventListener("pageshow", function(event) {
             // Session check via the non-HttpOnly companion cookie. cms_session itself is HttpOnly
             // and intentionally invisible to JS. cms_role is set/cleared in lockstep by the server.
