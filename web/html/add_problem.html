@@ -1099,6 +1099,13 @@
         }
 
         function validateFields() {
+            const curriculumId = parseInt(document.getElementById("curriculum-dropdown").value);
+            const gradeId = parseInt(document.getElementById("grade-dropdown").value);
+            const subjectId = parseInt(document.getElementById("subject-dropdown").value);
+            if (!Number.isInteger(curriculumId) || !Number.isInteger(gradeId) || !Number.isInteger(subjectId)) {
+                return fail('Curriculum, grade, and subject are still loading. Please wait a moment and try again.');
+            }
+
             const difficulty = document.querySelector('input[name="difficulty"]:checked');
             if (!difficulty) {
                 return fail('Please select a difficulty level.');
