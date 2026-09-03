@@ -37,6 +37,10 @@ const testsFilterViewTemplate = "tests_filter_view.html"
 const testsSearchViewTemplate = "tests_search_view.html"
 const testRowTemplate = "test_row.html"
 const testSearchRowTemplate = "test_search_row.html"
+const testLockButtonTemplate = "test_lock_button.html"
+const testLockResponseTemplate = "test_lock_response.html"
+const testActionsCellTemplate = "test_actions_cell.html"
+const testEditButtonTemplate = "test_edit_button.html"
 const addTestSearchRowTemplate = "add_test_search_row.html"
 const testTemplate = "test.html"
 const testProblemRowTemplate = "test_problem_row.html"
@@ -129,7 +133,8 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
-	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
+	views.ExecuteTemplates(responseWriter, tests, template.FuncMap{"dict": utils.Dict},
+		testRowTemplate, testActionsCellTemplate, testLockButtonTemplate, testEditButtonTemplate)
 }
 
 // listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the
@@ -184,7 +189,8 @@ func (h *TestsHandler) GetChapterTests(responseWriter http.ResponseWriter, reque
 	}
 	*tests = filtered
 
-	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
+	views.ExecuteTemplates(responseWriter, tests, template.FuncMap{"dict": utils.Dict},
+		testRowTemplate, testActionsCellTemplate, testLockButtonTemplate, testEditButtonTemplate)
 }
 
 // removes archived tests from the slice
@@ -281,9 +287,15 @@ func (h *TestsHandler) GetSearchTests(responseWriter http.ResponseWriter, reques
 		Curriculums: curriculumMap,
 		Grades:      gradeMap,
 	}
-	views.ExecuteTemplate(tmpl, responseWriter, data, template.FuncMap{
-		"dict": utils.Dict,
-	})
+	if tmpl == testSearchRowTemplate {
+		views.ExecuteTemplates(responseWriter, data, template.FuncMap{
+			"dict": utils.Dict,
+		}, tmpl, testActionsCellTemplate, testLockButtonTemplate, testEditButtonTemplate)
+	} else {
+		views.ExecuteTemplate(tmpl, responseWriter, data, template.FuncMap{
+			"dict": utils.Dict,
+		})
+	}
 }
 
 func sortTests(testPtrs []*models.Test, sortColumn string, sortOrder string, curriculumMap map[int16]string,
@@ -763,6 +775,11 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		return
 	}
 
+	if selectedTestPtr.IsLocked() {
+		http.Error(responseWriter, "Cannot edit a locked test", http.StatusForbidden)
+		return
+	}
+
 	problems := h.getTestProblems(responseWriter, request)
 	if problems == nil {
 		return
@@ -824,6 +841,14 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 	testIdStr := request.URL.Query().Get("id")
 	testId := utils.StringToInt(testIdStr)
 
+	if locked, err := h.isTestLocked(testIdStr, testId); err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching test: %v", err), http.StatusInternalServerError)
+		return
+	} else if locked {
+		http.Error(responseWriter, "Cannot edit a locked test", http.StatusForbidden)
+		return
+	}
+
 	_, err = h.testsService.UpdateObject(testIdStr, resourcesEndPoint, testObj, testsKey,
 		func(test *models.Test) bool {
 			return (*test).ID == testId
@@ -832,6 +857,18 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 		handlerutils.WriteRemoteAPIError(responseWriter, "Error updating test", err)
 		return
 	}
+}
+
+// isTestLocked reports whether the test is currently locked, for handlers that block edits
+// on a locked test but don't otherwise need to fetch the full existing object.
+func (h *TestsHandler) isTestLocked(testIDStr string, testID int) (bool, error) {
+	existing, err := h.testsService.GetObject(testIDStr,
+		func(test *models.Test) bool { return test.ID == testID },
+		testsKey, resourcesEndPoint)
+	if err != nil {
+		return false, err
+	}
+	return existing.IsLocked(), nil
 }
 
 func (h *TestsHandler) UpdateTestSubject(responseWriter http.ResponseWriter, request *http.Request) {
@@ -848,6 +885,11 @@ func (h *TestsHandler) UpdateTestSubject(responseWriter http.ResponseWriter, req
 	test, _, err := h.getTest(responseWriter, request)
 	if err != nil {
 		http.Error(responseWriter, "Test not found", http.StatusNotFound)
+		return
+	}
+
+	if test.IsLocked() {
+		http.Error(responseWriter, "Cannot edit a locked test", http.StatusForbidden)
 		return
 	}
 
@@ -896,6 +938,34 @@ func (h *TestsHandler) ArchiveTest(responseWriter http.ResponseWriter, request *
 		http.Error(responseWriter, fmt.Sprintf("Error archiving test: %v", err), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (h *TestsHandler) LockTest(responseWriter http.ResponseWriter, request *http.Request) {
+	testIDStr := request.URL.Query().Get("id")
+	testID := utils.StringToInt(testIDStr)
+	locked := request.URL.Query().Get("locked") == "true"
+
+	// blank/null clears the lock status back out, mirroring how archive sets cms_status_id
+	var statusValue any
+	if locked {
+		statusValue = constants.StatusLocked
+	}
+
+	body := map[string]any{
+		"cms_status_id": statusValue,
+	}
+
+	updated, err := h.testsService.UpdateObject(testIDStr, resourcesEndPoint, body, testsKey,
+		func(test *models.Test) bool {
+			return test.ID == testID
+		})
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error updating test lock status: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	views.ExecuteTemplates(responseWriter, updated, template.FuncMap{"dict": utils.Dict},
+		testLockResponseTemplate, testLockButtonTemplate, testEditButtonTemplate)
 }
 
 func getTestName(t models.Test, lang string) string {
