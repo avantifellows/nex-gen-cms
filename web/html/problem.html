@@ -38,13 +38,13 @@
     <div class="card card-pad" data-mathjax="true">
         {{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }}
         <h2 class="section-title">Paragraph</h2>
-        <div class="mt-2 text-ink">
+        <div class="mt-2 text-ink rich-text-content">
             {{ .ProblemPtr.Paragraph.Body }}
         </div>
         {{ end }}
         <h2 class="section-title{{ if and (eq .ProblemPtr.Subtype "comprehension") .ProblemPtr.Paragraph }} mt-6{{ end }}">Statement / Text</h2>
         {{ range .ProblemPtr.LangVersions }}
-        <div class="lang-panel mt-2 text-ink" data-lang="{{ .LangCode }}" {{ if ne .LangCode "en" }}style="display:none"{{ end }}>{{ .MetaData.Question }}</div>
+        <div class="lang-panel mt-2 text-ink rich-text-content" data-lang="{{ .LangCode }}" {{ if ne .LangCode "en" }}style="display:none"{{ end }}>{{ .MetaData.Question }}</div>
         {{ end }}
         {{ if .ProblemPtr.Concepts }}
         <h2 class="section-title mt-6">Concepts</h2>
@@ -71,7 +71,7 @@
                      the .option-row rule in input.css. -->
                 <div class="flex items-baseline option-row border-b border-border/40 p-4 last:border-b-0 bg-bg-card">
                     <span class="mr-6 font-mono font-bold text-accent w-6">{{ printf "%c" (add 65 $index) }}</span>
-                    <div class="text-ink">{{ $option }}</div>
+                    <div class="text-ink rich-text-content">{{ $option }}</div>
                 </div>
                 {{ end }}
             </div>
@@ -101,7 +101,7 @@
         {{ range .ProblemPtr.LangVersions }}
         <div class="lang-panel" data-lang="{{ .LangCode }}" {{ if ne .LangCode "en" }}style="display:none"{{ end }}>
             <h2 class="section-title mt-6">Solution</h2>
-            <div class="mt-2 text-ink solution-content">
+            <div class="mt-2 text-ink rich-text-content">
                 {{ if gt (len .MetaData.Solutions) 0 }}
                     {{ (index .MetaData.Solutions 0).Value }}
                 {{ else }}

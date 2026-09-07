@@ -316,6 +316,20 @@
   .output ol[data-ol-style="i"] { list-style-type: lower-roman; }
   .editor ol[data-ol-style="I"],
   .output ol[data-ol-style="I"] { list-style-type: upper-roman; }
+  /* Inside a table cell, an outside marker (the default, kept here) has no padding-left to
+     sit in - Tailwind v4 preflight zeroes it - and unlike .editor (which has overflow: auto
+     and so never shows this), a <td> has no overflow clipping, so the marker spills past the
+     cell's own border. Restoring padding-left gives it room to render inside its own box
+     instead. list-style-position: inside would also "fix" the overflow, but breaks hanging
+     indent on wrapped lines (a wrapped line has no marker to align past, so it returns flush
+     left instead of lining up with the item's text) - padding keeps outside's normal
+     wrapping behavior intact. margin-left: 0 cancels the ml-6 from the general .editor
+     ol/.output ol rule above, since the padding alone now reserves the marker's space -
+     scoped to table cells only, markers elsewhere keep that margin-based indent. */
+  .editor td ol,
+  .output td ol,
+  .editor td ul,
+  .output td ul { padding-left: 1.5em; margin-left: 0; }
   .editor hr,
   .output hr { @apply m-4 border-t border-border; }
   .editor-fullscreen {
@@ -346,18 +360,24 @@
     @apply border border-border px-4 py-2;
   }
 
-  /* Solution text rendered from rich-text HTML.
-     list-style-position: inside keeps every marker flush with the left edge of
-     the surrounding text — no separate marker column, no extra indent for
-     short markers like "i." vs "iii.". Tailwind v4 preflight already resets
-     padding/margin to 0, so only list-style needs to be set explicitly. */
-  .solution-content ol { list-style: decimal inside; }
-  .solution-content ul { list-style: disc inside; }
+  /* Saved problem/test rich-text HTML (question, options, solution) rendered read-only -
+     problem.html, answer_sheet.html, question_paper_with_answers.html. Unlike the live
+     .editor/.output, this never gets .editor/.output's own list rules, so it needs its own.
+     Tailwind v4 preflight zeroes padding/margin on every element, so an outside marker (the
+     default, kept here) has no room to render and can spill past a table cell's border -
+     padding-left restores that room. list-style-position: inside would also stop the
+     overflow, but breaks hanging indent on wrapped lines (a wrapped line has no marker to
+     align past, so it returns flush left instead of lining up with the item's text) -
+     padding keeps outside's normal wrapping behavior intact, in tables or not. */
+  .rich-text-content ol,
+  .rich-text-content ul { padding-left: 1.5em; }
+  .rich-text-content ol { list-style-type: decimal; }
+  .rich-text-content ul { list-style-type: disc; }
   /* TipTap stores non-decimal ol types via data-ol-style attribute */
-  .solution-content ol[data-ol-style="i"] { list-style-type: lower-roman; }
-  .solution-content ol[data-ol-style="I"] { list-style-type: upper-roman; }
-  .solution-content ol[data-ol-style="a"] { list-style-type: lower-alpha; }
-  .solution-content ol[data-ol-style="A"] { list-style-type: upper-alpha; }
+  .rich-text-content ol[data-ol-style="i"] { list-style-type: lower-roman; }
+  .rich-text-content ol[data-ol-style="I"] { list-style-type: upper-roman; }
+  .rich-text-content ol[data-ol-style="a"] { list-style-type: lower-alpha; }
+  .rich-text-content ol[data-ol-style="A"] { list-style-type: upper-alpha; }
 
   /* --- HTMX loader visibility helpers --------------------------------- */
   #search-btn-loader,

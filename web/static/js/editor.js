@@ -227,6 +227,86 @@ window.initializeRichTextEditors = function (root = document) {
         setTypeOnOl(ol, type);
     }
 
+    // --- Table column numbering (continue an <ol> from the same column in the cell above) ---
+    //
+    // Native execCommand("insertOrderedList") always creates an independent <ol> starting at 1,
+    // with no awareness of other lists elsewhere - including other cells in the same table
+    // column. Since a table cell often holds one item of a list that's meant to read down the
+    // whole column (e.g. matching-type questions), syncTableColumnNumbering treats every
+    // same-style <ol> down a column as one continuous sequence via the "start" attribute,
+    // recomputed live (see the MutationObserver below) so it stays correct as earlier cells are
+    // edited. A list can opt out via data-restart-numbering (the "Restart numbering here" button),
+    // which pins it back to 1 and becomes the new base for whatever follows it in that column.
+    function getActiveTable() {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return null;
+        const anchor = sel.anchorNode;
+        if (!anchor || !editor.contains(anchor)) return null;
+        return closestElement(anchor, 'table');
+    }
+
+    function syncTableColumnNumbering(table) {
+        // table.rows/tr.cells are native, live, and scoped to this table only - a nested table's
+        // own rows/cells never leak in, so no special-casing is needed for that case.
+        const rows = Array.from(table.rows);
+        const numCols = rows.reduce((max, tr) => Math.max(max, tr.cells.length), 0);
+
+        for (let col = 0; col < numCols; col++) {
+            // Tracks each ordered-list style's running item count independently down this
+            // column, so e.g. a 1,2,3 list and an interleaved a,b,c list don't affect each other.
+            const runningCounts = {};
+
+            for (const tr of rows) {
+                const cell = tr.cells[col];
+                if (!cell) continue;
+
+                // Only lists directly in the cell count as "one entry in this column's sequence" -
+                // a nested list inside a list item is part of that item, not a sibling of it.
+                const lists = Array.from(cell.children).filter(el => el.tagName === 'OL');
+                for (const ol of lists) {
+                    const style = ol.dataset.olStyle || '1';
+                    const itemCount = ol.querySelectorAll(':scope > li').length;
+                    const isRestart = ol.dataset.restartNumbering === 'true';
+                    const prevCount = isRestart ? 0 : (runningCounts[style] || 0);
+                    const desiredStart = prevCount + 1;
+
+                    if (desiredStart === 1) {
+                        ol.removeAttribute('start'); // 1 is the browser default; keep markup clean
+                    } else {
+                        ol.setAttribute('start', String(desiredStart));
+                    }
+                    runningCounts[style] = prevCount + itemCount;
+                }
+            }
+        }
+    }
+
+    function syncActiveTableNumbering() {
+        const table = getActiveTable();
+        if (table) syncTableColumnNumbering(table);
+    }
+
+    // Live re-sync: any list structure change anywhere in this editor's tables (items
+    // added/removed, a list added/removed, style changed) can shift what every list below it in
+    // that column should continue from.
+    const tableNumberingObserver = new MutationObserver((mutations) => {
+        // Ignore batches that are purely us setting "start" - otherwise every sync would
+        // re-trigger another (harmless but wasteful) sync via its own attribute mutations.
+        const isRealChange = mutations.some(m => !(m.type === 'attributes' && m.attributeName === 'start'));
+        if (!isRealChange) return;
+
+        clearTimeout(editor.__tableNumberingSyncTimeout);
+        editor.__tableNumberingSyncTimeout = setTimeout(() => {
+            editor.querySelectorAll('table').forEach(syncTableColumnNumbering);
+        }, 50);
+    });
+    tableNumberingObserver.observe(editor, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['start', 'data-ol-style', 'data-restart-numbering'],
+    });
+
     const olBtn = toolbar.querySelector(".olBtn");
     olBtn.addEventListener("click", function () {
         restoreSelection();
@@ -240,10 +320,12 @@ window.initializeRichTextEditors = function (root = document) {
         } else if (wasInOl && nowInOl && activeOrderedListType && activeOrderedListType !== '1') {
             applyOrderedListType(activeOrderedListType, { ensureList: false });
         }
+        syncActiveTableNumbering();
     });
 
     const olTypeDropdownBtn = toolbar.querySelector('.olTypeDropdownBtn');
     const olTypeDropdownMenu = toolbar.querySelector('.olTypeDropdownMenu');
+    const restartNumberingBtn = toolbar.querySelector('.restartNumberingBtn');
 
     if (olTypeDropdownBtn && olTypeDropdownMenu) {
         // Save selection before focus moves to toolbar
@@ -251,6 +333,13 @@ window.initializeRichTextEditors = function (root = document) {
 
         olTypeDropdownBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (restartNumberingBtn) {
+                const activeOl = getActiveOrderedList();
+                const isRestarted = activeOl?.dataset.restartNumbering === 'true';
+                restartNumberingBtn.textContent = isRestarted
+                    ? 'Continue from above instead'
+                    : 'Restart numbering here';
+            }
             olTypeDropdownMenu.classList.toggle('hidden');
         });
 
@@ -260,9 +349,28 @@ window.initializeRichTextEditors = function (root = document) {
                 e.stopPropagation();
                 restoreSelection();
                 applyOrderedListType(btn.dataset.olType, { ensureList: true });
+                syncActiveTableNumbering();
                 olTypeDropdownMenu.classList.add('hidden');
             });
         });
+
+        if (restartNumberingBtn) {
+            restartNumberingBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                restoreSelection();
+                const ol = getActiveOrderedList();
+                if (ol) {
+                    if (ol.dataset.restartNumbering === 'true') {
+                        ol.removeAttribute('data-restart-numbering');
+                    } else {
+                        ol.dataset.restartNumbering = 'true';
+                    }
+                    syncActiveTableNumbering();
+                }
+                olTypeDropdownMenu.classList.add('hidden');
+            });
+        }
     }
 
     const dropdownBtn = toolbar.querySelector('.paragraphDropdownBtn');
