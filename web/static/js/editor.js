@@ -326,6 +326,7 @@ window.initializeRichTextEditors = function (root = document) {
     const olTypeDropdownBtn = toolbar.querySelector('.olTypeDropdownBtn');
     const olTypeDropdownMenu = toolbar.querySelector('.olTypeDropdownMenu');
     const restartNumberingBtn = toolbar.querySelector('.restartNumberingBtn');
+    const restartNumberingDivider = toolbar.querySelector('.restartNumberingDivider');
 
     if (olTypeDropdownBtn && olTypeDropdownMenu) {
         // Save selection before focus moves to toolbar
@@ -334,11 +335,20 @@ window.initializeRichTextEditors = function (root = document) {
         olTypeDropdownBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (restartNumberingBtn) {
+                // Continue/restart numbering only ever does anything inside a table column
+                // (see syncTableColumnNumbering) - hide the option everywhere else instead of
+                // showing a control that would silently do nothing.
                 const activeOl = getActiveOrderedList();
-                const isRestarted = activeOl?.dataset.restartNumbering === 'true';
-                restartNumberingBtn.textContent = isRestarted
-                    ? 'Continue from above instead'
-                    : 'Restart numbering here';
+                const isInTable = !!(activeOl && closestElement(activeOl, 'table'));
+                restartNumberingBtn.classList.toggle('hidden', !isInTable);
+                if (restartNumberingDivider) restartNumberingDivider.classList.toggle('hidden', !isInTable);
+
+                if (isInTable) {
+                    const isRestarted = activeOl.dataset.restartNumbering === 'true';
+                    restartNumberingBtn.textContent = isRestarted
+                        ? 'Continue from above instead'
+                        : 'Restart numbering here';
+                }
             }
             olTypeDropdownMenu.classList.toggle('hidden');
         });
