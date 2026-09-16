@@ -304,6 +304,26 @@
   .img-resize-ne { top: -5px; right: -5px;  cursor: ne-resize; }
   .img-resize-se { bottom: -5px; right: -5px; cursor: se-resize; }
   .img-resize-sw { bottom: -5px; left: -5px;  cursor: sw-resize; }
+
+  /* --- Table column resize (drag handle on interior column borders) --- */
+  .table-col-resize-line {
+    display: none;
+    position: absolute;
+    z-index: 150;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--color-accent);
+    pointer-events: none;
+  }
+  .table-col-resize-line.active { display: block; }
+
+  /* Cursor/selection can't be scoped to the editor alone - a drag frequently carries the
+     pointer outside it (over the toolbar, the preview panel) before mouseup. */
+  body.table-col-resizing,
+  body.table-col-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+  }
   .editor ul,
   .output ul { @apply list-disc ml-6; }
   .editor ol,

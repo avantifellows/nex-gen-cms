@@ -508,18 +508,7 @@ window.initializeRichTextEditors = function (root = document) {
     gridContainer.addEventListener("click", () => {
         restoreSelection(); // restore cursor back to editor
 
-        const table = document.createElement("table");
-        table.className = "w-full border border-black border-collapse my-2";
-
-        for (let i = 0; i < selectedRows; i++) {
-            const tr = document.createElement("tr");
-            for (let j = 0; j < selectedCols; j++) {
-                const td = document.createElement("td");
-                td.className = "border border-black w-16 h-8";
-                tr.appendChild(td);
-            }
-            table.appendChild(tr);
-        }
+        const table = createEditorTable(selectedRows, selectedCols);
 
         const selection = window.getSelection();
         if (!selection.rangeCount) return;
@@ -594,6 +583,10 @@ window.initializeRichTextEditors = function (root = document) {
 
     if (typeof initImageEditing === 'function') {
         initImageEditing(editor, editorWrapper);
+    }
+
+    if (typeof initTableColumnResize === 'function') {
+        initTableColumnResize(editor, editorWrapper);
     }
 
     const fullscreenBtn = toolbar.querySelector(".fullscreenBtn");
