@@ -32,37 +32,74 @@ function createEditorTable(rows, cols) {
 window.createEditorTable = createEditorTable;
 
 /**
- * Tables saved before this feature existed (or pasted in from elsewhere) have no <colgroup> -
- * their columns are sized however the browser's table auto-layout happens to lay them out.
- * Give them one on first encounter, sized from their current rendered widths (normalized to
- * 100%) so the table doesn't visibly jump the moment a user hovers it.
+ * A <colgroup> is only usable for dragging if every <col> maps to exactly one column and has an
+ * explicit, positive percentage width. Anything else - no inline width, a non-percent unit (pasted
+ * tables commonly carry pt/px), a <col span> covering multiple columns, or a column-count mismatch
+ * - reads as 0 via parseFloat everywhere this code assumes a percent, which used to collapse both
+ * sides of the first drag to 0%.
+ */
+function colgroupIsUsable(colgroup, numCols) {
+    const cols = colgroup.querySelectorAll(':scope > col');
+    if (cols.length !== numCols) return false;
+
+    for (const col of cols) {
+        if (col.span !== 1) return false;
+        const width = (col.style.width || '').trim();
+        if (!width.endsWith('%')) return false;
+        if (!(parseFloat(width) > 0)) return false;
+    }
+    return true;
+}
+
+/**
+ * Tables saved before this feature existed (or pasted in from elsewhere, e.g. Google Docs) may
+ * have no <colgroup> at all, or one that isn't usable (see colgroupIsUsable) - their columns are
+ * sized however the browser's table auto-layout happens to lay them out. Give them a fresh one on
+ * first encounter, sized from their current rendered widths (normalized to 100%) so the table
+ * doesn't visibly jump the moment a user hovers it.
  */
 function ensureTableColgroup(table) {
-    if (table.querySelector(':scope > colgroup')) return;
-
     const rows = Array.from(table.rows);
     const numCols = rows.reduce((max, tr) => Math.max(max, tr.cells.length), 0);
     if (numCols === 0) return;
 
+    const existing = table.querySelector(':scope > colgroup');
+    if (existing && colgroupIsUsable(existing, numCols)) return;
+
+    // Measure current rendered widths before touching the DOM - if `existing` is governing layout
+    // with valid-but-non-percent widths (e.g. pt/px), removing it first would change the layout out
+    // from under us and defeat the "no visual jump" guarantee below.
     const tableWidth = table.getBoundingClientRect().width || 1;
     const firstRow = rows[0];
-
-    const colgroup = document.createElement('colgroup');
+    const widths = [];
     for (let i = 0; i < numCols; i++) {
         const cell = firstRow?.cells[i];
-        const cellWidth = cell ? cell.getBoundingClientRect().width : tableWidth / numCols;
-        const col = document.createElement('col');
-        col.style.width = ((cellWidth / tableWidth) * 100) + '%';
-        colgroup.appendChild(col);
+        widths.push(cell ? cell.getBoundingClientRect().width : tableWidth / numCols);
     }
+
+    existing?.remove();
+
+    const colgroup = document.createElement('colgroup');
+    widths.forEach((w) => {
+        const col = document.createElement('col');
+        col.style.width = ((w / tableWidth) * 100) + '%';
+        colgroup.appendChild(col);
+    });
 
     // Renormalize to exactly 100% - measurement/rounding drift here would otherwise compound
     // across future resizes, since each drag only touches two adjacent columns' share of the total.
+    // Falls back to equal columns if every measured width was 0 (e.g. table rendered nothing
+    // to measure) rather than leaving every column at a useless, unresizable 0%.
     const colEls = Array.from(colgroup.children);
-    const total = colEls.reduce((sum, col) => sum + parseFloat(col.style.width), 0) || 100;
-    colEls.forEach(col => {
-        col.style.width = ((parseFloat(col.style.width) / total) * 100).toFixed(4) + '%';
-    });
+    const total = colEls.reduce((sum, col) => sum + parseFloat(col.style.width), 0);
+    if (total > 0) {
+        colEls.forEach(col => {
+            col.style.width = ((parseFloat(col.style.width) / total) * 100).toFixed(4) + '%';
+        });
+    } else {
+        const equalPct = (100 / colEls.length).toFixed(4) + '%';
+        colEls.forEach(col => { col.style.width = equalPct; });
+    }
 
     table.insertBefore(colgroup, table.firstChild);
     table.style.tableLayout = 'fixed';
