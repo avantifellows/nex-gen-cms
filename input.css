@@ -317,6 +317,25 @@
   }
   .table-col-resize-line.active { display: block; }
 
+  .table-col-resize-pct {
+    display: none;
+    position: absolute;
+    z-index: 151;
+    padding: 2px 6px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    color: var(--color-bg-card);
+    background: var(--color-ink);
+    border-radius: 4px;
+    pointer-events: none;
+  }
+  .table-col-resize-pct.active { display: block; }
+  /* Anchored at the divider's x - left label sits just to its left, right label just to its
+     right, so they read as "this column's % | that column's %" straddling the drag line. */
+  .table-col-resize-pct-left  { transform: translate(-100%, -50%) translateX(-6px); }
+  .table-col-resize-pct-right { transform: translateY(-50%) translateX(6px); }
+
   /* Cursor/selection can't be scoped to the editor alone - a drag frequently carries the
      pointer outside it (over the toolbar, the preview panel) before mouseup. */
   body.table-col-resizing,

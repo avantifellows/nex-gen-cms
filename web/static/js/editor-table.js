@@ -105,18 +105,65 @@ function initTableColumnResize(editor, editorWrapper) {
     resizeLine.className = 'table-col-resize-line';
     editorWrapper.appendChild(resizeLine);
 
+    const pctLabelLeft = document.createElement('div');
+    pctLabelLeft.className = 'table-col-resize-pct table-col-resize-pct-left';
+    editorWrapper.appendChild(pctLabelLeft);
+
+    const pctLabelRight = document.createElement('div');
+    pctLabelRight.className = 'table-col-resize-pct table-col-resize-pct-right';
+    editorWrapper.appendChild(pctLabelRight);
+
     let dragging = false;
 
+    // The line lives in editorWrapper, a sibling of the scrollable .editor box, so it isn't
+    // clipped by .editor's own overflow - without this, it would visibly run past the editor's
+    // visible top/bottom edge (over the toolbar, or beyond its bottom) whenever a table taller
+    // than the editor's viewport is partly scrolled out of view.
+    function visibleLineRect(tableRect) {
+        const editorRect = editor.getBoundingClientRect();
+        const top = Math.max(tableRect.top, editorRect.top);
+        const bottom = Math.min(tableRect.bottom, editorRect.bottom);
+        return { top, height: bottom - top };
+    }
+
     function showLine(x, tableRect) {
+        const { top, height } = visibleLineRect(tableRect);
+        if (height <= 0) {
+            hideLine();
+            return null;
+        }
+
         const wRect = editorWrapper.getBoundingClientRect();
         resizeLine.style.left = (x - wRect.left) + 'px';
-        resizeLine.style.top = (tableRect.top - wRect.top) + 'px';
-        resizeLine.style.height = tableRect.height + 'px';
+        resizeLine.style.top = (top - wRect.top) + 'px';
+        resizeLine.style.height = height + 'px';
         resizeLine.classList.add('active');
+        return { top, height };
     }
 
     function hideLine() {
         resizeLine.classList.remove('active');
+    }
+
+    function showPercentLabels(x, pctA, pctB, visibleTop, visibleHeight) {
+        const wRect = editorWrapper.getBoundingClientRect();
+        const lineX = x - wRect.left;
+        const midY = visibleTop + visibleHeight / 2 - wRect.top;
+
+        pctLabelLeft.textContent = Math.round(pctA) + '%';
+        pctLabelLeft.style.left = lineX + 'px';
+        pctLabelLeft.style.top = midY + 'px';
+        pctLabelLeft.classList.add('active');
+
+        pctLabelRight.textContent = Math.round(pctB) + '%';
+        pctLabelRight.style.left = lineX + 'px';
+        pctLabelRight.style.top = midY + 'px';
+        pctLabelRight.classList.add('active');
+    }
+
+    function hidePercentLabels() {
+        pctLabelLeft.classList.remove('active');
+        pctLabelRight.classList.remove('active');
     }
 
     editor.addEventListener('mousemove', (e) => {
@@ -124,10 +171,19 @@ function initTableColumnResize(editor, editorWrapper) {
         const target = findTableColumnBorder(editor, e.clientX, e.clientY);
         if (target) {
             editor.style.cursor = 'col-resize';
-            showLine(target.edgeX, target.tableRect);
+            const visible = showLine(target.edgeX, target.tableRect);
+            if (visible) {
+                const cols = target.table.querySelectorAll(':scope > colgroup > col');
+                const pctA = parseFloat(cols[target.leftCol]?.style.width) || 0;
+                const pctB = parseFloat(cols[target.rightCol]?.style.width) || 0;
+                showPercentLabels(target.edgeX, pctA, pctB, visible.top, visible.height);
+            } else {
+                hidePercentLabels();
+            }
         } else {
             editor.style.cursor = '';
             hideLine();
+            hidePercentLabels();
         }
     });
 
@@ -135,6 +191,7 @@ function initTableColumnResize(editor, editorWrapper) {
         if (dragging) return;
         editor.style.cursor = '';
         hideLine();
+        hidePercentLabels();
     });
 
     editor.addEventListener('mousedown', (e) => {
@@ -167,7 +224,13 @@ function initTableColumnResize(editor, editorWrapper) {
             colB.style.width = newPctB.toFixed(4) + '%';
 
             const tableRect = target.table.getBoundingClientRect();
-            showLine(target.edgeX + (newPctA - startPctA) / 100 * tableWidth, tableRect);
+            const lineX = target.edgeX + (newPctA - startPctA) / 100 * tableWidth;
+            const visible = showLine(lineX, tableRect);
+            if (visible) {
+                showPercentLabels(lineX, newPctA, newPctB, visible.top, visible.height);
+            } else {
+                hidePercentLabels();
+            }
         };
 
         const onMouseUp = () => {
@@ -177,6 +240,7 @@ function initTableColumnResize(editor, editorWrapper) {
             dragging = false;
             editor.style.cursor = '';
             hideLine();
+            hidePercentLabels();
             if (typeof renderMath === 'function') renderMath(editor);
         };
 
