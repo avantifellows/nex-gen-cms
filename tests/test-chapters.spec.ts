@@ -30,7 +30,7 @@ test('verify that all table headers, add new chapter link are available and form
 
     const addChapterLink = page.locator('#addChapterLink');
     await expect(addChapterLink).toBeVisible();
-    await expect(addChapterLink).toHaveText("Add New Chapter");
+    await expect(addChapterLink).toHaveText("+ Add New Chapter");
 
     const addChapterForm = page.locator('#addChapterForm');
     await expect(addChapterForm).toBeHidden();
