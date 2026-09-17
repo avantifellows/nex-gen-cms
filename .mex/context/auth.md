@@ -51,7 +51,7 @@ identity and roles live in the Postgres `cms_user_permission` table — the only
 ## Flow
 
 1. `cmd/main.go` wraps the mux in `middleware.RequireLogin(mux, exceptions...)`. Exceptions (no session
-   required): `/login`, `/favicon.ico`, `/web/static/css/output.css`, `/auth/google/start`,
+   required): `/login`, `/favicon.ico`, the CSS route (/web/static/css/output.css), `/auth/google/start`,
    `/auth/google/callback`, `/dev-login`.
 2. `RequireLogin` reads `cms_session`. Missing/invalid → redirect to `/login` (or `HX-Redirect: /login`
    with 401 for HTMX). Valid → attach claims to context, continue.

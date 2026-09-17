@@ -43,8 +43,8 @@ shipped by GitHub Actions. Authoritative detail lives in `terraform/` and `.gith
 - `main.tf` — EC2, security group (22 from `ssh_cidr`; 80/443 from anywhere), EIP, Cloudflare A record.
 - `variables.tf` — `environment`, `instance_type`, Cloudflare creds, `letsencrypt_email`, `repo_url`/`repo_branch`,
   `db_service_endpoint`/`db_service_token` (sensitive), etc.
-- `backend.tf` — remote state in S3 bucket `tfstate-nex-gen-cms` (keys `nex-gen-cms/staging.tfstate`,
-  `nex-gen-cms/prod.tfstate`) + DynamoDB lock table `tfstate-nex-gen-cms-locks`.
+- `backend.tf` — remote state in S3 bucket `tfstate-nex-gen-cms` (S3 object keys, not repo paths:
+  nex-gen-cms/staging.tfstate, nex-gen-cms/prod.tfstate) + DynamoDB lock table `tfstate-nex-gen-cms-locks`.
 - `user-data.sh` — **idempotent, runs on every boot**: installs packages (incl. Node for the Tailwind build,
   `fontconfig` for PDF fonts), clones/`hard-reset`s the repo to `repo_branch`, writes `.env`, builds the
   app (`go build ./cmd`) and CSS, (re)creates the systemd unit + NGINX config, and runs Certbot.
@@ -52,8 +52,9 @@ shipped by GitHub Actions. Authoritative detail lives in `terraform/` and `.gith
 
 ## CI/CD (`.github/workflows/`)
 
-- `deploy-staging.yml` — deploys on **push to `main`** (and `workflow_dispatch`).
-- `deploy-prod.yml` — deploys on **push to `release`** (backend key `nex-gen-cms/prod.tfstate`).
+- `.github/workflows/deploy-staging.yml` — deploys on **push to `main`** (and `workflow_dispatch`).
+- `.github/workflows/deploy-prod.yml` — deploys on **push to `release`** (backend key, an S3 object
+  key not a repo path: nex-gen-cms/prod.tfstate).
 - Each job: `terraform init/validate/plan/apply` with `TF_VAR_*` from GitHub Secrets. **If Terraform detects
   no infra drift, it reboots the EC2 instance** — `user-data.sh` then pulls the latest code and restarts the
   app. So a code-only release = merge to the branch → reboot.

@@ -81,16 +81,16 @@ window.MathJax = {
     <div class="flex items-start mb-3 pl-11">
         <div class="flex-1 border border-gray-200 rounded p-3 bg-gray-50 text-sm">
             <div class="font-semibold mb-1">Paragraph</div>
-            <div class="whitespace-pre-wrap">{{ .Problem.Paragraph.Body }}</div>
+            <div class="whitespace-pre-wrap rich-text-content">{{ .Problem.Paragraph.Body }}</div>
         </div>
     </div>
     {{ end }}
     <div class="flex items-baseline mb-2">
         <div class="w-6 font-semibold">Q{{ .Counter }}.</div>
         <div class="flex-1 pl-5">
-            <div class="!text-ink [&_*]:!text-ink">{{ $enLV.MetaData.Question }}</div>
+            <div class="!text-ink [&_*]:!text-ink rich-text-content">{{ $enLV.MetaData.Question }}</div>
             {{ if and .RegionalLangCode $regLV }}
-            <div class="mt-1 !text-gray-800 [&_*]:!text-gray-800">{{ $regLV.MetaData.Question }}</div>
+            <div class="mt-1 !text-gray-800 [&_*]:!text-gray-800 rich-text-content">{{ $regLV.MetaData.Question }}</div>
             {{ end }}
         </div>
     </div>
@@ -118,11 +118,11 @@ window.MathJax = {
             <div class="flex items-baseline option-row">
                 <div class="font-semibold mr-2">{{ index labels $index }}</div>
                 <div class="flex-1">
-                    <div class="whitespace-pre-wrap !text-ink [&_*]:!text-ink">{{ $option }}</div>
+                    <div class="whitespace-pre-wrap !text-ink [&_*]:!text-ink rich-text-content">{{ $option }}</div>
                     {{- if and $.RegionalLangCode $regLV -}}
                     {{- $regOptions := $regLV.MetaData.Options -}}
                     {{- if lt $index (len $regOptions) }}
-                    <div class="whitespace-pre-wrap mt-1 !text-gray-800 [&_*]:!text-gray-800">{{ index $regOptions $index }}</div>
+                    <div class="whitespace-pre-wrap mt-1 !text-gray-800 [&_*]:!text-gray-800 rich-text-content">{{ index $regOptions $index }}</div>
                     {{- end -}}
                     {{- end }}
                 </div>
