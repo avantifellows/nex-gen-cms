@@ -23,7 +23,9 @@ test.describe('Homepage Load', () => {
             const dropdown = page.locator(`#${name}`);
             const options = dropdown.locator('option');
 
-            await expect(options).toHaveCount(2);
+            // grade-dropdown gets an extra "Common" option (value -1) appended after load.
+            const expectedCount = name === 'grade-dropdown' ? 3 : 2;
+            await expect(options).toHaveCount(expectedCount);
 
             for (let index = 0; index < content.length; index++) {
                 await expect(options.nth(index)).toContainText(content[index]);

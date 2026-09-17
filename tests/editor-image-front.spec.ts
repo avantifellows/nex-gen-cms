@@ -6,7 +6,9 @@ test('image toolbar can keep a diagram inline with its label', async ({ page }) 
   await page.request.post('http://localhost:8080/dev-login');
   await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
 
-  const editor = page.locator('#questionDiv .editor');
+  // #questionDiv holds one editor per language (en/hi/gu/ta); only "en" is visible by default.
+  const questionEn = page.locator('#questionDiv .lang-content[data-lang="en"]');
+  const editor = questionEn.locator('.editor');
   await editor.evaluate((el) => {
     el.innerHTML = `
       <table class="w-full border border-black border-collapse my-2">
@@ -26,9 +28,9 @@ test('image toolbar can keep a diagram inline with its label', async ({ page }) 
       </table>`;
   });
 
-  const image = page.locator('#questionDiv .editor img[alt="diagram"]');
+  const image = questionEn.locator('.editor img[alt="diagram"]');
   await image.click();
-  await page.locator('#questionDiv').getByTitle('Inline With Text').click();
+  await questionEn.getByTitle('Inline With Text').click();
 
   await expect(image).toHaveCSS('display', 'inline-block');
   await expect(image).toHaveCSS('float', 'none');
@@ -52,9 +54,11 @@ test('resizing the editor keeps the preview matched', async ({ page }) => {
   await page.request.post('http://localhost:8080/dev-login');
   await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
 
-  const editor = page.locator('#questionDiv .editor');
-  const preview = page.locator('#questionDiv .output');
-  const wrapper = page.locator('#questionDiv .editor-wrapper');
+  // #questionDiv holds one editor per language (en/hi/gu/ta); only "en" is visible by default.
+  const questionEn = page.locator('#questionDiv .lang-content[data-lang="en"]');
+  const editor = questionEn.locator('.editor');
+  const preview = questionEn.locator('.output');
+  const wrapper = questionEn.locator('.editor-wrapper');
 
   await expect(editor).toHaveCSS('resize', 'both');
 
@@ -90,8 +94,10 @@ test('resizing the editor cannot push the preview outside the problem card', asy
   await page.request.post('http://localhost:8080/dev-login');
   await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
 
-  const editor = page.locator('#questionDiv .editor');
-  const preview = page.locator('#questionDiv .output');
+  // #questionDiv holds one editor per language (en/hi/gu/ta); only "en" is visible by default.
+  const questionEn = page.locator('#questionDiv .lang-content[data-lang="en"]');
+  const editor = questionEn.locator('.editor');
+  const preview = questionEn.locator('.output');
   const form = page.locator('#content > form');
 
   await editor.evaluate((el: HTMLElement) => {
