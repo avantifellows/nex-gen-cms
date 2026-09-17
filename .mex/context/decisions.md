@@ -86,7 +86,7 @@ Google OAuth + the `cms_user_permission` role model (the `CMS_USERNAME`/`CMS_PAS
 **Date:** 2026-01-16
 **Status:** Active
 **Decision:** Question papers / answer sheets are rendered to PDF by driving headless Chrome with
-chromedp: render the template to an HTML string, inline `output.css` into a `<style>` tag, load it via
+chromedp: render the template to an HTML string, inline the generated stylesheet into a `<style>` tag, load it via
 CDP `Page.SetDocumentContent` (not a `data:` URL), wait for MathJax to finish, then `Page.PrintToPDF`.
 **Reasoning:** Papers contain MathJax-typeset math and Tailwind styling; a real browser is the only
 faithful renderer. CSS is inlined because headless Chrome can't resolve relative stylesheet links from
@@ -95,7 +95,7 @@ an in-memory document. `SetDocumentContent` avoids Chrome aborting navigation on
 **Consequences:** On EC2 the binary is the Playwright-installed Chromium (`/opt/playwright-browsers`);
 locally chromedp finds the system Chrome. See `patterns/generate-pdf.md`.
 
-### Generated Tailwind `output.css` is not committed
+### Generated Tailwind output.css is not committed
 **Date:** 2026-06-01
 **Status:** Active
 **Decision:** `web/static/css/output.css` is `.gitignore`d and built from `input.css` at deploy time,
