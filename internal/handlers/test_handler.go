@@ -26,6 +26,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/storage"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
@@ -79,12 +80,13 @@ type TestsHandler struct {
 	curriculumsService *services.Service[models.Curriculum]
 	gradesService      *services.Service[models.Grade]
 	examsService       *services.Service[models.Exam]
+	pdfStore           *storage.PdfStore
 }
 
 func NewTestsHandler(testsService *services.Service[models.Test], subjectsService *services.Service[models.Subject],
 	problemsService *services.Service[models.Problem], testRulesService *services.Service[models.TestRule],
 	curriculumsService *services.Service[models.Curriculum], gradesService *services.Service[models.Grade],
-	examsService *services.Service[models.Exam]) *TestsHandler {
+	examsService *services.Service[models.Exam], pdfStore *storage.PdfStore) *TestsHandler {
 	return &TestsHandler{
 		testsService:       testsService,
 		subjectsService:    subjectsService,
@@ -93,6 +95,7 @@ func NewTestsHandler(testsService *services.Service[models.Test], subjectsServic
 		curriculumsService: curriculumsService,
 		gradesService:      gradesService,
 		examsService:       examsService,
+		pdfStore:           pdfStore,
 	}
 }
 
