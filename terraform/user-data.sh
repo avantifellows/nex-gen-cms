@@ -111,7 +111,7 @@ fi
 # Create .env file in application directory for godotenv (after git clone).
 # Bumping a marker comment here also bumps the rendered user_data hash, which forces an instance
 # replacement under user_data_replace_on_change=true. Use this to redeploy env-var changes:
-# env-rev=2026-07-02-1
+# env-rev=2026-09-18-1
 log "Creating .env file for application"
 cat > "$APP_DIR/.env" << 'EOF'
 DB_SERVICE_ENDPOINT=${db_service_endpoint}
@@ -123,6 +123,8 @@ GOOGLE_CLIENT_ID=${google_client_id}
 GOOGLE_CLIENT_SECRET=${google_client_secret}
 OAUTH_REDIRECT_URL=${oauth_redirect_url}
 APP_ENV=${app_env}
+AWS_REGION=${aws_region}
+AWS_S3_BUCKET=${test_pdfs_bucket}
 EOF
 chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
 chmod 600 "$APP_DIR/.env"
