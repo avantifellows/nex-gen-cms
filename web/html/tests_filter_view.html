@@ -60,13 +60,20 @@
                             console.log("Skipping /api/tests request because tests are already loaded.");
                             event.preventDefault();
                             return;
-                        } 
+                        }
                     }
 
                     // clear table body & show loader
                     const tbody = document.getElementById("test-table-body");
                     tbody.innerHTML = "";
                     loader.classList.remove("hidden");
+
+                } else if (name === "htmx:afterSwap") {
+                    // Subject filtering (for Chapter Test) is applied client-side over the full,
+                    // unfiltered row set - re-apply it here after every /api/tests swap (initial
+                    // load and sort clicks alike), since none of those requests carry a subject
+                    // param anymore.
+                    window.filterTestRowsBySubject?.(document.getElementById('tests-subject-dropdown')?.value || '');
 
                 } else if (name === "htmx:afterRequest") {
                     // Hide loader
