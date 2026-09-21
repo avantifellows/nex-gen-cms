@@ -3,6 +3,8 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -1288,6 +1290,18 @@ func (h *TestsHandler) ruleForTest(test *models.Test) *models.TestRule {
 		return nil
 	}
 	return testRule
+}
+
+// pdfContentHash returns a hex-encoded SHA-256 digest of renderedHTML — the
+// fully rendered (pre-CSS-inlining) template output for one PDF request.
+// Template execution already incorporates every input that affects the PDF's
+// visible content (the test, its rule, all referenced problems, the regional
+// language), so hashing this string is what makes the S3 cache in DownloadPdf
+// self-invalidating: any relevant edit changes the rendered HTML, which
+// changes this hash, without having to hand-enumerate the relevant fields.
+func pdfContentHash(renderedHTML string) string {
+	sum := sha256.Sum256([]byte(renderedHTML))
+	return hex.EncodeToString(sum[:])
 }
 
 // buildPdfTasks builds the chromedp pipeline that loads htmlContent, waits for
