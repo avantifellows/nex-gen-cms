@@ -1180,6 +1180,27 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	}
 	htmlContent := buf.String()
 
+	testName := selectedTestPtr.GetNameByLang("en")
+	var filename string
+	if regionalLangCode != "" {
+		filename = fmt.Sprintf("%s - %s - %s.pdf", testName, pdfSuffix, utils.LangName(regionalLangCode))
+	} else {
+		filename = fmt.Sprintf("%s - %s.pdf", testName, pdfSuffix)
+	}
+
+	// pdfCacheKey identifies this (pdfType, language) variant within the test's cached
+	// PdfUrls, and doubles as the S3 object key's filename component.
+	pdfCacheKey := pdfType
+	if regionalLangCode != "" {
+		pdfCacheKey += "_" + regionalLangCode
+	}
+	contentHash := pdfContentHash(htmlContent)
+
+	if redirectURL, ok := h.cachedPdfRedirectURL(request.Context(), selectedTestPtr, pdfCacheKey, contentHash, filename); ok {
+		http.Redirect(responseWriter, request, redirectURL, http.StatusFound)
+		return
+	}
+
 	// for tailwind css lib. Including it from here, because chromedp is unable to resolve it using relative path in html <link>
 	cssBytes, err := os.ReadFile("web/static/css/output.css")
 	if err != nil {
@@ -1245,12 +1266,72 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	// Send as response
 	responseWriter.Header().Set("Content-Type", "application/pdf")
-	filename := fmt.Sprintf(`"%s - %s.pdf"`, selectedTestPtr.GetNameByLang("en"), pdfSuffix)
-	if regionalLangCode != "" {
-		filename = fmt.Sprintf(`"%s - %s - %s.pdf"`, selectedTestPtr.GetNameByLang("en"), pdfSuffix, utils.LangName(regionalLangCode))
-	}
-	responseWriter.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 	_, _ = responseWriter.Write(pdfData)
+
+	// Best-effort: the PDF has already been served above regardless of what
+	// happens here.
+	h.cachePdf(request.Context(), selectedTestPtr, pdfCacheKey, contentHash, pdfData)
+}
+
+// cachedPdfRedirectURL returns a presigned S3 URL to reuse the cached PDF for
+// (pdfCacheKey, contentHash) on test, plus true, if one is cached and its
+// hash still matches. Any miss, hash mismatch, or S3 error returns ("",
+// false) — the caller always falls back to regenerating; a cache-layer
+// problem must never fail the download.
+func (h *TestsHandler) cachedPdfRedirectURL(ctx context.Context, test *models.Test, pdfCacheKey,
+	contentHash, filename string) (string, bool) {
+	if h.pdfStore == nil {
+		return "", false
+	}
+
+	entry, cached := test.TypeParams.PdfUrls[pdfCacheKey]
+	if !cached || entry.Hash != contentHash {
+		return "", false
+	}
+
+	exists, err := h.pdfStore.Exists(ctx, entry.Key)
+	if err != nil {
+		log.Printf("pdf cache: HeadObject failed for test %d key %s: %v", test.ID, entry.Key, err)
+		return "", false
+	}
+	if !exists {
+		return "", false
+	}
+
+	url, err := h.pdfStore.PresignGetURL(ctx, entry.Key, filename)
+	if err != nil {
+		log.Printf("pdf cache: presign failed for test %d key %s: %v", test.ID, entry.Key, err)
+		return "", false
+	}
+	return url, true
+}
+
+// cachePdf uploads a freshly generated PDF to S3 and records the cache entry
+// on test via UpdateObject (fetch-whole-mutate-one-field, same pattern as
+// UpdateSubject), so the next DownloadPdf request for the same content can
+// skip chromedp entirely. Best-effort: errors are logged, never returned —
+// the PDF has already been written to the client by the time this runs.
+func (h *TestsHandler) cachePdf(ctx context.Context, test *models.Test, pdfCacheKey, contentHash string, pdfData []byte) {
+	if h.pdfStore == nil {
+		return
+	}
+
+	key := fmt.Sprintf("tests/%d/%s.pdf", test.ID, pdfCacheKey)
+	if err := h.pdfStore.Put(ctx, key, pdfData); err != nil {
+		log.Printf("pdf cache: upload failed for test %d key %s: %v", test.ID, key, err)
+		return
+	}
+
+	if test.TypeParams.PdfUrls == nil {
+		test.TypeParams.PdfUrls = make(map[string]models.PdfCacheEntry)
+	}
+	test.TypeParams.PdfUrls[pdfCacheKey] = models.PdfCacheEntry{Key: key, Hash: contentHash}
+
+	if _, err := h.testsService.UpdateObject(strconv.Itoa(test.ID), resourcesEndPoint, test, testsKey,
+		func(t *models.Test) bool { return (*t).ID == test.ID }); err != nil {
+		log.Printf("pdf cache: failed to persist cache entry for test %d: %v", test.ID, err)
+	}
 }
 
 // resolvePdfParams maps a pdfType ("questions", "questions_with_answers",
