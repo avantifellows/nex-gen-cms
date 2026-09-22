@@ -185,3 +185,19 @@ func (s *Service[T]) Post(urlEndPoint string, body any, result any) error {
 
 	return nil
 }
+
+// Get calls a db-service GET endpoint and unmarshals the response into result, whatever its
+// shape (unlike GetList, which assumes a bare JSON array of T).
+func (s *Service[T]) Get(urlEndPoint string, result any) error {
+
+	respBytes, err := s.apiRepository.CallAPI(urlEndPoint, http.MethodGet, nil)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(respBytes, result); err != nil {
+		return fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return nil
+}

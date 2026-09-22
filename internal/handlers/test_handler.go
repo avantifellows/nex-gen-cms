@@ -56,6 +56,7 @@ const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
 const addTestDestSubjectRowTemplate = "dest_subject_row.html"
 const testInstructionsModalTemplate = "test_instructions_modal.html"
 const addTestSearchedTemplate = "add_test_searched.html"
+const testSequenceOptionsTemplate = "test_sequence_options.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
 const addTestModalTemplate = "add_test_modal.html"
 const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
@@ -67,6 +68,7 @@ const pdfSharedTemplate = "test_pdf_shared.html"
 
 const testProblemsEndPoint = "resource/test/%d/problems"
 const testRulesEndPoint = "test-rule"
+const testSequencesEndPoint = "resources/test-sequences"
 
 const testsKey = "tests"
 const testRulesKey = "testRules"
@@ -191,6 +193,41 @@ func (h *TestsHandler) GetChapterTests(responseWriter http.ResponseWriter, reque
 
 	views.ExecuteTemplates(responseWriter, tests, template.FuncMap{"dict": utils.Dict},
 		testRowTemplate, testActionsCellTemplate, testLockButtonTemplate, testEditButtonTemplate)
+}
+
+// GetTestSequenceOptions renders the Sequence dropdown's <option> list for the add/edit-test
+// screen, with sequence numbers already used for the given program/type_code/year marked
+// bold. Query params: program, type_code, year (the other parts of the test code being
+// built) and selected (the sequence value to keep selected, if any) — all optional; with
+// program/type_code/year missing, no sequence is treated as used yet.
+func (h *TestsHandler) GetTestSequenceOptions(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	program := urlVals.Get("program")
+	typeCode := urlVals.Get("type_code")
+	year := urlVals.Get("year")
+
+	usedSequences := map[int]bool{}
+	if program != "" && typeCode != "" && year != "" {
+		queryParams := "?program=" + url.QueryEscape(program) + "&type_code=" + url.QueryEscape(typeCode) +
+			"&year=" + url.QueryEscape(year)
+
+		var resp dto.TestSequencesResponse
+		if err := h.testsService.Get(testSequencesEndPoint+queryParams, &resp); err != nil {
+			http.Error(responseWriter, fmt.Sprintf("Error fetching used test sequences: %v", err), http.StatusInternalServerError)
+			return
+		}
+		for _, seq := range resp.UsedSequences {
+			usedSequences[seq] = true
+		}
+	}
+
+	data := dto.TestSequenceOptionsData{
+		Sequences:     utils.Seq(1, 199),
+		UsedSequences: usedSequences,
+		Selected:      urlVals.Get("selected"),
+	}
+
+	views.ExecuteTemplate(testSequenceOptionsTemplate, responseWriter, data, nil)
 }
 
 // removes archived tests from the slice
