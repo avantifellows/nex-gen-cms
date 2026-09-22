@@ -198,7 +198,7 @@ func (h *TestsHandler) GetChapterTests(responseWriter http.ResponseWriter, reque
 // GetTestSequenceOptions renders the Sequence dropdown's <option> list for the add/edit-test
 // screen, with sequence numbers already used for the given program/type_code/year marked
 // bold. Query params: program, type_code, year (the other parts of the test code being
-// built) and selected (the sequence value to keep selected, if any) — all optional; with
+// built) and sequence (the value to keep selected, if any) — all optional; with
 // program/type_code/year missing, no sequence is treated as used yet.
 func (h *TestsHandler) GetTestSequenceOptions(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
@@ -224,7 +224,7 @@ func (h *TestsHandler) GetTestSequenceOptions(responseWriter http.ResponseWriter
 	data := dto.TestSequenceOptionsData{
 		Sequences:     utils.Seq(1, 199),
 		UsedSequences: usedSequences,
-		Selected:      urlVals.Get("selected"),
+		Selected:      urlVals.Get("sequence"),
 	}
 
 	views.ExecuteTemplate(testSequenceOptionsTemplate, responseWriter, data, nil)

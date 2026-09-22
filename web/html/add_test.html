@@ -212,27 +212,34 @@
             {{ $seq = index $parts 2 }}
             {{ $year = index $parts 3 }}
             {{end}}
-            <select id="program-dropdown" class="form-input flex-1"
+            <select id="program-dropdown" name="program" class="form-input flex-1"
                 onchange="sessionStorage.setItem('selectedProgram', this.value);">
                 {{ if ne $mode "edit" }}
                 <option value="" selected disabled hidden>Select Program</option>
                 {{ end }}
-            
+
                 {{range $opt := (slice "AF" "DL" "GJ" "GN" "HP" "JN" "MH" "MS" "ON" "OR" "PN" "TN" "UK" "X" "Y" "Z")}}
                 <option {{if eq $program $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
-            <select id="test-type-code-dropdown" class="form-input flex-1"
+            <select id="test-type-code-dropdown" name="type_code" class="form-input flex-1"
                 onchange="sessionStorage.setItem('selectedTestTypeCode', this.value);">
                 {{ if ne $mode "edit" }}
                 <option value="" selected disabled hidden>Select Type Code</option>
                 {{ end }}
-                
+
                 {{range $opt := (slice "P" "C" "M" "B" "CT" "CCT" "PT" "MT" "MoT" "FST")}}
                 <option {{if eq $type $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
-            <select id="test-sequence-dropdown" class="form-input flex-1"
+            <!-- Bolds already-used sequence numbers for the currently chosen program/type_code/year.
+                 This select's own current value rides along automatically (it's a named field
+                 inside the enclosing form), so a reload (triggered by a sibling changing) doesn't
+                 lose whatever sequence the user already picked. -->
+            <select id="test-sequence-dropdown" name="sequence" class="form-input flex-1"
+                hx-get="/api/test-sequence-options"
+                hx-trigger="load, change from:(#program-dropdown, #test-type-code-dropdown, #year-dropdown)"
+                hx-include="#program-dropdown, #test-type-code-dropdown, #year-dropdown"
                 onchange="sessionStorage.setItem('selectedSequence', this.value);">
                 {{ if ne $mode "edit" }}
                 <option value="" selected disabled hidden>Select Sequence</option>
@@ -243,7 +250,7 @@
                 <option {{if eq $seq (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
                 {{end}}
             </select>
-            <select id="year-dropdown" class="form-input flex-1"
+            <select id="year-dropdown" name="year" class="form-input flex-1"
                 onchange="sessionStorage.setItem('selectedYear', this.value);">
                 {{ if ne $mode "edit" }}
                 <option value="" selected disabled hidden>Select Year</option>
@@ -514,6 +521,12 @@
         setElementFromStorage('duration', SESSION_KEY_DURATION);
 
         restoreSectionNames();
+
+        // setElementFromStorage() above sets .value directly without dispatching a change
+        // event, so the Sequence dropdown's hx-get (bound to "change from" the program/
+        // type-code/year dropdowns) won't have fired for the restored values — trigger it
+        // explicitly so used-sequence bolding reflects them.
+        htmx.trigger(document.getElementById('program-dropdown'), 'change');
     });
 
     function saveSectionName(subjectId, subtype, value) {
