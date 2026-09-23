@@ -150,6 +150,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/api/tests", testsHandler.GetTests)
 	muxHandler.HandleFunc("/api/chapter-tests", testsHandler.GetChapterTests)
 	muxHandler.HandleFunc("/api/search-tests", testsHandler.GetSearchTests)
+	muxHandler.HandleFunc("/api/test-sequence-options", testsHandler.GetTestSequenceOptions)
 	muxHandler.HandleFunc("/test", testsHandler.GetTest)
 	muxHandler.HandleFunc("/api/test/problems", testsHandler.GetTestProblems)
 	muxHandler.HandleFunc("/tests/download-modal", testsHandler.GetDownloadModal)

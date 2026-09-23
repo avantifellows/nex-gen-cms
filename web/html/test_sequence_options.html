@@ -1,0 +1,7 @@
+{{ if not .Selected }}
+<option value="" selected disabled hidden>Select Sequence</option>
+{{ end }}
+{{ range .Sequences }}
+<!-- "%d" converts . to a string so it can be compared with $.Selected -->
+<option {{if eq $.Selected (printf "%d" .)}}selected{{end}} {{if index $.UsedSequences .}}class="font-bold"{{end}}>{{.}}</option>
+{{ end }}

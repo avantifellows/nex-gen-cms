@@ -212,27 +212,39 @@
             {{ $seq = index $parts 2 }}
             {{ $year = index $parts 3 }}
             {{end}}
-            <select id="program-dropdown" class="form-input flex-1"
-                onchange="sessionStorage.setItem('selectedProgram', this.value);">
+            <select id="program-dropdown" name="program" class="form-input flex-1"
+                onchange="sessionStorage.setItem('selectedProgram', this.value); updateSequenceDropdownState();">
                 {{ if ne $mode "edit" }}
                 <option value="" selected disabled hidden>Select Program</option>
                 {{ end }}
-            
+
                 {{range $opt := (slice "AF" "DL" "GJ" "GN" "HP" "JN" "MH" "MS" "ON" "OR" "PN" "TN" "UK" "X" "Y" "Z")}}
                 <option {{if eq $program $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
-            <select id="test-type-code-dropdown" class="form-input flex-1"
-                onchange="sessionStorage.setItem('selectedTestTypeCode', this.value);">
+            <select id="test-type-code-dropdown" name="type_code" class="form-input flex-1"
+                onchange="sessionStorage.setItem('selectedTestTypeCode', this.value); updateSequenceDropdownState();">
                 {{ if ne $mode "edit" }}
                 <option value="" selected disabled hidden>Select Type Code</option>
                 {{ end }}
-                
+
                 {{range $opt := (slice "P" "C" "M" "B" "CT" "CCT" "PT" "MT" "MoT" "FST")}}
                 <option {{if eq $type $opt}}selected{{end}}>{{$opt}}</option>
                 {{end}}
             </select>
-            <select id="test-sequence-dropdown" class="form-input flex-1"
+            <!-- Bolds already-used sequence numbers for the currently chosen program/type_code/year.
+                 This select's own current value rides along automatically (it's a named field
+                 inside the enclosing form), so a reload (triggered by a sibling changing) doesn't
+                 lose whatever sequence the user already picked.
+                 Disabled (via updateSequenceDropdownState) until program/type_code/year are all
+                 chosen, since a sequence number's "already used" bolding is meaningless without
+                 them; the title attribute shows why on hover (hover still works on a disabled
+                 element, unlike click/keyboard). -->
+            <select id="test-sequence-dropdown" name="sequence" class="form-input flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                {{ if ne $mode "edit" }}disabled title="Please select Program, Type Code and Year before choosing Sequence."{{ end }}
+                hx-get="/api/test-sequence-options"
+                hx-trigger="load, change from:(#program-dropdown, #test-type-code-dropdown, #year-dropdown)"
+                hx-include="#program-dropdown, #test-type-code-dropdown, #year-dropdown"
                 onchange="sessionStorage.setItem('selectedSequence', this.value);">
                 {{ if ne $mode "edit" }}
                 <option value="" selected disabled hidden>Select Sequence</option>
@@ -243,8 +255,8 @@
                 <option {{if eq $seq (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
                 {{end}}
             </select>
-            <select id="year-dropdown" class="form-input flex-1"
-                onchange="sessionStorage.setItem('selectedYear', this.value);">
+            <select id="year-dropdown" name="year" class="form-input flex-1"
+                onchange="sessionStorage.setItem('selectedYear', this.value); updateSequenceDropdownState();">
                 {{ if ne $mode "edit" }}
                 <option value="" selected disabled hidden>Select Year</option>
                 {{ end }}
@@ -508,13 +520,50 @@
     document.querySelector(ADD_TEST_DIV_SELECTOR).addEventListener(BACK_TO_ADD_TEST_EVT, () => {
         setElementFromStorage('program-dropdown', SESSION_KEY_PROGRAM);
         setElementFromStorage('test-type-code-dropdown', SESSION_KEY_TEST_TYPE_CODE);
-        setElementFromStorage('test-sequence-dropdown', SESSION_KEY_SEQUENCE);
         setElementFromStorage('year-dropdown', SESSION_KEY_YEAR);
         setElementFromStorage('test-name', SESSION_KEY_NAME);
         setElementFromStorage('duration', SESSION_KEY_DURATION);
 
         restoreSectionNames();
+
+        // The Sequence dropdown's own value isn't restored directly above: the reload below
+        // (triggered to refresh bold marks) replaces its <option> children entirely, and the
+        // browser's <select> reset algorithm then picks selection purely from the fresh HTML's
+        // own "selected" attribute — a .value set here wouldn't survive that swap. htmx's
+        // history-cache snapshot of it is also unreliable as that source: it reflects whichever
+        // <option> had "selected" the last time this content was server-rendered, and picking a
+        // different option via the UI only updates live selectedness, never that attribute. So
+        // re-apply the restored value once the reload's swap actually finishes instead.
+        const sequenceDropdown = document.getElementById('test-sequence-dropdown');
+        sequenceDropdown.addEventListener('htmx:afterSwap', function reapplySequence() {
+            sequenceDropdown.removeEventListener('htmx:afterSwap', reapplySequence);
+            setElementFromStorage('test-sequence-dropdown', SESSION_KEY_SEQUENCE);
+        });
+
+        // setElementFromStorage() above sets .value directly without dispatching a change
+        // event, so the Sequence dropdown's hx-get (bound to "change from" the program/
+        // type-code/year dropdowns) won't have fired for the restored values — trigger it
+        // explicitly so used-sequence bolding reflects them.
+        htmx.trigger(document.getElementById('program-dropdown'), 'change');
     });
+
+    // Sequence numbers are only meaningful (and their "already used" bolding only correct)
+    // once Program, Type Code and Year are all chosen, so the dropdown stays disabled until
+    // then, with a title tooltip (shown on hover, since disabled elements don't respond to
+    // click/keyboard) explaining why.
+    function updateSequenceDropdownState() {
+        const ready = document.getElementById('program-dropdown').value &&
+            document.getElementById('test-type-code-dropdown').value &&
+            document.getElementById('year-dropdown').value;
+
+        const sequenceDropdown = document.getElementById('test-sequence-dropdown');
+        sequenceDropdown.disabled = !ready;
+        if (ready) {
+            sequenceDropdown.removeAttribute('title');
+        } else {
+            sequenceDropdown.title = 'Please select Program, Type Code and Year before choosing Sequence.';
+        }
+    }
 
     function saveSectionName(subjectId, subtype, value) {
         const key = getSectionStorageKey(subjectId, subtype);
