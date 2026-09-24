@@ -1,3 +1,16 @@
+{{ define "nav-problems-filters" }}
+<!-- Subject Dropdown -->
+<select class="form-select-compact ms-3 w-auto" id="problems-subject-dropdown"
+    name="problems-subject-dropdown" hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend"
+    onchange="
+        const input = document.getElementById('problem-search');
+        if (input.value.length >= 3) {
+            htmx.trigger('#problems-table-body', 'searchTriggered');
+        }
+    ">
+    <option value="">All Subjects</option>
+</select>
+{{ end }}
 {{ define "content" }}
 <div>
     <!-- Search + Subject Filter Row -->
@@ -8,18 +21,6 @@
         <!-- Search field -->
         <input type="text" id="problem-search" name="problem-search" placeholder="Search problems by question or code..."
             class="form-input w-76">
-
-        <!-- Subject Dropdown -->
-        <select class="form-select-compact w-auto" id="problems-subject-dropdown"
-            name="problems-subject-dropdown" hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend"
-            onchange="
-                const input = document.getElementById('problem-search');
-                if (input.value.length >= 3) {
-                    htmx.trigger('#problems-table-body', 'searchTriggered');
-                }
-            ">
-            <option value="">All Subjects</option>
-        </select>
 
     </div>
 

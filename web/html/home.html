@@ -221,6 +221,9 @@
                             <option value="" disabled selected>Loading subjects...</option>
                         </select>
 
+                        <!-- Problems-tab-specific filters (defined only by problems.html; empty on every other tab) -->
+                        {{ block "nav-problems-filters" . }}{{ end }}
+
                         <!-- Logout button at far right -->
                         <button hx-post="/logout"
                             class="btn-secondary btn-sm ms-auto my-2">

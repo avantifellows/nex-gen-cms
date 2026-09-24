@@ -30,6 +30,18 @@
                 // this event is fired only from hx-get calls and not from manual js htmx.ajax() calls,
                 // hence only initially / on changing search term / on changing sort order, so reset offset and data
                 target.setAttribute("data-offset", "0");
+
+                // Stop watching the sentinel before collapsing the table - otherwise clearing
+                // innerHTML shrinks the table enough to pull the still-active sentinel (left
+                // observing from the previous search) into view, so its callback fires a
+                // spurious "load more" fetch using the data-offset just reset above (0). That
+                // response then lands with swap:"beforeend" (append, not replace) on top of the
+                // real search response, duplicating every row. afterSwap re-observes once the
+                // new results are actually in place.
+                if (target.__observer && target.__sentinel) {
+                    target.__observer.unobserve(target.__sentinel);
+                }
+
                 target.innerHTML = "";
 
                 if (loader) loader.classList.remove("hidden");
