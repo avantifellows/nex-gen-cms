@@ -180,7 +180,7 @@
         <header class="bg-bg-card border-b border-border shadow-card">
             <div class="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
                 <nav>
-                    <div class="nav nav-tabs flex flex-wrap items-center gap-y-2 border-b-0" id="nav-tab">
+                    <div class="nav nav-tabs flex flex-wrap items-center gap-y-2 border-b-0 {{ block "nav-tab-extra-class" . }}{{ end }}" id="nav-tab">
                         <a href="/chapters" class="shrink-0 mr-4 sm:mr-6 flex items-center" aria-label="Avanti Fellows">
                             <img src="https://cdn.avantifellows.org/af_logos/avanti_logo_black_text.webp"
                                  alt="Avanti Fellows" class="h-8 sm:h-9">
@@ -293,19 +293,13 @@
                 }
                 
                 // Hide subject dropdown when "Tests" tab is active
+                // (the Problems tab hides curriculum/grade/subject via CSS instead - see
+                // #nav-tab.problems-tab-active in input.css - so that they're never painted
+                // in the first place, rather than flashing visible before JS hides them)
                 const subjectDropdown = document.getElementById("subject-dropdown");
-                if (activeTabId === "tests-tab") { 
-                    if (!(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test") 
+                if (activeTabId === "tests-tab") {
+                    if (!(currentPath.endsWith("/add-test") || currentPath.endsWith("/edit-test")
                             || currentPath.endsWith("/copy-test"))) {
-                        subjectDropdown.style.display = "none";
-                    }
-
-                } else if (activeTabId === "problems-tab") {
-                    if (currentPath.endsWith("/problems")) {
-                        const curriculumDropdown = document.getElementById("curriculum-dropdown");
-                        curriculumDropdown.style.display = "none";
-                        const gradeDropdown = document.getElementById("grade-dropdown");
-                        gradeDropdown.style.display = "none";
                         subjectDropdown.style.display = "none";
                     }
                 }

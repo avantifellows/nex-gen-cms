@@ -285,7 +285,9 @@ func filterProblems(problems *[]*models.Problem, levels []string, ptype string, 
 }
 
 func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, _ *http.Request) {
-	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, problemsTemplate)
+	views.ExecuteTemplates(responseWriter, nil, template.FuncMap{
+		"dict": utils.Dict,
+	}, baseTemplate, problemsTemplate)
 }
 
 func (h *ProblemsHandler) LoadTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {

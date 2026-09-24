@@ -141,6 +141,17 @@
     @apply text-ink bg-transparent border-b-2 border-accent;
   }
 
+  /* Problems tab renders its own curriculum/grade/subject filters (see
+     nav-problems-filters in problems.html) - hide the shared top-level ones via
+     CSS, baked into the server-rendered HTML from the first paint, instead of
+     waiting for JS to toggle them after the swap settles (which flashed all six
+     dropdowns briefly before three disappeared). */
+  #nav-tab.problems-tab-active #curriculum-dropdown,
+  #nav-tab.problems-tab-active #grade-dropdown,
+  #nav-tab.problems-tab-active #subject-dropdown {
+    display: none;
+  }
+
   /* --- Sub-tabs (chapter / topic detail) ------------------------------ */
   .sub-tab {
     @apply inline-flex items-center min-h-[40px] px-4 py-2 rounded-lg cursor-pointer

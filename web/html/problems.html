@@ -1,15 +1,20 @@
-{{ define "nav-problems-filters" }}
-<!-- Subject Dropdown -->
-<select class="form-select-compact ms-3 w-auto" id="problems-subject-dropdown"
-    name="problems-subject-dropdown" hx-get="/api/subjects" hx-trigger="revealed" hx-swap="beforeend"
+{{ define "problems-filter-dropdown" }}
+<select class="form-select-compact ms-3 w-auto" id="{{ .ID }}" name="{{ .ID }}"
+    hx-get="{{ .Endpoint }}" hx-trigger="revealed" hx-swap="beforeend"
     onchange="
         const input = document.getElementById('problem-search');
         if (input.value.length >= 3) {
             htmx.trigger('#problems-table-body', 'searchTriggered');
         }
     ">
-    <option value="">All Subjects</option>
+    <option value="">{{ .AllLabel }}</option>
 </select>
+{{ end }}
+{{ define "nav-tab-extra-class" }}problems-tab-active{{ end }}
+{{ define "nav-problems-filters" }}
+{{ template "problems-filter-dropdown" (dict "ID" "problems-curriculum-dropdown" "Endpoint" "/api/curriculums" "AllLabel" "All Curriculums") }}
+{{ template "problems-filter-dropdown" (dict "ID" "problems-grade-dropdown" "Endpoint" "/api/grades" "AllLabel" "All Grades") }}
+{{ template "problems-filter-dropdown" (dict "ID" "problems-subject-dropdown" "Endpoint" "/api/subjects" "AllLabel" "All Subjects") }}
 {{ end }}
 {{ define "content" }}
 <div>
@@ -43,7 +48,7 @@
                 hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=10&offset=0"
                 data-limit="10" data-offset="0" hx-sync="this:replace"
                 hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search, searchTriggered"
-                hx-include="#problem-search,#problems-subject-dropdown"
+                hx-include="#problem-search,#problems-curriculum-dropdown,#problems-grade-dropdown,#problems-subject-dropdown"
                 data-loader="#problems-search-loader" data-sentinel="#problems-table-sentinel">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
@@ -57,11 +62,13 @@
 <script>
     (function () {
         const searchInput = document.getElementById("problem-search");
+        const curriculumDropdown = document.getElementById("problems-curriculum-dropdown");
+        const gradeDropdown = document.getElementById("problems-grade-dropdown");
         const subjectDropdown = document.getElementById("problems-subject-dropdown");
         const restoreFlag = document.getElementById("problems-restore-flag");
-        
+
         const STORAGE_KEY = "problemsTabState";
-        
+
         if (restoreFlag.value === "restore") {
             // Back navigation
             const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -69,13 +76,15 @@
                 const state = JSON.parse(saved);
 
                 if (state.search) searchInput.value = state.search;
+                if (state.curriculum) curriculumDropdown.value = state.curriculum;
+                if (state.grade) gradeDropdown.value = state.grade;
                 if (state.subject) subjectDropdown.value = state.subject;
             }
         } else {
             // Fresh visit
             sessionStorage.removeItem(STORAGE_KEY);
         }
-    
+
         // Save state whenever search changes
         function saveState() {
             // update restore flag state to retain it back on navigating to next screens and then coming back
@@ -84,12 +93,16 @@
                 STORAGE_KEY,
                 JSON.stringify({
                     search: searchInput.value,
+                    curriculum: curriculumDropdown?.value || "",
+                    grade: gradeDropdown?.value || "",
                     subject: subjectDropdown?.value || ""
                 })
             );
         }
-    
+
         searchInput.addEventListener("input", saveState);
+        curriculumDropdown.addEventListener("change", saveState);
+        gradeDropdown.addEventListener("change", saveState);
         subjectDropdown.addEventListener("change", saveState);
     })();
 </script>
