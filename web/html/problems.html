@@ -1,12 +1,7 @@
 {{ define "problems-filter-dropdown" }}
 <select class="form-select-compact ms-3 w-auto" id="{{ .ID }}" name="{{ .ID }}"
     hx-get="{{ .Endpoint }}" hx-trigger="revealed" hx-swap="beforeend"
-    onchange="
-        const input = document.getElementById('problem-search');
-        if (input.value.length >= 3) {
-            htmx.trigger('#problems-table-body', 'searchTriggered');
-        }
-    ">
+    onchange="problemsRefreshChapterDropdown()">
     <option value="">{{ .AllLabel }}</option>
 </select>
 {{ end }}
@@ -18,7 +13,7 @@
 {{ end }}
 {{ define "content" }}
 <div>
-    <!-- Search + Subject Filter Row -->
+    <!-- Search + Chapter/Topic Filter Row -->
     <div class="flex flex-wrap items-center gap-3 mb-4">
 
         <input type="hidden" id="problems-restore-flag" value="fresh">
@@ -26,6 +21,37 @@
         <!-- Search field -->
         <input type="text" id="problem-search" name="problem-search" placeholder="Search problems by question or code..."
             class="form-input w-76">
+
+        <!--
+            Chapter/topic only make sense scoped to a curriculum+grade+subject, so these stay
+            disabled with a placeholder until the nav-bar filters above narrow down to a specific
+            one of each. hx-vals remaps our "problems-*-dropdown" values to the literal
+            "curriculum-dropdown"/"grade-dropdown"/"subject-dropdown" param names those handlers
+            read (see home.html's comment on the global dropdowns), so the existing endpoints can
+            be reused as-is.
+        -->
+        <select class="form-select-compact-disableable w-auto"
+            id="problems-chapter-dropdown" name="problems-chapter-dropdown" disabled
+            hx-get="/api/chapters" hx-trigger="loadChapters" hx-target="this" hx-swap="beforeend"
+            hx-vals='js:{"curriculum-dropdown": document.getElementById("problems-curriculum-dropdown").value,
+                          "grade-dropdown": document.getElementById("problems-grade-dropdown").value,
+                          "subject-dropdown": document.getElementById("problems-subject-dropdown").value}'
+            hx-on::after-swap="problemsFinishDropdownLoad(this, 'All Chapters')"
+            onchange="problemsRefreshTopicDropdown()">
+            <option value="" selected disabled>Select curriculum, grade &amp; subject first</option>
+        </select>
+
+        <!-- Topics belong to one chapter, so this stays disabled until a specific chapter is
+             chosen above. -->
+        <select class="form-select-compact-disableable w-auto"
+            id="problems-topic-dropdown" name="problems-topic-dropdown" disabled
+            hx-get="/api/topics?view=dropdown" hx-trigger="loadTopics" hx-target="this" hx-swap="beforeend"
+            hx-vals='js:{"id": document.getElementById("problems-chapter-dropdown").value,
+                          "curriculum-dropdown": document.getElementById("problems-curriculum-dropdown").value}'
+            hx-on::after-swap="problemsFinishDropdownLoad(this, 'All Topics')"
+            onchange="problemsMaybeSearch()">
+            <option value="" selected disabled>Select a chapter first</option>
+        </select>
 
     </div>
 
@@ -48,7 +74,7 @@
                 hx-ext="infinite-scroll" hx-get="/api/search-problems?limit=10&offset=0"
                 data-limit="10" data-offset="0" hx-sync="this:replace"
                 hx-trigger="keyup[event.target.value.length>=3] changed delay:500ms from:#problem-search, searchTriggered"
-                hx-include="#problem-search,#problems-curriculum-dropdown,#problems-grade-dropdown,#problems-subject-dropdown"
+                hx-include="#problem-search,#problems-curriculum-dropdown,#problems-grade-dropdown,#problems-subject-dropdown,#problems-chapter-dropdown,#problems-topic-dropdown"
                 data-loader="#problems-search-loader" data-sentinel="#problems-table-sentinel">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
@@ -60,11 +86,79 @@
     </div>
 </div>
 <script>
+    // Global (not IIFE-scoped) since these are called from onchange="..." attributes.
+
+    function problemsMaybeSearch() {
+        const input = document.getElementById("problem-search");
+        if (input && input.value.length >= 3) {
+            htmx.trigger("#problems-table-body", "searchTriggered");
+        }
+    }
+
+    // The server's chapter/topic dropdown responses always lead with a hidden placeholder
+    // option built for a "must pick one" flow (see chapter_dropdown.html/topic_dropdown.html) -
+    // drop theirs and our own "Loading ..." one, then put our visible "All ..." option in front.
+    function problemsFinishDropdownLoad(select, allLabel) {
+        // Removing the (selected) placeholder options below makes the browser fall back to
+        // auto-selecting whatever real option is now first - so re-select "All ..." by value
+        // afterwards, rather than relying on it being freshly inserted.
+        select.querySelectorAll("option[hidden], option[data-loading-placeholder]").forEach(o => o.remove());
+        select.insertAdjacentHTML("afterbegin", `<option value="">${allLabel}</option>`);
+        select.value = "";
+        select.disabled = false;
+    }
+
+    function problemsResetTopicDropdown() {
+        const topicDropdown = document.getElementById("problems-topic-dropdown");
+        if (!topicDropdown) return;
+        topicDropdown.disabled = true;
+        topicDropdown.innerHTML = '<option value="" selected disabled>Select a chapter first</option>';
+    }
+
+    function problemsRefreshChapterDropdown() {
+        const curriculum = document.getElementById("problems-curriculum-dropdown")?.value;
+        const grade = document.getElementById("problems-grade-dropdown")?.value;
+        const subject = document.getElementById("problems-subject-dropdown")?.value;
+        const chapterDropdown = document.getElementById("problems-chapter-dropdown");
+        if (!chapterDropdown) return;
+
+        if (curriculum && grade && subject) {
+            // stays disabled while loading - problemsFinishDropdownLoad re-enables it once the
+            // real chapters (and our "All Chapters" option) are actually in place
+            chapterDropdown.disabled = true;
+            chapterDropdown.innerHTML = '<option value="" selected disabled data-loading-placeholder>Loading chapters...</option>';
+            htmx.trigger(chapterDropdown, "loadChapters");
+        } else {
+            chapterDropdown.disabled = true;
+            chapterDropdown.innerHTML = '<option value="" selected disabled>Select curriculum, grade & subject first</option>';
+        }
+        problemsResetTopicDropdown();
+        problemsMaybeSearch();
+    }
+
+    function problemsRefreshTopicDropdown() {
+        const chapter = document.getElementById("problems-chapter-dropdown")?.value;
+        const topicDropdown = document.getElementById("problems-topic-dropdown");
+        if (!topicDropdown) return;
+
+        if (chapter) {
+            // stays disabled while loading - problemsFinishDropdownLoad re-enables it
+            topicDropdown.disabled = true;
+            topicDropdown.innerHTML = '<option value="" selected disabled data-loading-placeholder>Loading topics...</option>';
+            htmx.trigger(topicDropdown, "loadTopics");
+        } else {
+            problemsResetTopicDropdown();
+        }
+        problemsMaybeSearch();
+    }
+
     (function () {
         const searchInput = document.getElementById("problem-search");
         const curriculumDropdown = document.getElementById("problems-curriculum-dropdown");
         const gradeDropdown = document.getElementById("problems-grade-dropdown");
         const subjectDropdown = document.getElementById("problems-subject-dropdown");
+        const chapterDropdown = document.getElementById("problems-chapter-dropdown");
+        const topicDropdown = document.getElementById("problems-topic-dropdown");
         const restoreFlag = document.getElementById("problems-restore-flag");
 
         const STORAGE_KEY = "problemsTabState";
@@ -79,6 +173,24 @@
                 if (state.curriculum) curriculumDropdown.value = state.curriculum;
                 if (state.grade) gradeDropdown.value = state.grade;
                 if (state.subject) subjectDropdown.value = state.subject;
+
+                // Chapter/topic options only exist once fetched, so restoring their value has to
+                // wait for the fetch each kicks off (chained, since topics need a chapter first).
+                if (state.chapter) {
+                    chapterDropdown.addEventListener("htmx:afterSwap", function onChaptersLoaded() {
+                        chapterDropdown.removeEventListener("htmx:afterSwap", onChaptersLoaded);
+                        chapterDropdown.value = state.chapter;
+
+                        if (state.topic) {
+                            topicDropdown.addEventListener("htmx:afterSwap", function onTopicsLoaded() {
+                                topicDropdown.removeEventListener("htmx:afterSwap", onTopicsLoaded);
+                                topicDropdown.value = state.topic;
+                            });
+                            problemsRefreshTopicDropdown();
+                        }
+                    });
+                }
+                problemsRefreshChapterDropdown();
             }
         } else {
             // Fresh visit
@@ -95,7 +207,9 @@
                     search: searchInput.value,
                     curriculum: curriculumDropdown?.value || "",
                     grade: gradeDropdown?.value || "",
-                    subject: subjectDropdown?.value || ""
+                    subject: subjectDropdown?.value || "",
+                    chapter: chapterDropdown?.value || "",
+                    topic: topicDropdown?.value || ""
                 })
             );
         }
@@ -104,6 +218,8 @@
         curriculumDropdown.addEventListener("change", saveState);
         gradeDropdown.addEventListener("change", saveState);
         subjectDropdown.addEventListener("change", saveState);
+        chapterDropdown.addEventListener("change", saveState);
+        topicDropdown.addEventListener("change", saveState);
     })();
 </script>
 {{ end }}
