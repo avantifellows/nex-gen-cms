@@ -25,18 +25,17 @@
         <!--
             Chapter/topic only make sense scoped to a curriculum+grade+subject, so these stay
             disabled with a placeholder until the nav-bar filters above narrow down to a specific
-            one of each. hx-vals remaps our "problems-*-dropdown" values to the literal
-            "curriculum-dropdown"/"grade-dropdown"/"subject-dropdown" param names those handlers
-            read (see home.html's comment on the global dropdowns), so the existing endpoints can
-            be reused as-is.
+            one of each. Loaded via htmx.ajax() from JS (problemsLoadChapters/problemsLoadTopics)
+            rather than declarative hx-get/hx-trigger, since those depend on htmx having already
+            processed the element - unreliable right after a back-navigation history restore,
+            where our own restore script can run before that processing completes. htmx.ajax()
+            works regardless, and also lets us remap our "problems-*-dropdown" values to the
+            literal "curriculum-dropdown"/"grade-dropdown"/"subject-dropdown" param names those
+            handlers read (see home.html's comment on the global dropdowns), reusing the existing
+            endpoints as-is.
         -->
         <select class="form-select-compact-disableable w-auto"
             id="problems-chapter-dropdown" name="problems-chapter-dropdown" disabled
-            hx-get="/api/chapters" hx-trigger="loadChapters" hx-target="this" hx-swap="beforeend"
-            hx-vals='js:{"curriculum-dropdown": document.getElementById("problems-curriculum-dropdown").value,
-                          "grade-dropdown": document.getElementById("problems-grade-dropdown").value,
-                          "subject-dropdown": document.getElementById("problems-subject-dropdown").value}'
-            hx-on::after-swap="problemsFinishDropdownLoad(this, 'All Chapters')"
             onchange="problemsRefreshTopicDropdown()">
             <option value="" selected disabled>Select curriculum, grade &amp; subject first</option>
         </select>
@@ -45,10 +44,6 @@
              chosen above. -->
         <select class="form-select-compact-disableable w-auto"
             id="problems-topic-dropdown" name="problems-topic-dropdown" disabled
-            hx-get="/api/topics?view=dropdown" hx-trigger="loadTopics" hx-target="this" hx-swap="beforeend"
-            hx-vals='js:{"id": document.getElementById("problems-chapter-dropdown").value,
-                          "curriculum-dropdown": document.getElementById("problems-curriculum-dropdown").value}'
-            hx-on::after-swap="problemsFinishDropdownLoad(this, 'All Topics')"
             onchange="problemsMaybeSearch()">
             <option value="" selected disabled>Select a chapter first</option>
         </select>
@@ -115,41 +110,80 @@
         topicDropdown.innerHTML = '<option value="" selected disabled>Select a chapter first</option>';
     }
 
+    // Issued directly via htmx.ajax() (not a declarative hx-get/hx-trigger) so this works
+    // regardless of whether htmx has processed this element yet - relying on hx-trigger here
+    // broke silently after a back-navigation history restore, where our own restore script can
+    // run before htmx finishes wiring up the restored DOM's triggers, so the request never even
+    // went out. htmx.ajax() plus its returned promise sidesteps that entirely.
+    function problemsLoadChapters() {
+        const chapterDropdown = document.getElementById("problems-chapter-dropdown");
+        if (!chapterDropdown) return Promise.resolve();
+        return htmx.ajax("GET", "/api/chapters", {
+            target: chapterDropdown,
+            swap: "beforeend",
+            values: {
+                "curriculum-dropdown": document.getElementById("problems-curriculum-dropdown")?.value || "",
+                "grade-dropdown": document.getElementById("problems-grade-dropdown")?.value || "",
+                "subject-dropdown": document.getElementById("problems-subject-dropdown")?.value || ""
+            }
+        }).then(() => problemsFinishDropdownLoad(chapterDropdown, "All Chapters"));
+    }
+
+    function problemsLoadTopics() {
+        const topicDropdown = document.getElementById("problems-topic-dropdown");
+        if (!topicDropdown) return Promise.resolve();
+        return htmx.ajax("GET", "/api/topics?view=dropdown", {
+            target: topicDropdown,
+            swap: "beforeend",
+            values: {
+                "id": document.getElementById("problems-chapter-dropdown")?.value || "",
+                "curriculum-dropdown": document.getElementById("problems-curriculum-dropdown")?.value || ""
+            }
+        }).then(() => problemsFinishDropdownLoad(topicDropdown, "All Topics"));
+    }
+
+    // Returns the chapter-load promise (resolved immediately if it didn't need to fetch), so
+    // callers - the restore cascade below - can chain onto "chapters are actually in place" rather
+    // than racing problemsFinishDropdownLoad's own cleanup via a separate afterSwap listener.
     function problemsRefreshChapterDropdown() {
         const curriculum = document.getElementById("problems-curriculum-dropdown")?.value;
         const grade = document.getElementById("problems-grade-dropdown")?.value;
         const subject = document.getElementById("problems-subject-dropdown")?.value;
         const chapterDropdown = document.getElementById("problems-chapter-dropdown");
-        if (!chapterDropdown) return;
+        if (!chapterDropdown) return Promise.resolve();
 
+        let loadPromise = Promise.resolve();
         if (curriculum && grade && subject) {
             // stays disabled while loading - problemsFinishDropdownLoad re-enables it once the
             // real chapters (and our "All Chapters" option) are actually in place
             chapterDropdown.disabled = true;
             chapterDropdown.innerHTML = '<option value="" selected disabled data-loading-placeholder>Loading chapters...</option>';
-            htmx.trigger(chapterDropdown, "loadChapters");
+            loadPromise = problemsLoadChapters();
         } else {
             chapterDropdown.disabled = true;
             chapterDropdown.innerHTML = '<option value="" selected disabled>Select curriculum, grade & subject first</option>';
         }
         problemsResetTopicDropdown();
         problemsMaybeSearch();
+        return loadPromise;
     }
 
     function problemsRefreshTopicDropdown() {
         const chapter = document.getElementById("problems-chapter-dropdown")?.value;
         const topicDropdown = document.getElementById("problems-topic-dropdown");
-        if (!topicDropdown) return;
+        if (!topicDropdown) return Promise.resolve();
 
+        let loadPromise = Promise.resolve();
         if (chapter) {
             // stays disabled while loading - problemsFinishDropdownLoad re-enables it
             topicDropdown.disabled = true;
             topicDropdown.innerHTML = '<option value="" selected disabled data-loading-placeholder>Loading topics...</option>';
-            htmx.trigger(topicDropdown, "loadTopics");
+            loadPromise = problemsLoadTopics();
         } else {
             problemsResetTopicDropdown();
         }
         problemsMaybeSearch();
+        return loadPromise;
     }
 
     (function () {
@@ -175,22 +209,21 @@
                 if (state.subject) subjectDropdown.value = state.subject;
 
                 // Chapter/topic options only exist once fetched, so restoring their value has to
-                // wait for the fetch each kicks off (chained, since topics need a chapter first).
+                // wait for the fetch each kicks off (chained via the returned promises, since
+                // topics need a chapter first) - not an afterSwap listener, since
+                // problemsFinishDropdownLoad's own "All ..." reset would race it either way.
+                const chapterLoaded = problemsRefreshChapterDropdown();
                 if (state.chapter) {
-                    chapterDropdown.addEventListener("htmx:afterSwap", function onChaptersLoaded() {
-                        chapterDropdown.removeEventListener("htmx:afterSwap", onChaptersLoaded);
+                    chapterLoaded.then(() => {
                         chapterDropdown.value = state.chapter;
 
                         if (state.topic) {
-                            topicDropdown.addEventListener("htmx:afterSwap", function onTopicsLoaded() {
-                                topicDropdown.removeEventListener("htmx:afterSwap", onTopicsLoaded);
+                            problemsRefreshTopicDropdown().then(() => {
                                 topicDropdown.value = state.topic;
                             });
-                            problemsRefreshTopicDropdown();
                         }
                     });
                 }
-                problemsRefreshChapterDropdown();
             }
         } else {
             // Fresh visit
