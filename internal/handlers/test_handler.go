@@ -1323,12 +1323,16 @@ func (h *TestsHandler) cachePdf(ctx context.Context, test *models.Test, pdfCache
 		return
 	}
 
-	if test.TypeParams.PdfUrls == nil {
-		test.TypeParams.PdfUrls = make(map[string]models.PdfCacheEntry)
+	// test is the shared cached object; copy it and its PdfUrls map so this
+	// write can't race with concurrent requests and crash the process.
+	updatedTest := *test
+	updatedTest.TypeParams.PdfUrls = make(map[string]models.PdfCacheEntry, len(test.TypeParams.PdfUrls)+1)
+	for k, v := range test.TypeParams.PdfUrls {
+		updatedTest.TypeParams.PdfUrls[k] = v
 	}
-	test.TypeParams.PdfUrls[pdfCacheKey] = models.PdfCacheEntry{Key: key, Hash: contentHash}
+	updatedTest.TypeParams.PdfUrls[pdfCacheKey] = models.PdfCacheEntry{Key: key, Hash: contentHash}
 
-	if _, err := h.testsService.UpdateObject(strconv.Itoa(test.ID), resourcesEndPoint, test, testsKey,
+	if _, err := h.testsService.UpdateObject(strconv.Itoa(test.ID), resourcesEndPoint, &updatedTest, testsKey,
 		func(t *models.Test) bool { return (*t).ID == test.ID }); err != nil {
 		log.Printf("pdf cache: failed to persist cache entry for test %d: %v", test.ID, err)
 	}
