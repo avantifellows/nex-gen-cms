@@ -1169,6 +1169,10 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	}
 
 	regionalLangCode := urlVals.Get("lang_code")
+	if regionalLangCode != "" && !slices.Contains(utils.LangCodes(), regionalLangCode) {
+		http.Error(responseWriter, "Invalid lang_code", http.StatusBadRequest)
+		return
+	}
 	data := dto.PaperData{
 		TestPtr:          selectedTestPtr,
 		ProblemsMap:      problemsMap,
