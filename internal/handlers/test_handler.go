@@ -68,6 +68,10 @@ const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
 const pdfSharedTemplate = "test_pdf_shared.html"
 
+// pdfCacheVersion is mixed into pdfContentHash. Bump it when buildPdfTasks's
+// PrintToPDF settings change, since those never appear in the hashed string.
+const pdfCacheVersion = "1"
+
 const testProblemsEndPoint = "resource/test/%d/problems"
 const testRulesEndPoint = "test-rule"
 
@@ -1194,12 +1198,6 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	if regionalLangCode != "" {
 		pdfCacheKey += "_" + regionalLangCode
 	}
-	contentHash := pdfContentHash(htmlContent)
-
-	if redirectURL, ok := h.cachedPdfRedirectURL(request.Context(), selectedTestPtr, pdfCacheKey, contentHash, filename); ok {
-		http.Redirect(responseWriter, request, redirectURL, http.StatusFound)
-		return
-	}
 
 	// for tailwind css lib. Including it from here, because chromedp is unable to resolve it using relative path in html <link>
 	cssBytes, err := os.ReadFile("web/static/css/output.css")
@@ -1220,6 +1218,15 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			<div style="margin-bottom:4px;">%s</div>
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
+
+	// Hash post-injection content plus headerHTML so CSS/style/header
+	// changes also invalidate the cache.
+	contentHash := pdfContentHash(pdfCacheVersion, htmlContent, headerHTML)
+
+	if redirectURL, ok := h.cachedPdfRedirectURL(request.Context(), selectedTestPtr, pdfCacheKey, contentHash, filename); ok {
+		http.Redirect(responseWriter, request, redirectURL, http.StatusFound)
+		return
+	}
 
 	var ctx context.Context
 	var cancel context.CancelFunc
@@ -1377,16 +1384,15 @@ func (h *TestsHandler) ruleForTest(test *models.Test) *models.TestRule {
 	return testRule
 }
 
-// pdfContentHash returns a hex-encoded SHA-256 digest of renderedHTML — the
-// fully rendered (pre-CSS-inlining) template output for one PDF request.
-// Template execution already incorporates every input that affects the PDF's
-// visible content (the test, its rule, all referenced problems, the regional
-// language), so hashing this string is what makes the S3 cache in DownloadPdf
-// self-invalidating: any relevant edit changes the rendered HTML, which
-// changes this hash, without having to hand-enumerate the relevant fields.
-func pdfContentHash(renderedHTML string) string {
-	sum := sha256.Sum256([]byte(renderedHTML))
-	return hex.EncodeToString(sum[:])
+// pdfContentHash returns a hex-encoded SHA-256 digest of parts, each
+// length-prefixed so concatenation can't create ambiguity.
+func pdfContentHash(parts ...string) string {
+	h := sha256.New()
+	for _, part := range parts {
+		_, _ = fmt.Fprintf(h, "%d:", len(part))
+		_, _ = h.Write([]byte(part))
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // buildPdfTasks builds the chromedp pipeline that loads htmlContent, waits for
@@ -1430,7 +1436,9 @@ func buildPdfTasks(htmlContent, headerHTML, pdfType string, pdfData *[]byte) chr
 			await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 		})()`, nil, evalAwaitPromise),
 
-		// Generate PDF using CDP low-level API
+		// Generate PDF using CDP low-level API.
+		// Changing any option below isn't reflected in pdfContentHash - bump
+		// pdfCacheVersion so cached PDFs don't keep serving the old output.
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var err error
 			*pdfData, _, err = page.PrintToPDF().
