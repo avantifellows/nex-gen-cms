@@ -1276,9 +1276,11 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 	_, _ = responseWriter.Write(pdfData)
 
-	// Best-effort: the PDF has already been served above regardless of what
-	// happens here.
-	h.cachePdf(request.Context(), selectedTestPtr.ID, pdfCacheKey, contentHash, pdfData)
+	// Run in the background on a context decoupled from the request, so a
+	// closed download tab can't abort the S3 upload and the client isn't
+	// held waiting on it before its download finishes.
+	bgCtx := context.WithoutCancel(request.Context())
+	go h.cachePdf(bgCtx, selectedTestPtr.ID, pdfCacheKey, contentHash, pdfData)
 }
 
 // cachedPdfRedirectURL returns a presigned S3 URL to reuse the cached PDF for
