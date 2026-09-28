@@ -452,7 +452,7 @@ func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http
 	selectedTestPtr, err := h.testsService.GetObject(testIdStr,
 		func(test *models.Test) bool {
 			return (*test).ID == testId
-		}, testsKey, resourcesEndPoint)
+		}, testsKey, resourcesEndPoint, false)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching test: %v", err)
 	}
@@ -691,7 +691,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	problemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemID
-		}, problemsKey, endPointWithID)
+		}, problemsKey, endPointWithID, false)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
@@ -873,7 +873,7 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 func (h *TestsHandler) isTestLocked(testIDStr string, testID int) (bool, error) {
 	existing, err := h.testsService.GetObject(testIDStr,
 		func(test *models.Test) bool { return test.ID == testID },
-		testsKey, resourcesEndPoint)
+		testsKey, resourcesEndPoint, false)
 	if err != nil {
 		return false, err
 	}
@@ -1278,7 +1278,7 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	// Best-effort: the PDF has already been served above regardless of what
 	// happens here.
-	h.cachePdf(request.Context(), selectedTestPtr, pdfCacheKey, contentHash, pdfData)
+	h.cachePdf(request.Context(), selectedTestPtr.ID, pdfCacheKey, contentHash, pdfData)
 }
 
 // cachedPdfRedirectURL returns a presigned S3 URL to reuse the cached PDF for
@@ -1315,33 +1315,38 @@ func (h *TestsHandler) cachedPdfRedirectURL(ctx context.Context, test *models.Te
 }
 
 // cachePdf uploads a freshly generated PDF to S3 and records the cache entry
-// on test via UpdateObject (fetch-whole-mutate-one-field, same pattern as
-// UpdateSubject), so the next DownloadPdf request for the same content can
+// via UpdateObject, so the next DownloadPdf request for the same content can
 // skip chromedp entirely. Best-effort: errors are logged, never returned —
 // the PDF has already been written to the client by the time this runs.
-func (h *TestsHandler) cachePdf(ctx context.Context, test *models.Test, pdfCacheKey, contentHash string, pdfData []byte) {
+func (h *TestsHandler) cachePdf(ctx context.Context, testID int, pdfCacheKey, contentHash string, pdfData []byte) {
 	if h.pdfStore == nil {
 		return
 	}
 
-	key := fmt.Sprintf("tests/%d/%s.pdf", test.ID, pdfCacheKey)
+	key := fmt.Sprintf("tests/%d/%s.pdf", testID, pdfCacheKey)
 	if err := h.pdfStore.Put(ctx, key, pdfData); err != nil {
-		log.Printf("pdf cache: upload failed for test %d key %s: %v", test.ID, key, err)
+		log.Printf("pdf cache: upload failed for test %d key %s: %v", testID, key, err)
 		return
 	}
 
-	// test is the shared cached object; copy it and its PdfUrls map so this
-	// write can't race with concurrent requests and crash the process.
-	updatedTest := *test
-	updatedTest.TypeParams.PdfUrls = make(map[string]models.PdfCacheEntry, len(test.TypeParams.PdfUrls)+1)
-	for k, v := range test.TypeParams.PdfUrls {
-		updatedTest.TypeParams.PdfUrls[k] = v
+	// Re-fetch instead of reusing the test from before the (up to 60s) render:
+	// PATCHing that stale copy back could revert a concurrent edit to it.
+	// cacheKey is unused here since onlyRemote skips the cached-list lookup.
+	freshTest, err := h.testsService.GetObject(strconv.Itoa(testID),
+		func(t *models.Test) bool { return t.ID == testID }, "", resourcesEndPoint, true)
+	if err != nil {
+		log.Printf("pdf cache: refetch failed for test %d: %v", testID, err)
+		return
 	}
-	updatedTest.TypeParams.PdfUrls[pdfCacheKey] = models.PdfCacheEntry{Key: key, Hash: contentHash}
 
-	if _, err := h.testsService.UpdateObject(strconv.Itoa(test.ID), resourcesEndPoint, &updatedTest, testsKey,
-		func(t *models.Test) bool { return (*t).ID == test.ID }); err != nil {
-		log.Printf("pdf cache: failed to persist cache entry for test %d: %v", test.ID, err)
+	if freshTest.TypeParams.PdfUrls == nil {
+		freshTest.TypeParams.PdfUrls = make(map[string]models.PdfCacheEntry)
+	}
+	freshTest.TypeParams.PdfUrls[pdfCacheKey] = models.PdfCacheEntry{Key: key, Hash: contentHash}
+
+	if _, err := h.testsService.UpdateObject(strconv.Itoa(testID), resourcesEndPoint, freshTest, testsKey,
+		func(t *models.Test) bool { return (*t).ID == testID }); err != nil {
+		log.Printf("pdf cache: failed to persist cache entry for test %d: %v", testID, err)
 	}
 }
 

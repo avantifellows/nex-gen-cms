@@ -58,15 +58,19 @@ func (s *Service[T]) GetList(urlEndPoint string, cacheKey string, onlyCache bool
 	return &list, nil
 }
 
+// onlyRemote, like on GetList, skips the cached list and always fetches by
+// ID — for read-modify-write callers that can't risk acting on a stale copy.
 func (s *Service[T]) GetObject(objIdStr string, objFindingPredicate func(*T) bool, cacheKey string,
-	urlEndPoint string) (*T, error) {
+	urlEndPoint string, onlyRemote bool) (*T, error) {
 
-	// check in the cache for list
-	list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
-	if list != nil {
-		found := funk.Find(*list, objFindingPredicate)
-		if found != nil {
-			return found.(*T), nil
+	if !onlyRemote {
+		// check in the cache for list
+		list, _ := s.GetList(urlEndPoint, cacheKey, true, false)
+		if list != nil {
+			found := funk.Find(*list, objFindingPredicate)
+			if found != nil {
+				return found.(*T), nil
+			}
 		}
 	}
 
