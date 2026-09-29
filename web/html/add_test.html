@@ -246,14 +246,13 @@
                 hx-trigger="load, change from:(#program-dropdown, #test-type-code-dropdown, #year-dropdown)"
                 hx-include="#program-dropdown, #test-type-code-dropdown, #year-dropdown"
                 onchange="sessionStorage.setItem('selectedSequence', this.value);">
+                {{/* Full option list loads via hx-trigger="load" below; edit mode seeds its own
+                     current value here so that initial load request carries it. */}}
                 {{ if ne $mode "edit" }}
                 <option value="" selected disabled hidden>Select Sequence</option>
+                {{ else }}
+                <option selected>{{$seq}}</option>
                 {{ end }}
-
-                {{range $i := seq 1 199}}
-                <!-- "%d" is used to convert $i to string so that it can be compared with $seq -->
-                <option {{if eq $seq (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
-                {{end}}
             </select>
             <select id="year-dropdown" name="year" class="form-input flex-1"
                 onchange="sessionStorage.setItem('selectedYear', this.value); updateSequenceDropdownState();">
