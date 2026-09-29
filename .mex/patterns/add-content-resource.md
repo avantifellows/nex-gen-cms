@@ -18,7 +18,7 @@ edges:
     condition: when the new route mutates data and needs an editor/admin guard
   - target: patterns/debug-htmx-rendering.md
     condition: when the new route renders blank or the fragment doesn't swap
-last_updated: 2026-06-26
+last_updated: 2026-09-29
 ---
 
 # Add a Content Resource / Route
