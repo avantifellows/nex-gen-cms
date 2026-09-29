@@ -195,11 +195,8 @@ func (h *TestsHandler) GetChapterTests(responseWriter http.ResponseWriter, reque
 		testRowTemplate, testActionsCellTemplate, testLockButtonTemplate, testEditButtonTemplate)
 }
 
-// GetTestSequenceOptions renders the Sequence dropdown's <option> list for the add/edit-test
-// screen, with sequence numbers already used for the given program/type_code/year marked
-// bold. Query params: program, type_code, year (the other parts of the test code being
-// built) and sequence (the value to keep selected, if any) — all optional; with
-// program/type_code/year missing, no sequence is treated as used yet.
+// GetTestSequenceOptions renders the Sequence dropdown's <option> list, bolding sequence
+// numbers already used for the given program/type_code/year query params.
 func (h *TestsHandler) GetTestSequenceOptions(responseWriter http.ResponseWriter, request *http.Request) {
 	urlVals := request.URL.Query()
 	program := urlVals.Get("program")
