@@ -18,7 +18,7 @@ edges:
     condition: when extending a component and you need the code patterns
   - target: context/deployment.md
     condition: when you need how the running server sits behind NGINX/EC2
-last_updated: 2026-06-26
+last_updated: 2026-09-30
 ---
 
 # Architecture

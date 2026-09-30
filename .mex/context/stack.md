@@ -14,7 +14,7 @@ edges:
     condition: when understanding how to use a technology in this codebase
   - target: context/setup.md
     condition: when installing toolchains or building CSS
-last_updated: 2026-06-26
+last_updated: 2026-09-30
 ---
 
 # Stack
@@ -55,5 +55,5 @@ last_updated: 2026-06-26
 - **Go >= 1.25** — `Service[T]` and `utils.StringToIntType[T]` rely on generics.
 - **Tailwind v4** (upgraded 2026-05) — its CLI build requires **Node 22**; older Node breaks the build.
 - Handlers import **`text/template`** for building `FuncMap`s while `internal/views` uses
-  **`html/template`**; they interoperate because `html/template.FuncMap` is an alias of
-  `text/template.FuncMap`. Output HTML escaping is governed by `html/template` in `views`.
+  **`html/template`**; they interoperate because `html/template`'s `FuncMap` type is an alias of
+  `text/template`'s `FuncMap` type. Output HTML escaping is governed by `html/template` in `views`.
