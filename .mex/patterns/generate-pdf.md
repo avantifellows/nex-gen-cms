@@ -18,7 +18,7 @@ edges:
     condition: when PDF fails locally due to a missing Chrome
   - target: context/deployment.md
     condition: when PDF fails on EC2 (Playwright Chromium path or missing fonts)
-last_updated: 2026-06-26
+last_updated: 2026-09-30
 ---
 
 # PDF Generation (chromedp)

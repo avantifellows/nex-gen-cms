@@ -1,5 +1,7 @@
 # Pattern Index
 
+_Last reviewed: 2026-09-30._
+
 Lookup table for all pattern files in this directory. Check here before starting any task — if a pattern exists, follow it.
 
 <!-- Each row maps a pattern file (or section) to its trigger — when should the agent load it?

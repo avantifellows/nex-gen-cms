@@ -18,7 +18,7 @@ edges:
     condition: when working on login, sessions, roles, route guards, or the Postgres user store
   - target: context/deployment.md
     condition: when deploying, changing AWS/Terraform infra, CI/CD, or release operations
-last_updated: 2026-08-21
+last_updated: 2026-09-30
 ---
 
 # Session Bootstrap
@@ -45,6 +45,10 @@ Then read this file fully before doing anything else in this session.
   instead of saving. The frontend injects that modal; "Save Anyway" re-POSTs/PATCHes the same payload
   with `?confirmDuplicates=true`, which skips the check. No matches → saves directly, same as before.
 - Server-rendered HTML + HTMX UI; Tailwind v4 styling (built from `input.css`; generated CSS not committed).
+- The add/edit-test Sequence dropdown marks sequence numbers already used for the chosen
+  Program/Type Code/Year (a checkmark suffix, sourced from db-service's `resources/test-sequences`
+  endpoint via a new `GetTestSequenceOptions` fragment handler) and stays disabled until all three
+  are chosen.
 - Question paper / answer sheet / combined PDF generation via headless Chrome (chromedp + MathJax).
 - Admin user management (`/admin/users`), move/copy of resources & problems.
 - AWS deploy via Terraform + GitHub Actions (staging on `main`, prod on `release`).
