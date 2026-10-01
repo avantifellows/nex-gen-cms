@@ -20,7 +20,7 @@ edges:
     condition: when the change relates to the generated-CSS / build-at-deploy decision
   - target: context/architecture.md
     condition: when you need how the running server is structured behind NGINX
-last_updated: 2026-06-26
+last_updated: 2026-10-01
 ---
 
 # Deployment & Infrastructure

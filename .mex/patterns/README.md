@@ -120,6 +120,11 @@ Do not use a fixed number. Generate one pattern per:
 For a simple project this may be 3-4 files. For a complex project this may be 10-15.
 Do not cap based on a number — cap based on whether the pattern adds real value.
 
+## Maintenance
+
+Periodically re-check each pattern against the current codebase (new gotchas, renamed files/routes)
+and bump its `last_updated` after reviewing — `mex check` flags files that have gone stale.
+
 ## Pattern categories
 
 Walk through each category below. For each one, check the relevant context files

@@ -177,6 +177,16 @@ func (t *Test) DisplaySubtype() string {
 	}
 }
 
+// ChapterTestSubjectID returns the subject id for a chapter_test, derived from
+// TypeParams.Subjects (a chapter_test's problems come from one chapter, which belongs to
+// exactly one subject). Returns nil for any other test type, or if that invariant doesn't hold.
+func (t *Test) ChapterTestSubjectID() *int8 {
+	if t.Subtype != "chapter_test" || len(t.TypeParams.Subjects) != 1 {
+		return nil
+	}
+	return &t.TypeParams.Subjects[0].SubjectID
+}
+
 func (t *Test) RecalculateTotalMarksFromSubjects() {
 	var total int16
 

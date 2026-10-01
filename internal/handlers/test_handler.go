@@ -137,10 +137,12 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 		testRowTemplate, testActionsCellTemplate, testLockButtonTemplate, testEditButtonTemplate)
 }
 
-// listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the
-// HTMX row view (GetTests) and the service JSON API (GetTestsJSON).
-func (h *TestsHandler) listTests(curriculumId int16, gradeId int8, testtype, sortColumn, sortOrder string) (*[]*models.Test, error) {
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
+// listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the HTMX
+// row view (GetTests) and the service JSON API (GetTestsJSON). The subject filter on the tests
+// list screen is applied client-side instead, so a subject change never round-trips here.
+func (h *TestsHandler) listTests(curriculumID int16, gradeID int8, testtype,
+	sortColumn, sortOrder string) (*[]*models.Test, error) {
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumID, gradeID, testtype)
 
 	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
 	if err != nil {
