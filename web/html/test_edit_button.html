@@ -1,0 +1,13 @@
+{{ if .Test.IsLocked }}
+<button id="test-edit-button-{{.Test.ID}}"{{ if .OOB }} hx-swap-oob="true"{{ end }} class="action-button" disabled title="Locked - unlock to edit">
+    <i class="fa-solid fa-pen"></i>
+</button>
+{{ else }}
+<!-- target is kept body instead of #content, because using #content as target will not work when
+ directly edit url is entered in browser -->
+<button id="test-edit-button-{{.Test.ID}}"{{ if .OOB }} hx-swap-oob="true"{{ end }} class="action-button"
+    hx-get="/tests/edit-test?id={{.Test.ID}}"
+    hx-target="body" hx-push-url="true">
+    <i class="fa-solid fa-pen"></i>
+</button>
+{{ end }}

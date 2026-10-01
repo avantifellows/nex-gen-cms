@@ -924,21 +924,15 @@
         window.createProblem = function (event, topicId, chapterId, problemId) {
             event.preventDefault();  // Cancel the default form request
 
-            const saveBtn = document.getElementById('saveButton');
-            // Disable the button and change its text
-            toggleButton(saveBtn, true, 'Saving...');
-
             // save latest option value visible; otherwise if save is pressed directly after entering value
             // in option A editor, it will show wrong alert aking to enter value in option A, because without
             // this save call we are saving tab content only on switching tabs and adding new tab
             saveCurrentContent();
 
             if (!validateFields()) {
-                toggleButton(saveBtn, false, 'Save')
                 return false;
             }
 
-            
             const subtype = document.getElementById('problem-type-dropdown').value;
             const isComprehensionCreate = !isEditPage && subtype === 'comprehension';
 
@@ -953,10 +947,24 @@
                 payload = { ...payload, paragraph };
             }
 
-            const url = isEditPage
+            submitProblem(payload, isComprehensionCreate, problemId);
+        };
+
+        // Posts the save payload. The Go handler does the similarity check itself: a 409 response
+        // means it found likely duplicates and rendered a confirmation modal instead of saving;
+        // any other response is the normal create/update outcome.
+        function submitProblem(payload, isComprehensionCreate, problemId, confirmDuplicates) {
+            const saveBtn = document.getElementById('saveButton');
+            toggleButton(saveBtn, true, 'Saving...');
+
+            let url = isEditPage
                 ? `/update-problem?id=${problemId}`
                 : (isComprehensionCreate ? '/create-problems' : '/create-problem');
             const method = isEditPage ? 'PATCH' : 'POST';
+
+            if (confirmDuplicates) {
+                url += (url.includes('?') ? '&' : '?') + 'confirmDuplicates=true';
+            }
 
             fetch(url, {
                 method: method,
@@ -967,37 +975,65 @@
                 }
 
             }).then(res => {
+                if (res.status === 409) {
+                    return res.text().then(html => {
+                        showDuplicateProblemsModal(html, () => submitProblem(payload, isComprehensionCreate, problemId, true));
+                        toggleButton(saveBtn, false, 'Save');
+                    });
+                }
+
                 if (!res.ok) {
                     // Turn HTTP error into a real JS error to trigger .catch
                     throw new Error(`HTTP error! status: ${res.status}`);
                 }
-                return res.text(); // if OK, read body
+                return res.text().then(() => { // if OK, ignore body
 
-            }).then(html => {
-                if (isCopyPage) {
-                    sessionStorage.setItem('topicTabOnce', 'topic-problems-tab');
-                    const topicUrl = '/topic?id={{if .TopicPtr}}{{.TopicPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
-                    history.replaceState(null, '', topicUrl);
-                    htmx.ajax('GET', topicUrl, { target: 'body', swap: 'innerHTML' });
-                
-                } else {
-                    if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {
-                        sessionStorage.setItem(
-                            REFRESH_PROBLEM_URL_KEY,
-                            `/problem?id=${problemId}`
-                        );
-                        sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
+                    if (isCopyPage) {
+                        sessionStorage.setItem('topicTabOnce', 'topic-problems-tab');
+                        const topicUrl = '/topic?id={{if .TopicPtr}}{{.TopicPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
+                        history.replaceState(null, '', topicUrl);
+                        htmx.ajax('GET', topicUrl, { target: 'body', swap: 'innerHTML' });
+
+                    } else {
+                        if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {
+                            sessionStorage.setItem(
+                                REFRESH_PROBLEM_URL_KEY,
+                                `/problem?id=${problemId}`
+                            );
+                            sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
+                        }
+                        // go back to remove add/edit problem screen
+                        goBackAfterDelay(0);
                     }
-                    // go back to remove add/edit problem screen
-                    goBackAfterDelay(0);
-                }
+                });
 
             }).catch(err => {
                 console.error("Error during problem creation:", err);
                 alert("There was an error while saving the problem.");
                 toggleButton(saveBtn, false, 'Save');
             });
-        };
+        }
+
+        // Injects the server-rendered duplicate-warning modal and wires its buttons.
+        // onConfirm is called (and the modal removed) if the editor chooses to save anyway.
+        function showDuplicateProblemsModal(html, onConfirm) {
+            const container = document.createElement('div');
+            container.id = 'duplicate-problems-modal-container';
+            container.innerHTML = html;
+            document.body.appendChild(container);
+
+            window.confirmSaveDuplicateProblem = function () {
+                container.remove();
+                delete window.confirmSaveDuplicateProblem;
+                delete window.cancelSaveDuplicateProblem;
+                onConfirm();
+            };
+            window.cancelSaveDuplicateProblem = function () {
+                container.remove();
+                delete window.confirmSaveDuplicateProblem;
+                delete window.cancelSaveDuplicateProblem;
+            };
+        }
 
         function toggleButton(btn, disable, label) {
             btn.disabled = disable;
@@ -1063,6 +1099,13 @@
         }
 
         function validateFields() {
+            const curriculumId = parseInt(document.getElementById("curriculum-dropdown").value);
+            const gradeId = parseInt(document.getElementById("grade-dropdown").value);
+            const subjectId = parseInt(document.getElementById("subject-dropdown").value);
+            if (!Number.isInteger(curriculumId) || !Number.isInteger(gradeId) || !Number.isInteger(subjectId)) {
+                return fail('Curriculum, grade, and subject are still loading. Please wait a moment and try again.');
+            }
+
             const difficulty = document.querySelector('input[name="difficulty"]:checked');
             if (!difficulty) {
                 return fail('Please select a difficulty level.');

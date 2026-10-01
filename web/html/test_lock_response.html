@@ -1,0 +1,4 @@
+{{ template "test_lock_button.html" . }}
+<span hx-swap-oob="innerHTML:#test-status-{{.ID}}">{{ if .IsLocked }}Final{{ else }}Draft{{ end }}</span>
+{{ $cg := index .CurriculumGrades 0 }}
+{{ template "test_edit_button.html" (dict "Test" . "CurriculumId" $cg.CurriculumID "GradeId" $cg.GradeID "OOB" true) }}

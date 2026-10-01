@@ -1,0 +1,50 @@
+<div id="duplicate-problems-modal"
+    class="fixed inset-0 bg-ink/40 flex justify-center items-center z-50 p-4">
+
+    <div class="card shadow-xl rounded-xl w-full max-w-lg p-6 max-h-[90vh] flex flex-col">
+
+        <!-- Title -->
+        <h2 class="page-title mb-2">Similar Problems Found</h2>
+
+        <!-- Description -->
+        <p class="text-sm text-ink-muted mb-4">
+            The following existing problems look similar to this one. Save anyway?
+        </p>
+
+        <!-- Table -->
+        <div class="card overflow-hidden flex-1 overflow-y-auto mb-6 max-h-64">
+            <table class="app-table">
+                <thead class="sticky top-0">
+                    <tr>
+                        <th>Problem Code</th>
+                        <th>Language</th>
+                        <th>Match %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .}}
+                    <tr class="border-b border-border/40">
+                        <td class="font-mono">
+                            <a href="/problem?id={{.ID}}" target="_blank" rel="noopener noreferrer"
+                                class="text-accent hover:text-accent-hover hover:underline">{{.Code}}</a>
+                        </td>
+                        <td>{{langName .LangCode}}</td>
+                        <td class="font-mono">{{.MatchPercent}}%</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex gap-3 justify-end">
+            <button type="button" class="btn-secondary" onclick="cancelSaveDuplicateProblem()">
+                Cancel
+            </button>
+            <button type="button" class="btn-primary" onclick="confirmSaveDuplicateProblem()">
+                Save Anyway
+            </button>
+        </div>
+
+    </div>
+</div>
