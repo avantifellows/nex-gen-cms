@@ -18,7 +18,9 @@ edges:
     condition: when extending a component and you need the code patterns
   - target: context/deployment.md
     condition: when you need how the running server sits behind NGINX/EC2
-last_updated: 2026-06-26
+  - target: patterns/debug-htmx-rendering.md
+    condition: when an HTMX route in this request flow returns blank/500/redirect or doesn't swap
+last_updated: 2026-10-01
 ---
 
 # Architecture
