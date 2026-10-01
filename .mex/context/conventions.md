@@ -104,4 +104,5 @@ Before presenting any code:
       handler reference, and the `FuncMap` includes **every** helper the template calls.
 - [ ] List handlers filter out `StatusArchived`; content deletes are archives (`cms_status_id`).
 - [ ] Multi-lang names use `[]XxxLang` (not raw strings); no mutation of cached `[]*T` pointers.
-- [ ] If Tailwind classes changed, `npm run build:css` was run; `output.css` was not hand-edited or committed.
+- [ ] If Tailwind classes changed, `npm run build:css` was run; the generated stylesheet was not
+      hand-edited or committed.

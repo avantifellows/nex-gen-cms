@@ -6,11 +6,16 @@ test('math templates insert an editable piecewise equation', async ({ page }) =>
   await page.request.post('http://localhost:8080/dev-login');
   await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
 
-  await page.locator('#questionDiv .editor').click();
-  await page.locator('#questionDiv .mathTemplateBtn').click();
-  await page.getByRole('button', { name: 'Piecewise / Cases' }).click();
+  // #questionDiv holds one editor per language (en/hi/gu/ta); only "en" is visible by default.
+  const questionEn = page.locator('#questionDiv .lang-content[data-lang="en"]');
 
-  const mathField = page.locator('#questionDiv math-field').first();
+  await questionEn.locator('.editor').click();
+  await questionEn.locator('.mathTemplateBtn').click();
+  // The dropdown row pairs a "number of rows" input with an "Insert" button; the
+  // default row count (2) is enough to produce a \begin{cases} block.
+  await questionEn.locator('.mathTemplateDropdown').getByTitle('Insert').click();
+
+  const mathField = questionEn.locator('math-field').first();
   await expect(mathField).toBeVisible();
   await expect.poll(() => mathField.evaluate((el: any) => el.getValue('latex'))).toContain('\\begin{cases}');
 
@@ -20,6 +25,6 @@ test('math templates insert an editable piecewise equation', async ({ page }) =>
   await mathField.focus();
   await page.keyboard.press('Enter');
 
-  await expect(page.locator('#questionDiv .output mjx-container')).toBeVisible();
-  await expect(page.locator('#questionDiv .editor')).toContainText('\\begin{cases}');
+  await expect(questionEn.locator('.output mjx-container')).toBeVisible();
+  await expect(questionEn.locator('.editor')).toContainText('\\begin{cases}');
 });

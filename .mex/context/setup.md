@@ -36,7 +36,8 @@ last_updated: 2026-06-26
 1. `git clone https://github.com/avantifellows/nex-gen-cms.git`
 2. `go mod tidy`
 3. `npm install` (first time only — Tailwind CLI + Playwright)
-4. `npm run build:css` (`output.css` is generated, not committed — no styles without this)
+4. `npm run build:css` (the Tailwind stylesheet is generated from `input.css` and not committed —
+   no styles without this)
 5. Create a `.env` at the project root with the variables below (a `.env` file **must** exist —
    `config.LoadEnv` is fatal if it can't load one).
 6. `go run ./cmd` (or `make run`, which builds CSS first, then starts the server)
@@ -74,7 +75,8 @@ Optional:
 ## Common Issues
 
 - **`Error loading .env file` (fatal at startup):** create a `.env` at the project root — `LoadEnv` is fatal.
-- **No styles after a fresh clone:** `output.css` isn't built — run `npm run build:css` (or `make run`).
+- **No styles after a fresh clone:** the generated stylesheet isn't built — run `npm run build:css`
+  (or `make run`).
 - **Startup fails with `DATABASE_URL is not set` / `ping postgres`:** auth deps are built at startup and
   fail fast — set `DATABASE_URL` and make sure Postgres is reachable.
 - **Can't sign in / "account is not authorized":** your email must exist and be `is_active` in

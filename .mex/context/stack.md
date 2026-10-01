@@ -23,8 +23,8 @@ last_updated: 2026-06-26
 
 - **Go 1.25** (`go.mod`) — backend language; standard `net/http` ServeMux, no web framework.
 - Frontend: HTML + HTMX + vanilla JS. Server renders `html/template`; HTMX does partial swaps.
-- **Tailwind CSS v4** (`@tailwindcss/cli`) — styling. `web/static/css/output.css` is built from
-  `input.css`, never hand-written. Requires Node 22 to build.
+- **Tailwind CSS v4** (via the @tailwindcss/cli npm package) — styling. The generated stylesheet
+  is built from `input.css`, never hand-written. Requires Node 22 to build.
 - **PostgreSQL** (`github.com/lib/pq`, `database/sql`) — auth only (`cms_user_permission` table).
 - **Node.js 22** — only for the Tailwind build and Playwright; not a runtime dependency of the server.
 
