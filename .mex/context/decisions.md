@@ -16,7 +16,7 @@ edges:
     condition: when a decision relates to login, roles, or the user store
   - target: context/deployment.md
     condition: when a decision affects build-at-deploy, infra, or release flow
-last_updated: 2026-06-26
+last_updated: 2026-10-01
 ---
 
 # Decisions

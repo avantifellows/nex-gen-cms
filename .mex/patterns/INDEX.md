@@ -2,6 +2,8 @@
 
 Lookup table for all pattern files in this directory. Check here before starting any task — if a pattern exists, follow it.
 
+<!-- Reviewed 2026-10-01: rows below still match the files in this directory. -->
+
 <!-- Each row maps a pattern file (or section) to its trigger — when should the agent load it?
      Row format uses a Markdown link in the first cell:
        simple   — `[name.md](name.md)` | when to use it

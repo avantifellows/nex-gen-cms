@@ -224,5 +224,6 @@ A well-populated scaffold should give the agent enough to:
 Once the scaffold is populated, use these to keep it aligned with your codebase:
 
 - **`mex check`** — detect drift (zero tokens, zero AI)
-- **`.mex/sync.sh`** — interactive drift check + targeted or full resync
+- **sync.sh** under `.mex/` (if generated for this project) — interactive drift check + targeted
+  or full resync; see SYNC.md for the manual fallback if it wasn't generated
 - **`mex watch`** — auto drift score after every commit

@@ -21,7 +21,7 @@ edges:
     condition: when adding or changing the auth/role guard on a route
   - target: context/setup.md
     condition: when configuring OAuth env vars or the DEV_LOGIN_EMAIL bypass
-last_updated: 2026-06-26
+last_updated: 2026-10-01
 ---
 
 # Auth
@@ -51,8 +51,8 @@ identity and roles live in the Postgres `cms_user_permission` table — the only
 ## Flow
 
 1. `cmd/main.go` wraps the mux in `middleware.RequireLogin(mux, exceptions...)`. Exceptions (no session
-   required): `/login`, `/favicon.ico`, `/web/static/css/output.css`, `/auth/google/start`,
-   `/auth/google/callback`, `/dev-login`.
+   required): `/login`, `/favicon.ico`, the built CSS route (`output.css` under `web/static/css`,
+   gitignored - see `context/stack.md`), `/auth/google/start`, `/auth/google/callback`, `/dev-login`.
 2. `RequireLogin` reads `cms_session`. Missing/invalid → redirect to `/login` (or `HX-Redirect: /login`
    with 401 for HTMX). Valid → attach claims to context, continue.
 3. **Login:** `/auth/google/start` → Google consent → `/auth/google/callback`. The callback verifies the

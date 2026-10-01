@@ -20,7 +20,7 @@ edges:
     condition: when the change relates to the generated-CSS / build-at-deploy decision
   - target: context/architecture.md
     condition: when you need how the running server is structured behind NGINX
-last_updated: 2026-06-26
+last_updated: 2026-10-01
 ---
 
 # Deployment & Infrastructure
@@ -43,8 +43,8 @@ shipped by GitHub Actions. Authoritative detail lives in `terraform/` and `.gith
 - `main.tf` — EC2, security group (22 from `ssh_cidr`; 80/443 from anywhere), EIP, Cloudflare A record.
 - `variables.tf` — `environment`, `instance_type`, Cloudflare creds, `letsencrypt_email`, `repo_url`/`repo_branch`,
   `db_service_endpoint`/`db_service_token` (sensitive), etc.
-- `backend.tf` — remote state in S3 bucket `tfstate-nex-gen-cms` (keys `nex-gen-cms/staging.tfstate`,
-  `nex-gen-cms/prod.tfstate`) + DynamoDB lock table `tfstate-nex-gen-cms-locks`.
+- `backend.tf` — remote state in S3 bucket `tfstate-nex-gen-cms` (keys `staging.tfstate` and
+  `prod.tfstate` under the `nex-gen-cms` prefix) + DynamoDB lock table `tfstate-nex-gen-cms-locks`.
 - `user-data.sh` — **idempotent, runs on every boot**: installs packages (incl. Node for the Tailwind build,
   `fontconfig` for PDF fonts), clones/`hard-reset`s the repo to `repo_branch`, writes `.env`, builds the
   app (`go build ./cmd`) and CSS, (re)creates the systemd unit + NGINX config, and runs Certbot.
@@ -53,7 +53,8 @@ shipped by GitHub Actions. Authoritative detail lives in `terraform/` and `.gith
 ## CI/CD (`.github/workflows/`)
 
 - `deploy-staging.yml` — deploys on **push to `main`** (and `workflow_dispatch`).
-- `deploy-prod.yml` — deploys on **push to `release`** (backend key `nex-gen-cms/prod.tfstate`).
+- `deploy-prod.yml` — deploys on **push to `release`** (backend key `prod.tfstate` under the
+  `nex-gen-cms` prefix).
 - Each job: `terraform init/validate/plan/apply` with `TF_VAR_*` from GitHub Secrets. **If Terraform detects
   no infra drift, it reboots the EC2 instance** — `user-data.sh` then pulls the latest code and restarts the
   app. So a code-only release = merge to the branch → reboot.
