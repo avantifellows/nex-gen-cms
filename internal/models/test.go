@@ -167,13 +167,11 @@ func (t *Test) DisplaySubtype() string {
 	}
 }
 
-// ChapterTestSubjectID returns the subject a chapter_test's problems belong to, derived from
-// TypeParams.Subjects rather than stored separately - a chapter_test's problems all come from
-// one chapter, and a chapter belongs to exactly one subject, so a well-formed chapter_test
-// should carry exactly one entry. Returns nil before any problems are added (Subjects is empty)
-// or if that single-subject invariant is ever violated, rather than guessing which one applies.
+// ChapterTestSubjectID returns the subject id for a chapter_test, derived from
+// TypeParams.Subjects (a chapter_test's problems come from one chapter, which belongs to
+// exactly one subject). Returns nil for any other test type, or if that invariant doesn't hold.
 func (t *Test) ChapterTestSubjectID() *int8 {
-	if len(t.TypeParams.Subjects) != 1 {
+	if t.Subtype != "chapter_test" || len(t.TypeParams.Subjects) != 1 {
 		return nil
 	}
 	return &t.TypeParams.Subjects[0].SubjectID

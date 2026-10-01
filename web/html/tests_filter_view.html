@@ -68,10 +68,9 @@
                     loader.classList.remove("hidden");
 
                 } else if (name === "htmx:afterSwap") {
-                    // Subject filtering (for Chapter Test) is applied client-side over the full,
-                    // unfiltered row set - re-apply it here after every /api/tests swap (initial
-                    // load and sort clicks alike), since none of those requests carry a subject
-                    // param anymore.
+                    // Subject filtering (for Chapter Test) is applied client-side over the full
+                    // row set - re-apply it after every /api/tests swap, since none of those
+                    // requests carry a subject param.
                     window.filterTestRowsBySubject?.(document.getElementById('tests-subject-dropdown')?.value || '');
 
                 } else if (name === "htmx:afterRequest") {

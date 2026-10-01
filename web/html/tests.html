@@ -152,11 +152,8 @@
                 dropdown.value = storedTesttype;
                 toggleTestsSubjectDropdown(storedTesttype);
 
-                // htmx's history cache restores DOM structure (so #tests-subject-dropdown may
-                // already have its real <option>s from before) but not <select> selectedness,
-                // since picking an option only mutates the live .value, never the underlying
-                // HTML. Apply the stored subject directly when its option is already present; if
-                // not (fresh server render, only the default option exists yet),
+                // htmx's history cache restores DOM structure but not <select> selectedness, so
+                // apply the stored subject directly if its option is already present; otherwise
                 // afterSubjectDropdownReq() applies it once /api/subjects loads for real.
                 const subjectDropdown = document.getElementById('tests-subject-dropdown');
                 const storedTestSubject = sessionStorage.getItem('selectedTestSubject');
@@ -173,22 +170,23 @@
             }
         }
 
-        // Shows the subject filter only for Chapter Test, since subject filtering is only
-        // meaningful for that test type. Exposed on window since it's called from inline
-        // onchange/restoreState, both of which resolve names against the global scope, not this
-        // IIFE's closure.
+        // Shows the subject filter only for Chapter Test; hiding it also clears its value and
+        // the stored selection so a stale subject never leaks into other test types' rows.
+        // Exposed on window since inline onchange/restoreState resolve names globally.
         window.toggleTestsSubjectDropdown = function (testtype) {
             const subjectDropdown = document.getElementById('tests-subject-dropdown');
             if (!subjectDropdown) return;
-            subjectDropdown.classList.toggle('hidden', testtype !== 'chapter_test');
+            const isChapterTest = testtype === 'chapter_test';
+            subjectDropdown.classList.toggle('hidden', !isChapterTest);
+            if (!isChapterTest) {
+                subjectDropdown.value = '';
+                sessionStorage.removeItem('selectedTestSubject');
+            }
         };
 
-        // Shows/hides #test-table-body rows by their data-subject-id (set from
-        // Test.ChapterTestSubjectID in test_row.html) - the subject filter never triggers a
-        // server request, so this is the only place selecting a subject takes effect. Called on
-        // subject change, on restore, and after every /api/tests row swap (tests_filter_view.html's
-        // tests-loader extension, for initial load and sort clicks). Exposed on window for the
-        // same cross-scope reason as toggleTestsSubjectDropdown above.
+        // Shows/hides #test-table-body rows by their data-subject-id (from Test.ChapterTestSubjectID).
+        // The subject filter never triggers a server request, so this is the only place a
+        // selection takes effect - called on change, on restore, and after every row swap.
         window.filterTestRowsBySubject = function (subjectId) {
             const tbody = document.getElementById('test-table-body');
             if (!tbody) return;
@@ -199,10 +197,8 @@
         };
 
         // hx-on::after-request handler for #tests-subject-dropdown: restores the last-selected
-        // subject once its real options have loaded (same idea as home.html's afterDropdownReq
-        // for curriculum/grade/subject), then re-applies the row filter in case rows already
-        // loaded first. Exposed on window since hx-on:: attributes resolve names against the
-        // global scope.
+        // subject once its real options have loaded, then re-applies the row filter in case
+        // rows already loaded first.
         window.afterSubjectDropdownReq = function (dropdown) {
             const storedSubject = sessionStorage.getItem('selectedTestSubject');
             if (storedSubject) {

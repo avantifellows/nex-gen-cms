@@ -132,11 +132,9 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 	views.ExecuteTemplate(testRowTemplate, responseWriter, tests, nil)
 }
 
-// listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the
-// HTMX row view (GetTests) and the service JSON API (GetTestsJSON). Chapter tests always carry
-// every subject's tests together - the subject filter on the tests list screen is applied
-// client-side (via each row's data-subject-id, from Test.ChapterTestSubjectID) instead of here,
-// so a subject change never needs a fresh request.
+// listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the HTMX
+// row view (GetTests) and the service JSON API (GetTestsJSON). The subject filter on the tests
+// list screen is applied client-side instead, so a subject change never round-trips here.
 func (h *TestsHandler) listTests(curriculumID int16, gradeID int8, testtype,
 	sortColumn, sortOrder string) (*[]*models.Test, error) {
 	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumID, gradeID, testtype)
