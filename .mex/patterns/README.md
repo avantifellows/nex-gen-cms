@@ -61,6 +61,7 @@ last_updated: [YYYY-MM-DD]
 - [ ] Update `.mex/ROUTER.md` "Current Project State" if what's working/not built has changed
 - [ ] Update any `.mex/context/` files that are now out of date
 - [ ] If this is a new task type without a pattern, create one in `.mex/patterns/` and add to `INDEX.md`
+- [ ] Bump this pattern's own `last_updated` if you changed it
 ```
 
 ### Multi-section pattern (one file = multiple related tasks)
@@ -105,6 +106,7 @@ last_updated: [YYYY-MM-DD]
 - [ ] Update `.mex/ROUTER.md` "Current Project State" if what's working/not built has changed
 - [ ] Update any `.mex/context/` files that are now out of date
 - [ ] If this is a new task type without a pattern, create one in `.mex/patterns/` and add to `INDEX.md`
+- [ ] Bump this pattern's own `last_updated` if you changed it
 ```
 
 Do NOT combine unrelated tasks into one file just to reduce file count.

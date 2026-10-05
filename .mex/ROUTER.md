@@ -18,7 +18,7 @@ edges:
     condition: when working on login, sessions, roles, route guards, or the Postgres user store
   - target: context/deployment.md
     condition: when deploying, changing AWS/Terraform infra, CI/CD, or release operations
-last_updated: 2026-10-01
+last_updated: 2026-10-05
 ---
 
 # Session Bootstrap
@@ -49,13 +49,18 @@ Then read this file fully before doing anything else in this session.
   just the name, so users who know the chapter code can find it directly.
 - Question paper / answer sheet / combined PDF generation via headless Chrome (chromedp + MathJax).
 - Admin user management (`/admin/users`), move/copy of resources & problems.
+- Generated test PDFs are cached in S3 by content hash (`TestsHandler.DownloadPdf` + the `storage.PdfStore`
+  type) — a repeat download redirects to a presigned URL instead of re-rendering via chromedp; optional,
+  `AWS_S3_BUCKET` unset just disables it. See `context/decisions.md` and
+  `patterns/generate-pdf.md`.
 - AWS deploy via Terraform + GitHub Actions (staging on `main`, prod on `release`).
 - Go unit tests (cmd, config, views) + Playwright E2E (home/chapters); `go build`/`go test` green.
 
 **Not yet built / partial:**
 - Sorting is inconsistent: chapters/topics are server-managed, tests are client-managed (sessionStorage) — not unified.
 - E2E coverage is thin (only a few specs); most flows are untested.
-- No background jobs, no object storage (problem images are inlined as base64), no cache beyond in-process `go-cache`.
+- No job queue/scheduler, no general file/object storage (problem images are still inlined as base64) —
+  S3 is used narrowly for the PDF cache only. No cache beyond in-process `go-cache` for content data.
 
 **Known issues:**
 - db-service endpoint strings are inconsistent about leading slashes (`"chapter"` vs `"/skill"`) — watch for double/missing slashes.

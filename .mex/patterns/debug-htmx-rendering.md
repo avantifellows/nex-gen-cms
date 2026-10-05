@@ -16,7 +16,7 @@ edges:
     condition: when the symptom is a redirect to /login or a 403
   - target: patterns/add-content-resource.md
     condition: when debugging a route you just added
-last_updated: 2026-10-01
+last_updated: 2026-10-05
 ---
 
 # Debug HTMX / Template Rendering
