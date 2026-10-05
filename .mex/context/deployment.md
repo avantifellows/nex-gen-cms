@@ -20,7 +20,7 @@ edges:
     condition: when the change relates to the generated-CSS / build-at-deploy decision
   - target: context/architecture.md
     condition: when you need how the running server is structured behind NGINX
-last_updated: 2026-09-30
+last_updated: 2026-10-05
 ---
 
 # Deployment & Infrastructure
@@ -45,10 +45,18 @@ shipped by GitHub Actions. Authoritative detail lives in `terraform/` and `.gith
   `db_service_endpoint`/`db_service_token` (sensitive), etc.
 - `backend.tf` — remote state in S3 bucket `tfstate-nex-gen-cms` (S3 object keys, not repo paths:
   nex-gen-cms/staging.tfstate, nex-gen-cms/prod.tfstate) + DynamoDB lock table `tfstate-nex-gen-cms-locks`.
+- `s3.tf` — a **separate** per-env S3 bucket (`<account-id>-<name-prefix>-test-pdfs`, SSE-AES256, public
+  access fully blocked) that caches generated test PDFs — not to be confused with the Terraform state
+  bucket above. `iam.tf` grants the EC2 instance role `s3:GetObject`/`s3:PutObject` scoped to just that
+  bucket's objects, via an instance profile (`aws_iam_instance_profile.web`) — no static AWS keys on the
+  box. See `context/decisions.md` ("Cache generated test PDFs in S3").
 - `user-data.sh` — **idempotent, runs on every boot**: installs packages (incl. Node for the Tailwind build,
-  `fontconfig` for PDF fonts), clones/`hard-reset`s the repo to `repo_branch`, writes `.env`, builds the
-  app (`go build ./cmd`) and CSS, (re)creates the systemd unit + NGINX config, and runs Certbot.
-- `bootstrap.sh` — one-time creation of the S3 bucket + DynamoDB table. `outputs.tf` — IPs, `application_url`, etc.
+  `fontconfig` for PDF fonts), clones/`hard-reset`s the repo to `repo_branch`, writes `.env` (including
+  `AWS_REGION`/`AWS_S3_BUCKET` for the PDF cache), builds the app (`go build ./cmd`) and CSS, (re)creates
+  the systemd unit + NGINX config, and runs Certbot.
+- `bootstrap.sh` — one-time creation of the S3 **state** bucket + DynamoDB table (unrelated to the PDF
+  cache bucket, which Terraform creates/manages directly via `s3.tf`). `outputs.tf` — IPs,
+  `application_url`, `test_pdfs_bucket_name`, etc.
 
 ## CI/CD (`.github/workflows/`)
 
@@ -82,3 +90,6 @@ shipped by GitHub Actions. Authoritative detail lives in `terraform/` and `.gith
 - **Cloudflare must stay `proxied=false`** during ACME issuance/renewal or the HTTP-01 challenge fails.
 - **PDFs need Chrome + fonts on the box** — Playwright Chromium under `/opt/playwright-browsers` and
   `fontconfig`; missing either breaks `/download-pdf`. See `patterns/generate-pdf.md`.
+- **The PDF cache is optional, not required.** `AWS_S3_BUCKET` unset (e.g. a stripped-down `.env`) makes
+  `storage.NewPdfStore` return `nil` — PDFs still generate, they're just never cached. Don't treat a
+  missing bucket/IAM permission as a deploy blocker.

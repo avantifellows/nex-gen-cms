@@ -14,7 +14,7 @@ edges:
     condition: for how sessions, roles, cookies, and the middleware chain work
   - target: patterns/add-content-resource.md
     condition: when the route being protected is a new resource/handler route
-last_updated: 2026-09-30
+last_updated: 2026-10-05
 ---
 
 # Protect a Route

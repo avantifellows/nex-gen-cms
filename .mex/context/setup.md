@@ -17,7 +17,7 @@ edges:
     condition: when PDF generation fails locally (Chrome / chromedp)
   - target: context/deployment.md
     condition: when mapping local env/setup to how it runs on staging/prod
-last_updated: 2026-09-30
+last_updated: 2026-10-05
 ---
 
 # Setup
@@ -59,6 +59,9 @@ Optional:
 - `DEV_LOGIN_EMAIL` — local-only bypass; exposes a "Sign in as <email>" button / `POST /dev-login`. The
   named user must exist and be active in `cms_user_permission`. **Never set in production.**
 - `APP_ENV` — set to `production` to require `Secure` (HTTPS-only) cookies. Leave unset locally (HTTP).
+- `AWS_S3_BUCKET` / `AWS_REGION` — enables the S3-backed test-PDF cache (`storage.PdfStore`). Leave
+  `AWS_S3_BUCKET` unset for local dev with no AWS credentials — PDFs still generate, just always
+  regenerated instead of cached. See `patterns/generate-pdf.md`.
 
 > Removed: `CMS_USERNAME` / `CMS_PASSWORD` (old basic auth) are no longer used — see `context/decisions.md`.
 
