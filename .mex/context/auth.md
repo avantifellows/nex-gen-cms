@@ -21,7 +21,7 @@ edges:
     condition: when adding or changing the auth/role guard on a route
   - target: context/setup.md
     condition: when configuring OAuth env vars or the DEV_LOGIN_EMAIL bypass
-last_updated: 2026-06-26
+last_updated: 2026-10-01
 ---
 
 # Auth
