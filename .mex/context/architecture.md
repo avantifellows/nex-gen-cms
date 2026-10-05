@@ -19,8 +19,8 @@ edges:
   - target: context/deployment.md
     condition: when you need how the running server sits behind NGINX/EC2
   - target: patterns/debug-htmx-rendering.md
-    condition: when an HTMX route returns blank/500/redirects or doesn't swap
-last_updated: 2026-09-29
+    condition: when an HTMX route in this request flow returns blank/500/redirect or doesn't swap
+last_updated: 2026-10-05
 ---
 
 # Architecture

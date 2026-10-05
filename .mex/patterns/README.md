@@ -170,3 +170,8 @@ Only generate if `context/setup.md` reveals non-trivial deployment.
 
 Examples: "deploy to staging", "rollback a release", "update environment config",
 "run database migration in production"
+
+## Maintenance
+
+Periodically re-check each pattern against the current codebase (new gotchas, renamed files/routes)
+and bump its `last_updated` after reviewing — `mex check` flags files that have gone stale.

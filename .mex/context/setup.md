@@ -17,7 +17,7 @@ edges:
     condition: when PDF generation fails locally (Chrome / chromedp)
   - target: context/deployment.md
     condition: when mapping local env/setup to how it runs on staging/prod
-last_updated: 2026-09-29
+last_updated: 2026-10-05
 ---
 
 # Setup
