@@ -60,4 +60,4 @@ last_updated: 2026-10-05
 - **Tailwind v4** (upgraded 2026-05) — its CLI build requires **Node 22**; older Node breaks the build.
 - Handlers import **`text/template`** for building `FuncMap`s while `internal/views` uses
   **`html/template`**; they interoperate because `html/template`'s `FuncMap` type is an alias of
-  `text/template`'s. Output HTML escaping is governed by `html/template` in `views`.
+  `text/template`'s `FuncMap` type. Output HTML escaping is governed by `html/template` in `views`.

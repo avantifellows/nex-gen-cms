@@ -1,5 +1,7 @@
 # Pattern Index
 
+_Last reviewed: 2026-09-30._
+
 Lookup table for all pattern files in this directory. Check here before starting any task — if a pattern exists, follow it.
 
 <!-- Reviewed 2026-10-01: rows below still match the files in this directory. -->

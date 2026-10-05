@@ -15,6 +15,8 @@ edges:
     condition: when adding a new resource type or a route to an existing handler
   - target: context/auth.md
     condition: when the convention involves role guards or session/role data
+  - target: patterns/debug-htmx-rendering.md
+    condition: when an HTMX route returns blank/500/redirects or doesn't swap
 last_updated: 2026-10-05
 ---
 
