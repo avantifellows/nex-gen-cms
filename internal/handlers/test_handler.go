@@ -3,6 +3,8 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -26,6 +28,7 @@ import (
 	"github.com/avantifellows/nex-gen-cms/internal/handlers/handlerutils"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/storage"
 	"github.com/avantifellows/nex-gen-cms/internal/views"
 	"github.com/avantifellows/nex-gen-cms/utils"
 )
@@ -56,6 +59,7 @@ const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
 const addTestDestSubjectRowTemplate = "dest_subject_row.html"
 const testInstructionsModalTemplate = "test_instructions_modal.html"
 const addTestSearchedTemplate = "add_test_searched.html"
+const testSequenceOptionsTemplate = "test_sequence_options.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
 const addTestModalTemplate = "add_test_modal.html"
 const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
@@ -65,8 +69,13 @@ const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
 const pdfSharedTemplate = "test_pdf_shared.html"
 
+// pdfCacheVersion is mixed into pdfContentHash. Bump it when buildPdfTasks's
+// PrintToPDF settings change, since those never appear in the hashed string.
+const pdfCacheVersion = "1"
+
 const testProblemsEndPoint = "resource/test/%d/problems"
 const testRulesEndPoint = "test-rule"
+const testSequencesEndPoint = "resources/test-sequences"
 
 const testsKey = "tests"
 const testRulesKey = "testRules"
@@ -79,12 +88,13 @@ type TestsHandler struct {
 	curriculumsService *services.Service[models.Curriculum]
 	gradesService      *services.Service[models.Grade]
 	examsService       *services.Service[models.Exam]
+	pdfStore           *storage.PdfStore
 }
 
 func NewTestsHandler(testsService *services.Service[models.Test], subjectsService *services.Service[models.Subject],
 	problemsService *services.Service[models.Problem], testRulesService *services.Service[models.TestRule],
 	curriculumsService *services.Service[models.Curriculum], gradesService *services.Service[models.Grade],
-	examsService *services.Service[models.Exam]) *TestsHandler {
+	examsService *services.Service[models.Exam], pdfStore *storage.PdfStore) *TestsHandler {
 	return &TestsHandler{
 		testsService:       testsService,
 		subjectsService:    subjectsService,
@@ -93,6 +103,7 @@ func NewTestsHandler(testsService *services.Service[models.Test], subjectsServic
 		curriculumsService: curriculumsService,
 		gradesService:      gradesService,
 		examsService:       examsService,
+		pdfStore:           pdfStore,
 	}
 }
 
@@ -191,6 +202,38 @@ func (h *TestsHandler) GetChapterTests(responseWriter http.ResponseWriter, reque
 
 	views.ExecuteTemplates(responseWriter, tests, template.FuncMap{"dict": utils.Dict},
 		testRowTemplate, testActionsCellTemplate, testLockButtonTemplate, testEditButtonTemplate)
+}
+
+// GetTestSequenceOptions renders the Sequence dropdown's <option> list, bolding sequence
+// numbers already used for the given program/type_code/year query params.
+func (h *TestsHandler) GetTestSequenceOptions(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	program := urlVals.Get("program")
+	typeCode := urlVals.Get("type_code")
+	year := urlVals.Get("year")
+
+	usedSequences := map[int]bool{}
+	if program != "" && typeCode != "" && year != "" {
+		queryParams := "?program=" + url.QueryEscape(program) + "&type_code=" + url.QueryEscape(typeCode) +
+			"&year=" + url.QueryEscape(year)
+
+		var resp dto.TestSequencesResponse
+		if err := h.testsService.Get(testSequencesEndPoint+queryParams, &resp); err != nil {
+			http.Error(responseWriter, fmt.Sprintf("Error fetching used test sequences: %v", err), http.StatusInternalServerError)
+			return
+		}
+		for _, seq := range resp.UsedSequences {
+			usedSequences[seq] = true
+		}
+	}
+
+	data := dto.TestSequenceOptionsData{
+		Sequences:     utils.Seq(1, 199),
+		UsedSequences: usedSequences,
+		Selected:      urlVals.Get("sequence"),
+	}
+
+	views.ExecuteTemplate(testSequenceOptionsTemplate, responseWriter, data, nil)
 }
 
 // removes archived tests from the slice
@@ -443,7 +486,7 @@ func (h *TestsHandler) getTest(responseWriter http.ResponseWriter, request *http
 	selectedTestPtr, err := h.testsService.GetObject(testIdStr,
 		func(test *models.Test) bool {
 			return (*test).ID == testId
-		}, testsKey, resourcesEndPoint)
+		}, testsKey, resourcesEndPoint, false)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching test: %v", err)
 	}
@@ -682,7 +725,7 @@ func (h *TestsHandler) AddQuestionToTest(responseWriter http.ResponseWriter, req
 	problemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemID
-		}, problemsKey, endPointWithID)
+		}, problemsKey, endPointWithID, false)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 	}
@@ -864,7 +907,7 @@ func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *h
 func (h *TestsHandler) isTestLocked(testIDStr string, testID int) (bool, error) {
 	existing, err := h.testsService.GetObject(testIDStr,
 		func(test *models.Test) bool { return test.ID == testID },
-		testsKey, resourcesEndPoint)
+		testsKey, resourcesEndPoint, false)
 	if err != nil {
 		return false, err
 	}
@@ -1160,6 +1203,10 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 	}
 
 	regionalLangCode := urlVals.Get("lang_code")
+	if regionalLangCode != "" && !slices.Contains(utils.LangCodes(), regionalLangCode) {
+		http.Error(responseWriter, "Invalid lang_code", http.StatusBadRequest)
+		return
+	}
 	data := dto.PaperData{
 		TestPtr:          selectedTestPtr,
 		ProblemsMap:      problemsMap,
@@ -1174,6 +1221,21 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 		return
 	}
 	htmlContent := buf.String()
+
+	testName := selectedTestPtr.GetNameByLang("en")
+	var filename string
+	if regionalLangCode != "" {
+		filename = fmt.Sprintf("%s - %s - %s.pdf", testName, pdfSuffix, utils.LangName(regionalLangCode))
+	} else {
+		filename = fmt.Sprintf("%s - %s.pdf", testName, pdfSuffix)
+	}
+
+	// pdfCacheKey identifies this (pdfType, language) variant within the test's cached
+	// PdfUrls, and doubles as the S3 object key's filename component.
+	pdfCacheKey := pdfType
+	if regionalLangCode != "" {
+		pdfCacheKey += "_" + regionalLangCode
+	}
 
 	// for tailwind css lib. Including it from here, because chromedp is unable to resolve it using relative path in html <link>
 	cssBytes, err := os.ReadFile("web/static/css/output.css")
@@ -1194,6 +1256,15 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 			<div style="margin-bottom:4px;">%s</div>
 			<hr style="border:0; border-top:1px solid #000; margin:4px 0 0 0;">
 		</div>`, headerTxt)
+
+	// Hash post-injection content plus headerHTML so CSS/style/header
+	// changes also invalidate the cache.
+	contentHash := pdfContentHash(pdfCacheVersion, htmlContent, headerHTML)
+
+	if redirectURL, ok := h.cachedPdfRedirectURL(request.Context(), selectedTestPtr, pdfCacheKey, contentHash, filename); ok {
+		http.Redirect(responseWriter, request, redirectURL, http.StatusFound)
+		return
+	}
 
 	var ctx context.Context
 	var cancel context.CancelFunc
@@ -1240,12 +1311,83 @@ func (h *TestsHandler) DownloadPdf(responseWriter http.ResponseWriter, request *
 
 	// Send as response
 	responseWriter.Header().Set("Content-Type", "application/pdf")
-	filename := fmt.Sprintf(`"%s - %s.pdf"`, selectedTestPtr.GetNameByLang("en"), pdfSuffix)
-	if regionalLangCode != "" {
-		filename = fmt.Sprintf(`"%s - %s - %s.pdf"`, selectedTestPtr.GetNameByLang("en"), pdfSuffix, utils.LangName(regionalLangCode))
-	}
-	responseWriter.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	responseWriter.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", filename))
 	_, _ = responseWriter.Write(pdfData)
+
+	// Run in the background on a context decoupled from the request, so a
+	// closed download tab can't abort the S3 upload and the client isn't
+	// held waiting on it before its download finishes.
+	bgCtx := context.WithoutCancel(request.Context())
+	go h.cachePdf(bgCtx, selectedTestPtr.ID, pdfCacheKey, contentHash, pdfData)
+}
+
+// cachedPdfRedirectURL returns a presigned S3 URL to reuse the cached PDF for
+// (pdfCacheKey, contentHash) on test, plus true, if one is cached and its
+// hash still matches. Any miss, hash mismatch, or S3 error returns ("",
+// false) — the caller always falls back to regenerating; a cache-layer
+// problem must never fail the download.
+func (h *TestsHandler) cachedPdfRedirectURL(ctx context.Context, test *models.Test, pdfCacheKey,
+	contentHash, filename string) (string, bool) {
+	if h.pdfStore == nil {
+		return "", false
+	}
+
+	entry, cached := test.TypeParams.PdfUrls[pdfCacheKey]
+	if !cached || entry.Hash != contentHash {
+		return "", false
+	}
+
+	exists, err := h.pdfStore.Exists(ctx, entry.Key)
+	if err != nil {
+		log.Printf("pdf cache: HeadObject failed for test %d key %s: %v", test.ID, entry.Key, err)
+		return "", false
+	}
+	if !exists {
+		return "", false
+	}
+
+	url, err := h.pdfStore.PresignGetURL(ctx, entry.Key, filename)
+	if err != nil {
+		log.Printf("pdf cache: presign failed for test %d key %s: %v", test.ID, entry.Key, err)
+		return "", false
+	}
+	return url, true
+}
+
+// cachePdf uploads a freshly generated PDF to S3 and records the cache entry
+// via UpdateObject, so the next DownloadPdf request for the same content can
+// skip chromedp entirely. Best-effort: errors are logged, never returned —
+// the PDF has already been written to the client by the time this runs.
+func (h *TestsHandler) cachePdf(ctx context.Context, testID int, pdfCacheKey, contentHash string, pdfData []byte) {
+	if h.pdfStore == nil {
+		return
+	}
+
+	key := fmt.Sprintf("tests/%d/%s.pdf", testID, pdfCacheKey)
+	if err := h.pdfStore.Put(ctx, key, pdfData); err != nil {
+		log.Printf("pdf cache: upload failed for test %d key %s: %v", testID, key, err)
+		return
+	}
+
+	// Re-fetch instead of reusing the test from before the (up to 60s) render:
+	// PATCHing that stale copy back could revert a concurrent edit to it.
+	// cacheKey is unused here since onlyRemote skips the cached-list lookup.
+	freshTest, err := h.testsService.GetObject(strconv.Itoa(testID),
+		func(t *models.Test) bool { return t.ID == testID }, "", resourcesEndPoint, true)
+	if err != nil {
+		log.Printf("pdf cache: refetch failed for test %d: %v", testID, err)
+		return
+	}
+
+	if freshTest.TypeParams.PdfUrls == nil {
+		freshTest.TypeParams.PdfUrls = make(map[string]models.PdfCacheEntry)
+	}
+	freshTest.TypeParams.PdfUrls[pdfCacheKey] = models.PdfCacheEntry{Key: key, Hash: contentHash}
+
+	if _, err := h.testsService.UpdateObject(strconv.Itoa(testID), resourcesEndPoint, freshTest, testsKey,
+		func(t *models.Test) bool { return (*t).ID == testID }); err != nil {
+		log.Printf("pdf cache: failed to persist cache entry for test %d: %v", testID, err)
+	}
 }
 
 // resolvePdfParams maps a pdfType ("questions", "questions_with_answers",
@@ -1285,6 +1427,17 @@ func (h *TestsHandler) ruleForTest(test *models.Test) *models.TestRule {
 		return nil
 	}
 	return testRule
+}
+
+// pdfContentHash returns a hex-encoded SHA-256 digest of parts, each
+// length-prefixed so concatenation can't create ambiguity.
+func pdfContentHash(parts ...string) string {
+	h := sha256.New()
+	for _, part := range parts {
+		_, _ = fmt.Fprintf(h, "%d:", len(part))
+		_, _ = h.Write([]byte(part))
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // buildPdfTasks builds the chromedp pipeline that loads htmlContent, waits for
@@ -1328,7 +1481,9 @@ func buildPdfTasks(htmlContent, headerHTML, pdfType string, pdfData *[]byte) chr
 			await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 		})()`, nil, evalAwaitPromise),
 
-		// Generate PDF using CDP low-level API
+		// Generate PDF using CDP low-level API.
+		// Changing any option below isn't reflected in pdfContentHash - bump
+		// pdfCacheVersion so cached PDFs don't keep serving the old output.
 		chromedp.ActionFunc(func(ctx context.Context) error {
 			var err error
 			*pdfData, _, err = page.PrintToPDF().

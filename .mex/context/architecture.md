@@ -18,7 +18,9 @@ edges:
     condition: when extending a component and you need the code patterns
   - target: context/deployment.md
     condition: when you need how the running server sits behind NGINX/EC2
-last_updated: 2026-06-26
+  - target: patterns/debug-htmx-rendering.md
+    condition: when an HTMX route in this request flow returns blank/500/redirect or doesn't swap
+last_updated: 2026-10-05
 ---
 
 # Architecture
@@ -39,7 +41,8 @@ Request flow:
    (`go-cache`) or fetches from the remote **db-service** REST API (`APIRepository`, Bearer token).
 5. The handler renders templates via `views.ExecuteTemplate(s)` with a `template.FuncMap` of
    helpers → an HTML fragment (e.g. `chapter_row.html`) or a full page (`home.html` base + content block).
-6. HTMX swaps the returned fragment into the DOM client-side.
+6. HTMX swaps the returned fragment into the DOM client-side. See `patterns/debug-htmx-rendering.md`
+   when a fragment route returns blank/500/redirects or doesn't swap.
 
 Auth data (users/roles) is the **only** thing read from Postgres directly (`db.CmsUserRepo`);
 all content data (chapters/topics/tests/problems/…) comes from the db-service API.
@@ -65,7 +68,11 @@ all content data (chapters/topics/tests/problems/…) comes from the db-service 
 - **`views.ExecuteTemplate(s)`** (`internal/views/render.go`) — the only template-render entry
   point. Resolves paths via `constants.GetHtmlFolderPath()` (`web/html`).
 - **`TestsHandler.DownloadPdf`** — headless-Chrome (chromedp) HTML→PDF for question papers /
-  answer sheets. See `patterns/generate-pdf.md`.
+  answer sheets, cached in S3 by content hash so unchanged content is served from cache instead of
+  re-rendered. See `patterns/generate-pdf.md`.
+- **`storage.PdfStore`** (`internal/storage/pdf_store.go`) — thin S3 client (head/put/presigned-GET)
+  backing the PDF cache. `NewPdfStore` returns `nil` (not an error) when `AWS_S3_BUCKET` is unset, so
+  local dev without AWS credentials still works — PDFs are just always regenerated in that case.
 
 ## External Dependencies
 
@@ -77,6 +84,9 @@ all content data (chapters/topics/tests/problems/…) comes from the db-service 
 - Login — Google OAuth / OIDC (`accounts.google.com`). Restricted to the `avantifellows.org`
   hosted domain; ID token verified server-side. See `context/auth.md`.
 - PDF rendering — headless Chrome via chromedp renders question-paper/answer-sheet HTML (incl. MathJax) to PDF.
+- Object storage — an S3 bucket (`terraform/s3.tf`, `AWS_S3_BUCKET`) caches generated test PDFs; the EC2
+  instance reaches it via an IAM instance profile (no static AWS keys). Optional: unset locally disables
+  caching without breaking PDF generation. See `patterns/generate-pdf.md`.
 - Frontend CDNs — HTMX, MathJax, MathLive, Font Awesome, loaded in `web/html/home.html`.
 
 ## What Does NOT Exist Here
@@ -85,5 +95,7 @@ all content data (chapters/topics/tests/problems/…) comes from the db-service 
   db-service's responsibility. Postgres here is for auth users only.
 - **No SPA / client-side framework** — server-rendered `html/template` + HTMX only. No React/Vue, no JSON API for the UI.
 - **No second HTTP router** — standard library `net/http` ServeMux only.
-- **No background jobs / queues / schedulers.**
-- **No file/object storage layer** — problem images are inlined into HTML (base64) by the editor.
+- **No job queue or scheduler** — `TestsHandler.cachePdf` fires a single detached goroutine
+  (`context.WithoutCancel`) per PDF upload; there's no retry, worker pool, or background-job framework.
+- **No general file/object storage** — problem images are still inlined into HTML (base64) by the editor.
+  S3 is used narrowly, for the PDF cache only (see above).

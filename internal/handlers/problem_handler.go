@@ -115,7 +115,7 @@ func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int
 	selectedProblemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemId
-		}, problemsKey, endPointWithID)
+		}, problemsKey, endPointWithID, false)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching problem: %v", err)
 	}
