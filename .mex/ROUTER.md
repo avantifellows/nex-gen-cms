@@ -18,7 +18,7 @@ edges:
     condition: when working on login, sessions, roles, route guards, or the Postgres user store
   - target: context/deployment.md
     condition: when deploying, changing AWS/Terraform infra, CI/CD, or release operations
-last_updated: 2026-08-21
+last_updated: 2026-09-30
 ---
 
 # Session Bootstrap
@@ -40,7 +40,9 @@ Then read this file fully before doing anything else in this session.
   problem pages use full width.
 - `CreateProblem`/`CreateProblems`/`UpdateProblem` do the duplicate check themselves before saving: they
   call db-service's `"problems/similar-search"` with each language's question text extracted from the same
-  payload (`UpdateProblem` excludes the problem's own id from the results, since its own saved text
+  payload, plus `curriculum_id` (via `Problem.ResolvedCurriculumID()`, read from the payload's
+  `curriculum_grades[0]`) so a look-alike in an unrelated curriculum no longer blocks a save
+  (`UpdateProblem` also excludes the problem's own id from the results, since its own saved text
   otherwise self-matches at ~100%). Matches → respond `409` + render `duplicate_problems_modal.html`
   instead of saving. The frontend injects that modal; "Save Anyway" re-POSTs/PATCHes the same payload
   with `?confirmDuplicates=true`, which skips the check. No matches → saves directly, same as before.

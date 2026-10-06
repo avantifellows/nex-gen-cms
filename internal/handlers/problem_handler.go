@@ -330,7 +330,7 @@ func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, requ
 	var problem models.Problem
 	_ = json.Unmarshal(reqBodyBytes, &problem) // best-effort: an unparsable body just skips the similarity check
 
-	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), 0) {
+	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problem.ResolvedCurriculumID(), 0) {
 		return
 	}
 
@@ -355,10 +355,14 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 	_ = json.Unmarshal(reqBodyBytes, &batch) // best-effort: an unparsable body just skips the similarity check
 
 	var languages []dto.SimilarSearchLanguage
+	var curriculumID int16
 	for _, problem := range batch.Problems {
 		languages = append(languages, extractSimilarityLanguages(problem)...)
+		if curriculumID == 0 {
+			curriculumID = problem.ResolvedCurriculumID()
+		}
 	}
-	if h.duplicatesFound(responseWriter, request, languages, 0) {
+	if h.duplicatesFound(responseWriter, request, languages, curriculumID, 0) {
 		return
 	}
 
@@ -375,17 +379,22 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 // written a response — the caller should return without saving. Also writes an error response
 // and returns true if the check itself fails, so a flaky similarity check never masks the save.
 //
+// curriculumID restricts matches to problems mapped to that curriculum, so a look-alike from an
+// unrelated curriculum no longer blocks a save; 0 falls back to db-service's cross-curriculum
+// matching.
+//
 // excludeProblemID drops a match against that problem's own id — needed on edit, where the
 // problem's own already-saved text otherwise self-matches at ~100%. Pass 0 on create, where
 // there's no id yet.
 func (h *ProblemsHandler) duplicatesFound(responseWriter http.ResponseWriter, request *http.Request,
-	languages []dto.SimilarSearchLanguage, excludeProblemID int) bool {
+	languages []dto.SimilarSearchLanguage, curriculumID int16, excludeProblemID int) bool {
 	if request.URL.Query().Get(confirmDuplicatesParam) == "true" || len(languages) == 0 {
 		return false
 	}
 
+	req := dto.SimilarSearchRequest{CurriculumID: curriculumID, Languages: languages}
 	var resp dto.SimilarSearchResponse
-	if err := h.problemsService.Post(similarSearchEndPoint, dto.SimilarSearchRequest{Languages: languages}, &resp); err != nil {
+	if err := h.problemsService.Post(similarSearchEndPoint, req, &resp); err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error checking similar problems: %v", err), http.StatusInternalServerError)
 		return true
 	}
@@ -481,7 +490,7 @@ func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, requ
 	var problem models.Problem
 	_ = json.Unmarshal(reqBodyBytes, &problem) // best-effort: an unparsable body just skips the similarity check
 
-	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problemId) {
+	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problem.ResolvedCurriculumID(), problemId) {
 		return
 	}
 
