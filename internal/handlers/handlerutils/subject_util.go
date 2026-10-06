@@ -23,7 +23,7 @@ func FetchSelectedSubject(
 
 	selectedSubPtr, err := subjectsService.GetObject(subIdStr, func(subject *models.Subject) bool {
 		return subject.ID == subjectId
-	}, SubjectsKey, SubjectsEndPoint)
+	}, SubjectsKey, SubjectsEndPoint, false)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching subject: %w", err)
 	}
@@ -33,7 +33,7 @@ func FetchSelectedSubject(
 		parentIDStr := utils.IntToString[int8](selectedSubPtr.ParentID)
 		parentSubPtr, err := subjectsService.GetObject(parentIDStr, func(subject *models.Subject) bool {
 			return subject.ID == selectedSubPtr.ParentID
-		}, SubjectsKey, SubjectsEndPoint)
+		}, SubjectsKey, SubjectsEndPoint, false)
 
 		if err != nil {
 			return nil, http.StatusInternalServerError, fmt.Errorf("error fetching parent subject: %w", err)

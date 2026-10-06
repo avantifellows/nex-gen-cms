@@ -16,7 +16,12 @@ test.describe('Add Chapter', () => {
 
         await page.goto(HOME_PAGE_URL);
         await page.click('#chapters-tab');
-        
+
+        // Let the dropdowns' delayed "onLoaded" triggers (and any resulting chapter-list
+        // reload) settle before interacting, so they can't race a later create-chapter
+        // response and stomp the freshly-added row back to the mocked list.
+        await page.waitForLoadState('networkidle');
+
         const addChapterLink = page.locator('#addChapterLink');
         await addChapterLink.click();
     });
