@@ -1,5 +1,7 @@
 # Pattern Index
 
+_Last reviewed: 2026-09-30._
+
 Lookup table for all pattern files in this directory. Check here before starting any task — if a pattern exists, follow it.
 
 <!-- Reviewed 2026-10-01: rows below still match the files in this directory. -->
@@ -18,3 +20,5 @@ Lookup table for all pattern files in this directory. Check here before starting
 | [debug-htmx-rendering.md](debug-htmx-rendering.md) | An HTMX route returns blank/500/redirect or doesn't swap |
 | [generate-pdf.md](generate-pdf.md) | Editing or debugging question-paper/answer-sheet PDF generation (chromedp) |
 | [protect-route.md](protect-route.md) | Adding/changing auth or role authorization on a route |
+
+<!-- Reviewed 2026-09-29: still one row per pattern file in .mex/patterns/, alphabetically sorted. -->

@@ -23,7 +23,7 @@ func GetEntityByID[T any, ID comparable](
 
 	entityPtr, err := service.GetObject(idStr, func(e *T) bool {
 		return idMatcher(e, id)
-	}, cacheKey, endpoint)
+	}, cacheKey, endpoint, false)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching %s: %w", entityName, err)
 	}

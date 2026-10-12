@@ -133,7 +133,7 @@ func (h *ResourcesHandler) EditResource(responseWriter http.ResponseWriter, requ
 	selectedResourcePtr, err := h.service.GetObject(resourceIdStr,
 		func(resource *models.Resource) bool {
 			return resource.ID == int(resourceId)
-		}, resourcesKey, resourcesEndPoint)
+		}, resourcesKey, resourcesEndPoint, false)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching resource: %v", err), http.StatusInternalServerError)
 		return
