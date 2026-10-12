@@ -25,6 +25,12 @@ type Problem struct {
 	TagIDs          []int         `json:"tag_ids"`
 	TagNames        []string
 	StatusID        int8 `json:"cms_status_id"`
+	Tests           []LinkedTest `json:"tests,omitempty"` // only in the by-id get call
+}
+
+type LinkedTest struct {
+	TestID   int    `json:"test_id"`
+	TestCode string `json:"test_code"`
 }
 
 type LangVersion struct {
@@ -51,6 +57,11 @@ type Solution struct {
 type ProblemParagraph struct {
 	ID   int           `json:"id"`
 	Body template.HTML `json:"body"`
+}
+
+// HasLinkedTestsInfo is true only when db-service sent a tests array (possibly empty).
+func (p *Problem) HasLinkedTestsInfo() bool {
+	return p.Tests != nil
 }
 
 func (p *Problem) GetLangVersion(langCode string) *LangVersion {
