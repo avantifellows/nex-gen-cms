@@ -7,4 +7,5 @@ type ProblemData struct {
 	ProblemPtr *models.Problem
 	TopicPtr   *models.Topic
 	ChapterPtr *models.Chapter
+	Tests      []ProblemTestRef
 }
