@@ -24,7 +24,7 @@ type Problem struct {
 	DifficultyLevel string        `json:"difficulty_level"`
 	TagIDs          []int         `json:"tag_ids"`
 	TagNames        []string
-	StatusID        int8 `json:"cms_status_id"`
+	StatusID        int8         `json:"cms_status_id"`
 	Tests           []LinkedTest `json:"tests,omitempty"` // only in the by-id get call
 }
 

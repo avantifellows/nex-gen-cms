@@ -11,7 +11,7 @@ type TestsContainingProblemsResponse struct {
 }
 
 type ProblemTestsAssociation struct {
-	ProblemID   int              `json:"problem_id"`
-	ProblemCode string           `json:"problem_code"`
+	ProblemID   int                 `json:"problem_id"`
+	ProblemCode string              `json:"problem_code"`
 	Tests       []models.LinkedTest `json:"tests"`
 }
