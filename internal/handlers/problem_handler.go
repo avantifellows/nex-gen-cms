@@ -404,8 +404,8 @@ func (h *ProblemsHandler) duplicatesFound(responseWriter http.ResponseWriter, re
 	return true
 }
 
-// extractSimilarityLanguages returns the {lang_code, text} pairs the similarity check needs from
-// a problem's language versions, skipping any with blank question text.
+// extractSimilarityLanguages returns the {lang_code, text, options} entries the similarity check
+// needs from a problem's language versions, skipping any with blank question text.
 func extractSimilarityLanguages(problem models.Problem) []dto.SimilarSearchLanguage {
 	languages := make([]dto.SimilarSearchLanguage, 0, len(problem.LangVersions))
 	for _, langVersion := range problem.LangVersions {
@@ -413,9 +413,14 @@ func extractSimilarityLanguages(problem models.Problem) []dto.SimilarSearchLangu
 		if text == "" {
 			continue
 		}
+		options := make([]string, len(langVersion.MetaData.Options))
+		for i, option := range langVersion.MetaData.Options {
+			options[i] = string(option)
+		}
 		languages = append(languages, dto.SimilarSearchLanguage{
 			LangCode: langVersion.LangCode,
 			Text:     text,
+			Options:  options,
 		})
 	}
 	return languages

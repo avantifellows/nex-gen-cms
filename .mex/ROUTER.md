@@ -39,8 +39,8 @@ Then read this file fully before doing anything else in this session.
   surfaces are resizable, keep the preview size in sync, and stay within the page card; add/edit
   problem pages use full width.
 - `CreateProblem`/`CreateProblems`/`UpdateProblem` do the duplicate check themselves before saving: they
-  call db-service's `"problems/similar-search"` with each language's question text extracted from the same
-  payload (`UpdateProblem` excludes the problem's own id from the results, since its own saved text
+  call db-service's `"problems/similar-search"` with each language's question text and options extracted from
+  the same payload (`UpdateProblem` excludes the problem's own id from the results, since its own saved text
   otherwise self-matches at ~100%). Matches → respond `409` + render `duplicate_problems_modal.html`
   instead of saving. The frontend injects that modal; "Save Anyway" re-POSTs/PATCHes the same payload
   with `?confirmDuplicates=true`, which skips the check. No matches → saves directly, same as before.
