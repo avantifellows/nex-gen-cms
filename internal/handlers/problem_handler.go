@@ -161,47 +161,17 @@ func (h *ProblemsHandler) enrichProblemTagNames(problem *models.Problem) error {
 }
 
 func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	const includeParagraphSiblingsParam = "include_paragraph_siblings"
-
 	urlValues := request.URL.Query()
-	topicIdStr := urlValues.Get("topic-dropdown")
+	topicIdStr := urlValues.Get(TOPIC_DROPDOWN_NAME)
 	topicId, err := utils.StringToIntType[int16](topicIdStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
 		return
 	}
 
-	queryParams := fmt.Sprintf("?topic_id=%d", topicId)
-	if urlValues.Has(includeParagraphSiblingsParam) {
-		queryParams += "&" + includeParagraphSiblingsParam + "=" + urlValues.Get(includeParagraphSiblingsParam)
-	}
-	problems, err := h.problemsService.GetList(problemsEndPoint+queryParams, problemsKey, false, true)
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
+	problems, ok := h.fetchProblems(responseWriter, urlValues, fmt.Sprintf("?topic_id=%d", topicId))
+	if !ok {
 		return
-	}
-
-	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(urlValues.Get(SUBJECT_DROPDOWN_NAME),
-		h.subjectsService)
-	if err != nil {
-		http.Error(responseWriter, err.Error(), statusCode)
-		return
-	}
-
-	tagsMap, err := h.getTagsMap()
-	if err != nil {
-		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// set subject & tag names on each problem
-	for _, problemPtr := range *problems {
-		problemPtr.Subject = *subjectPtr
-
-		// Loop through tag ids and add corresponding tag names
-		for _, tagId := range problemPtr.TagIDs {
-			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagId])
-		}
 	}
 
 	levels := urlValues["level"]
@@ -217,6 +187,85 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 		// for topic screen's Problems tab
 		views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
 	}
+}
+
+// GetChapterProblems returns the rows of every problem of a chapter, optionally narrowed to a single topic
+// (a blank TOPIC_DROPDOWN_NAME means all topics). It will back the chapter screen's Problems tab.
+func (h *ProblemsHandler) GetChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	urlValues := request.URL.Query()
+	queryParams, err := chapterProblemsQuery(urlValues.Get(CHAPTER_DROPDOWN_NAME), urlValues.Get(TOPIC_DROPDOWN_NAME))
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	problems, ok := h.fetchProblems(responseWriter, urlValues, queryParams)
+	if !ok {
+		return
+	}
+
+	// only drops archived problems here: no level, type or already-selected filtering on this screen
+	filterProblems(problems, nil, "", "")
+	views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
+}
+
+// fetchProblems loads the problems matching queryParams from db-service and sets the selected subject and
+// tag names on each of them. On failure it writes the error response itself and returns false.
+func (h *ProblemsHandler) fetchProblems(responseWriter http.ResponseWriter, urlValues url.Values,
+	queryParams string) (*[]*models.Problem, bool) {
+	const includeParagraphSiblingsParam = "include_paragraph_siblings"
+	if urlValues.Has(includeParagraphSiblingsParam) {
+		queryParams += "&" + includeParagraphSiblingsParam + "=" + urlValues.Get(includeParagraphSiblingsParam)
+	}
+	problems, err := h.problemsService.GetList(problemsEndPoint+queryParams, problemsKey, false, true)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
+		return nil, false
+	}
+
+	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(urlValues.Get(SUBJECT_DROPDOWN_NAME),
+		h.subjectsService)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), statusCode)
+		return nil, false
+	}
+
+	tagsMap, err := h.getTagsMap()
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return nil, false
+	}
+
+	// set subject & tag names on each problem
+	for _, problemPtr := range *problems {
+		problemPtr.Subject = *subjectPtr
+
+		// Loop through tag ids and add corresponding tag names
+		for _, tagId := range problemPtr.TagIDs {
+			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagId])
+		}
+	}
+	return problems, true
+}
+
+// chapterProblemsQuery builds db-service's problems query string. The chapter is required; the topic is an
+// optional filter, where a blank value means all topics.
+func chapterProblemsQuery(chapterIdStr string, topicIdStr string) (string, error) {
+	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	if err != nil {
+		return "", fmt.Errorf("Invalid Chapter ID")
+	}
+
+	queryParams := fmt.Sprintf("?chapter_id=%d", chapterId)
+	if topicIdStr == "" {
+		return queryParams, nil
+	}
+
+	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	if err != nil {
+		return "", fmt.Errorf("Invalid Topic ID")
+	}
+	return queryParams + fmt.Sprintf("&topic_id=%d", topicId), nil
 }
 
 func (h *ProblemsHandler) getTagsMap() (map[int]string, error) {
@@ -682,7 +731,7 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	chapterIdStr := request.Form.Get("chapter-dropdown")
+	chapterIdStr := request.Form.Get(CHAPTER_DROPDOWN_NAME)
 	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Invalid Chapter ID: %v", err), http.StatusBadRequest)

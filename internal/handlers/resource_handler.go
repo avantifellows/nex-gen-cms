@@ -285,7 +285,7 @@ func (h *ResourcesHandler) MoveResource(responseWriter http.ResponseWriter, requ
 		curriculumGrade.GradeID = gradeID
 	}
 
-	chapterIDStr := request.Form.Get("chapter-dropdown")
+	chapterIDStr := request.Form.Get(CHAPTER_DROPDOWN_NAME)
 	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Invalid Chapter ID: %v", err), http.StatusBadRequest)

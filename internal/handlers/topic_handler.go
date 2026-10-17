@@ -17,6 +17,7 @@ import (
 )
 
 const QUERY_PARAM_TOPIC_ID = "topic_id"
+const TOPIC_DROPDOWN_NAME = "topic-dropdown"
 
 const topicsTemplate = "topics.html"
 const topicRowTemplate = "topic_row.html"
