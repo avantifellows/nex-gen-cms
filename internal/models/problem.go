@@ -17,7 +17,8 @@ type Problem struct {
 	GradeID         int8  `json:"grade_id"`      // used with only get call
 	SubjectID       int8  `json:"subject_id"`
 	Subject         Subject
-	TopicID         int16         `json:"topic_id"`
+	TopicID         int16         `json:"topic_id"`  // legacy single topic; superseded by TopicIDs
+	TopicIDs        []int16       `json:"topic_ids"` // optional; may include topics of other chapters
 	ChapterID       int16         `json:"chapter_id"`
 	ChapterName     []ChapterLang `json:"chapter_name"` // used with only get call
 	Concepts        []Concept     `json:"concepts"`     // used with only get call
