@@ -1,6 +1,11 @@
 package handlers
 
-import "testing"
+import (
+	"bytes"
+	"html/template"
+	"strings"
+	"testing"
+)
 
 func TestChapterProblemsQuery(t *testing.T) {
 	tests := []struct {
@@ -33,5 +38,27 @@ func TestChapterProblemsQuery(t *testing.T) {
 				t.Errorf("query = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, "12"); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	html := out.String()
+
+	for _, want := range []string{
+		`hx-get="/api/chapter/problems?chapter-dropdown=12"`, // tbody refresh
+		`var chapterId = '12';`,                              // initial load script
+		`id="problemTableBody"`,                              // the move modal refreshes this id
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("rendered tab is missing %q", want)
+		}
+	}
+	if strings.Contains(html, "/topic/") || strings.Contains(html, "/api/topic/") {
+		t.Errorf("chapter tab must not call topic endpoints:\n%s", html)
 	}
 }

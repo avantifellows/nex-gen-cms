@@ -35,6 +35,7 @@ const srcProblemRowParentTemplate = "src_problem_row_parent.html"
 const srcProblemRowTemplate = "src_problem_row.html"
 const topicProblemsTemplate = "topic_problems.html"
 const topicProblemRowTemplate = "topic_problem_row.html"
+const chapterProblemsTemplate = "chapter_problems.html"
 const searchProblemRowTemplate = "search_problem_row.html"
 const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
@@ -340,6 +341,11 @@ func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, _ *ht
 func (h *ProblemsHandler) LoadTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
 	views.ExecuteTemplate(topicProblemsTemplate, responseWriter, topicIdStr, nil)
+}
+
+func (h *ProblemsHandler) LoadChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterIdStr := request.URL.Query().Get("chapterId")
+	views.ExecuteTemplate(chapterProblemsTemplate, responseWriter, chapterIdStr, nil)
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
