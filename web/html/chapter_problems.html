@@ -1,5 +1,13 @@
 <div>
-    <div class="flex flex-wrap gap-3 mb-4">
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+        <!-- Optional single-topic filter: lists only this chapter's topics; the blank "All Topics" option shows
+             every problem of the chapter. Its value is included in the table's requests below. -->
+        <select id="problems-topic-filter" name="topic-dropdown" class="form-select w-auto"
+            hx-get="/api/topics?view=dropdown-all&id={{.}}" hx-include="#curriculum-dropdown"
+            hx-trigger="load" hx-target="this" hx-swap="innerHTML">
+            <option value="" selected>All Topics</option>
+        </select>
+
         <button id="move-problems-btn" hx-include='input[name="select-problem"]:checked'
             class="btn-primary btn-sm group min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-card-alt disabled:text-ink-muted"
             hx-post="/problems/test-associations" hx-target="body"
@@ -41,8 +49,8 @@
                  inherit it too, so e.g. clicking Edit was incorrectly starting the whole table's loading
                  spinner instead of just navigating to the edit screen. -->
             <tbody id="problemTableBody" class="text-ink-muted text-sm"
-                hx-trigger="refreshProblems"
-                hx-get="/api/chapter/problems?chapter-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
+                hx-trigger="refreshProblems, change from:#problems-topic-filter"
+                hx-get="/api/chapter/problems?chapter-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown, #problems-topic-filter"
                 hx-indicator="#chapter-problems-loader" hx-disinherit="hx-indicator"
                 hx-on::before-request="if (event.detail.elt === this) this.innerHTML=''"
                 hx-on::after-swap="updateHeaderState()" data-mathjax="true">
@@ -67,7 +75,9 @@
         const curriculum = document.getElementById('curriculum-dropdown').value;
         const subject = document.getElementById('subject-dropdown').value;
         if (!curriculum || !subject) return false;
-        htmx.ajax('GET', `/api/chapter/problems?chapter-dropdown=${chapterId}&curriculum-dropdown=${curriculum}&subject-dropdown=${subject}`, {
+        // The curriculum, subject and topic filter values are not added to this URL: because the tbody is the
+        // request source, htmx adds them itself from the tbody's hx-include (adding them here sent them twice).
+        htmx.ajax('GET', `/api/chapter/problems?chapter-dropdown=${chapterId}`, {
             source: '#problemTableBody',
             target: '#problemTableBody',
             swap: 'innerHTML',

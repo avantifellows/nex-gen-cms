@@ -27,6 +27,7 @@ const chapterTemplate = "chapter.html"
 const chapterTestsTemplate = "chapter_tests.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
 const topicDropdownOptionalTemplate = "topic_dropdown_optional.html"
+const topicDropdownAllTemplate = "topic_dropdown_all.html"
 
 const CHAPTER_DROPDOWN_NAME = "chapter-dropdown"
 const chapterPriorityOptionsTemplate = "chapter_priority_options.html"
@@ -326,6 +327,8 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 		filename = topicRowTemplate
 	case "dropdown-optional":
 		filename = topicDropdownOptionalTemplate
+	case "dropdown-all":
+		filename = topicDropdownAllTemplate
 	default:
 		filename = topicDropdownTemplate
 	}
