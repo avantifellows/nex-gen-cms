@@ -6,6 +6,7 @@
                 "htmx:beforeRequest",
                 "htmx:beforeSwap", 
                 "htmx:afterSwap",
+                "infinite-scroll:restore",
                 "htmx:responseError"
             ];
     
@@ -61,14 +62,20 @@
 
                 alert(`Error loading data: ${status} ${message}`);
 
-            } else if (name === 'htmx:afterSwap') {
+            } else if (name === 'htmx:afterSwap' || name === 'infinite-scroll:restore') {
+                // restore: the page came back from history with its rows, offset and hasMore as saved
+                const restoring = name === 'infinite-scroll:restore';
                 if (loader) loader.classList.add("hidden");
-                const limit = parseInt(target.getAttribute("data-limit") || "10", 10);
-                const offset = parseInt(target.getAttribute("data-offset") || "0", 10);
-                target.setAttribute("data-offset", offset + limit);
+                if (!restoring) {
+                    const limit = parseInt(target.getAttribute("data-limit") || "10", 10);
+                    const offset = parseInt(target.getAttribute("data-offset") || "0", 10);
+                    target.setAttribute("data-offset", offset + limit);
+                }
                 target.removeAttribute("data-loading");
 
-                const hasMore = evt.detail.xhr.getResponseHeader("hasMore");
+                const hasMore = restoring ? target.getAttribute("data-has-more")
+                    : evt.detail.xhr.getResponseHeader("hasMore");
+                if (!restoring) target.setAttribute("data-has-more", hasMore === "false" ? "false" : "true");
                 // Check server flag if present
                 if (hasMore === "false") {
                     // Server indicates no more results, unobserving sentinel.

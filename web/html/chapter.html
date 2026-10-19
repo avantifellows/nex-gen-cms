@@ -18,7 +18,7 @@
         <div class="sub-tab"
             id="problems-sub-tab"
             hx-get="/chapter/problems?chapterId={{.ChapterPtr.ID}}"
-            hx-trigger="load[document.getElementById('problems-sub-tab').classList.contains('active')], click"
+            hx-trigger="load[document.getElementById('problems-sub-tab').classList.contains('active') && !document.getElementById('subContent').children.length], click"
             hx-target="#subContent"
             onclick="activateSubTab('problems-sub-tab')">
             Problems

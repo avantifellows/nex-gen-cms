@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 )
 
@@ -176,5 +177,86 @@ func TestProblemsPagination(t *testing.T) {
 				t.Errorf("problemsPagination() = (%q, %d), want (%q, %d)", gotQuery, gotLimit, tt.wantQuery, tt.wantLimit)
 			}
 		})
+	}
+}
+
+// Back navigation restores the saved page, so nothing on it may re-fetch what it already has.
+func TestChapterProblemsTemplateRestoresFromHistory(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, "12"); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	html := out.String()
+
+	for _, want := range []string{
+		// the topic options are loaded only when the page does not have them yet
+		`hx-trigger="load[document.getElementById('problems-topic-filter').options.length < 2]"`,
+		// the script tells a fresh load from a restored one and restores the topic from the saved params
+		`if (tbody.children.length === 0) {`,
+		`function restoreChapterProblems() {`,
+		`tbody.getAttribute('data-active-params')`,
+		`htmx.trigger(tbody, 'infinite-scroll:restore');`,
+		// selected rows survive the history snapshot: every change is mirrored into the saved attribute
+		`var syncCheckedAttributes = () =>`,
+		`cb.toggleAttribute('checked', cb.checked)`,
+		// a flag set by the add / edit / delete screens makes the restored list reload
+		`sessionStorage.getItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY)`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("rendered tab is missing %q", want)
+		}
+	}
+	// nothing may be registered on the document or body, where it would outlive this screen
+	if strings.Contains(html, "document.body.addEventListener") || strings.Contains(html, "beforeHistorySave") {
+		t.Errorf("the tab must not register page-level listeners")
+	}
+}
+
+func TestChapterScreenDoesNotRefetchRestoredProblemsTab(t *testing.T) {
+	tmpl := template.Must(template.New("chapter.html").Funcs(template.FuncMap{
+		"getName": func(any, string) string { return "Motion" },
+	}).ParseFiles("../../web/html/chapter.html"))
+	data := dto.ChapterData{
+		HomeData:   dto.HomeData{CurriculumID: 3, GradeID: 10, SubjectID: 2},
+		ChapterPtr: &models.Chapter{ID: 49},
+	}
+
+	var out bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&out, "content", data); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+
+	// the tab loads on page load only while it is active and its content area is still empty
+	want := `hx-trigger="load[document.getElementById('problems-sub-tab').classList.contains('active') && ` +
+		`!document.getElementById('subContent').children.length], click"`
+	if !strings.Contains(out.String(), want) {
+		t.Errorf("the Problems tab should not reload when restored with its content: %s", out.String())
+	}
+}
+
+// These screens change what the chapter's list shows, so each must flag it for reload on Back.
+func TestScreensFlagChapterProblemsForReload(t *testing.T) {
+	files := map[string]string{
+		"nav-tracker.js defines the key":                  "../../web/static/js/nav-tracker.js",
+		"add/edit problem save sets it":                   "../../web/html/add_problem.html",
+		"deleting a problem from its screen sets it":      "../../web/html/problem.html",
+		"infinite-scroll.js restores a page from history": "../../web/static/js/infinite-scroll.js",
+	}
+	wants := map[string]string{
+		"nav-tracker.js defines the key":                  `REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY = "refreshChapterProblemsOnBack"`,
+		"add/edit problem save sets it":                   `sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1')`,
+		"deleting a problem from its screen sets it":      `sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1')`,
+		"infinite-scroll.js restores a page from history": `name === 'infinite-scroll:restore'`,
+	}
+
+	for name, path := range files {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		if !strings.Contains(string(content), wants[name]) {
+			t.Errorf("%s: %s does not contain %q", name, path, wants[name])
+		}
 	}
 }

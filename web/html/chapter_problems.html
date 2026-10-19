@@ -4,7 +4,8 @@
              every problem of the chapter. Its value is included in the table's requests below. -->
         <select id="problems-topic-filter" name="topic-dropdown" class="form-select w-auto"
             hx-get="/api/topics?view=dropdown-all&id={{.}}" hx-include="#curriculum-dropdown"
-            hx-trigger="load" hx-target="this" hx-swap="innerHTML">
+            hx-trigger="load[document.getElementById('problems-topic-filter').options.length < 2]"
+            hx-target="this" hx-swap="innerHTML">
             <option value="" selected>All Topics</option>
         </select>
 
@@ -113,10 +114,12 @@
         }
     }
 
-    initChapterProblemsList();
-
     var getCheckboxes = () =>
         tbody.querySelectorAll('input[name="select-problem"]');
+
+    // The history snapshot keeps a checkbox's state only as an attribute, so mirror every change there.
+    var syncCheckedAttributes = () =>
+        [selectAll, ...getCheckboxes()].forEach(cb => cb.toggleAttribute('checked', cb.checked));
 
     var updateHeaderState = () => {
         const all = getCheckboxes();
@@ -127,6 +130,7 @@
 
         // Enable / disable Move Problems button
         moveBtn.disabled = checked.length === 0;
+        syncCheckedAttributes();
     };
 
     // Select All
@@ -137,6 +141,7 @@
         });
         selectAll.indeterminate = false;
         moveBtn.disabled = !checked;
+        syncCheckedAttributes();
     });
 
     // Individual checkbox
@@ -144,4 +149,29 @@
         if (e.target.name !== "select-problem") return;
         updateHeaderState();
     });
+
+    // Back navigation rebuilds this page from saved HTML with its rows already loaded: only re-attach what
+    // the HTML cannot keep, and reload just when a problem was added, edited or deleted meanwhile.
+    function restoreChapterProblems() {
+        // the saved HTML does not keep the selected topic, but the last request's params do
+        const activeParams = new URLSearchParams(tbody.getAttribute('data-active-params') || '');
+        document.getElementById('problems-topic-filter').value = activeParams.get('topic-dropdown') || '';
+
+        if (sessionStorage.getItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY)) {
+            sessionStorage.removeItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY);
+            // deferred, because while htmx swaps the page in, the page's dropdowns exist twice
+            setTimeout(initChapterProblemsList, 0);
+        } else {
+            htmx.trigger(tbody, 'infinite-scroll:restore');
+            updateHeaderState();
+        }
+    }
+
+    if (tbody.children.length === 0) {
+        // a fresh load is up to date already
+        sessionStorage.removeItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY);
+        initChapterProblemsList();
+    } else {
+        restoreChapterProblems();
+    }
 </script>

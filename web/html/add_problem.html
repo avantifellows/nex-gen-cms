@@ -1002,6 +1002,8 @@
                             );
                             sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
                         }
+                        // the chapter's problems list is stale now, so reload it when going back to it
+                        sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1');
                         // go back to remove add/edit problem screen
                         goBackAfterDelay(0);
                     }
