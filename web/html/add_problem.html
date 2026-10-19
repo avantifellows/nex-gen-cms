@@ -989,7 +989,6 @@
                 return res.text().then(() => { // if OK, ignore body
 
                     if (isCopyPage) {
-                        sessionStorage.setItem('topicTabOnce', 'topic-problems-tab');
                         const topicUrl = '/topic?id={{if .TopicPtr}}{{.TopicPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
                         history.replaceState(null, '', topicUrl);
                         htmx.ajax('GET', topicUrl, { target: 'body', swap: 'innerHTML' });

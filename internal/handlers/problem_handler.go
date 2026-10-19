@@ -33,8 +33,7 @@ const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
 const srcProblemRowParentTemplate = "src_problem_row_parent.html"
 const srcProblemRowTemplate = "src_problem_row.html"
-const topicProblemsTemplate = "topic_problems.html"
-const topicProblemRowTemplate = "topic_problem_row.html"
+const chapterProblemRowTemplate = "chapter_problem_row.html"
 const chapterProblemsTemplate = "chapter_problems.html"
 const searchProblemRowTemplate = "search_problem_row.html"
 const addProblemTemplate = "add_problem.html"
@@ -180,14 +179,7 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	selectedIds := urlValues.Get("selected-ids")
 	filterProblems(problems, levels, ptype, selectedIds)
 
-	if urlValues.Has("ptype-dropdown") {
-		// for add/edit test screen
-		views.ExecuteTemplates(responseWriter, problems, nil, srcProblemRowParentTemplate, srcProblemRowTemplate)
-
-	} else {
-		// for topic screen's Problems tab
-		views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
-	}
+	views.ExecuteTemplates(responseWriter, problems, nil, srcProblemRowParentTemplate, srcProblemRowTemplate)
 }
 
 // GetChapterProblems returns a chapter's problems, optionally narrowed to one topic (blank = all topics).
@@ -214,7 +206,7 @@ func (h *ProblemsHandler) GetChapterProblems(responseWriter http.ResponseWriter,
 
 	// only drops archived problems here: no level, type or already-selected filtering on this screen
 	filterProblems(problems, nil, "", "")
-	views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
+	views.ExecuteTemplate(chapterProblemRowTemplate, responseWriter, problems, nil)
 }
 
 // problemsPagination returns the "&limit=..&offset=.." suffix to add to db-service's problems query, and the
@@ -355,11 +347,6 @@ func filterProblems(problems *[]*models.Problem, levels []string, ptype string, 
 
 func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, problemsTemplate)
-}
-
-func (h *ProblemsHandler) LoadTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	views.ExecuteTemplate(topicProblemsTemplate, responseWriter, topicIdStr, nil)
 }
 
 func (h *ProblemsHandler) LoadChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {

@@ -1,7 +1,7 @@
 {{ range . }}
 <tr class="border-b">
-    <!-- hx-params="none" is added to prevent extra query parameters (curriculum-dropdown
-         and subject-dropdown) going from its parent topic_problems.html file's problemTableBody -->
+    <!-- hx-params="none" is added to prevent extra query parameters (the search term and subject filter)
+         going from its parent problems.html file's problems-table-body -->
     <td class="p-2 text-center whitespace-nowrap text-accent hover:text-accent-hover hover:underline font-medium"><a href="/problem?id={{.ID}}"
             hx-get="/problem?id={{.ID}}" hx-params="none" hx-target="body"
             hx-push-url="true">{{.Code}}

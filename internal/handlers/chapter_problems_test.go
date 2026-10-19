@@ -260,3 +260,30 @@ func TestScreensFlagChapterProblemsForReload(t *testing.T) {
 		}
 	}
 }
+
+// Problems now live on the chapter screen, so nothing may still open a Problems tab on the topic screen.
+func TestTopicScreenHasNoProblemsTab(t *testing.T) {
+	removed := map[string][]string{
+		"../../web/html/topic.html":       {"topic-problems-tab", "/topic/problems", "topicTabOnce"},
+		"../../web/html/add_problem.html": {"topicTabOnce", "topic-problems-tab"},
+		"../../cmd/main.go":               {`"/topic/problems"`, "LoadTopicProblems"}, // /api/topic/problems stays
+	}
+
+	for path, unwanted := range removed {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		for _, text := range unwanted {
+			if strings.Contains(string(content), text) {
+				t.Errorf("%s still mentions %q", path, text)
+			}
+		}
+	}
+
+	for _, gone := range []string{"../../web/html/topic_problems.html", "../../web/html/topic_problem_row.html"} {
+		if _, err := os.Stat(gone); err == nil {
+			t.Errorf("%s should have been removed", gone)
+		}
+	}
+}

@@ -583,7 +583,7 @@ Spinners use the brand border + accent top-border pattern:
 </div>
 ```
 
-`input.css` already wires `.htmx-request` visibility for the well-known loader ids (`#search-btn-loader`, `#searched-test-loader`, `#question-bank-loader`, `#topic-problems-loader`) and form-state classes (`#move-problems-form.htmx-request .btn-text { display: none; }` etc.). New loaders should follow the same naming so the existing rules apply, or add a fresh selector to the components layer.
+`input.css` already wires `.htmx-request` visibility for the well-known loader ids (`#search-btn-loader`, `#searched-test-loader`, `#question-bank-loader`) and form-state classes (`#move-problems-form.htmx-request .btn-text { display: none; }` etc.). New loaders should follow the same naming so the existing rules apply, or add a fresh selector to the components layer.
 
 For an inline button spinner (e.g. on a submit button that fires HTMX):
 
