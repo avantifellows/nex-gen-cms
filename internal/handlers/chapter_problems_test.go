@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"html/template"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -117,5 +118,35 @@ func TestTopicDropdownAllTemplate(t *testing.T) {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q:\n%s", want, html)
 		}
+	}
+}
+
+func TestProblemsPagination(t *testing.T) {
+	tests := []struct {
+		name      string
+		query     string
+		wantQuery string
+		wantLimit int
+	}{
+		{"not paged without limit", "chapter-dropdown=12", "", 0},
+		{"offset alone does not page", "chapter-dropdown=12&offset=20", "", 0},
+		{"first page", "limit=10", "&limit=10&offset=0", 10},
+		{"later page", "limit=10&offset=20", "&limit=10&offset=20", 10},
+		{"invalid limit falls back to 10", "limit=abc&offset=10", "&limit=10&offset=10", 10},
+		{"limit below 1 falls back to 10", "limit=0", "&limit=10&offset=0", 10},
+		{"negative offset falls back to 0", "limit=10&offset=-5", "&limit=10&offset=0", 10},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			values, err := url.ParseQuery(tt.query)
+			if err != nil {
+				t.Fatalf("parse query: %v", err)
+			}
+			gotQuery, gotLimit := problemsPagination(values)
+			if gotQuery != tt.wantQuery || gotLimit != tt.wantLimit {
+				t.Errorf("problemsPagination() = (%q, %d), want (%q, %d)", gotQuery, gotLimit, tt.wantQuery, tt.wantLimit)
+			}
+		})
 	}
 }
