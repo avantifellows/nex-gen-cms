@@ -44,22 +44,22 @@
             <!-- In before-request, condition is added to only clear the tbody
              when the request comes from the tbody itself (its own refresh on load);
              otherwise it reloads even on just clicking copy problem button for any row -->
-            <!-- hx-disinherit="hx-indicator" keeps #chapter-problems-loader scoped to this tbody's own
-                 bulk reload; without it, row actions (Edit/Copy/Delete/Code link in topic_problem_row.html)
-                 inherit it too, so e.g. clicking Edit was incorrectly starting the whole table's loading
-                 spinner instead of just navigating to the edit screen. -->
+            <!-- Lazy loading: the infinite-scroll extension loads the next 10 rows when the sentinel below the
+                 table scrolls into view, and shows / hides the loader (data-loader) for every page. -->
             <tbody id="problemTableBody" class="text-ink-muted text-sm"
+                hx-ext="infinite-scroll" data-limit="10" data-offset="0" hx-sync="this:replace"
+                data-loader="#chapter-problems-loader" data-sentinel="#chapter-problems-sentinel"
                 hx-trigger="refreshProblems, change from:#problems-topic-filter"
-                hx-get="/api/chapter/problems?chapter-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown, #problems-topic-filter"
-                hx-indicator="#chapter-problems-loader" hx-disinherit="hx-indicator"
+                hx-get="/api/chapter/problems?chapter-dropdown={{.}}&limit=10&offset=0" hx-include="#curriculum-dropdown, #subject-dropdown, #problems-topic-filter"
                 hx-on::before-request="if (event.detail.elt === this) this.innerHTML=''"
                 hx-on::after-swap="updateHeaderState()" data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
     </div>
-    <div id="chapter-problems-loader" class="justify-center py-4">
-        <div class="w-6 h-6 border-4 border-border border-t-accent rounded-full animate-spin"></div>
+    <div id="chapter-problems-sentinel"></div>
+    <div id="chapter-problems-loader" class="hidden justify-center py-4">
+        <div class="w-6 h-6 mx-auto border-4 border-border border-t-accent rounded-full animate-spin"></div>
     </div>
 </div>
 <script>
@@ -77,7 +77,7 @@
         if (!curriculum || !subject) return false;
         // The curriculum, subject and topic filter values are not added to this URL: because the tbody is the
         // request source, htmx adds them itself from the tbody's hx-include (adding them here sent them twice).
-        htmx.ajax('GET', `/api/chapter/problems?chapter-dropdown=${chapterId}`, {
+        htmx.ajax('GET', `/api/chapter/problems?chapter-dropdown=${chapterId}&limit=10&offset=0`, {
             source: '#problemTableBody',
             target: '#problemTableBody',
             swap: 'innerHTML',

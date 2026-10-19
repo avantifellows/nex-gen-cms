@@ -422,15 +422,13 @@
   #search-btn-loader,
   #searched-test-loader,
   #question-bank-loader,
-  #topic-problems-loader,
-  #chapter-problems-loader {
+  #topic-problems-loader {
     display: none;
   }
   #search-btn-loader.htmx-request,
   #searched-test-loader.htmx-request,
   #question-bank-loader.htmx-request,
-  #topic-problems-loader.htmx-request,
-  #chapter-problems-loader.htmx-request {
+  #topic-problems-loader.htmx-request {
     display: flex;
   }
   #searched-test-results { display: block; }

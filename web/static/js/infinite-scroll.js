@@ -12,7 +12,7 @@
             if (!allowedEvents.includes(name)) return;
     
             const requestPath = evt.detail?.elt?.getAttribute("hx-get");
-            if (!isSearchEndpoint(requestPath)) return;
+            if (!isInfiniteScrollEndpoint(requestPath)) return;
 
             const target = evt.detail?.target || evt.detail?.elt;
 
@@ -138,8 +138,8 @@
         }
     });
 
-    function isSearchEndpoint(path) {
-        return path?.startsWith("/api/search");
+    function isInfiniteScrollEndpoint(path) {
+        return path?.startsWith("/api/search") || path?.startsWith("/api/chapter/problems");
     }
 
     function getSearchValue(query) {

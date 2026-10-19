@@ -54,9 +54,9 @@ func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
 	html := out.String()
 
 	for _, want := range []string{
-		`hx-get="/api/chapter/problems?chapter-dropdown=12"`, // tbody refresh
-		`var chapterId = '12';`,                              // initial load script
-		`id="problemTableBody"`,                              // the move modal refreshes this id
+		`hx-get="/api/chapter/problems?chapter-dropdown=12&limit=10&offset=0"`, // tbody refresh
+		`var chapterId = '12';`, // initial load script
+		`id="problemTableBody"`, // the move modal refreshes this id
 		// topic filter: loads this chapter's topics, and its changes reload the table with its value included
 		`hx-get="/api/topics?view=dropdown-all&id=12"`,
 		`hx-trigger="refreshProblems, change from:#problems-topic-filter"`,
@@ -72,7 +72,7 @@ func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
 
 	// The initial-load script must only send the chapter: the tbody's hx-include adds curriculum, subject and
 	// the topic filter, so repeating them in the URL sent them twice.
-	if !strings.Contains(html, "`/api/chapter/problems?chapter-dropdown=${chapterId}`") {
+	if !strings.Contains(html, "`/api/chapter/problems?chapter-dropdown=${chapterId}&limit=10&offset=0`") {
 		t.Errorf("initial-load script URL should carry only the chapter:\n%s", html)
 	}
 	if strings.Contains(html, "subject-dropdown=${") || strings.Contains(html, "curriculum-dropdown=${") {
@@ -80,19 +80,47 @@ func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
 	}
 }
 
-// input.css hides the loaders by id (display none, flex while htmx-request), so a loader id without a rule
-// stays visible forever.
-func TestChapterProblemsLoaderHasCssRule(t *testing.T) {
-	css, err := os.ReadFile("../../input.css")
-	if err != nil {
-		t.Fatalf("read input.css: %v", err)
+// The infinite-scroll extension drives the loader (the hidden class) and loads the next page when the
+// sentinel scrolls into view, so the template must declare both and start with the loader hidden.
+func TestChapterProblemsTemplateIsLazyLoaded(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, "12"); err != nil {
+		t.Fatalf("execute: %v", err)
 	}
-	rules := string(css)
+	html := out.String()
 
-	for _, want := range []string{"#chapter-problems-loader {", "#chapter-problems-loader.htmx-request {"} {
-		if !strings.Contains(rules, want) {
-			t.Errorf("input.css has no rule %q for the chapter problems loader", want)
+	for _, want := range []string{
+		`hx-ext="infinite-scroll"`,
+		`data-limit="10" data-offset="0"`,
+		`hx-sync="this:replace"`, // a stale response must not land after the topic filter changed
+		`data-loader="#chapter-problems-loader"`,
+		`data-sentinel="#chapter-problems-sentinel"`,
+		`hx-get="/api/chapter/problems?chapter-dropdown=12&limit=10&offset=0"`,
+		`<div id="chapter-problems-sentinel"></div>`,
+		`<div id="chapter-problems-loader" class="hidden `,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("rendered tab is missing %q", want)
 		}
+	}
+	// the loader is a block once the extension removes "hidden", so the spinner centres itself
+	if !strings.Contains(html, `w-6 h-6 mx-auto border-4`) {
+		t.Errorf("the spinner must centre itself with mx-auto:\n%s", html)
+	}
+	if strings.Contains(html, "hx-indicator") {
+		t.Errorf("the extension drives the loader, hx-indicator would fight it:\n%s", html)
+	}
+}
+
+// The extension only reacts to the endpoints it knows, so the chapter list must be one of them.
+func TestInfiniteScrollKnowsChapterProblemsEndpoint(t *testing.T) {
+	js, err := os.ReadFile("../../web/static/js/infinite-scroll.js")
+	if err != nil {
+		t.Fatalf("read infinite-scroll.js: %v", err)
+	}
+	if !strings.Contains(string(js), `path?.startsWith("/api/chapter/problems")`) {
+		t.Errorf("infinite-scroll.js does not handle /api/chapter/problems")
 	}
 }
 
