@@ -287,3 +287,22 @@ func TestTopicScreenHasNoProblemsTab(t *testing.T) {
 		}
 	}
 }
+
+// Clearing the table for a new first page brings the sentinel into view, so the first page must count as
+// loading: otherwise the scroll observer starts a second, identical "page 1" request.
+func TestInfiniteScrollMarksFirstPageAsLoading(t *testing.T) {
+	js, err := os.ReadFile("../../web/static/js/infinite-scroll.js")
+	if err != nil {
+		t.Fatalf("read infinite-scroll.js: %v", err)
+	}
+	script := strings.ReplaceAll(string(js), "\r\n", "\n")
+
+	start := strings.Index(script, "name === 'htmx:beforeRequest'")
+	end := strings.Index(script, "name === 'htmx:beforeSwap'")
+	if start < 0 || end < start {
+		t.Fatalf("could not find the beforeRequest branch of infinite-scroll.js")
+	}
+	if !strings.Contains(script[start:end], `target.setAttribute("data-loading", "true")`) {
+		t.Errorf("the beforeRequest branch must mark the table as loading")
+	}
+}

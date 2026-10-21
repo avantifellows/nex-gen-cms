@@ -32,6 +32,8 @@
                 // hence only initially / on changing search term / on changing sort order, so reset offset and data
                 target.setAttribute("data-offset", "0");
                 target.innerHTML = "";
+                // the empty table brings the sentinel into view, but the observer must not start a page request
+                target.setAttribute("data-loading", "true");
 
                 if (loader) loader.classList.remove("hidden");
 
