@@ -80,11 +80,9 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	topicIDStr := strconv.Itoa(int(selectedProblemPtr.TopicID))
 	selectedTopicPtr, _, _ := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
 
-	var selectedChapterPtr *models.Chapter
-	if selectedTopicPtr != nil {
-		chapterIDStr := strconv.Itoa(int(selectedTopicPtr.ChapterID))
-		selectedChapterPtr, _, _ = handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
-	}
+	// the chapter comes from the problem itself: a problem may have no topic, or topics of other chapters
+	chapterIDStr := strconv.Itoa(int(selectedProblemPtr.ChapterID))
+	selectedChapterPtr, _, _ := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 
 	data := dto.ProblemData{
 		HomeData: dto.HomeData{
