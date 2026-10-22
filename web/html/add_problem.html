@@ -1,5 +1,5 @@
 {{ define "content" }}
-{{ $isCopy := and .TopicPtr .ProblemPtr }}
+{{ $isCopy := and .ChapterPtr .ProblemPtr }}
 {{ $isEdit := and .ProblemPtr (not $isCopy) }}
 {{ $prefill := or $isEdit $isCopy }}
 {{ $enLang := false }}
@@ -13,15 +13,15 @@
     {{ $taLang = .ProblemPtr.GetLangVersion "ta" }}
 {{ end }}
 <form class="card card-pad w-full" onsubmit="createProblem(event,
-        {{if .TopicPtr}}
+        {{if .ChapterPtr}}
         <!-- add or copy problem -->
-            {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}, null
+            null, {{.ChapterPtr.ID}}, null
         {{else}}
         <!-- edit problem -->
             {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
         {{end}}
 );">
-    <h2 class="page-title mb-6">{{if $isCopy}}Copy{{else if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
+    <h2 class="page-title mb-6">{{if $isCopy}}Copy{{else if .ChapterPtr}}Add New{{else}}Edit{{end}} Problem</h2>
 
     <!-- type, skills, concepts -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -50,7 +50,7 @@
             <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
                 class="form-select h-24 overflow-y-auto"
                 hx-swap="{{if $prefill}}beforeend{{else}}innerHTML{{end}}"
-                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if $prefill}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
+                hx-get="/api/concepts?topic_id={{if .ProblemPtr}}{{.ProblemPtr.TopicID}}{{end}}{{if $prefill}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
                     {{ if $prefill }}
                         {{ range .ProblemPtr.Concepts }}
                             <!-- These are already mapped concepts -->
@@ -309,8 +309,8 @@
         const additionalProblemTemplate = document.getElementById('tmplAdditionalProblem');
         const mainSkillsDropdown = document.getElementById('skills-dropdown');
         const mainConceptsDropdown = document.getElementById('concepts-dropdown');
-        const currentTopicId = '{{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}';
-        const currentChapterId = '{{if .TopicPtr}}{{.TopicPtr.ChapterID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
+        const currentTopicId = '{{if .ProblemPtr}}{{.ProblemPtr.TopicID}}{{end}}';
+        const currentChapterId = '{{if .ChapterPtr}}{{.ChapterPtr.ID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
         const isEditPage = {{ $isEdit }};
         const isCopyPage = {{ $isCopy }};
         const hasPrefill = {{ $prefill }};
@@ -989,9 +989,9 @@
                 return res.text().then(() => { // if OK, ignore body
 
                     if (isCopyPage) {
-                        const topicUrl = '/topic?id={{if .TopicPtr}}{{.TopicPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
-                        history.replaceState(null, '', topicUrl);
-                        htmx.ajax('GET', topicUrl, { target: 'body', swap: 'innerHTML' });
+                        const chapterUrl = '/chapter?id={{if .ChapterPtr}}{{.ChapterPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
+                        history.replaceState(null, '', chapterUrl);
+                        htmx.ajax('GET', chapterUrl, { target: 'body', swap: 'innerHTML' });
 
                     } else {
                         if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {

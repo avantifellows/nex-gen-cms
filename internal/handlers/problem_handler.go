@@ -353,15 +353,15 @@ func (h *ProblemsHandler) LoadChapterProblems(responseWriter http.ResponseWriter
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIDStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	selectedTopicPtr, code, err := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
+	chapterIDStr := request.URL.Query().Get(QUERY_PARAM_CHAPTER_ID)
+	selectedChapterPtr, code, err := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 
 	data := dto.ProblemData{
-		TopicPtr: selectedTopicPtr,
+		ChapterPtr: selectedChapterPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"joinInt16":        utils.JoinInt16,
@@ -698,6 +698,14 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 		return
 	}
 
+	// the copy dialog still picks a topic, so its chapter is the copy's chapter until the dialog asks for a chapter
+	chapterIDStr := strconv.Itoa(int(selectedTopicPtr.ChapterID))
+	selectedChapterPtr, code, err := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
+	if err != nil {
+		http.Error(responseWriter, err.Error(), code)
+		return
+	}
+
 	curriculumId, gradeId, subjectId := getCurriculumGradeSubjectIds(urlValues)
 	if curriculumId == 0 || gradeId == 0 || subjectId == 0 {
 		http.Error(responseWriter, "Invalid curriculum, grade or subject ID", http.StatusBadRequest)
@@ -713,7 +721,7 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 			SubjectID:    subjectId,
 		},
 		ProblemPtr: &copiedProblem,
-		TopicPtr:   selectedTopicPtr,
+		ChapterPtr: selectedChapterPtr,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{

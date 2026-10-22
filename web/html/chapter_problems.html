@@ -1,5 +1,9 @@
 <div>
     <div class="flex flex-wrap items-center gap-3 mb-4">
+        <button class="btn-primary btn-sm" hx-target="body"
+            hx-get="/chapter/add-problem?chapter_id={{.}}" hx-push-url="true">+ Add New Problem
+        </button>
+
         <!-- Optional single-topic filter: lists only this chapter's topics; the blank "All Topics" option shows
              every problem of the chapter. Its value is included in the table's requests below. -->
         <select id="problems-topic-filter" name="topic-dropdown" class="form-select w-auto"
