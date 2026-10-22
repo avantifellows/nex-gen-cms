@@ -1,6 +1,11 @@
 package models
 
-import "html/template"
+import (
+	"html/template"
+	"slices"
+
+	"github.com/avantifellows/nex-gen-cms/internal/constants"
+)
 
 type Problem struct {
 	ID              int               `json:"id,omitempty"`
@@ -60,6 +65,12 @@ func (p *Problem) GetLangVersion(langCode string) *LangVersion {
 		}
 	}
 	return nil
+}
+
+// NeedsVerification reports whether the problem carries the "needs verification" tag.
+// TagNames must already be filled in by the handler.
+func (p *Problem) NeedsVerification() bool {
+	return slices.Contains(p.TagNames, constants.TagNeedsVerification)
 }
 
 func (p Problem) DisplayDifficulty() int8 {
