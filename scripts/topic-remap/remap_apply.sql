@@ -8,12 +8,11 @@
 -- commit, expect_remap / expect_flag (apply aborts unless both match).
 -- Output: backup.csv (every row this run changes, before → after; flag=true only where this run adds the tag), written before COMMIT; remap_rollback.sql reads it.
 --
--- Rules: only questions with a single topic row that (a) is on the chapter's default first slot (code
--- ending .1, or .0 on a few old topics) and (b) hasn't changed since export_cutoff. Names don't work as
--- the test: the slot is "Introduction" in most chapters but "Introudctions" (JA-11M2.1) or "Introduction
--- to Definite Integration" (JM-12M20.1) in others, while real topics like "Introduction to Determinants"
--- sit elsewhere. A question on any other topic, or changed after the export, is a person's tag and is
--- left alone. Then: the candidate for the
+-- Rules: only questions with a single topic row that (a) is on a placeholder topic, named exactly
+-- "Introduction" (any language entry, case/space-insensitive) or listed in placeholder_typos below, and
+-- (b) hasn't changed since export_cutoff. Anything else is a person's tag and is left alone, including
+-- descriptive first topics like JM-12M20.1 "Introduction to Definite Integration", which are real topics
+-- (the AI picks them as answers). Then: the candidate for the
 -- question's curriculum (or, for old unprefixed topics, the one in the same chapter); target resolved by
 -- topic code (the CSV's topic_row_id is stale for some rows); target must be in the same chapter.
 -- Flag: the blind recheck disagreed with run 1, or the tag came from the "v2-closest" prompt.
@@ -62,7 +61,8 @@ LEFT JOIN recheck c ON c.problem_id = r.problem_id AND c.run1_topic_id = r.topic
 CREATE TEMP TABLE remap_plan ON COMMIT DROP AS
 WITH cur AS (
   SELECT rt.id AS rt_id, rt.resource_id, rt.topic_id, t.code, t.chapter_id,
-         t.code ~ '\.[01]$' AS on_default_slot,
+         (EXISTS (SELECT 1 FROM jsonb_array_elements(t.name) e WHERE lower(trim(e->>'topic')) = 'introduction')
+          OR t.code IN ('JA-11M2.1')) AS on_placeholder,  -- placeholder_typos: 'Introudctions'
          rt.updated_at <= :'export_cutoff'::timestamp AS unchanged_since_export,
          count(*) OVER (PARTITION BY rt.resource_id) AS n_rows
   FROM resource_topic rt JOIN topic t ON t.id = rt.topic_id
@@ -74,7 +74,7 @@ topic_by_code AS (
 cand AS (
   SELECT i.resource_id, i.target_code, i.flag_reason,
          c.rt_id, c.topic_id AS from_topic_id, c.code AS from_code, c.chapter_id AS from_chapter,
-         c.on_default_slot, c.unchanged_since_export, c.n_rows, tt.id AS to_topic_id, tt.chapter_id AS to_chapter
+         c.on_placeholder, c.unchanged_since_export, c.n_rows, tt.id AS to_topic_id, tt.chapter_id AS to_chapter
   FROM remap_input i
   JOIN cur c USING (resource_id)
   LEFT JOIN topic_by_code tt ON tt.code = i.target_code
@@ -89,7 +89,7 @@ SELECT *,
     WHEN n_rows <> 1 THEN 'skip:multiple_topic_rows'
     WHEN n_cand <> 1 THEN 'skip:ambiguous'
     WHEN from_topic_id = to_topic_id THEN 'skip:already_on_target'
-    WHEN NOT on_default_slot THEN 'skip:already_tagged_by_person'
+    WHEN NOT on_placeholder THEN 'skip:already_tagged_by_person'
     WHEN NOT unchanged_since_export THEN 'skip:changed_since_export'
     WHEN to_topic_id IS NULL THEN 'skip:target_topic_not_found'
     WHEN to_chapter <> from_chapter THEN 'skip:target_in_other_chapter'
