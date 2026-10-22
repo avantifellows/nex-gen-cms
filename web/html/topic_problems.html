@@ -17,6 +17,12 @@
 
         </button>
 
+        <label class="inline-flex items-center gap-2 text-sm text-ink-secondary ml-auto cursor-pointer">
+            <input type="checkbox" id="needs-verification" name="needs-verification" class="accent-accent"
+                onchange="loadTopicProblems()">
+            Needs verification only
+        </label>
+
     </div>
 
     <div class="card overflow-hidden">
@@ -46,7 +52,7 @@
                  spinner instead of just navigating to the edit screen. -->
             <tbody id="problemTableBody" class="text-ink-muted text-sm"
                 hx-trigger="refreshProblems"
-                hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
+                hx-get="/api/topic/problems?topic-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown, #needs-verification"
                 hx-indicator="#topic-problems-loader" hx-disinherit="hx-indicator"
                 hx-on::before-request="if (event.detail.elt === this) this.innerHTML=''"
                 hx-on::after-swap="updateHeaderState()" data-mathjax="true">
@@ -71,7 +77,8 @@
         const curriculum = document.getElementById('curriculum-dropdown').value;
         const subject = document.getElementById('subject-dropdown').value;
         if (!curriculum || !subject) return false;
-        htmx.ajax('GET', `/api/topic/problems?topic-dropdown=${topicId}&curriculum-dropdown=${curriculum}&subject-dropdown=${subject}`, {
+        const needsVerification = document.getElementById('needs-verification').checked ? '&needs-verification=on' : '';
+        htmx.ajax('GET', `/api/topic/problems?topic-dropdown=${topicId}&curriculum-dropdown=${curriculum}&subject-dropdown=${subject}${needsVerification}`, {
             source: '#problemTableBody',
             target: '#problemTableBody',
             swap: 'innerHTML',
