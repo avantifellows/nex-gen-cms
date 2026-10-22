@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -208,6 +209,9 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 	ptype := urlValues.Get("ptype-dropdown")
 	selectedIds := urlValues.Get("selected-ids")
 	filterProblems(problems, levels, ptype, selectedIds)
+	if urlValues.Get("needs-verification") == "on" {
+		*problems = slices.DeleteFunc(*problems, func(p *models.Problem) bool { return !p.NeedsVerification() })
+	}
 
 	if urlValues.Has("ptype-dropdown") {
 		// for add/edit test screen
