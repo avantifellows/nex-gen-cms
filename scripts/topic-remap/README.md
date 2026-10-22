@@ -11,7 +11,7 @@ Two CSVs in `s3://af-data-dumps/nex-gen-cms/topic-remap/2026-10-22/`, pinned by 
 
 ## What it changes
 
-- `resource_topic.topic_id`, only for questions still on an Introduction topic. The target is resolved by topic code and must be in the same chapter and curriculum; anything else is skipped and counted.
+- `resource_topic.topic_id`, only for questions still on their chapter's default first topic slot (code ending `.1`, or `.0` on a few old topics; usually named "Introduction", but not always) **and** whose topic row hasn't changed since the CSV export (`EXPORT_CUTOFF` in `run.sh`). Anything else is a person's tag and is left alone. The target is resolved by topic code and must be in the same chapter and curriculum; anything else is skipped and counted.
 - `tag`: creates `needs verification` if it doesn't exist.
 - `resource.tag_ids`: appends that tag to flagged questions.
 

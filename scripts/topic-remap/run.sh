@@ -14,6 +14,9 @@ case "$MODE" in dry-run|apply|rollback) ;; *) echo "mode must be dry-run, apply 
 
 HERE=$(cd "$(dirname "$0")" && pwd)
 S3_PREFIX=s3://af-data-dumps/nex-gen-cms/topic-remap/2026-10-22
+# When Vishal exported the CSV (UTC): newest problem in it was inserted 2026-10-06 12:32:42, the next
+# one 2026-10-07 03:58:15. Topic rows changed after this are a person's edit and are not overwritten.
+EXPORT_CUTOFF='2026-10-06 12:33:00'
 AWS_PROFILE=${AWS_PROFILE:-cms-data-import}
 # Kept between runs: rollback needs the backup that apply wrote here.
 WORK=${REMAP_WORK_DIR:-$HOME/.cms-topic-remap/$ENV_NAME}
@@ -27,7 +30,7 @@ done
 BACKUPS=$S3_PREFIX/backups/$ENV_NAME
 upload() { aws s3 cp "$1" "$BACKUPS/$2" --profile "$AWS_PROFILE" --only-show-errors && echo "uploaded $BACKUPS/$2"; }
 
-psql_run() { (cd "$WORK" && psql "$REMAP_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -v env="$ENV_NAME" "$@"); }
+psql_run() { (cd "$WORK" && psql "$REMAP_DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -v env="$ENV_NAME" -v export_cutoff="$EXPORT_CUTOFF" "$@"); }
 
 case "$MODE" in
   dry-run)
