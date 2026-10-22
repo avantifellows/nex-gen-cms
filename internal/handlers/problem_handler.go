@@ -72,7 +72,7 @@ func NewProblemsHandler(problemsService *services.Service[models.Problem],
 }
 
 func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
+	selectedProblemPtr, code, err := h.getProblem(request.URL.Query(), true)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -107,7 +107,8 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	}, baseTemplate, problemTemplate)
 }
 
-func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int, error) {
+// withLinkedTests bypasses the problem cache, as only the by-id response carries Problem.Tests.
+func (h *ProblemsHandler) getProblem(urlValues url.Values, withLinkedTests bool) (*models.Problem, int, error) {
 	problemIdStr := urlValues.Get("id")
 	problemId := utils.StringToInt(problemIdStr)
 	endPointWithID := fmt.Sprintf(problemEndPoint, problemId)
@@ -116,7 +117,7 @@ func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int
 	selectedProblemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemId
-		}, problemsKey, endPointWithID, false)
+		}, problemsKey, endPointWithID, withLinkedTests)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching problem: %v", err)
 	}
@@ -445,7 +446,7 @@ func renderDuplicateProblemsModal(responseWriter http.ResponseWriter, matches []
 }
 
 func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
+	selectedProblemPtr, code, err := h.getProblem(request.URL.Query(), false)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -630,7 +631,7 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 	problemQuery := url.Values{}
 	problemQuery.Set("id", urlValues.Get("id"))
 
-	selectedProblemPtr, code, err := h.getProblem(problemQuery)
+	selectedProblemPtr, code, err := h.getProblem(problemQuery, false)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
