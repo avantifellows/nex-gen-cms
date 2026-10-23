@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"html/template"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 
+	"github.com/avantifellows/nex-gen-cms/internal/constants"
 	"github.com/avantifellows/nex-gen-cms/internal/dto"
 	"github.com/avantifellows/nex-gen-cms/internal/models"
 	"github.com/avantifellows/nex-gen-cms/utils"
@@ -21,7 +23,6 @@ func renderAddProblem(t *testing.T, data dto.ProblemData) string {
 		"add":              utils.Add,
 		"stringToInt":      utils.StringToInt,
 		"toJson":           utils.ToJson,
-		"getConceptName":   getConceptName,
 		"dict":             utils.Dict,
 		"emptyStringSlice": utils.EmptyStringSlice,
 	}
@@ -154,26 +155,29 @@ func TestAddProblemScreenShowsTopicsField(t *testing.T) {
 	}
 }
 
-func renderTopicChecklist(t *testing.T, topics []*models.Topic) string {
+func renderTopicChecklist(t *testing.T, data dto.TopicChecklistData) string {
 	t.Helper()
 	tmpl := template.Must(template.New("topic_checklist.html").Funcs(template.FuncMap{"getName": getTopicName}).
 		ParseFiles("../../web/html/topic_checklist.html"))
 	var out bytes.Buffer
-	if err := tmpl.Execute(&out, topics); err != nil {
+	if err := tmpl.Execute(&out, data); err != nil {
 		t.Fatalf("execute: %v", err)
 	}
 	return out.String()
 }
 
+func topicNamed(id int16, name string) *models.Topic {
+	return &models.Topic{ID: id, Name: []models.TopicLang{{LangCode: "en", TopicName: name}}}
+}
+
 // Each topic is one labelled checkbox row, and a chapter without topics says so instead of staying blank.
 func TestTopicChecklistTemplate(t *testing.T) {
-	html := renderTopicChecklist(t, []*models.Topic{
-		{ID: 5, Name: []models.TopicLang{{LangCode: "en", TopicName: "Kinematics"}}},
-		{ID: 6, Name: []models.TopicLang{{LangCode: "en", TopicName: "Dynamics"}}},
+	html := renderTopicChecklist(t, dto.TopicChecklistData{
+		Topics: []*models.Topic{topicNamed(5, "Kinematics"), topicNamed(6, "Dynamics")},
 	})
 
-	if strings.Count(html, `type="checkbox"`) != 2 {
-		t.Errorf("expected one checkbox per topic, got: %s", html)
+	if strings.Count(html, `type="checkbox"`) != 2 || strings.Contains(html, "checked") {
+		t.Errorf("expected two unticked checkboxes, got: %s", html)
 	}
 	for _, want := range []string{
 		`name="topic-ids" value="5"`, `<span>Kinematics</span>`,
@@ -187,9 +191,66 @@ func TestTopicChecklistTemplate(t *testing.T) {
 		t.Errorf("the empty message must not show when there are topics")
 	}
 
-	empty := renderTopicChecklist(t, nil)
+	empty := renderTopicChecklist(t, dto.TopicChecklistData{})
 	if !strings.Contains(empty, "No topics in this chapter") || strings.Contains(empty, "checkbox") {
 		t.Errorf("an empty chapter should show only the empty message, got: %s", empty)
+	}
+}
+
+// A problem's own topics come back ticked, including those that are not in the chapter's list.
+func TestTopicChecklistTemplateTicksSelectedTopics(t *testing.T) {
+	html := renderTopicChecklist(t, dto.TopicChecklistData{
+		Topics:   []*models.Topic{topicNamed(5, "Kinematics"), topicNamed(6, "Dynamics")},
+		Selected: map[int16]bool{6: true, 90: true},
+		Other:    []dto.TopicChecklistExtra{{Topic: topicNamed(90, "Optics"), Note: "other chapter"}},
+	})
+
+	if !strings.Contains(html, `value="6" class="accent-accent" checked>`) {
+		t.Errorf("the selected chapter topic should be ticked: %s", html)
+	}
+	if strings.Contains(html, `value="5" class="accent-accent" checked`) {
+		t.Errorf("a topic that is not selected must stay unticked: %s", html)
+	}
+	if !strings.Contains(html, `value="90" class="accent-accent" checked>`) ||
+		!strings.Contains(html, `Optics <span class="text-ink-muted">(other chapter)</span>`) {
+		t.Errorf("a selected topic of another chapter should be listed ticked with its note: %s", html)
+	}
+}
+
+func TestParseTopicIDs(t *testing.T) {
+	tests := map[string][]int16{
+		"":          nil,
+		"5":         {5},
+		"5,9":       {5, 9},
+		" 5 , 9 ,":  {5, 9},
+		"5,abc,9,x": {5, 9},
+	}
+	for input, want := range tests {
+		if got := parseTopicIDs(input); !reflect.DeepEqual(got, want) {
+			t.Errorf("parseTopicIDs(%q) = %v, want %v", input, got, want)
+		}
+	}
+}
+
+func TestBuildTopicChecklist(t *testing.T) {
+	chapterTopics := []*models.Topic{topicNamed(5, "Kinematics"), topicNamed(6, "Dynamics")}
+	archived := topicNamed(7, "Old topic")
+	archived.StatusID = constants.StatusArchived
+	known := map[int16]*models.Topic{7: archived, 90: topicNamed(90, "Optics")}
+	lookup := func(id int16) *models.Topic { return known[id] }
+
+	data := buildTopicChecklist(chapterTopics, []int16{6, 90, 7, 90, 404}, lookup)
+
+	if !reflect.DeepEqual(data.Selected, map[int16]bool{6: true, 90: true, 7: true, 404: true}) {
+		t.Errorf("Selected = %v", data.Selected)
+	}
+	if len(data.Topics) != 2 {
+		t.Errorf("the chapter's own topics must be kept, got %d", len(data.Topics))
+	}
+	// 6 is listed already, 404 is unknown, and 90 is asked for twice: only 90 and 7 are extra, once each
+	if len(data.Other) != 2 || data.Other[0].Topic.ID != 90 || data.Other[0].Note != "other chapter" ||
+		data.Other[1].Topic.ID != 7 || data.Other[1].Note != "archived" {
+		t.Errorf("Other = %+v", data.Other)
 	}
 }
 
@@ -211,11 +272,49 @@ func TestAddProblemScreenLoadsChapterTopics(t *testing.T) {
 			// not before the curriculum dropdown has a value: the topics are filtered by curriculum
 			`hx-trigger="load[document.getElementById('curriculum-dropdown').value], onLoaded from:#curriculum-dropdown"`,
 			`hx-include="#curriculum-dropdown"`,
-			`hx-get="/api/topics?view=checklist&id=9"`,
+			`hx-get="/api/topics?view=checklist&id=9`, // edit and copy continue with &selected=…
 		} {
 			if !strings.Contains(html, want) {
 				t.Errorf("%s screen is missing %q", mode, want)
 			}
+		}
+	}
+}
+
+// Edit and copy ask for their topics to come back ticked; a new problem has none to tick.
+func TestAddProblemScreenAsksForTheProblemsTopicsTicked(t *testing.T) {
+	problem := &models.Problem{
+		ID: 7, Subtype: "mcq_single_answer", ChapterID: 9, TopicIDs: []int16{5, 90},
+		LangVersions: []models.LangVersion{{LangCode: "en"}},
+	}
+	want := `hx-get="/api/topics?view=checklist&id=9&selected=5,90"`
+
+	for mode, data := range map[string]dto.ProblemData{
+		"edit": {ProblemPtr: problem},
+		"copy": {ProblemPtr: problem, ChapterPtr: &models.Chapter{ID: 9}},
+	} {
+		if html := renderAddProblem(t, data); !strings.Contains(html, want) {
+			t.Errorf("%s screen should request %q", mode, want)
+		}
+	}
+
+	if html := renderAddProblem(t, dto.ProblemData{ChapterPtr: &models.Chapter{ID: 9}}); strings.Contains(html, "selected=") {
+		t.Errorf("a new problem has no topics to tick")
+	}
+}
+
+// Topics replace concepts on this screen, so the concept prefill must not render any more.
+func TestAddProblemScreenDoesNotPrefillConcepts(t *testing.T) {
+	problem := &models.Problem{
+		ID: 7, Subtype: "mcq_single_answer", ChapterID: 9, TopicID: 5,
+		LangVersions: []models.LangVersion{{LangCode: "en"}},
+		Concepts:     []models.Concept{{ID: 3, Name: []models.ConceptLang{{LangCode: "en", ConceptName: "Velocity"}}}},
+	}
+
+	html := renderAddProblem(t, dto.ProblemData{ProblemPtr: problem})
+	for _, unwanted := range []string{"already mapped concepts", "Velocity", "exclude="} {
+		if strings.Contains(html, unwanted) {
+			t.Errorf("the edit screen should not prefill concepts, found %q", unwanted)
 		}
 	}
 }

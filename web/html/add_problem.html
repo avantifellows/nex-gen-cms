@@ -49,16 +49,8 @@
             <label class="form-label" for="concepts-dropdown">Concepts</label>
             <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
                 class="form-select h-24 overflow-y-auto"
-                hx-swap="{{if $prefill}}beforeend{{else}}innerHTML{{end}}"
-                hx-get="/api/concepts?topic_id={{if .ProblemPtr}}{{.ProblemPtr.TopicID}}{{end}}{{if $prefill}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
-                    {{ if $prefill }}
-                        {{ range .ProblemPtr.Concepts }}
-                            <!-- These are already mapped concepts -->
-                            <option value="{{.ID}}" selected>{{ getConceptName . "en" }}</option>
-                        {{ end }}
-                    {{ else }}
-                        <option disabled>Loading concepts...</option>
-                    {{ end }}
+                hx-get="/api/concepts?topic_id={{if .ProblemPtr}}{{.ProblemPtr.TopicID}}{{end}}">
+                <option disabled>Loading concepts...</option>
             </select>
             <a href="#" class="add-new-link mt-1 inline-block" hx-get="/topic/add-problem/add-concept-dialog"
                 hx-target="body" hx-swap="beforeend"
@@ -71,7 +63,7 @@
             <div id="topics-checklist" role="group" aria-labelledby="topics-label"
                 hx-trigger="load[document.getElementById('curriculum-dropdown').value], onLoaded from:#curriculum-dropdown"
                 hx-include="#curriculum-dropdown"
-                hx-get="/api/topics?view=checklist&id={{if .ChapterPtr}}{{.ChapterPtr.ID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}"
+                hx-get="/api/topics?view=checklist&id={{if .ChapterPtr}}{{.ChapterPtr.ID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}{{if $prefill}}&selected={{joinInt16 .ProblemPtr.TopicIDs ","}}{{end}}"
                 class="max-h-60 overflow-y-auto rounded-lg border border-border bg-bg-input">
                 <p class="px-3 py-1.5 text-sm text-ink-muted">Loading topics...</p>
             </div>

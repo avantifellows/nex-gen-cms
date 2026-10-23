@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -345,7 +346,11 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 		 * then just return empty response.
 		 */
 		if chapterDropdownVal == "Select Chapter" || chapterDropdownVal == "" {
-			views.ExecuteTemplate(filename, responseWriter, nil, template.FuncMap{
+			var emptyData any
+			if view == "checklist" {
+				emptyData = dto.TopicChecklistData{}
+			}
+			views.ExecuteTemplate(filename, responseWriter, emptyData, template.FuncMap{
 				"getName": getTopicName,
 			})
 		} else {
@@ -375,7 +380,59 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	sortOrder := urlVals.Get("sortOrder")
 	sortTopics(localChapter.Topics, sortColumn, sortOrder)
 
-	views.ExecuteTemplate(filename, responseWriter, localChapter.Topics, template.FuncMap{
+	var data any = localChapter.Topics
+	if view == "checklist" {
+		data = buildTopicChecklist(localChapter.Topics, parseTopicIDs(urlVals.Get("selected")), func(id int16) *models.Topic {
+			topicPtr, _, err := handlerutils.GetTopicByID(strconv.Itoa(int(id)), h.topicsService)
+			if err != nil {
+				return nil
+			}
+			return topicPtr
+		})
+	}
+	views.ExecuteTemplate(filename, responseWriter, data, template.FuncMap{
 		"getName": getTopicName,
 	})
+}
+
+// parseTopicIDs reads a comma separated list of topic ids, skipping anything that is not a valid id.
+func parseTopicIDs(idsStr string) []int16 {
+	var ids []int16
+	for _, idStr := range strings.Split(idsStr, ",") {
+		if id, err := utils.StringToIntType[int16](strings.TrimSpace(idStr)); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+// buildTopicChecklist ticks the selected topics among the chapter's own, and adds the selected ones that are
+// not listed there (other chapters, archived) so that a problem's topics are never hidden or dropped on save.
+func buildTopicChecklist(chapterTopics []*models.Topic, selectedIDs []int16, lookup func(int16) *models.Topic) dto.TopicChecklistData {
+	data := dto.TopicChecklistData{Topics: chapterTopics, Selected: map[int16]bool{}}
+
+	listed := map[int16]bool{}
+	for _, topicPtr := range chapterTopics {
+		listed[topicPtr.ID] = true
+	}
+
+	for _, id := range selectedIDs {
+		if data.Selected[id] {
+			continue
+		}
+		data.Selected[id] = true
+		if listed[id] {
+			continue
+		}
+		topicPtr := lookup(id)
+		if topicPtr == nil {
+			continue
+		}
+		note := "other chapter"
+		if topicPtr.StatusID == constants.StatusArchived {
+			note = "archived"
+		}
+		data.Other = append(data.Other, dto.TopicChecklistExtra{Topic: topicPtr, Note: note})
+	}
+	return data
 }
