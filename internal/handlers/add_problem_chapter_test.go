@@ -122,3 +122,34 @@ func TestAddProblemTemplateHasNoTopicPtr(t *testing.T) {
 		t.Errorf("add_problem.html should not use .TopicPtr any more")
 	}
 }
+
+// The Topics checklist is part of the shared screen, so add, edit and copy all show it.
+func TestAddProblemScreenShowsTopicsField(t *testing.T) {
+	problem := &models.Problem{
+		ID: 7, Subtype: "mcq_single_answer", ChapterID: 9,
+		LangVersions: []models.LangVersion{{LangCode: "en"}},
+	}
+	screens := map[string]dto.ProblemData{
+		"add":  {ChapterPtr: &models.Chapter{ID: 9}},
+		"edit": {ProblemPtr: problem},
+		"copy": {ProblemPtr: problem, ChapterPtr: &models.Chapter{ID: 9}},
+	}
+
+	for mode, data := range screens {
+		html := renderAddProblem(t, data)
+		for _, want := range []string{
+			`<p class="form-label" id="topics-label">Topics</p>`,
+			// a scrollable list of about 7.5 rows (max-h-60 = 15rem), labelled by the heading above it
+			`id="topics-checklist" role="group" aria-labelledby="topics-label"`,
+			`max-h-60 overflow-y-auto`,
+			`Loading topics...`,
+		} {
+			if !strings.Contains(html, want) {
+				t.Errorf("%s screen is missing %q", mode, want)
+			}
+		}
+		if strings.Contains(html, `id="topics-dropdown"`) {
+			t.Errorf("%s screen should show checkboxes, not a multi-select", mode)
+		}
+	}
+}
