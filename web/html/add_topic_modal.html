@@ -1,0 +1,134 @@
+<div id="add-topic-modal"
+    class="fixed inset-0 bg-ink/40 flex justify-center items-center z-50 p-4">
+    <div class="card shadow-xl rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+
+        <h2 class="page-title mb-2">Add Topics from Another Chapter</h2>
+        <p class="text-sm text-ink-muted mb-6">
+            Curriculum and subject are the same as on this screen. Select a Grade and a Chapter, then tick its topics.
+        </p>
+
+        <div class="space-y-6">
+
+            <div class="grid grid-cols-3 gap-4">
+
+                <!-- Grade: starts as the grade of this screen -->
+                <select id="add-topic-grade-dropdown" name="grade-dropdown"
+                        class="form-select" hx-get="/api/grades"
+                        hx-trigger="load" hx-target="this" hx-swap="innerHTML"
+                        hx-on::after-request="afterAddTopicGradeReq()">
+                    <option disabled selected>Loading grades...</option>
+                </select>
+
+                <!-- Chapter: curriculum and subject come from the dropdowns of the screen behind this dialog -->
+                <select id="add-topic-chapter-dropdown" name="chapter-dropdown"
+                        class="form-select col-span-2" hx-get="/api/chapters"
+                        hx-target="this" hx-swap="innerHTML"
+                        hx-trigger="loadChapters, change from:#add-topic-grade-dropdown"
+                        hx-include="#add-topic-grade-dropdown, #curriculum-dropdown, #subject-dropdown"
+                        hx-params="not chapter-dropdown" hx-on::before-request="beforeAddTopicChaptersRequest()">
+                    <option disabled selected>Loading chapters...</option>
+                </select>
+
+            </div>
+
+            <!-- The chosen chapter's topics, the same checkbox rows as the problem's own Topics list -->
+            <div id="add-topic-checklist" class="max-h-60 overflow-y-auto rounded-lg border border-border bg-bg-input"
+                hx-get="/api/topics?view=checklist" hx-trigger="change from:#add-topic-chapter-dropdown"
+                hx-include="#add-topic-chapter-dropdown, #curriculum-dropdown"
+                hx-target="this" hx-swap="innerHTML" hx-on::before-request="beforeAddTopicChecklistRequest()">
+                <p class="px-3 py-1.5 text-sm text-ink-muted">Select a chapter first</p>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-end gap-3 pt-4 border-t border-border">
+                <button type="button" onclick="closeAddTopicModal()" class="btn-secondary">Cancel</button>
+                <button id="add-topic-btn" type="button" disabled onclick="addPickedTopics()"
+                    class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-card-alt disabled:text-ink-muted">
+                    Add Topics
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+<script>
+(function () {
+    const modal = document.getElementById('add-topic-modal');
+    const gradeDropdown = modal.querySelector('#add-topic-grade-dropdown');
+    const chapterDropdown = modal.querySelector('#add-topic-chapter-dropdown');
+    const pickList = modal.querySelector('#add-topic-checklist');
+    const addBtn = modal.querySelector('#add-topic-btn');
+
+    const MESSAGE_CLASS = 'px-3 py-1.5 text-sm text-ink-muted';
+    const ROW_CLASS = 'flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-bg-hover cursor-pointer';
+
+    window.afterAddTopicGradeReq = function () {
+        // start from the grade of the screen behind this dialog, when its options include it
+        const screenGrade = document.getElementById('grade-dropdown')?.value;
+        if (screenGrade && Array.from(gradeDropdown.options).some(option => option.value === screenGrade)) {
+            gradeDropdown.value = screenGrade;
+        }
+        htmx.trigger(chapterDropdown, 'loadChapters');
+    };
+
+    window.beforeAddTopicChaptersRequest = function () {
+        chapterDropdown.innerHTML = '<option disabled selected>Loading chapters...</option>';
+        pickList.innerHTML = `<p class="${MESSAGE_CLASS}">Select a chapter first</p>`;
+        addBtn.disabled = true;
+    };
+
+    window.beforeAddTopicChecklistRequest = function () {
+        pickList.innerHTML = `<p class="${MESSAGE_CLASS}">Loading topics...</p>`;
+        addBtn.disabled = true;
+    };
+
+    pickList.addEventListener('change', () => {
+        addBtn.disabled = !pickList.querySelector('input[name="topic-ids"]:checked');
+    });
+
+    // Appends a topic to the problem's Topics list, already ticked. A topic the list already has is just ticked.
+    function addTopicRow(targetList, id, name) {
+        const existing = targetList.querySelector(`input[name="topic-ids"][value="${id}"]`);
+        if (existing) {
+            existing.checked = true;
+            return;
+        }
+
+        // the "No topics in this chapter" line no longer applies once a topic is added
+        targetList.querySelectorAll(':scope > p').forEach(message => message.remove());
+
+        const row = document.createElement('label');
+        row.className = ROW_CLASS;
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.name = 'topic-ids';
+        checkbox.value = id;
+        checkbox.className = 'accent-accent';
+        checkbox.checked = true;
+
+        const text = document.createElement('span');
+        text.textContent = name + ' ';
+        const note = document.createElement('span');
+        note.className = 'text-ink-muted';
+        note.textContent = '(other chapter)';
+        text.appendChild(note);
+
+        row.append(checkbox, text);
+        targetList.appendChild(row);
+    }
+
+    window.addPickedTopics = function () {
+        const targetList = window._topicModalTargetChecklist;
+        pickList.querySelectorAll('input[name="topic-ids"]:checked').forEach(box => {
+            const name = box.closest('label').querySelector('span').textContent.trim();
+            addTopicRow(targetList, box.value, name);
+        });
+        modal.remove();
+    };
+
+    window.closeAddTopicModal = function () {
+        modal.remove();
+    };
+})();
+</script>

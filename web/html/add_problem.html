@@ -23,7 +23,7 @@
 );">
     <h2 class="page-title mb-6">{{if $isCopy}}Copy{{else if .ChapterPtr}}Add New{{else}}Edit{{end}} Problem</h2>
 
-    <!-- type, skills, concepts, topics -->
+    <!-- type, skills, topics -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
         <div>
             <label class="form-label" for="problem-type-dropdown">Type</label>
@@ -46,17 +46,6 @@
             </select>
         </div>
         <div>
-            <label class="form-label" for="concepts-dropdown">Concepts</label>
-            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
-                class="form-select h-24 overflow-y-auto"
-                hx-get="/api/concepts?topic_id={{if .ProblemPtr}}{{.ProblemPtr.TopicID}}{{end}}">
-                <option disabled>Loading concepts...</option>
-            </select>
-            <a href="#" class="add-new-link mt-1 inline-block" hx-get="/topic/add-problem/add-concept-dialog"
-                hx-target="body" hx-swap="beforeend"
-                onclick="window._conceptModalTargetDropdown = document.getElementById('concepts-dropdown')">+ Add concept from other topic</a>
-        </div>
-        <div>
             <p class="form-label" id="topics-label">Topics</p>
             <!-- max-h-60 (15rem) is 7.5 rows of 2rem: 7 to 8 topics show, the rest scroll. The topics are
                  filtered by curriculum, so the list loads once the curriculum dropdown has a value -->
@@ -67,6 +56,9 @@
                 class="max-h-60 overflow-y-auto rounded-lg border border-border bg-bg-input">
                 <p class="px-3 py-1.5 text-sm text-ink-muted">Loading topics...</p>
             </div>
+            <a href="#" class="add-new-link mt-1 inline-block" hx-get="/chapter/add-problem/add-topic-dialog"
+                hx-target="body" hx-swap="beforeend"
+                onclick="window._topicModalTargetChecklist = document.getElementById('topics-checklist')">+ Add topic from other chapter</a>
         </div>
     </div>
 
@@ -312,7 +304,6 @@
         const additionalProblemsContainer = document.getElementById('additionalProblemsContainer');
         const additionalProblemTemplate = document.getElementById('tmplAdditionalProblem');
         const mainSkillsDropdown = document.getElementById('skills-dropdown');
-        const mainConceptsDropdown = document.getElementById('concepts-dropdown');
         const topicsChecklist = document.getElementById('topics-checklist');
         const currentTopicId = '{{if .ProblemPtr}}{{.ProblemPtr.TopicID}}{{end}}';
         const currentChapterId = '{{if .ChapterPtr}}{{.ChapterPtr.ID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
@@ -527,10 +518,6 @@
 
         mainSkillsDropdown.addEventListener('htmx:afterSwap', () => {
             skillsOptionsHtml = getUnselectedOptionsHtml(mainSkillsDropdown.innerHTML);
-        });
-
-        mainConceptsDropdown.addEventListener('htmx:afterSwap', () => {
-            conceptsOptionsByTopic.set(currentTopicId, getUnselectedOptionsHtml(mainConceptsDropdown.innerHTML));
         });
 
         function initializeAdditionalDropdowns(problemBlock) {

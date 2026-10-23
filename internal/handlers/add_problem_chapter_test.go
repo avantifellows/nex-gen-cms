@@ -356,3 +356,81 @@ func TestAddProblemSavesTheTickedTopics(t *testing.T) {
 		}
 	}
 }
+
+// The picker asks only for a grade and a chapter, then lists that chapter's topics as checkbox rows.
+func TestAddTopicModalTemplate(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../../web/html/add_topic_modal.html"))
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, nil); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	html := out.String()
+
+	for _, unwanted := range []string{"add-topic-curriculum-dropdown", "add-topic-subject-dropdown"} {
+		if strings.Contains(html, unwanted) {
+			t.Errorf("the picker must not ask for the curriculum or subject again, found %q", unwanted)
+		}
+	}
+	for _, want := range []string{
+		`id="add-topic-grade-dropdown"`, `id="add-topic-chapter-dropdown"`,
+		// curriculum and subject are the ones of the screen behind the dialog, not chosen again here
+		`hx-include="#add-topic-grade-dropdown, #curriculum-dropdown, #subject-dropdown"`,
+		// the chosen chapter's topics come from the checklist view, filtered by that curriculum
+		`hx-get="/api/topics?view=checklist" hx-trigger="change from:#add-topic-chapter-dropdown"`,
+		`hx-include="#add-topic-chapter-dropdown, #curriculum-dropdown"`,
+		`id="add-topic-btn" type="button" disabled`,
+		`window.addPickedTopics = function`,
+		`window.closeAddTopicModal = function`,
+		// the ticked topics are added to the list the opening link pointed at
+		`window._topicModalTargetChecklist`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("the topic picker is missing %q", want)
+		}
+	}
+}
+
+// Topics replace concepts for the main problem: the screen offers the topic picker and no Concepts field.
+func TestAddProblemScreenOffersTopicPickerInsteadOfConcepts(t *testing.T) {
+	problem := &models.Problem{
+		ID: 7, Subtype: "mcq_single_answer", ChapterID: 9,
+		LangVersions: []models.LangVersion{{LangCode: "en"}},
+	}
+	screens := map[string]dto.ProblemData{
+		"add":  {ChapterPtr: &models.Chapter{ID: 9}},
+		"edit": {ProblemPtr: problem},
+		"copy": {ProblemPtr: problem, ChapterPtr: &models.Chapter{ID: 9}},
+	}
+
+	for mode, data := range screens {
+		html := renderAddProblem(t, data)
+		for _, want := range []string{
+			`hx-get="/chapter/add-problem/add-topic-dialog"`,
+			`window._topicModalTargetChecklist = document.getElementById('topics-checklist')`,
+			`+ Add topic from other chapter`,
+		} {
+			if !strings.Contains(html, want) {
+				t.Errorf("%s screen is missing %q", mode, want)
+			}
+		}
+		if strings.Contains(html, `id="concepts-dropdown"`) {
+			t.Errorf("%s screen should not have the main Concepts field any more", mode)
+		}
+	}
+
+	content, err := os.ReadFile("../../web/html/add_problem.html")
+	if err != nil {
+		t.Fatalf("read add_problem.html: %v", err)
+	}
+	if strings.Contains(string(content), "mainConceptsDropdown") {
+		t.Errorf("the script should not keep a handle on the removed Concepts field")
+	}
+
+	mainGo, err := os.ReadFile("../../cmd/main.go")
+	if err != nil {
+		t.Fatalf("read main.go: %v", err)
+	}
+	if !strings.Contains(string(mainGo), `"/chapter/add-problem/add-topic-dialog"`) {
+		t.Errorf("main.go should register the topic picker route")
+	}
+}
