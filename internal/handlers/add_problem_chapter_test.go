@@ -72,9 +72,9 @@ func TestAddProblemRouteIsScopedToChapter(t *testing.T) {
 func TestAddProblemScreenForAChapter(t *testing.T) {
 	html := renderAddProblem(t, dto.ProblemData{ChapterPtr: &models.Chapter{ID: 49}})
 
-	// no topic yet (null), the chapter, and no problem id
-	if !regexp.MustCompile(`createProblem\(event,\s*(<!--.*?-->\s*)?null\s*,\s*49\s*,\s*null\s*\)`).MatchString(html) {
-		t.Errorf("the form should call createProblem(event, null, 49, null)")
+	// the chapter and no problem id; topics come from the checklist, not from an argument
+	if !regexp.MustCompile(`createProblem\(event,\s*(<!--.*?-->\s*)?49\s*,\s*null\s*\)`).MatchString(html) {
+		t.Errorf("the form should call createProblem(event, 49, null)")
 	}
 	if !strings.Contains(html, "Add New Problem") || strings.Contains(html, "Edit Problem") {
 		t.Errorf("the title should read Add New Problem")
@@ -93,9 +93,9 @@ func TestAddProblemScreenStillRendersEditAndCopy(t *testing.T) {
 	}
 
 	edit := renderAddProblem(t, dto.ProblemData{ProblemPtr: problem})
-	if !regexp.MustCompile(`createProblem\(event,\s*(<!--.*?-->\s*)?5\s*,\s*9\s*,\s*7\s*\)`).MatchString(edit) ||
+	if !regexp.MustCompile(`createProblem\(event,\s*(<!--.*?-->\s*)?9\s*,\s*7\s*\)`).MatchString(edit) ||
 		!strings.Contains(edit, "Edit Problem") {
-		t.Errorf("edit mode should call createProblem(event, 5, 9, 7) under an Edit title")
+		t.Errorf("edit mode should call createProblem(event, 9, 7) under an Edit title")
 	}
 
 	cp := renderAddProblem(t, dto.ProblemData{
@@ -103,9 +103,9 @@ func TestAddProblemScreenStillRendersEditAndCopy(t *testing.T) {
 		ProblemPtr: problem,
 		ChapterPtr: &models.Chapter{ID: 9},
 	})
-	if !regexp.MustCompile(`createProblem\(event,\s*(<!--.*?-->\s*)?null\s*,\s*9\s*,\s*null\s*\)`).MatchString(cp) ||
+	if !regexp.MustCompile(`createProblem\(event,\s*(<!--.*?-->\s*)?9\s*,\s*null\s*\)`).MatchString(cp) ||
 		!strings.Contains(cp, "Copy Problem") {
-		t.Errorf("copy mode should call createProblem(event, null, 9, null) under a Copy title")
+		t.Errorf("copy mode should call createProblem(event, 9, null) under a Copy title")
 	}
 	// after saving a copy the user lands on the chapter, not on a topic screen
 	if !strings.Contains(cp, "const chapterUrl = '/chapter?id=9&curriculum-dropdown=1&grade-dropdown=10&subject-dropdown=2';") {
@@ -315,6 +315,44 @@ func TestAddProblemScreenDoesNotPrefillConcepts(t *testing.T) {
 	for _, unwanted := range []string{"already mapped concepts", "Velocity", "exclude="} {
 		if strings.Contains(html, unwanted) {
 			t.Errorf("the edit screen should not prefill concepts, found %q", unwanted)
+		}
+	}
+}
+
+// The main problem is saved with the ticked topics. The script lives in the template, so these checks read it.
+func TestAddProblemSavesTheTickedTopics(t *testing.T) {
+	content, err := os.ReadFile("../../web/html/add_problem.html")
+	if err != nil {
+		t.Fatalf("read add_problem.html: %v", err)
+	}
+	script := strings.ReplaceAll(string(content), "\r\n", "\n")
+
+	for _, want := range []string{
+		// the topic is no longer an argument, and the payload carries the ticked ids
+		"window.createProblem = function (event, chapterId, problemId) {",
+		"function buildProblemJson(chapterId) {",
+		`topicIds: getCheckedTopicIds(topicsChecklist),`,
+		`querySelectorAll('input[name="topic-ids"]:checked')`,
+		"...(topicIds !== undefined && { topic_ids: topicIds }),",
+		// topic_ids is the full set, so saving before the list loaded must be refused
+		"topicsChecklist.dataset.loaded = 'true';",
+		"Topics are still loading. Please wait a moment and try again.",
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("add_problem.html is missing %q", want)
+		}
+	}
+
+	// the main problem sends neither the legacy topic nor concepts
+	mainStart := strings.Index(script, "function buildProblemJson(chapterId) {")
+	mainEnd := strings.Index(script, "scheduleEditorBoot(")
+	if mainStart < 0 || mainEnd < mainStart {
+		t.Fatalf("could not find buildProblemJson")
+	}
+	main := script[mainStart:mainEnd]
+	for _, unwanted := range []string{`\btopicId\b`, `\bconceptIds\b`, `concepts-dropdown`} {
+		if regexp.MustCompile(unwanted).MatchString(main) {
+			t.Errorf("the main problem payload must not use %q any more", unwanted)
 		}
 	}
 }

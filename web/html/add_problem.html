@@ -15,10 +15,10 @@
 <form class="card card-pad w-full" onsubmit="createProblem(event,
         {{if .ChapterPtr}}
         <!-- add or copy problem -->
-            null, {{.ChapterPtr.ID}}, null
+            {{.ChapterPtr.ID}}, null
         {{else}}
         <!-- edit problem -->
-            {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
+            {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
         {{end}}
 );">
     <h2 class="page-title mb-6">{{if $isCopy}}Copy{{else if .ChapterPtr}}Add New{{else}}Edit{{end}} Problem</h2>
@@ -313,6 +313,7 @@
         const additionalProblemTemplate = document.getElementById('tmplAdditionalProblem');
         const mainSkillsDropdown = document.getElementById('skills-dropdown');
         const mainConceptsDropdown = document.getElementById('concepts-dropdown');
+        const topicsChecklist = document.getElementById('topics-checklist');
         const currentTopicId = '{{if .ProblemPtr}}{{.ProblemPtr.TopicID}}{{end}}';
         const currentChapterId = '{{if .ChapterPtr}}{{.ChapterPtr.ID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
         const isEditPage = {{ $isEdit }};
@@ -518,6 +519,11 @@
                 problemBlock.querySelector('h3').textContent = `Additional Problem ${index + 2}`;
             });
         }
+
+        // topic_ids is the full set to save, so saving before the list has loaded would wipe the problem's topics
+        topicsChecklist.addEventListener('htmx:afterSwap', () => {
+            topicsChecklist.dataset.loaded = 'true';
+        });
 
         mainSkillsDropdown.addEventListener('htmx:afterSwap', () => {
             skillsOptionsHtml = getUnselectedOptionsHtml(mainSkillsDropdown.innerHTML);
@@ -925,7 +931,7 @@
 
         addTabButton.addEventListener('click', addTab);
 
-        window.createProblem = function (event, topicId, chapterId, problemId) {
+        window.createProblem = function (event, chapterId, problemId) {
             event.preventDefault();  // Cancel the default form request
 
             // save latest option value visible; otherwise if save is pressed directly after entering value
@@ -941,8 +947,8 @@
             const isComprehensionCreate = !isEditPage && subtype === 'comprehension';
 
             let payload = isComprehensionCreate
-                ? buildComprehensionProblemsPayload(topicId, chapterId)
-                : buildProblemJson(topicId, chapterId);
+                ? buildComprehensionProblemsPayload(chapterId)
+                : buildProblemJson(chapterId);
 
             // Edit comprehension: same PATCH body as other types, plus paragraph for the API.
             if (isEditPage && subtype === 'comprehension') {
@@ -1111,6 +1117,10 @@
                 return fail('Curriculum, grade, and subject are still loading. Please wait a moment and try again.');
             }
 
+            if (topicsChecklist.dataset.loaded !== 'true') {
+                return fail('Topics are still loading. Please wait a moment and try again.');
+            }
+
             const difficulty = document.querySelector('input[name="difficulty"]:checked');
             if (!difficulty) {
                 return fail('Please select a difficulty level.');
@@ -1173,12 +1183,12 @@
             return true;
         }
 
-        function buildComprehensionProblemsPayload(topicId, chapterId) {
+        function buildComprehensionProblemsPayload(chapterId) {
             const paragraphEditor = paragraphDiv.querySelector('.editor');
             const paragraph = paragraphEditor ? getEditorHtml(paragraphEditor) : '';
 
             const problems = [];
-            problems.push(buildProblemJson(topicId, chapterId));
+            problems.push(buildProblemJson(chapterId));
 
             additionalProblemsContainer.querySelectorAll('.additional-problem').forEach(block => {
                 problems.push(buildAdditionalProblemJson(block, chapterId));
@@ -1264,6 +1274,7 @@
             gradeId,
             subjectId,
             topicId,
+            topicIds,
             chapterId,
             difficulty,
             langVersions,
@@ -1285,7 +1296,9 @@
                     }
                 ],
                 subject_id: subjectId,
-                topic_id: topicId,
+                // main problems send topic_ids; additional ones keep topic_id and concept_ids until they get topics too
+                ...(topicId !== undefined && { topic_id: topicId }),
+                ...(topicIds !== undefined && { topic_ids: topicIds }),
                 chapter_id: chapterId,
                 difficulty_level: difficulty,
                 lang_versions: langVersions.map(({ lang_code, question, options, solution }) => ({
@@ -1297,12 +1310,17 @@
                         solutions: [{ type: "text", value: solution }]
                     }
                 })),
-                concept_ids: conceptIds,
+                ...(conceptIds !== undefined && { concept_ids: conceptIds }),
                 tags: tags
             };
         }
 
-        function buildProblemJson(topicId, chapterId) {
+        function getCheckedTopicIds(checklist) {
+            return Array.from(checklist.querySelectorAll('input[name="topic-ids"]:checked'))
+                .map(box => parseInt(box.value, 10));
+        }
+
+        function buildProblemJson(chapterId) {
             const subtype = document.getElementById('problem-type-dropdown').value;
 
             const skillsDropdown = document.getElementById("skills-dropdown");
@@ -1341,21 +1359,17 @@
 
             const langVersions = getLangVersionsForMain(subtype);
 
-            const conceptsDropdown = document.getElementById("concepts-dropdown");
-            const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
-
             return buildProblemPayload({
                 subtype,
                 skillIds: selectedSkillIds,
                 curriculumId,
                 gradeId,
                 subjectId,
-                topicId,
+                topicIds: getCheckedTopicIds(topicsChecklist),
                 chapterId,
                 difficulty,
                 langVersions,
                 answers,
-                conceptIds: selectedConceptIds,
                 tags: getTagsForSection(mainTagsRoot),
             });
         }
