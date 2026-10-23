@@ -66,8 +66,12 @@
         </div>
         <div>
             <p class="form-label" id="topics-label">Topics</p>
-            <!-- max-h-60 (15rem) is 7.5 rows of 2rem: 7 to 8 topics show, the rest scroll -->
+            <!-- max-h-60 (15rem) is 7.5 rows of 2rem: 7 to 8 topics show, the rest scroll. The topics are
+                 filtered by curriculum, so the list loads once the curriculum dropdown has a value -->
             <div id="topics-checklist" role="group" aria-labelledby="topics-label"
+                hx-trigger="load[document.getElementById('curriculum-dropdown').value], onLoaded from:#curriculum-dropdown"
+                hx-include="#curriculum-dropdown"
+                hx-get="/api/topics?view=checklist&id={{if .ChapterPtr}}{{.ChapterPtr.ID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}"
                 class="max-h-60 overflow-y-auto rounded-lg border border-border bg-bg-input">
                 <p class="px-3 py-1.5 text-sm text-ink-muted">Loading topics...</p>
             </div>

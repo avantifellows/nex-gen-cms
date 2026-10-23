@@ -153,3 +153,69 @@ func TestAddProblemScreenShowsTopicsField(t *testing.T) {
 		}
 	}
 }
+
+func renderTopicChecklist(t *testing.T, topics []*models.Topic) string {
+	t.Helper()
+	tmpl := template.Must(template.New("topic_checklist.html").Funcs(template.FuncMap{"getName": getTopicName}).
+		ParseFiles("../../web/html/topic_checklist.html"))
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, topics); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	return out.String()
+}
+
+// Each topic is one labelled checkbox row, and a chapter without topics says so instead of staying blank.
+func TestTopicChecklistTemplate(t *testing.T) {
+	html := renderTopicChecklist(t, []*models.Topic{
+		{ID: 5, Name: []models.TopicLang{{LangCode: "en", TopicName: "Kinematics"}}},
+		{ID: 6, Name: []models.TopicLang{{LangCode: "en", TopicName: "Dynamics"}}},
+	})
+
+	if strings.Count(html, `type="checkbox"`) != 2 {
+		t.Errorf("expected one checkbox per topic, got: %s", html)
+	}
+	for _, want := range []string{
+		`name="topic-ids" value="5"`, `<span>Kinematics</span>`,
+		`name="topic-ids" value="6"`, `<span>Dynamics</span>`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("missing %q: %s", want, html)
+		}
+	}
+	if strings.Contains(html, "No topics in this chapter") {
+		t.Errorf("the empty message must not show when there are topics")
+	}
+
+	empty := renderTopicChecklist(t, nil)
+	if !strings.Contains(empty, "No topics in this chapter") || strings.Contains(empty, "checkbox") {
+		t.Errorf("an empty chapter should show only the empty message, got: %s", empty)
+	}
+}
+
+// The list loads the problem's chapter topics itself on load, for add, edit and copy alike.
+func TestAddProblemScreenLoadsChapterTopics(t *testing.T) {
+	problem := &models.Problem{
+		ID: 7, Subtype: "mcq_single_answer", ChapterID: 9,
+		LangVersions: []models.LangVersion{{LangCode: "en"}},
+	}
+	screens := map[string]dto.ProblemData{
+		"add":  {ChapterPtr: &models.Chapter{ID: 9}},
+		"edit": {ProblemPtr: problem},
+		"copy": {ProblemPtr: problem, ChapterPtr: &models.Chapter{ID: 9}},
+	}
+
+	for mode, data := range screens {
+		html := renderAddProblem(t, data)
+		for _, want := range []string{
+			// not before the curriculum dropdown has a value: the topics are filtered by curriculum
+			`hx-trigger="load[document.getElementById('curriculum-dropdown').value], onLoaded from:#curriculum-dropdown"`,
+			`hx-include="#curriculum-dropdown"`,
+			`hx-get="/api/topics?view=checklist&id=9"`,
+		} {
+			if !strings.Contains(html, want) {
+				t.Errorf("%s screen is missing %q", mode, want)
+			}
+		}
+	}
+}

@@ -1,0 +1,8 @@
+{{ range . }}
+<label class="flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-bg-hover cursor-pointer">
+    <input type="checkbox" name="topic-ids" value="{{.ID}}" class="accent-accent">
+    <span>{{ getName . "en" }}</span>
+</label>
+{{ else }}
+<p class="px-3 py-1.5 text-sm text-ink-muted">No topics in this chapter</p>
+{{ end }}
