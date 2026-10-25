@@ -189,7 +189,6 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/topic/copy-problem", editor(problemsHandler.CopyProblem))
 	muxHandler.Handle("/topic/copy-problem-dialog", middleware.RequireHTMX(middleware.RequireRole(auth.RoleEditor, http.HandlerFunc(problemsHandler.LoadCopyProblemDialog))))
 	muxHandler.HandleFunc("/chapter/add-problem/add-topic-dialog", editor(problemsHandler.AddTopicModal))
-	muxHandler.HandleFunc("/topic/add-problem/add-concept-dialog", editor(problemsHandler.AddConceptModal))
 	muxHandler.HandleFunc("/create-problem", editor(problemsHandler.CreateProblem))
 	muxHandler.HandleFunc("/create-problems", editor(problemsHandler.CreateProblems))
 	muxHandler.HandleFunc("/problems/edit-problem", editor(problemsHandler.EditProblem))

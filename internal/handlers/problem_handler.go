@@ -38,7 +38,6 @@ const chapterProblemsTemplate = "chapter_problems.html"
 const searchProblemRowTemplate = "search_problem_row.html"
 const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
-const addConceptModalTemplate = "add_concept_modal.html"
 const addTopicModalTemplate = "add_topic_modal.html"
 const editorTemplate = "editor.html"
 const problemAnswerNumericalTemplate = "problem_answer_numerical.html"
@@ -377,10 +376,6 @@ func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request
 
 func (h *ProblemsHandler) AddTopicModal(responseWriter http.ResponseWriter, _ *http.Request) {
 	views.ExecuteTemplate(addTopicModalTemplate, responseWriter, nil, nil)
-}
-
-func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, _ *http.Request) {
-	views.ExecuteTemplates(responseWriter, nil, nil, addConceptModalTemplate, curriculumGradeSelectsTemplate)
 }
 
 func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, request *http.Request) {

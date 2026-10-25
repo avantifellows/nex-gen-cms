@@ -79,9 +79,9 @@ func TestAddProblemScreenForAChapter(t *testing.T) {
 	if !strings.Contains(html, "Add New Problem") || strings.Contains(html, "Edit Problem") {
 		t.Errorf("the title should read Add New Problem")
 	}
-	if !strings.Contains(html, "const currentChapterId = '49';") ||
-		!strings.Contains(html, "const currentTopicId = '';") {
-		t.Errorf("the script should know the chapter and no topic")
+	// the chapter reaches the script through createProblem; it keeps no chapter or topic constant of its own
+	if strings.Contains(html, "currentChapterId") || strings.Contains(html, "currentTopicId") {
+		t.Errorf("the script should not keep a chapter or topic constant")
 	}
 }
 
@@ -298,7 +298,7 @@ func TestAddProblemScreenAsksForTheProblemsTopicsTicked(t *testing.T) {
 		}
 	}
 
-	if html := renderAddProblem(t, dto.ProblemData{ChapterPtr: &models.Chapter{ID: 9}}); strings.Contains(html, "selected=") {
+	if html := renderAddProblem(t, dto.ProblemData{ChapterPtr: &models.Chapter{ID: 9}}); strings.Contains(html, "view=checklist&id=9&selected=") {
 		t.Errorf("a new problem has no topics to tick")
 	}
 }
@@ -333,7 +333,7 @@ func TestAddProblemSavesTheTickedTopics(t *testing.T) {
 		"function buildProblemJson(chapterId) {",
 		`topicIds: getCheckedTopicIds(topicsChecklist),`,
 		`querySelectorAll('input[name="topic-ids"]:checked')`,
-		"...(topicIds !== undefined && { topic_ids: topicIds }),",
+		"topic_ids: topicIds,",
 		// topic_ids is the full set, so saving before the list loaded must be refused
 		"topicsChecklist.dataset.loaded = 'true';",
 		"Topics are still loading. Please wait a moment and try again.",
@@ -472,5 +472,129 @@ func TestAddProblemScreenLayoutPutsSkillsBelowTypeAndTopicsOnTheRight(t *testing
 	}
 	if strings.Contains(html[paragraphAt:languageTabsAt], "Difficulty Rating") {
 		t.Errorf("the difficulty choice should have moved out of the row below the paragraph editor")
+	}
+}
+
+// The additional comprehension problems pick their topics the way the main problem does, and have no concepts.
+func TestAdditionalProblemBlockHasATopicsChecklist(t *testing.T) {
+	html := renderAddProblem(t, dto.ProblemData{ChapterPtr: &models.Chapter{ID: 9}})
+
+	start := strings.Index(html, `<template id="tmplAdditionalProblem">`)
+	end := strings.Index(html, `<template id="tmplAnsNumeric">`)
+	if start < 0 || end < start {
+		t.Fatalf("could not find the additional problem template")
+	}
+	block := html[start:end]
+
+	for _, want := range []string{
+		`additional-topics-checklist h-60 overflow-y-auto`,
+		`hx-get="/chapter/add-problem/add-topic-dialog"`,
+		// the picker adds to this block's own list
+		`window._topicModalTargetChecklist = this.closest('.additional-problem').querySelector('.additional-topics-checklist')`,
+		`+ Add topic from other chapter`,
+	} {
+		if !strings.Contains(block, want) {
+			t.Errorf("the additional problem block is missing %q", want)
+		}
+	}
+	for _, unwanted := range []string{
+		"additional-topic-dropdown", "additional-concepts-dropdown", "add-concept-dialog", "Concepts",
+	} {
+		if strings.Contains(block, unwanted) {
+			t.Errorf("the additional problem block should not have %q any more", unwanted)
+		}
+	}
+}
+
+// Every additional problem is saved with its own ticked topics, and nothing about concepts is left on the screen.
+func TestAdditionalProblemsSaveTheirTickedTopics(t *testing.T) {
+	content, err := os.ReadFile("../../web/html/add_problem.html")
+	if err != nil {
+		t.Fatalf("read add_problem.html: %v", err)
+	}
+	script := strings.ReplaceAll(string(content), "\r\n", "\n")
+
+	for _, want := range []string{
+		"function fillAdditionalTopics(problemBlock) {",
+		// a new block copies the main problem's list: the same rows, with the same ones ticked
+		"Array.from(topicsChecklist.children, row => row.cloneNode(true))",
+		"topicsChecklist.addEventListener('htmx:afterSwap', copy, { once: true });",
+		"topicIds: getCheckedTopicIds(problemBlock.querySelector('.additional-topics-checklist')),",
+		"topic_ids: topicIds,",
+		// saving waits until every block's topics are in
+		"block.querySelector('.additional-topics-checklist').dataset.loaded !== 'true'",
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("add_problem.html is missing %q", want)
+		}
+	}
+
+	for _, unwanted := range []string{
+		"loadConceptOptions", "loadAdditionalConcepts", "loadTopicOptions", "conceptsOptionsByTopic",
+		"topicsOptionsHtml", "currentTopicId", "topic_id:", "additional-topic-dropdown",
+		// no request of its own any more: the chapter id and the loader that used it are gone
+		"currentChapterId", "loadAdditionalTopics", "fetchText(`/api/topics",
+	} {
+		if strings.Contains(script, unwanted) {
+			t.Errorf("add_problem.html should not contain %q any more", unwanted)
+		}
+	}
+	if strings.Contains(strings.ToLower(script), "concept") {
+		t.Errorf("add_problem.html should not mention concepts any more")
+	}
+}
+
+// The concept modal had no other user than this screen, so its template, route and handler are gone.
+func TestConceptModalIsGone(t *testing.T) {
+	if _, err := os.Stat("../../web/html/add_concept_modal.html"); err == nil {
+		t.Errorf("add_concept_modal.html should have been removed")
+	}
+
+	for path, unwanted := range map[string][]string{
+		"../../cmd/main.go":                          {"add-concept-dialog", "AddConceptModal"},
+		"../../internal/handlers/problem_handler.go": {"AddConceptModal", "addConceptModalTemplate"},
+	} {
+		content, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		for _, text := range unwanted {
+			if strings.Contains(string(content), text) {
+				t.Errorf("%s still mentions %q", path, text)
+			}
+		}
+	}
+}
+
+// An additional problem is laid out like the main one: skills and difficulty in the left 40%, topics in the right 60%.
+func TestAdditionalProblemBlockLayoutMatchesTheMainBlock(t *testing.T) {
+	html := renderAddProblem(t, dto.ProblemData{ChapterPtr: &models.Chapter{ID: 9}})
+
+	start := strings.Index(html, `<template id="tmplAdditionalProblem">`)
+	end := strings.Index(html, `<template id="tmplAnsNumeric">`)
+	if start < 0 || end < start {
+		t.Fatalf("could not find the additional problem template")
+	}
+	block := html[start:end]
+
+	gridAt := strings.Index(block, `grid grid-cols-1 md:grid-cols-5`)
+	leftColumnAt := strings.Index(block, `<div class="space-y-6 md:col-span-2">`)
+	skillsAt := strings.Index(block, `Skills</p>`)
+	difficultyAt := strings.Index(block, `Difficulty Rating`)
+	rightColumnAt := strings.Index(block, `<div class="md:col-span-3">`)
+	topicsAt := strings.Index(block, `Topics</p>`)
+
+	for name, at := range map[string]int{
+		"grid": gridAt, "left column": leftColumnAt, "skills": skillsAt,
+		"difficulty": difficultyAt, "right column": rightColumnAt, "topics": topicsAt,
+	} {
+		if at < 0 {
+			t.Fatalf("the additional problem block is missing its %s", name)
+		}
+	}
+
+	if !(gridAt < leftColumnAt && leftColumnAt < skillsAt && skillsAt < difficultyAt &&
+		difficultyAt < rightColumnAt && rightColumnAt < topicsAt) {
+		t.Errorf("expected Skills and Difficulty in the left column, then Topics in the right one")
 	}
 }

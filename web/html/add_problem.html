@@ -208,50 +208,44 @@
             </button>
         </div>
 
-        <!-- topic, skills, concepts -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div>
-                <p class="form-label mb-2">Topic</p>
-                <select name="additional-topic-dropdown"
-                    class="additional-topic-dropdown form-select">
-                    <option disabled selected>Loading topics...</option>
-                </select>
+        <!-- left 40%: skills and difficulty; right 60%: topics -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+            <div class="space-y-6 md:col-span-2">
+                <div>
+                    <p class="form-label mb-2">Skills</p>
+                    <select name="additional-skills-dropdown" multiple
+                        class="additional-skills-dropdown form-select h-24 overflow-y-auto">
+                        <option disabled>Loading skills...</option>
+                    </select>
+                </div>
+                <!-- difficulty -->
+                <div>
+                    <p class="form-label mb-2">Difficulty Rating</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                            <input type="radio" data-name="difficulty" value="easy" class="accent-accent">
+                            <span class="font-bold">1 — Easy</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                            <input type="radio" data-name="difficulty" value="medium" class="accent-accent">
+                            <span class="font-bold">2 — Medium</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                            <input type="radio" data-name="difficulty" value="hard" class="accent-accent">
+                            <span class="font-bold">3 — Hard</span>
+                        </label>
+                    </div>
+                </div>
             </div>
-            <div>
-                <p class="form-label mb-2">Skills</p>
-                <select name="additional-skills-dropdown" multiple
-                    class="additional-skills-dropdown form-select h-24 overflow-y-auto">
-                    <option disabled>Loading skills...</option>
-                </select>
-            </div>
-            <div>
-                <p class="form-label mb-2">Concepts</p>
-                <select name="additional-concepts-dropdown" multiple
-                    class="additional-concepts-dropdown form-select h-24 overflow-y-auto">
-                    <option disabled>Select a topic first</option>
-                </select>
-                <a href="#" class="add-new-link mt-1 inline-block" hx-get="/topic/add-problem/add-concept-dialog"
+            <div class="md:col-span-3">
+                <p class="form-label mb-2">Topics</p>
+                <div role="group" aria-label="Topics"
+                    class="additional-topics-checklist h-60 overflow-y-auto rounded-lg border border-border bg-bg-input">
+                    <p class="px-3 py-1.5 text-sm text-ink-muted">Loading topics...</p>
+                </div>
+                <a href="#" class="add-new-link mt-1 inline-block" hx-get="/chapter/add-problem/add-topic-dialog"
                     hx-target="body" hx-swap="beforeend"
-                    onclick="window._conceptModalTargetDropdown = this.closest('.additional-problem').querySelector('.additional-concepts-dropdown')">+ Add concept from other topic</a>
-            </div>
-        </div>
-
-        <!-- difficulty -->
-        <div class="mb-6">
-            <p class="form-label mb-2">Difficulty Rating</p>
-            <div class="flex gap-2 flex-wrap">
-                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                    <input type="radio" data-name="difficulty" value="easy" class="accent-accent">
-                    <span class="font-bold">1 — Easy</span>
-                </label>
-                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                    <input type="radio" data-name="difficulty" value="medium" class="accent-accent">
-                    <span class="font-bold">2 — Medium</span>
-                </label>
-                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                    <input type="radio" data-name="difficulty" value="hard" class="accent-accent">
-                    <span class="font-bold">3 — Hard</span>
-                </label>
+                    onclick="window._topicModalTargetChecklist = this.closest('.additional-problem').querySelector('.additional-topics-checklist')">+ Add topic from other chapter</a>
             </div>
         </div>
 
@@ -306,8 +300,6 @@
         const additionalProblemTemplate = document.getElementById('tmplAdditionalProblem');
         const mainSkillsDropdown = document.getElementById('skills-dropdown');
         const topicsChecklist = document.getElementById('topics-checklist');
-        const currentTopicId = '{{if .ProblemPtr}}{{.ProblemPtr.TopicID}}{{end}}';
-        const currentChapterId = '{{if .ChapterPtr}}{{.ChapterPtr.ID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
         const isEditPage = {{ $isEdit }};
         const isCopyPage = {{ $isCopy }};
         const hasPrefill = {{ $prefill }};
@@ -414,8 +406,6 @@
         // --- End language tabs ---
 
         let skillsOptionsHtml = '';
-        let topicsOptionsHtml = '';
-        const conceptsOptionsByTopic = new Map();
         let additionalProblemCount = 0;
 
         // Determine tab count
@@ -522,20 +512,13 @@
         });
 
         function initializeAdditionalDropdowns(problemBlock) {
-            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
             const skillsDropdown = problemBlock.querySelector('.additional-skills-dropdown');
-
-            topicDropdown.addEventListener('change', () => loadAdditionalConcepts(problemBlock));
 
             loadSkillsOptions().then(html => {
                 skillsDropdown.innerHTML = html;
             });
 
-            loadTopicOptions().then(html => {
-                topicDropdown.innerHTML = html;
-                topicDropdown.value = currentTopicId;
-                loadAdditionalConcepts(problemBlock);
-            });
+            fillAdditionalTopics(problemBlock);
         }
 
         function loadSkillsOptions() {
@@ -546,31 +529,6 @@
             return fetchText('/api/skills').then(html => {
                 skillsOptionsHtml = getUnselectedOptionsHtml(html);
                 return skillsOptionsHtml;
-            });
-        }
-
-        function loadTopicOptions() {
-            if (topicsOptionsHtml) {
-                return Promise.resolve(topicsOptionsHtml);
-            }
-
-            const curriculumId = document.getElementById('curriculum-dropdown')?.value || '';
-            return fetchText(`/api/topics?view=dropdown&chapter-dropdown=${encodeURIComponent(currentChapterId)}&curriculum-dropdown=${encodeURIComponent(curriculumId)}`)
-                .then(html => {
-                    topicsOptionsHtml = getUnselectedOptionsHtml(html);
-                    return topicsOptionsHtml;
-                });
-        }
-
-        function loadConceptOptions(topicId) {
-            if (conceptsOptionsByTopic.has(topicId)) {
-                return Promise.resolve(conceptsOptionsByTopic.get(topicId));
-            }
-
-            return fetchText(`/api/concepts?topic_id=${encodeURIComponent(topicId)}`).then(html => {
-                const optionsHtml = getUnselectedOptionsHtml(html);
-                conceptsOptionsByTopic.set(topicId, optionsHtml);
-                return optionsHtml;
             });
         }
 
@@ -593,25 +551,19 @@
             return select.innerHTML;
         }
 
-        function loadAdditionalConcepts(problemBlock) {
-            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
-            const conceptsDropdown = problemBlock.querySelector('.additional-concepts-dropdown');
-            const topicId = topicDropdown.value;
+        // A new block copies the main problem's topics list: the same rows, with the same ones ticked.
+        function fillAdditionalTopics(problemBlock) {
+            const checklist = problemBlock.querySelector('.additional-topics-checklist');
+            const copy = () => {
+                checklist.replaceChildren(...Array.from(topicsChecklist.children, row => row.cloneNode(true)));
+                checklist.dataset.loaded = 'true';
+            };
 
-            if (!topicId) {
-                conceptsDropdown.innerHTML = '<option disabled>Select a topic first</option>';
-                return;
+            if (topicsChecklist.dataset.loaded === 'true') {
+                copy();
+            } else {
+                topicsChecklist.addEventListener('htmx:afterSwap', copy, { once: true });
             }
-
-            conceptsDropdown.innerHTML = '<option disabled>Loading concepts...</option>';
-            loadConceptOptions(topicId)
-                .then(html => {
-                    conceptsDropdown.innerHTML = html;
-                })
-                .catch(err => {
-                    console.error("Error loading concepts:", err);
-                    conceptsDropdown.innerHTML = '<option disabled>Error loading concepts</option>';
-                });
         }
 
         addMoreProblemButton.addEventListener('click', addAdditionalProblem);
@@ -1133,6 +1085,10 @@
                     const qEditor = block.querySelector('.additional-question .editor');
                     if (!validateEditorNotEmpty(qEditor, 'Please enter the question for each additional problem.')) return false;
 
+                    if (block.querySelector('.additional-topics-checklist').dataset.loaded !== 'true') {
+                        return fail('Topics are still loading. Please wait a moment and try again.');
+                    }
+
                     if (!validateNumericalAnswer(block, `additional-numType-${idx}`, 'For each additional problem, ')) {
                         return false;
                     }
@@ -1192,11 +1148,6 @@
             const skillsDropdown = problemBlock.querySelector('.additional-skills-dropdown');
             const selectedSkillIds = Array.from(skillsDropdown?.selectedOptions ?? []).map(opt => parseInt(opt.value, 10));
 
-            const conceptsDropdown = problemBlock.querySelector('.additional-concepts-dropdown');
-            const selectedConceptIds = Array.from(conceptsDropdown?.selectedOptions ?? []).map(opt => parseInt(opt.value, 10));
-
-            const topicId = parseInt(problemBlock.querySelector('.additional-topic-dropdown')?.value ?? '0', 10);
-
             const curriculumId = parseInt(document.getElementById("curriculum-dropdown").value);
             const gradeId = parseInt(document.getElementById("grade-dropdown").value);
             const subjectId = parseInt(document.getElementById("subject-dropdown").value);
@@ -1228,12 +1179,11 @@
                 curriculumId,
                 gradeId,
                 subjectId,
-                topicId,
+                topicIds: getCheckedTopicIds(problemBlock.querySelector('.additional-topics-checklist')),
                 chapterId,
                 difficulty,
                 langVersions: [{ lang_code: 'en', question, options: null, solution }],
                 answers,
-                conceptIds: selectedConceptIds,
                 tags,
             });
         }
@@ -1261,13 +1211,11 @@
             curriculumId,
             gradeId,
             subjectId,
-            topicId,
             topicIds,
             chapterId,
             difficulty,
             langVersions,
             answers,
-            conceptIds,
             tags
         }) {
             return {
@@ -1284,9 +1232,7 @@
                     }
                 ],
                 subject_id: subjectId,
-                // main problems send topic_ids; additional ones keep topic_id and concept_ids until they get topics too
-                ...(topicId !== undefined && { topic_id: topicId }),
-                ...(topicIds !== undefined && { topic_ids: topicIds }),
+                topic_ids: topicIds,
                 chapter_id: chapterId,
                 difficulty_level: difficulty,
                 lang_versions: langVersions.map(({ lang_code, question, options, solution }) => ({
@@ -1298,7 +1244,6 @@
                         solutions: [{ type: "text", value: solution }]
                     }
                 })),
-                ...(conceptIds !== undefined && { concept_ids: conceptIds }),
                 tags: tags
             };
         }
