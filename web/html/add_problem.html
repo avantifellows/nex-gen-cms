@@ -23,37 +23,57 @@
 );">
     <h2 class="page-title mb-6">{{if $isCopy}}Copy{{else if .ChapterPtr}}Add New{{else}}Edit{{end}} Problem</h2>
 
-    <!-- type, skills, topics -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div>
-            <label class="form-label" for="problem-type-dropdown">Type</label>
-            <select id="problem-type-dropdown" name="problem-type-dropdown"
-                {{if $isEdit}}disabled title="Problem type cannot be changed in edit mode"{{end}}
-                class="form-select {{if $isEdit}}bg-bg-card-alt text-ink-muted cursor-not-allowed{{end}}">
-                {{if $prefill}}
-                {{template "problem_type_options" .ProblemPtr.Subtype}}
-                {{else}}
-                {{template "problem_type_options"}}
-                {{end}}
-            </select>
+    <!-- left 40%: type, skills and difficulty stacked; right 60%: topics -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+        <div class="space-y-6 md:col-span-2">
+            <div>
+                <label class="form-label" for="problem-type-dropdown">Type</label>
+                <select id="problem-type-dropdown" name="problem-type-dropdown"
+                    {{if $isEdit}}disabled title="Problem type cannot be changed in edit mode"{{end}}
+                    class="form-select {{if $isEdit}}bg-bg-card-alt text-ink-muted cursor-not-allowed{{end}}">
+                    {{if $prefill}}
+                    {{template "problem_type_options" .ProblemPtr.Subtype}}
+                    {{else}}
+                    {{template "problem_type_options"}}
+                    {{end}}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="skills-dropdown">Skills</label>
+                <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
+                    class="form-select h-24 overflow-y-auto"
+                    hx-get='/api/skills{{if $prefill}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
+                    <option disabled>Loading skills...</option>
+                </select>
+            </div>
+            <!-- difficulty -->
+            <div>
+                <p class="form-label mb-2">Difficulty Rating</p>
+                <div class="flex gap-2 flex-wrap">
+                    <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                        <input type="radio" name="difficulty" value="easy" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}>
+                        <span class="font-bold">1 — Easy</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                        <input type="radio" name="difficulty" value="medium" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}>
+                        <span class="font-bold">2 — Medium</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                        <input type="radio" name="difficulty" value="hard" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}>
+                        <span class="font-bold">3 — Hard</span>
+                    </label>
+                </div>
+            </div>
         </div>
-        <div>
-            <label class="form-label" for="skills-dropdown">Skills</label>
-            <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
-                class="form-select h-24 overflow-y-auto"
-                hx-get='/api/skills{{if $prefill}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
-                <option disabled>Loading skills...</option>
-            </select>
-        </div>
-        <div>
+        <div class="md:col-span-3">
             <p class="form-label" id="topics-label">Topics</p>
-            <!-- max-h-60 (15rem) is 7.5 rows of 2rem: 7 to 8 topics show, the rest scroll. The topics are
+            <!-- h-60 (15rem) is 7.5 rows of 2rem: 7 to 8 topics show, the rest scroll. The topics are
                  filtered by curriculum, so the list loads once the curriculum dropdown has a value -->
             <div id="topics-checklist" role="group" aria-labelledby="topics-label"
                 hx-trigger="load[document.getElementById('curriculum-dropdown').value], onLoaded from:#curriculum-dropdown"
                 hx-include="#curriculum-dropdown"
                 hx-get="/api/topics?view=checklist&id={{if .ChapterPtr}}{{.ChapterPtr.ID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}{{if $prefill}}&selected={{joinInt16 .ProblemPtr.TopicIDs ","}}{{end}}"
-                class="max-h-60 overflow-y-auto rounded-lg border border-border bg-bg-input">
+                class="h-60 overflow-y-auto rounded-lg border border-border bg-bg-input">
                 <p class="px-3 py-1.5 text-sm text-ink-muted">Loading topics...</p>
             </div>
             <a href="#" class="add-new-link mt-1 inline-block" hx-get="/chapter/add-problem/add-topic-dialog"
@@ -70,25 +90,6 @@
         {{ else }}
         {{ template "editor" }}
         {{ end }}
-    </div>
-
-    <!-- difficulty -->
-    <div class="mb-6">
-        <p class="form-label mb-2">Difficulty Rating</p>
-        <div class="flex gap-2 flex-wrap">
-            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                <input type="radio" name="difficulty" value="easy" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}>
-                <span class="font-bold">1 — Easy</span>
-            </label>
-            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                <input type="radio" name="difficulty" value="medium" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}>
-                <span class="font-bold">2 — Medium</span>
-            </label>
-            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                <input type="radio" name="difficulty" value="hard" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}>
-                <span class="font-bold">3 — Hard</span>
-            </label>
-        </div>
     </div>
 
     <!-- Language Tabs -->

@@ -140,9 +140,9 @@ func TestAddProblemScreenShowsTopicsField(t *testing.T) {
 		html := renderAddProblem(t, data)
 		for _, want := range []string{
 			`<p class="form-label" id="topics-label">Topics</p>`,
-			// a scrollable list of about 7.5 rows (max-h-60 = 15rem), labelled by the heading above it
+			// a scrollable list of a fixed height of about 7.5 rows (h-60 = 15rem), labelled by the heading above it
 			`id="topics-checklist" role="group" aria-labelledby="topics-label"`,
-			`max-h-60 overflow-y-auto`,
+			`class="h-60 overflow-y-auto`,
 			`Loading topics...`,
 		} {
 			if !strings.Contains(html, want) {
@@ -378,6 +378,8 @@ func TestAddTopicModalTemplate(t *testing.T) {
 		// the chosen chapter's topics come from the checklist view, filtered by that curriculum
 		`hx-get="/api/topics?view=checklist" hx-trigger="change from:#add-topic-chapter-dropdown"`,
 		`hx-include="#add-topic-chapter-dropdown, #curriculum-dropdown"`,
+		// the topics list has the same fixed height (7.5 rows) as the problem's own list
+		`id="add-topic-checklist" class="h-60 overflow-y-auto`,
 		`id="add-topic-btn" type="button" disabled`,
 		`window.addPickedTopics = function`,
 		`window.closeAddTopicModal = function`,
@@ -432,5 +434,43 @@ func TestAddProblemScreenOffersTopicPickerInsteadOfConcepts(t *testing.T) {
 	}
 	if !strings.Contains(string(mainGo), `"/chapter/add-problem/add-topic-dialog"`) {
 		t.Errorf("main.go should register the topic picker route")
+	}
+}
+
+// Type, Skills and Difficulty stack in the left 40% and Topics takes the right 60%.
+func TestAddProblemScreenLayoutPutsSkillsBelowTypeAndTopicsOnTheRight(t *testing.T) {
+	html := renderAddProblem(t, dto.ProblemData{ChapterPtr: &models.Chapter{ID: 9}})
+
+	gridAt := strings.Index(html, `grid grid-cols-1 md:grid-cols-5`)
+	leftColumnAt := strings.Index(html, `<div class="space-y-6 md:col-span-2">`)
+	typeAt := strings.Index(html, `for="problem-type-dropdown"`)
+	skillsAt := strings.Index(html, `for="skills-dropdown"`)
+	difficultyAt := strings.Index(html, `Difficulty Rating`) // the first one is the main problem's
+	rightColumnAt := strings.Index(html, `<div class="md:col-span-3">`)
+	topicsAt := strings.Index(html, `id="topics-label"`)
+
+	for name, at := range map[string]int{
+		"grid": gridAt, "left column": leftColumnAt, "type": typeAt, "skills": skillsAt,
+		"difficulty": difficultyAt, "right column": rightColumnAt, "topics": topicsAt,
+	} {
+		if at < 0 {
+			t.Fatalf("the layout is missing its %s", name)
+		}
+	}
+
+	// a five column grid: the left column (Type, Skills, Difficulty) takes two, the right column (Topics) three
+	if !(gridAt < leftColumnAt && leftColumnAt < typeAt && typeAt < skillsAt && skillsAt < difficultyAt &&
+		difficultyAt < rightColumnAt && rightColumnAt < topicsAt) {
+		t.Errorf("expected Type, Skills and Difficulty in the left column, then Topics in the right one")
+	}
+
+	// the difficulty choice no longer sits as its own row under the paragraph editor
+	paragraphAt := strings.Index(html, `id="paragraphDiv"`)
+	languageTabsAt := strings.Index(html, `id="langTabs"`)
+	if paragraphAt < 0 || languageTabsAt < paragraphAt {
+		t.Fatalf("could not find the paragraph editor and the language tabs")
+	}
+	if strings.Contains(html[paragraphAt:languageTabsAt], "Difficulty Rating") {
+		t.Errorf("the difficulty choice should have moved out of the row below the paragraph editor")
 	}
 }

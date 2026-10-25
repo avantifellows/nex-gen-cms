@@ -31,8 +31,8 @@
 
             </div>
 
-            <!-- The chosen chapter's topics, the same checkbox rows as the problem's own Topics list -->
-            <div id="add-topic-checklist" class="max-h-60 overflow-y-auto rounded-lg border border-border bg-bg-input"
+            <!-- The chosen chapter's topics: the same rows and the same fixed height as the problem's own Topics list -->
+            <div id="add-topic-checklist" class="h-60 overflow-y-auto rounded-lg border border-border bg-bg-input"
                 hx-get="/api/topics?view=checklist" hx-trigger="change from:#add-topic-chapter-dropdown"
                 hx-include="#add-topic-chapter-dropdown, #curriculum-dropdown"
                 hx-target="this" hx-swap="innerHTML" hx-on::before-request="beforeAddTopicChecklistRequest()">
