@@ -55,5 +55,15 @@
             }
         });
     }
+
+    // Another screen can ask for a tab to open once on arrival (a saved copy opens Problems). The class is set
+    // here, before htmx checks the tabs' load triggers, so only that tab loads.
+    (function () {
+        const tabId = sessionStorage.getItem('chapterTabOnce');
+        sessionStorage.removeItem('chapterTabOnce');
+        if (tabId && document.getElementById(tabId)) {
+            activateSubTab(tabId);
+        }
+    })();
 </script>
 {{ end }}

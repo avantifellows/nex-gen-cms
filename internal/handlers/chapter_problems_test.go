@@ -306,3 +306,32 @@ func TestInfiniteScrollMarksFirstPageAsLoading(t *testing.T) {
 		t.Errorf("the beforeRequest branch must mark the table as loading")
 	}
 }
+
+// Another screen can ask the chapter screen to open a given tab once, by name, before the tabs load themselves.
+func TestChapterScreenOpensTheRequestedTabOnce(t *testing.T) {
+	content, err := os.ReadFile("../../web/html/chapter.html")
+	if err != nil {
+		t.Fatalf("read chapter.html: %v", err)
+	}
+	script := string(content)
+
+	for _, want := range []string{
+		`sessionStorage.getItem('chapterTabOnce')`,
+		// the request is forgotten at once, so it applies to one arrival only
+		`sessionStorage.removeItem('chapterTabOnce')`,
+		// an unknown tab name must not leave every tab inactive
+		`if (tabId && document.getElementById(tabId)) {`,
+		`activateSubTab(tabId);`,
+	} {
+		if !strings.Contains(script, want) {
+			t.Errorf("chapter.html is missing %q", want)
+		}
+	}
+
+	// the request is read after the tabs exist and before htmx processes them: it sits inside the script block
+	scriptAt := strings.Index(script, "<script>")
+	openerAt := strings.Index(script, "sessionStorage.getItem('chapterTabOnce')")
+	if scriptAt < 0 || openerAt < scriptAt {
+		t.Errorf("the opener should be part of the screen's script, after its tabs")
+	}
+}
