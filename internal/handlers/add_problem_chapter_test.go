@@ -598,3 +598,40 @@ func TestAdditionalProblemBlockLayoutMatchesTheMainBlock(t *testing.T) {
 		t.Errorf("expected Skills and Difficulty in the left column, then Topics in the right one")
 	}
 }
+
+// A saved copy opens its destination chapter on the Problems tab; add and edit go back to the list they came from.
+func TestSavedCopyOpensTheChaptersProblemsTab(t *testing.T) {
+	content, err := os.ReadFile("../../web/html/add_problem.html")
+	if err != nil {
+		t.Fatalf("read add_problem.html: %v", err)
+	}
+	script := strings.ReplaceAll(string(content), "\r\n", "\n")
+
+	copyAt := strings.Index(script, "if (isCopyPage) {")
+	otherwiseAt := strings.Index(script[copyAt+1:], "} else {")
+	if copyAt < 0 || otherwiseAt < 0 {
+		t.Fatalf("could not find the copy and the add or edit branches of the save handling")
+	}
+	copyBranch := script[copyAt : copyAt+1+otherwiseAt]
+	addOrEditBranch := script[copyAt+1+otherwiseAt:]
+
+	request := "sessionStorage.setItem('chapterTabOnce', 'problems-sub-tab');"
+	if !strings.Contains(copyBranch, request) {
+		t.Errorf("the copy branch should ask the chapter screen to open its Problems tab")
+	}
+	// the request has to be stored before the chapter is loaded, or the chapter would read nothing
+	if strings.Index(copyBranch, request) > strings.Index(copyBranch, "htmx.ajax('GET', chapterUrl") {
+		t.Errorf("the request must be stored before the chapter is loaded")
+	}
+	if !strings.Contains(copyBranch, "const chapterUrl = '/chapter?id=") {
+		t.Errorf("a saved copy should open its chapter")
+	}
+
+	// add and edit keep going back to their list, and must not open a tab of their own
+	if strings.Contains(addOrEditBranch, "chapterTabOnce") {
+		t.Errorf("add and edit should not ask for a tab: they go back to the list they came from")
+	}
+	if !strings.Contains(addOrEditBranch, "goBackAfterDelay(0);") {
+		t.Errorf("add and edit should still go back")
+	}
+}

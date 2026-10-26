@@ -939,6 +939,8 @@
                 return res.text().then(() => { // if OK, ignore body
 
                     if (isCopyPage) {
+                        // the destination chapter opens on its Problems tab, where the copy now is
+                        sessionStorage.setItem('chapterTabOnce', 'problems-sub-tab');
                         const chapterUrl = '/chapter?id={{if .ChapterPtr}}{{.ChapterPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
                         history.replaceState(null, '', chapterUrl);
                         htmx.ajax('GET', chapterUrl, { target: 'body', swap: 'innerHTML' });
