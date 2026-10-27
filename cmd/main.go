@@ -182,7 +182,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	problemsHandler := appComponentPtr.ProblemsHandler
 	muxHandler.HandleFunc("/problems", problemsHandler.LoadProblems)
 	muxHandler.HandleFunc("/problem", problemsHandler.GetProblem)
-	muxHandler.HandleFunc("/api/topic/problems", problemsHandler.GetTopicProblems)
+	muxHandler.HandleFunc("/api/question-bank/problems", problemsHandler.GetQuestionBankProblems)
 	muxHandler.HandleFunc("/api/chapter/problems", problemsHandler.GetChapterProblems)
 	muxHandler.HandleFunc("/chapter/problems", problemsHandler.LoadChapterProblems)
 	muxHandler.HandleFunc("/chapter/add-problem", editor(problemsHandler.AddProblem))

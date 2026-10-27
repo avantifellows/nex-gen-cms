@@ -266,7 +266,7 @@ func TestTopicScreenHasNoProblemsTab(t *testing.T) {
 	removed := map[string][]string{
 		"../../web/html/topic.html":       {"topic-problems-tab", "/topic/problems", "topicTabOnce"},
 		"../../web/html/add_problem.html": {"topicTabOnce", "topic-problems-tab"},
-		"../../cmd/main.go":               {`"/topic/problems"`, "LoadTopicProblems"}, // /api/topic/problems stays
+		"../../cmd/main.go":               {`"/topic/problems"`, "LoadTopicProblems", "/api/topic/problems", "GetTopicProblems"},
 	}
 
 	for path, unwanted := range removed {

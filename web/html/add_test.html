@@ -2,6 +2,11 @@
 <script>
     var dropdownDebounceTimers = {};
 
+    // A new chapter must not keep showing (or sending) the old chapter's topic while its own topics load.
+    function resetTopicDropdown() {
+        document.getElementById('topic-dropdown').innerHTML = '<option value="">All Topics</option>';
+    }
+
     function onDropdownLoaded(dropdown, storageKey) {
         // restore last selected value from sessionStorage
         const lastSelectedValue = sessionStorage.getItem(storageKey);
@@ -69,15 +74,15 @@
                         hx-trigger="load, onLoaded from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown), change from:(#curriculum-dropdown, #grade-dropdown, #subject-dropdown)"
                         hx-get="/api/chapters?view=dropdown"
                         hx-include="#curriculum-dropdown, #grade-dropdown, #subject-dropdown"
-                        onchange="if (this.value) sessionStorage.setItem('selectedChapter', this.value);"
+                        onchange="resetTopicDropdown(); if (this.value) { sessionStorage.setItem('selectedChapter', this.value); if (event.isTrusted) sessionStorage.removeItem('selectedTopic'); }"
                         hx-on::after-request="onDropdownLoaded(this, 'selectedChapter')">
                         <option>Select Chapter</option>
                     </select>
                     <select id="topic-dropdown" name="topic-dropdown" hx-ext="cascade-clear" class="form-select"
-                        hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
-                        hx-include="#chapter-dropdown, #curriculum-dropdown" onchange="if (this.value) sessionStorage.setItem('selectedTopic', this.value);"
+                        hx-get="/api/topics?view=dropdown-all" hx-trigger="change from:#chapter-dropdown"
+                        hx-include="#chapter-dropdown, #curriculum-dropdown" onchange="if (this.value || event.isTrusted) sessionStorage.setItem('selectedTopic', this.value);"
                         hx-on::after-request="onDropdownLoaded(this, 'selectedTopic')">
-                        <option value="">Select Topic</option>
+                        <option value="">All Topics</option>
                     </select>
                     <label class="form-label">Level</label>
                     <label class="form-label">Problem Type</label>
@@ -113,9 +118,12 @@
                             <th class="px-2!">Question</th>
                         </tr>
                     </thead>
-                    <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/topic/problems?include_paragraph_siblings=true"
-                        hx-trigger="change from:(#topic-dropdown, .level-checkbox, #ptype-dropdown)"
-                        hx-include="#topic-dropdown, #curriculum-dropdown, #subject-dropdown, .level-checkbox, #ptype-dropdown"
+                    <!-- A chapter change loads problems itself only when no topic is remembered; otherwise (coming back
+                         from a problem) the remembered topic's restore loads them, and loading twice is avoided. -->
+                    <tbody id="question-bank" hx-ext="addSelectedIds" hx-get="/api/question-bank/problems?include_paragraph_siblings=true"
+                        hx-trigger="change[!sessionStorage.getItem('selectedTopic')] from:#chapter-dropdown, change from:(#topic-dropdown, .level-checkbox, #ptype-dropdown)"
+                        hx-include="#chapter-dropdown, #topic-dropdown, #curriculum-dropdown, #subject-dropdown, .level-checkbox, #ptype-dropdown"
+                        hx-sync="this:replace"
                         data-mathjax="true" hx-indicator="#question-bank-loader"
                         hx-on::before-request="this.innerHTML=''">
                         <!-- Rows will be dynamically inserted here -->
@@ -612,7 +620,7 @@
                 if (chapterDropdown.value !== saved) {
                     onDropdownLoaded(chapterDropdown, 'selectedChapter');
                 } else {
-                    reloadSelectedTopicProblems();
+                    reloadQuestionBankProblems();
                 }
             }
 
@@ -710,18 +718,15 @@
             if (name === "htmx:afterSwap") {
 
                 const targetId = event.detail.target.id;
-                // Reset topic dropdown to default if afterSwap event is received for chapter-dropdown
+                // The reloaded chapters leave nothing selected: reset the topic dropdown and clear the problems.
+                // A topic dropdown swap must not clear them: a chapter change loads problems and topics together.
                 if (targetId === "chapter-dropdown") {
-                    const topicDropdown = document.getElementById('topic-dropdown');
-                    if (topicDropdown) {
-                        topicDropdown.innerHTML = '<option value="">Select Topic</option>';
-                    }
-                }
+                    resetTopicDropdown();
 
-                // Clear problem list
-                const problemList = document.getElementById('question-bank');
-                if (problemList) {
-                    problemList.innerHTML = '';
+                    const problemList = document.getElementById('question-bank');
+                    if (problemList) {
+                        problemList.innerHTML = '';
+                    }
                 }
 
             } else if (name === "htmx:configRequest") {
@@ -793,14 +798,13 @@
             reloadSelectedSearchTest();
 
         } else {
-            // Question Bank tab active -> refresh problems of last selected topic
-            reloadSelectedTopicProblems();
+            // Question Bank tab active -> refresh problems of last selected chapter / topic
+            reloadQuestionBankProblems();
         }
     }
 
-    function reloadSelectedTopicProblems() {
-        const topicDropdown = document.getElementById("topic-dropdown");
-        htmx.trigger(topicDropdown, "change");
+    function reloadQuestionBankProblems() {
+        htmx.trigger(document.getElementById("topic-dropdown"), "change");
     }
 
     function reloadSelectedSearchTest() {

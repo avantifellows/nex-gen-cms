@@ -158,16 +158,22 @@ func (h *ProblemsHandler) enrichProblemTagNames(problem *models.Problem) error {
 	return nil
 }
 
-func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
+// GetQuestionBankProblems returns the Add Test question bank's problems of a chapter, optionally narrowed to
+// one topic (blank = all topics). No chapter chosen yet gives an empty list.
+func (h *ProblemsHandler) GetQuestionBankProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	urlValues := request.URL.Query()
-	topicIdStr := urlValues.Get(TOPIC_DROPDOWN_NAME)
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
-	if err != nil {
-		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
+	chapterIdStr := urlValues.Get(CHAPTER_DROPDOWN_NAME)
+	if chapterIdStr == "" || chapterIdStr == "Select Chapter" {
 		return
 	}
 
-	problems, ok := h.fetchProblems(responseWriter, urlValues, fmt.Sprintf("?topic_id=%d", topicId))
+	queryParams, err := chapterProblemsQuery(chapterIdStr, urlValues.Get(TOPIC_DROPDOWN_NAME))
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	problems, ok := h.fetchProblems(responseWriter, urlValues, queryParams)
 	if !ok {
 		return
 	}
