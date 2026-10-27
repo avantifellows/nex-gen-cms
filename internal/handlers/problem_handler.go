@@ -77,9 +77,6 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		return
 	}
 
-	topicIDStr := strconv.Itoa(int(selectedProblemPtr.TopicID))
-	selectedTopicPtr, _, _ := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
-
 	// the chapter comes from the problem itself: a problem may have no topic, or topics of other chapters
 	chapterIDStr := strconv.Itoa(int(selectedProblemPtr.ChapterID))
 	selectedChapterPtr, _, _ := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
@@ -91,7 +88,10 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 			SubjectID:    selectedProblemPtr.SubjectID,
 		},
 		ProblemPtr: selectedProblemPtr,
-		TopicPtr:   selectedTopicPtr,
+		TopicPtrs: problemTopics(selectedProblemPtr.TopicIDs, func(id int16) *models.Topic {
+			topicPtr, _, _ := handlerutils.GetTopicByID(strconv.Itoa(int(id)), h.topicsService)
+			return topicPtr
+		}),
 		ChapterPtr: selectedChapterPtr,
 	}
 
@@ -102,6 +102,17 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 		"getName":     getConceptName,
 		"langName":    utils.LangName,
 	}, baseTemplate, problemTemplate)
+}
+
+// problemTopics looks up a problem's topics, leaving out any that cannot be found.
+func problemTopics(topicIDs []int16, lookup func(int16) *models.Topic) []*models.Topic {
+	var topics []*models.Topic
+	for _, id := range topicIDs {
+		if topicPtr := lookup(id); topicPtr != nil {
+			topics = append(topics, topicPtr)
+		}
+	}
+	return topics
 }
 
 func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int, error) {

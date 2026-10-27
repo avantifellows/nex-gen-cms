@@ -26,13 +26,17 @@
             </button>
         </div>
     </div>
-    {{ if or .ChapterPtr .TopicPtr }}
+    {{ if or .ChapterPtr .TopicPtrs }}
     <div class="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-sm text-ink-muted">
         {{ if .ChapterPtr }}
         <span><span class="font-semibold text-ink">Chapter:</span> {{ .ChapterPtr.Code }} — {{ .ChapterPtr.GetNameByLang "en" }}</span>
         {{ end }}
-        {{ if .TopicPtr }}
-        <span><span class="font-semibold text-ink">Topic:</span> {{ .TopicPtr.Code }} — {{ .TopicPtr.GetNameByLang "en" }}</span>
+        {{ if .TopicPtrs }}
+        <span><span class="font-semibold text-ink">Topics:</span>
+            {{- range $index, $topic := .TopicPtrs -}}
+                {{- if $index }}, {{ else }} {{ end -}}{{ $topic.Code }} — {{ $topic.GetNameByLang "en" }}
+            {{- end -}}
+        </span>
         {{ end }}
     </div>
     {{ end }}
