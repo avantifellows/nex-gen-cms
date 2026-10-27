@@ -689,15 +689,7 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	topicIDStr := urlValues.Get(QUERY_PARAM_TOPIC_ID)
-	selectedTopicPtr, code, err := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
-	if err != nil {
-		http.Error(responseWriter, err.Error(), code)
-		return
-	}
-
-	// the copy dialog still picks a topic, so its chapter is the copy's chapter until the dialog asks for a chapter
-	chapterIDStr := strconv.Itoa(int(selectedTopicPtr.ChapterID))
+	chapterIDStr := urlValues.Get(CHAPTER_DROPDOWN_NAME)
 	selectedChapterPtr, code, err := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
@@ -710,7 +702,7 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	copiedProblem := selectedProblemPtr.CopyTo(selectedTopicPtr, curriculumId, gradeId, subjectId)
+	copiedProblem := selectedProblemPtr.CopyTo(selectedChapterPtr, curriculumId, gradeId, subjectId)
 
 	data := dto.ProblemData{
 		HomeData: dto.HomeData{

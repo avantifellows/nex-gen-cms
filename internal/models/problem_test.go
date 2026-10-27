@@ -33,3 +33,36 @@ func TestProblemUnmarshalTopicIDs(t *testing.T) {
 		})
 	}
 }
+
+func TestProblemCopyToKeepsTopicsAndMovesToTheChapter(t *testing.T) {
+	original := &Problem{
+		ID: 7, Code: "P0000007", ChapterID: 9, TopicIDs: []int16{5, 90},
+		Paragraph: &ProblemParagraph{ID: 3, Body: "passage"},
+	}
+
+	copied := original.CopyTo(&Chapter{ID: 12}, 1, 10, 2)
+
+	if copied.ID != 0 || copied.Code != "" {
+		t.Errorf("a copy is a new problem: id and code must be cleared, got %d %q", copied.ID, copied.Code)
+	}
+	if copied.ChapterID != 12 || copied.CurriculumID != 1 || copied.GradeID != 10 || copied.SubjectID != 2 {
+		t.Errorf("the copy should carry the destination, got chapter %d curriculum %d grade %d subject %d",
+			copied.ChapterID, copied.CurriculumID, copied.GradeID, copied.SubjectID)
+	}
+	// topics need not belong to the chapter, so the copy keeps all of them
+	if !reflect.DeepEqual(copied.TopicIDs, []int16{5, 90}) {
+		t.Errorf("the copy should keep the original's topics, got %v", copied.TopicIDs)
+	}
+	// but it must not share them: editing the copy's topics must leave the original alone
+	copied.TopicIDs[0] = 1
+	if original.TopicIDs[0] != 5 {
+		t.Errorf("the copy shares its topics list with the original")
+	}
+	// the passage is copied as a new one, and the original keeps its own
+	if copied.Paragraph == nil || copied.Paragraph.ID != 0 || original.Paragraph.ID != 3 {
+		t.Errorf("the copy should get a new passage while the original keeps its own")
+	}
+	if original.ChapterID != 9 {
+		t.Errorf("the original must not change")
+	}
+}

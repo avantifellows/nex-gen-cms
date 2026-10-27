@@ -1,6 +1,9 @@
 package models
 
-import "html/template"
+import (
+	"html/template"
+	"slices"
+)
 
 type Problem struct {
 	ID              int               `json:"id,omitempty"`
@@ -83,13 +86,14 @@ func (p *Problem) GetChapterNameByLang(langCode string) string {
 	return ""
 }
 
-// CopyTo returns a clone of p cleared for create in the destination topic.
-func (p *Problem) CopyTo(topic *Topic, curriculumID int16, gradeID int8, subjectID int8) Problem {
+// CopyTo returns a clone of p cleared for create in the destination chapter. Its topics are kept, because a
+// problem's topics need not belong to its chapter.
+func (p *Problem) CopyTo(chapter *Chapter, curriculumID int16, gradeID int8, subjectID int8) Problem {
 	copied := *p
 	copied.ID = 0
 	copied.Code = ""
-	copied.TopicID = topic.ID
-	copied.ChapterID = topic.ChapterID
+	copied.ChapterID = chapter.ID
+	copied.TopicIDs = slices.Clone(p.TopicIDs)
 	copied.CurriculumID = curriculumID
 	copied.GradeID = gradeID
 	copied.SubjectID = subjectID
