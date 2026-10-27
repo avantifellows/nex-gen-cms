@@ -335,3 +335,23 @@ func TestChapterScreenOpensTheRequestedTabOnce(t *testing.T) {
 		t.Errorf("the opener should be part of the screen's script, after its tabs")
 	}
 }
+
+// The toolbar reads left to right: the topic filter, then adding a problem, then moving the selected ones.
+func TestChapterProblemsToolbarOrder(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, "12"); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	html := out.String()
+
+	filterAt := strings.Index(html, `id="problems-topic-filter"`)
+	addAt := strings.Index(html, `/chapter/add-problem?chapter_id=12`)
+	moveAt := strings.Index(html, `id="move-problems-btn"`)
+	if filterAt < 0 || addAt < 0 || moveAt < 0 {
+		t.Fatalf("the toolbar is missing a control: filter=%d add=%d move=%d", filterAt, addAt, moveAt)
+	}
+	if !(filterAt < addAt && addAt < moveAt) {
+		t.Errorf("expected the topic filter, then the add button, then the move button")
+	}
+}

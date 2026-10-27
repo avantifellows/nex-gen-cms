@@ -745,18 +745,10 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	topicIdStr := request.Form.Get("topic_id")
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
-		return
-	}
-	topicIdPtr := &topicId
-
 	problemIdsStr := request.Form.Get("problem_ids")
 	problemIds := utils.StringSliceToIntSlice(strings.Split(problemIdsStr, ","))
 
-	reqBody := dto.MoveResourcesRequest{
+	reqBody := dto.MoveProblemsRequest{
 		ResourceIDs: problemIds,
 		CurriculumGrades: []models.CurriculumGrade{
 			{
@@ -766,7 +758,6 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		},
 		SubjectID: subjectId,
 		ChapterID: chapterId,
-		TopicID:   topicIdPtr,
 		LangCode:  "en",
 	}
 

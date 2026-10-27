@@ -1,10 +1,10 @@
 <div id="move-problems-modal" data-problem-ids='{{.}}'
     class="fixed inset-0 bg-ink/40 flex justify-center items-center z-50 p-4">
-    <div class="card shadow-xl rounded-xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+    <div class="card shadow-xl rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
 
         <h2 class="page-title mb-2">Move Problems</h2>
         <p class="text-sm text-ink-muted mb-6">
-            Select Curriculum, Grade & Subject in any order. Then select Chapter, and finally Topic.
+            Select Curriculum, Grade & Subject in any order. Then select Chapter.
         </p>
 
         <form id="move-problems-form" class="space-y-6" hx-post="/move-problems" hx-swap="none"
@@ -12,7 +12,7 @@
             hx-on::after-request="handleMoveProblemsResponse(event)"
             hx-disabled-elt="#move-problems-modal button">
 
-            <div class="grid grid-cols-3 gap-4">
+            <div class="grid grid-cols-2 gap-4">
 
                 <!-- Curriculum -->
                 <select id="curriculum-dropdown" name="curriculum-dropdown" 
@@ -40,23 +40,13 @@
 
                 <!-- Chapter -->
                 <select id="chapter-dropdown" name="chapter-dropdown" 
-                        class="form-select" hx-get="/api/chapters"
+                        class="form-select" hx-get="/api/chapters" onchange="toggleMoveButton()"
                         hx-target="this" hx-swap="innerHTML"
                         hx-trigger="loadChapters, change from:(#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown)"
                         hx-include="#move-problems-modal #curriculum-dropdown, #move-problems-modal #grade-dropdown, #move-problems-modal #subject-dropdown"
                         hx-params="not chapter-dropdown" hx-on::before-request="beforeMoveProblemsChaptersRequest()"
                         hx-on::after-request="toggleMoveButton()">
                     <option disabled selected>Loading chapters...</option>
-                </select>
-
-                <!-- Topic -->
-                <select id="topic-dropdown" name="topic_id" class="form-select"
-                        hx-get="/api/topics?view=dropdown" hx-trigger="change from:#chapter-dropdown"
-                        hx-target="this" hx-swap="innerHTML" onchange="toggleMoveButton()" 
-                        hx-include="#chapter-dropdown, #move-problems-modal #curriculum-dropdown" hx-on::after-swap="toggleMoveButton()"
-                        hx-on::before-request="beforeMoveProblemsTopicsRequest()"
-                        hx-on::after-request="toggleMoveButton()">
-                    <option value="" disabled selected>Select a chapter first</option>
                 </select>
 
             </div>
@@ -100,23 +90,14 @@ function beforeMoveProblemsChaptersRequest() {
     const chapter = modal.querySelector("#chapter-dropdown");
     chapter.innerHTML = '<option disabled selected>Loading chapters...</option>';
 
-    const topic = modal.querySelector("#topic-dropdown");
-    topic.innerHTML = '<option value="" disabled selected>Select a chapter first</option>';
-
     modal.querySelector("#move-problems-btn").disabled = true;
-}
-
-function beforeMoveProblemsTopicsRequest() {
-    const modal = document.getElementById("move-problems-modal");
-    const topic = modal.querySelector("#topic-dropdown");
-    topic.innerHTML = '<option disabled selected>Loading topics...</option>';
 }
 
 function toggleMoveButton() {
     const modal = document.getElementById("move-problems-modal");
-    const topic = modal.querySelector("#topic-dropdown");
+    const chapter = modal.querySelector("#chapter-dropdown");
     const moveBtn = modal.querySelector("#move-problems-btn");
-    moveBtn.disabled = !topic.value;
+    moveBtn.disabled = !chapter.value;
 }
 
 function handleMoveProblemsResponse(event) {
