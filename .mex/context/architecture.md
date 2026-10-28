@@ -20,7 +20,7 @@ edges:
     condition: when you need how the running server sits behind NGINX/EC2
   - target: patterns/debug-htmx-rendering.md
     condition: when an HTMX route in this request flow returns blank/500/redirect or doesn't swap
-last_updated: 2026-10-05
+last_updated: 2026-10-28
 ---
 
 # Architecture
@@ -73,6 +73,12 @@ all content data (chapters/topics/tests/problems/…) comes from the db-service 
 - **`storage.PdfStore`** (`internal/storage/pdf_store.go`) — thin S3 client (head/put/presigned-GET)
   backing the PDF cache. `NewPdfStore` returns `nil` (not an error) when `AWS_S3_BUCKET` is unset, so
   local dev without AWS credentials still works — PDFs are just always regenerated in that case.
+
+- **Problem scope** — a problem has a required `chapter_id` and optional `topic_ids` (`models.Problem`;
+  topics may belong to other chapters). `ProblemsHandler` lists by chapter (`chapterProblemsQuery`, topic as
+  an optional filter, paged with `limit`/`offset` only when asked) for the chapter's Problems tab
+  (`/api/chapter/problems`) and the Add Test question bank (`/api/question-bank/problems`). db-service must
+  support `chapter_id`, `topic_ids`, and paging on its problems endpoint.
 
 ## External Dependencies
 

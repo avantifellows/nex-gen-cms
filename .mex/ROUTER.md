@@ -18,7 +18,7 @@ edges:
     condition: when working on login, sessions, roles, route guards, or the Postgres user store
   - target: context/deployment.md
     condition: when deploying, changing AWS/Terraform infra, CI/CD, or release operations
-last_updated: 2026-10-05
+last_updated: 2026-10-28
 ---
 
 # Session Bootstrap
@@ -50,7 +50,16 @@ Then read this file fully before doing anything else in this session.
   endpoint via a new `GetTestSequenceOptions` fragment handler) and stays disabled until all three
   are chosen.
 - Add/Edit Test screen's chapter dropdown (Question Bank tab) shows `<code> - <name>` per chapter, not
-  just the name, so users who know the chapter code can find it directly.
+  just the name, so users who know the chapter code can find it directly. The Question Bank loads a
+  chapter's problems on its own (`/api/question-bank/problems`); its topic dropdown is an optional filter
+  that starts at "All Topics".
+- Problems are scoped to a **chapter** (required) with zero or more **topics** (optional, may belong to other
+  chapters). The Problems tab lives on the chapter screen (2nd tab, 10 rows at a time via the
+  `infinite-scroll` extension, optional single-topic filter). Add/edit/copy pick topics from a checklist
+  (`/api/topics?view=checklist`) plus a picker for other chapters' topics; copy keeps the original's topics and
+  lands on the destination chapter's Problems tab; move changes the chapter only and never touches topics;
+  the problem screen lists all of a problem's topics. Concepts still belong to topics only (topic screen
+  Concepts tab). The topic screen has no Problems tab, and the legacy single `Problem.TopicID` is gone.
 - Question paper / answer sheet / combined PDF generation via headless Chrome (chromedp + MathJax).
 - Admin user management (`/admin/users`), move/copy of resources & problems.
 - Generated test PDFs are cached in S3 by content hash (`TestsHandler.DownloadPdf` + the `storage.PdfStore`

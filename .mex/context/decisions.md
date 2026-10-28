@@ -16,7 +16,7 @@ edges:
     condition: when a decision relates to login, roles, or the user store
   - target: context/deployment.md
     condition: when a decision affects build-at-deploy, infra, or release flow
-last_updated: 2026-10-05
+last_updated: 2026-10-28
 ---
 
 # Decisions
@@ -127,3 +127,17 @@ PATCHing (`GetObject`'s new param) rather than reusing the copy from before the 
 a concurrent edit made during the (up to 60s) render. Bumping `pdfCacheVersion` is required whenever
 `buildPdfTasks`'s `PrintToPDF` options change, since those aren't part of the hashed content. See
 `patterns/generate-pdf.md` and `terraform/s3.tf`/`terraform/iam.tf`.
+
+### Problems belong to a chapter, with optional topics
+**Date:** 2026-10-28
+**Status:** Active
+**Decision:** A problem's scope is a required chapter plus zero or more topics (which may be of other
+chapters), replacing the old single required topic. The Problems tab moved from the topic screen to the
+chapter screen; concepts stay on topics.
+**Reasoning:** Problems were forced under one topic although many span topics or have none; the chapter
+is the level at which teachers browse and build tests.
+**Alternatives considered:** Keeping the topic scope and adding a chapter view (rejected, two sources of
+truth); moving concepts to chapters (rejected, concepts are topic-level knowledge).
+**Consequences:** Moves send a request without topic keys so topics survive; copies keep topics; db-service
+lists problems by `chapter_id` and filters by `topic_id`, with opt-in paging. The legacy `topic_id` on a
+problem is no longer read or sent by the CMS.
