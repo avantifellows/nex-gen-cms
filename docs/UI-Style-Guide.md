@@ -429,7 +429,7 @@ Use `.btn-*` everywhere a button or button-styled link is needed.
 </div>
 
 <!-- Inline "+ Add new" link -->
-<a href="#" class="add-new-link" hx-get="…">+ Add concept from other topic</a>
+<a href="#" class="add-new-link" hx-get="…">+ Add topic from other chapter</a>
 
 <!-- Icon-only row action — uses the legacy .action-button class -->
 <button class="action-button" hx-get="/edit-chapter?id={{.ID}}" title="Edit">

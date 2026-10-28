@@ -66,3 +66,21 @@ func TestProblemCopyToKeepsTopicsAndMovesToTheChapter(t *testing.T) {
 		t.Errorf("the original must not change")
 	}
 }
+
+// The single legacy topic is gone: a problem sent to db-service (a copy, for one) carries topic_ids only.
+func TestProblemJSONCarriesNoLegacyTopicID(t *testing.T) {
+	body, err := json.Marshal(Problem{ChapterID: 9, TopicIDs: []int16{5}})
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	keys := map[string]json.RawMessage{}
+	if err := json.Unmarshal(body, &keys); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if _, found := keys["topic_id"]; found {
+		t.Errorf("a problem must not send the legacy topic_id")
+	}
+	if string(keys["topic_ids"]) != "[5]" {
+		t.Errorf("topic_ids = %s, want [5]", keys["topic_ids"])
+	}
+}

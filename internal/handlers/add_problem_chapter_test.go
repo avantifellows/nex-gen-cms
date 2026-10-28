@@ -88,7 +88,7 @@ func TestAddProblemScreenForAChapter(t *testing.T) {
 // Edit keeps its own branch, and copy is now chapter-based like add: it also sends the chapter and no topic yet.
 func TestAddProblemScreenStillRendersEditAndCopy(t *testing.T) {
 	problem := &models.Problem{
-		ID: 7, Subtype: "mcq_single_answer", TopicID: 5, ChapterID: 9,
+		ID: 7, Subtype: "mcq_single_answer", ChapterID: 9,
 		LangVersions: []models.LangVersion{{LangCode: "en"}},
 	}
 
@@ -306,7 +306,7 @@ func TestAddProblemScreenAsksForTheProblemsTopicsTicked(t *testing.T) {
 // Topics replace concepts on this screen, so the concept prefill must not render any more.
 func TestAddProblemScreenDoesNotPrefillConcepts(t *testing.T) {
 	problem := &models.Problem{
-		ID: 7, Subtype: "mcq_single_answer", ChapterID: 9, TopicID: 5,
+		ID: 7, Subtype: "mcq_single_answer", ChapterID: 9,
 		LangVersions: []models.LangVersion{{LangCode: "en"}},
 		Concepts:     []models.Concept{{ID: 3, Name: []models.ConceptLang{{LangCode: "en", ConceptName: "Velocity"}}}},
 	}
