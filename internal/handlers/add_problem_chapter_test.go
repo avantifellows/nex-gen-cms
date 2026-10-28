@@ -635,3 +635,23 @@ func TestSavedCopyOpensTheChaptersProblemsTab(t *testing.T) {
 		t.Errorf("add and edit should still go back")
 	}
 }
+
+// A picked topic is added as a copy of the picker's own row, so the markup of a topic row lives in
+// topic_checklist.html only and cannot drift from the one the problem's list shows.
+func TestAddTopicModalReusesThePickedRow(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../../web/html/add_topic_modal.html"))
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, nil); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	html := out.String()
+
+	if !strings.Contains(html, `pickedBox.closest('label').cloneNode(true)`) {
+		t.Errorf("the picked topic row should be copied")
+	}
+	for _, unwanted := range []string{"ROW_CLASS", "createElement('label')", "createElement('input')"} {
+		if strings.Contains(html, unwanted) {
+			t.Errorf("the picker should not build a topic row itself, found %q", unwanted)
+		}
+	}
+}
