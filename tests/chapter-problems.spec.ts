@@ -24,7 +24,7 @@ async function mockTopicsApi(page: Page, view: string, body: string) {
   });
 }
 
-test('the chapter Problems tab lists problems and narrows them by an optional topic', async ({ page }) => {
+test('the chapter Problems tab lists all problems and narrows them locally by an optional topic', async ({ page }) => {
   await page.request.post(`${BASE_URL}/dev-login`);
   await mockHeaderDropdowns(page);
   await mockTopicsApi(page, 'dropdown-all',
@@ -36,8 +36,8 @@ test('the chapter Problems tab lists problems and narrows them by an optional to
     await route.fulfill({
       status: 200,
       contentType: 'text/html',
-      body: `<tr><td><input type="checkbox" name="select-problem" value="1"></td><td>P1</td><td>First</td><td></td></tr>
-             <tr><td><input type="checkbox" name="select-problem" value="2"></td><td>P2</td><td>Second</td><td></td></tr>`,
+      body: `<tr data-topic-ids="7"><td><input type="checkbox" name="select-problem" value="1"></td><td>P1</td><td>First</td><td></td></tr>
+             <tr data-topic-ids=""><td><input type="checkbox" name="select-problem" value="2"></td><td>P2</td><td>Second</td><td></td></tr>`,
     });
   });
 
@@ -47,8 +47,9 @@ test('the chapter Problems tab lists problems and narrows them by an optional to
   await expect(page.locator('#problemTableBody tr')).toHaveCount(2);
   // the chapter alone loads the problems: no topic is needed
   expect(problemRequests[0]).toContain(`chapter-dropdown=${CHAPTER_ID}`);
-  expect(problemRequests[0]).toContain('limit=10');
-  expect(problemRequests[0]).not.toMatch(/topic-dropdown=[^&]/);
+  // one unpaged request, with no topic
+  expect(problemRequests[0]).not.toContain('limit=');
+  expect(problemRequests[0]).not.toContain('topic-dropdown');
 
   // the first row of controls: the topic filter, then the add button
   const controls = page.locator('#problems-topic-filter, button:has-text("+ Add New Problem")');
@@ -59,12 +60,12 @@ test('the chapter Problems tab lists problems and narrows them by an optional to
   await page.locator('input[name="select-problem"]').first().check();
   await expect(page.locator('#move-problems-btn')).toBeEnabled();
 
-  const filtered = page.waitForRequest(request =>
-    request.url().includes('/api/chapter/problems') && request.url().includes('topic-dropdown=7'));
+  // the topic filter hides rows in the browser, and sends no request
   await page.selectOption('#problems-topic-filter', '7');
-  const request = await filtered;
-  expect(request.url()).toContain(`chapter-dropdown=${CHAPTER_ID}`);
-  expect(request.url()).toContain('offset=0');
+  await expect(page.locator('#problemTableBody tr:not(.hidden)')).toHaveCount(1);
+  await page.selectOption('#problems-topic-filter', '');
+  await expect(page.locator('#problemTableBody tr:not(.hidden)')).toHaveCount(2);
+  expect(problemRequests.length).toBe(1);
 });
 
 test('adding a problem picks topics from a checklist, with no concepts field', async ({ page }) => {

@@ -1,8 +1,8 @@
 <div>
     <div class="flex flex-wrap items-center gap-3 mb-4">
         <!-- Optional single-topic filter: lists only this chapter's topics; the blank "All Topics" option shows
-             every problem of the chapter. Its value is included in the table's requests below. -->
-        <select id="problems-topic-filter" name="topic-dropdown" class="form-select w-auto"
+             every problem of the chapter. It narrows the loaded rows in the browser, with no request. -->
+        <select id="problems-topic-filter" class="form-select w-auto"
             hx-get="/api/topics?view=dropdown-all&id={{.}}" hx-include="#curriculum-dropdown"
             hx-trigger="load[document.getElementById('problems-topic-filter').options.length < 2]"
             hx-target="this" hx-swap="innerHTML">
@@ -46,24 +46,19 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <!-- In before-request, condition is added to only clear the tbody
-             when the request comes from the tbody itself (its own refresh on load);
-             otherwise it reloads even on just clicking copy problem button for any row -->
-            <!-- Lazy loading: the infinite-scroll extension loads the next 10 rows when the sentinel below the
-                 table scrolls into view, and shows / hides the loader (data-loader) for every page. -->
-            <tbody id="problemTableBody" class="text-ink-muted text-sm"
-                hx-ext="infinite-scroll" data-limit="10" data-offset="0" hx-sync="this:replace"
-                data-loader="#chapter-problems-loader" data-sentinel="#chapter-problems-sentinel"
-                hx-trigger="refreshProblems, change from:#problems-topic-filter"
-                hx-get="/api/chapter/problems?chapter-dropdown={{.}}&limit=10&offset=0" hx-include="#curriculum-dropdown, #subject-dropdown, #problems-topic-filter"
+            <!-- The chapter's problems load in one request. In before-request, condition is added to only clear
+                 the tbody when the request comes from the tbody itself (its own refresh on load); otherwise
+                 it reloads even on just clicking copy problem button for any row -->
+            <tbody id="problemTableBody" class="text-ink-muted text-sm" hx-sync="this:replace"
+                hx-indicator="#chapter-problems-loader" hx-disinherit="hx-indicator" hx-trigger="refreshProblems"
+                hx-get="/api/chapter/problems?chapter-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
                 hx-on::before-request="if (event.detail.elt === this) this.innerHTML=''"
-                hx-on::after-swap="updateHeaderState()" data-mathjax="true">
+                hx-on::after-swap="if (event.detail.elt === this) applyTopicFilter()" data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
     </div>
-    <div id="chapter-problems-sentinel"></div>
-    <div id="chapter-problems-loader" class="hidden justify-center py-4">
+    <div id="chapter-problems-loader" class="justify-center py-4">
         <div class="w-6 h-6 mx-auto border-4 border-border border-t-accent rounded-full animate-spin"></div>
     </div>
 </div>
@@ -80,9 +75,9 @@
         const curriculum = document.getElementById('curriculum-dropdown').value;
         const subject = document.getElementById('subject-dropdown').value;
         if (!curriculum || !subject) return false;
-        // The curriculum, subject and topic filter values are not added to this URL: because the tbody is the
-        // request source, htmx adds them itself from the tbody's hx-include (adding them here sent them twice).
-        htmx.ajax('GET', `/api/chapter/problems?chapter-dropdown=${chapterId}&limit=10&offset=0`, {
+        // The curriculum and subject values are not added to this URL: because the tbody is the request
+        // source, htmx adds them itself from the tbody's hx-include (adding them here sent them twice).
+        htmx.ajax('GET', `/api/chapter/problems?chapter-dropdown=${chapterId}`, {
             source: '#problemTableBody',
             target: '#problemTableBody',
             swap: 'innerHTML',
@@ -118,8 +113,27 @@
         }
     }
 
+    var topicFilter = document.getElementById("problems-topic-filter");
+
+    var getRows = () => tbody.querySelectorAll('tr[data-topic-ids]');
+
+    // Only the rows of the chosen topic stay visible (no topic = all rows). A hidden row is unchecked, so that
+    // Move Problems can never carry a problem the user can no longer see.
+    function applyTopicFilter() {
+        const topicId = topicFilter.value;
+        tbody.setAttribute('data-topic-filter', topicId);
+        getRows().forEach(row => {
+            const show = !topicId || row.dataset.topicIds.split(',').includes(topicId);
+            row.classList.toggle('hidden', !show);
+            if (!show) row.querySelector('input[name="select-problem"]').checked = false;
+        });
+        updateHeaderState();
+    }
+
+    topicFilter.addEventListener('change', applyTopicFilter);
+
     var getCheckboxes = () =>
-        tbody.querySelectorAll('input[name="select-problem"]');
+        tbody.querySelectorAll('tr:not(.hidden) input[name="select-problem"]');
 
     // The history snapshot keeps a checkbox's state only as an attribute, so mirror every change there.
     var syncCheckedAttributes = () =>
@@ -127,7 +141,7 @@
 
     var updateHeaderState = () => {
         const all = getCheckboxes();
-        const checked = tbody.querySelectorAll('input[name="select-problem"]:checked');
+        const checked = tbody.querySelectorAll('tr:not(.hidden) input[name="select-problem"]:checked');
 
         selectAll.checked = all.length > 0 && all.length === checked.length;
         selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
@@ -157,16 +171,14 @@
     // Back navigation rebuilds this page from saved HTML with its rows already loaded: only re-attach what
     // the HTML cannot keep, and reload just when a problem was added, edited or deleted meanwhile.
     function restoreChapterProblems() {
-        // the saved HTML does not keep the selected topic, but the last request's params do
-        const activeParams = new URLSearchParams(tbody.getAttribute('data-active-params') || '');
-        document.getElementById('problems-topic-filter').value = activeParams.get('topic-dropdown') || '';
+        // the saved HTML does not keep the selected topic, but the tbody's attribute does
+        topicFilter.value = tbody.getAttribute('data-topic-filter') || '';
 
         if (sessionStorage.getItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY)) {
             sessionStorage.removeItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY);
             // deferred, because while htmx swaps the page in, the page's dropdowns exist twice
             setTimeout(initChapterProblemsList, 0);
         } else {
-            htmx.trigger(tbody, 'infinite-scroll:restore');
             updateHeaderState();
         }
     }

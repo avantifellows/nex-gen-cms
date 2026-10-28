@@ -421,12 +421,14 @@
   /* --- HTMX loader visibility helpers --------------------------------- */
   #search-btn-loader,
   #searched-test-loader,
-  #question-bank-loader {
+  #question-bank-loader,
+  #chapter-problems-loader {
     display: none;
   }
   #search-btn-loader.htmx-request,
   #searched-test-loader.htmx-request,
-  #question-bank-loader.htmx-request {
+  #question-bank-loader.htmx-request,
+  #chapter-problems-loader.htmx-request {
     display: flex;
   }
   #searched-test-results { display: block; }

@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"html/template"
-	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -55,13 +54,13 @@ func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
 	html := out.String()
 
 	for _, want := range []string{
-		`hx-get="/api/chapter/problems?chapter-dropdown=12&limit=10&offset=0"`, // tbody refresh
+		`hx-get="/api/chapter/problems?chapter-dropdown=12"`, // tbody refresh
 		`var chapterId = '12';`, // initial load script
 		`id="problemTableBody"`, // the move modal refreshes this id
-		// topic filter: loads this chapter's topics, and its changes reload the table with its value included
+		// topic filter: loads this chapter's topics; its changes only hide rows, so no request carries its value
 		`hx-get="/api/topics?view=dropdown-all&id=12"`,
-		`hx-trigger="refreshProblems, change from:#problems-topic-filter"`,
-		`#curriculum-dropdown, #subject-dropdown, #problems-topic-filter`,
+		`hx-trigger="refreshProblems"`,
+		`hx-include="#curriculum-dropdown, #subject-dropdown"`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("rendered tab is missing %q", want)
@@ -73,7 +72,7 @@ func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
 
 	// The initial-load script must only send the chapter: the tbody's hx-include adds curriculum, subject and
 	// the topic filter, so repeating them in the URL sent them twice.
-	if !strings.Contains(html, "`/api/chapter/problems?chapter-dropdown=${chapterId}&limit=10&offset=0`") {
+	if !strings.Contains(html, "`/api/chapter/problems?chapter-dropdown=${chapterId}`") {
 		t.Errorf("initial-load script URL should carry only the chapter:\n%s", html)
 	}
 	if strings.Contains(html, "subject-dropdown=${") || strings.Contains(html, "curriculum-dropdown=${") {
@@ -81,9 +80,9 @@ func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
 	}
 }
 
-// The infinite-scroll extension drives the loader (the hidden class) and loads the next page when the
-// sentinel scrolls into view, so the template must declare both and start with the loader hidden.
-func TestChapterProblemsTemplateIsLazyLoaded(t *testing.T) {
+// The chapter's problems load in one request and the topic filter works on the loaded rows, so the table
+// must not be paged: no limit, no offset, no infinite scroll, and no topic value sent to the server.
+func TestChapterProblemsTemplateIsNotPaged(t *testing.T) {
 	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
 	var out bytes.Buffer
 	if err := tmpl.Execute(&out, "12"); err != nil {
@@ -91,37 +90,56 @@ func TestChapterProblemsTemplateIsLazyLoaded(t *testing.T) {
 	}
 	html := out.String()
 
+	for _, unwanted := range []string{
+		"infinite-scroll", "limit=", "offset=", "data-sentinel", "chapter-problems-sentinel", "topic-dropdown",
+	} {
+		if strings.Contains(html, unwanted) {
+			t.Errorf("the chapter tab must not be paged or filter on the server, found %q", unwanted)
+		}
+	}
+
 	for _, want := range []string{
-		`hx-ext="infinite-scroll"`,
-		`data-limit="10" data-offset="0"`,
-		`hx-sync="this:replace"`, // a stale response must not land after the topic filter changed
-		`data-loader="#chapter-problems-loader"`,
-		`data-sentinel="#chapter-problems-sentinel"`,
-		`hx-get="/api/chapter/problems?chapter-dropdown=12&limit=10&offset=0"`,
-		`<div id="chapter-problems-sentinel"></div>`,
-		`<div id="chapter-problems-loader" class="hidden `,
+		`hx-sync="this:replace"`,
+		// htmx marks the loader while the tbody's own request runs (input.css shows it then), and the
+		// row buttons must not inherit it
+		`hx-indicator="#chapter-problems-loader" hx-disinherit="hx-indicator"`,
+		`<div id="chapter-problems-loader" class="justify-center `,
+		// a topic change and every (re)load narrow the rows locally
+		`topicFilter.addEventListener('change', applyTopicFilter);`,
+		`hx-on::after-swap="if (event.detail.elt === this) applyTopicFilter()"`,
+		`row.dataset.topicIds.split(',').includes(topicId)`,
+		// a hidden row is unchecked, so Move Problems cannot carry a problem the user cannot see
+		`row.querySelector('input[name="select-problem"]').checked = false`,
+		`tr:not(.hidden) input[name="select-problem"]`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("rendered tab is missing %q", want)
 		}
 	}
-	// the loader is a block once the extension removes "hidden", so the spinner centres itself
+	// the spinner centres itself
 	if !strings.Contains(html, `w-6 h-6 mx-auto border-4`) {
 		t.Errorf("the spinner must centre itself with mx-auto:\n%s", html)
 	}
-	if strings.Contains(html, "hx-indicator") {
-		t.Errorf("the extension drives the loader, hx-indicator would fight it:\n%s", html)
-	}
 }
 
-// The extension only reacts to the endpoints it knows, so the chapter list must be one of them.
-func TestInfiniteScrollKnowsChapterProblemsEndpoint(t *testing.T) {
-	js, err := os.ReadFile("../../web/static/js/infinite-scroll.js")
-	if err != nil {
-		t.Fatalf("read infinite-scroll.js: %v", err)
+// Each row carries its topic ids (empty when it has none), which is what the local topic filter reads.
+func TestChapterProblemRowCarriesTopicIDs(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problem_row.html"))
+	problems := []*models.Problem{
+		{ID: 1, Code: "P1", TopicIDs: []int16{7, 9}, LangVersions: []models.LangVersion{{LangCode: "en"}}},
+		{ID: 2, Code: "P2", LangVersions: []models.LangVersion{{LangCode: "en"}}},
 	}
-	if !strings.Contains(string(js), `path?.startsWith("/api/chapter/problems")`) {
-		t.Errorf("infinite-scroll.js does not handle /api/chapter/problems")
+
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, problems); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	html := out.String()
+
+	for _, want := range []string{`data-topic-ids="7,9"`, `data-topic-ids=""`} {
+		if !strings.Contains(html, want) {
+			t.Errorf("rendered rows are missing %q:\n%s", want, html)
+		}
 	}
 }
 
@@ -150,36 +168,6 @@ func TestTopicDropdownAllTemplate(t *testing.T) {
 	}
 }
 
-func TestProblemsPagination(t *testing.T) {
-	tests := []struct {
-		name      string
-		query     string
-		wantQuery string
-		wantLimit int
-	}{
-		{"not paged without limit", "chapter-dropdown=12", "", 0},
-		{"offset alone does not page", "chapter-dropdown=12&offset=20", "", 0},
-		{"first page", "limit=10", "&limit=10&offset=0", 10},
-		{"later page", "limit=10&offset=20", "&limit=10&offset=20", 10},
-		{"invalid limit falls back to 10", "limit=abc&offset=10", "&limit=10&offset=10", 10},
-		{"limit below 1 falls back to 10", "limit=0", "&limit=10&offset=0", 10},
-		{"negative offset falls back to 0", "limit=10&offset=-5", "&limit=10&offset=0", 10},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			values, err := url.ParseQuery(tt.query)
-			if err != nil {
-				t.Fatalf("parse query: %v", err)
-			}
-			gotQuery, gotLimit := problemsPagination(values)
-			if gotQuery != tt.wantQuery || gotLimit != tt.wantLimit {
-				t.Errorf("problemsPagination() = (%q, %d), want (%q, %d)", gotQuery, gotLimit, tt.wantQuery, tt.wantLimit)
-			}
-		})
-	}
-}
-
 // Back navigation restores the saved page, so nothing on it may re-fetch what it already has.
 func TestChapterProblemsTemplateRestoresFromHistory(t *testing.T) {
 	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
@@ -195,8 +183,7 @@ func TestChapterProblemsTemplateRestoresFromHistory(t *testing.T) {
 		// the script tells a fresh load from a restored one and restores the topic from the saved params
 		`if (tbody.children.length === 0) {`,
 		`function restoreChapterProblems() {`,
-		`tbody.getAttribute('data-active-params')`,
-		`htmx.trigger(tbody, 'infinite-scroll:restore');`,
+		`topicFilter.value = tbody.getAttribute('data-topic-filter') || '';`,
 		// selected rows survive the history snapshot: every change is mirrored into the saved attribute
 		`var syncCheckedAttributes = () =>`,
 		`cb.toggleAttribute('checked', cb.checked)`,
@@ -241,13 +228,11 @@ func TestScreensFlagChapterProblemsForReload(t *testing.T) {
 		"nav-tracker.js defines the key":                  "../../web/static/js/nav-tracker.js",
 		"add/edit problem save sets it":                   "../../web/html/add_problem.html",
 		"deleting a problem from its screen sets it":      "../../web/html/problem.html",
-		"infinite-scroll.js restores a page from history": "../../web/static/js/infinite-scroll.js",
 	}
 	wants := map[string]string{
 		"nav-tracker.js defines the key":                  `REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY = "refreshChapterProblemsOnBack"`,
 		"add/edit problem save sets it":                   `sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1')`,
 		"deleting a problem from its screen sets it":      `sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1')`,
-		"infinite-scroll.js restores a page from history": `name === 'infinite-scroll:restore'`,
 	}
 
 	for name, path := range files {
@@ -285,25 +270,6 @@ func TestTopicScreenHasNoProblemsTab(t *testing.T) {
 		if _, err := os.Stat(gone); err == nil {
 			t.Errorf("%s should have been removed", gone)
 		}
-	}
-}
-
-// Clearing the table for a new first page brings the sentinel into view, so the first page must count as
-// loading: otherwise the scroll observer starts a second, identical "page 1" request.
-func TestInfiniteScrollMarksFirstPageAsLoading(t *testing.T) {
-	js, err := os.ReadFile("../../web/static/js/infinite-scroll.js")
-	if err != nil {
-		t.Fatalf("read infinite-scroll.js: %v", err)
-	}
-	script := strings.ReplaceAll(string(js), "\r\n", "\n")
-
-	start := strings.Index(script, "name === 'htmx:beforeRequest'")
-	end := strings.Index(script, "name === 'htmx:beforeSwap'")
-	if start < 0 || end < start {
-		t.Fatalf("could not find the beforeRequest branch of infinite-scroll.js")
-	}
-	if !strings.Contains(script[start:end], `target.setAttribute("data-loading", "true")`) {
-		t.Errorf("the beforeRequest branch must mark the table as loading")
 	}
 }
 

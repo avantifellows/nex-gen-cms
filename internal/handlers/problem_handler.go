@@ -197,43 +197,24 @@ func (h *ProblemsHandler) GetQuestionBankProblems(responseWriter http.ResponseWr
 	views.ExecuteTemplates(responseWriter, problems, nil, srcProblemRowParentTemplate, srcProblemRowTemplate)
 }
 
-// GetChapterProblems returns a chapter's problems, optionally narrowed to one topic (blank = all topics).
-// They are paged only when the request carries "limit".
+// GetChapterProblems returns all of a chapter's problems, unpaged. Each row carries its topic ids, so the
+// chapter screen narrows them by topic in the browser without another request.
 func (h *ProblemsHandler) GetChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	urlValues := request.URL.Query()
-	queryParams, err := chapterProblemsQuery(urlValues.Get(CHAPTER_DROPDOWN_NAME), urlValues.Get(TOPIC_DROPDOWN_NAME))
+	queryParams, err := chapterProblemsQuery(urlValues.Get(CHAPTER_DROPDOWN_NAME), "")
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
 	}
-	paginationParams, limit := problemsPagination(urlValues)
-	queryParams += paginationParams
 
 	problems, ok := h.fetchProblems(responseWriter, urlValues, queryParams)
 	if !ok {
 		return
 	}
 
-	// Decide hasMore BEFORE filtering, because filtering drops archived problems from a full page
-	if limit > 0 && len(*problems) < limit {
-		responseWriter.Header().Set("hasMore", "false")
-	}
-
 	// only drops archived problems here: no level, type or already-selected filtering on this screen
 	filterProblems(problems, nil, "", "")
 	views.ExecuteTemplate(chapterProblemRowTemplate, responseWriter, problems, nil)
-}
-
-// problemsPagination returns the "&limit=..&offset=.." suffix to add to db-service's problems query, and the
-// page size. Pagination is opt-in: a request without "limit" gets ("", 0) and is not paged.
-func problemsPagination(urlValues url.Values) (string, int) {
-	if !urlValues.Has("limit") {
-		return "", 0
-	}
-
-	limit := utils.StringToIntOrDefault(urlValues.Get("limit"), 10, 1)  // min = 1
-	offset := utils.StringToIntOrDefault(urlValues.Get("offset"), 0, 0) // min = 0
-	return fmt.Sprintf("&limit=%d&offset=%d", limit, offset), limit
 }
 
 // fetchProblems loads the problems matching queryParams from db-service and sets the selected subject and

@@ -6,14 +6,13 @@
                 "htmx:beforeRequest",
                 "htmx:beforeSwap", 
                 "htmx:afterSwap",
-                "infinite-scroll:restore",
                 "htmx:responseError"
             ];
     
             if (!allowedEvents.includes(name)) return;
     
             const requestPath = evt.detail?.elt?.getAttribute("hx-get");
-            if (!isInfiniteScrollEndpoint(requestPath)) return;
+            if (!isSearchEndpoint(requestPath)) return;
 
             const target = evt.detail?.target || evt.detail?.elt;
 
@@ -32,8 +31,6 @@
                 // hence only initially / on changing search term / on changing sort order, so reset offset and data
                 target.setAttribute("data-offset", "0");
                 target.innerHTML = "";
-                // the empty table brings the sentinel into view, but the observer must not start a page request
-                target.setAttribute("data-loading", "true");
 
                 if (loader) loader.classList.remove("hidden");
 
@@ -64,20 +61,14 @@
 
                 alert(`Error loading data: ${status} ${message}`);
 
-            } else if (name === 'htmx:afterSwap' || name === 'infinite-scroll:restore') {
-                // restore: the page came back from history with its rows, offset and hasMore as saved
-                const restoring = name === 'infinite-scroll:restore';
+            } else if (name === 'htmx:afterSwap') {
                 if (loader) loader.classList.add("hidden");
-                if (!restoring) {
-                    const limit = parseInt(target.getAttribute("data-limit") || "10", 10);
-                    const offset = parseInt(target.getAttribute("data-offset") || "0", 10);
-                    target.setAttribute("data-offset", offset + limit);
-                }
+                const limit = parseInt(target.getAttribute("data-limit") || "10", 10);
+                const offset = parseInt(target.getAttribute("data-offset") || "0", 10);
+                target.setAttribute("data-offset", offset + limit);
                 target.removeAttribute("data-loading");
 
-                const hasMore = restoring ? target.getAttribute("data-has-more")
-                    : evt.detail.xhr.getResponseHeader("hasMore");
-                if (!restoring) target.setAttribute("data-has-more", hasMore === "false" ? "false" : "true");
+                const hasMore = evt.detail.xhr.getResponseHeader("hasMore");
                 // Check server flag if present
                 if (hasMore === "false") {
                     // Server indicates no more results, unobserving sentinel.
@@ -147,8 +138,8 @@
         }
     });
 
-    function isInfiniteScrollEndpoint(path) {
-        return path?.startsWith("/api/search") || path?.startsWith("/api/chapter/problems");
+    function isSearchEndpoint(path) {
+        return path?.startsWith("/api/search");
     }
 
     function getSearchValue(query) {

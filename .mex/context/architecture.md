@@ -76,9 +76,10 @@ all content data (chapters/topics/tests/problems/…) comes from the db-service 
 
 - **Problem scope** — a problem has a required `chapter_id` and optional `topic_ids` (`models.Problem`;
   topics may belong to other chapters). `ProblemsHandler` lists by chapter (`chapterProblemsQuery`, topic as
-  an optional filter, paged with `limit`/`offset` only when asked) for the chapter's Problems tab
-  (`/api/chapter/problems`) and the Add Test question bank (`/api/question-bank/problems`). db-service must
-  support `chapter_id`, `topic_ids`, and paging on its problems endpoint.
+  an optional filter for the question bank) for the chapter's Problems tab (`/api/chapter/problems`, all
+  problems in one unpaged request, narrowed by topic in the browser from each row's `data-topic-ids`) and the
+  Add Test question bank (`/api/question-bank/problems`). db-service must support `chapter_id` and `topic_ids`
+  on its problems endpoint.
 
 ## External Dependencies
 
