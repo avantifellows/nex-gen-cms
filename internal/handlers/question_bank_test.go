@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -74,6 +75,24 @@ func TestQuestionBankRequestWithABadChapterOrTopicIsRejected(t *testing.T) {
 		handler.GetQuestionBankProblems(recorder, httptest.NewRequest(http.MethodGet, "/api/question-bank/problems?"+query, nil))
 		if recorder.Code != http.StatusBadRequest {
 			t.Errorf("%s: got %d, want 400", query, recorder.Code)
+		}
+	}
+}
+
+// The value goes into db-service's URL, so it must not be able to add parameters of its own.
+func TestParagraphSiblingsParamIsEscaped(t *testing.T) {
+	cases := []struct{ name, query, want string }{
+		{"absent", "", ""},
+		{"plain", "include_paragraph_siblings=true", "&include_paragraph_siblings=true"},
+		{"injected parameter", "include_paragraph_siblings=true%26chapter_id%3D999", "&include_paragraph_siblings=true%26chapter_id%3D999"},
+	}
+	for _, tt := range cases {
+		values, err := url.ParseQuery(tt.query)
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
+		}
+		if got := paragraphSiblingsParam(values); got != tt.want {
+			t.Errorf("%s: got %q, want %q", tt.name, got, tt.want)
 		}
 	}
 }

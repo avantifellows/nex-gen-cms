@@ -240,10 +240,7 @@ func problemsPagination(urlValues url.Values) (string, int) {
 // tag names on each of them. On failure it writes the error response itself and returns false.
 func (h *ProblemsHandler) fetchProblems(responseWriter http.ResponseWriter, urlValues url.Values,
 	queryParams string) (*[]*models.Problem, bool) {
-	const includeParagraphSiblingsParam = "include_paragraph_siblings"
-	if urlValues.Has(includeParagraphSiblingsParam) {
-		queryParams += "&" + includeParagraphSiblingsParam + "=" + urlValues.Get(includeParagraphSiblingsParam)
-	}
+	queryParams += paragraphSiblingsParam(urlValues)
 	problems, err := h.problemsService.GetList(problemsEndPoint+queryParams, problemsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
@@ -273,6 +270,16 @@ func (h *ProblemsHandler) fetchProblems(responseWriter http.ResponseWriter, urlV
 		}
 	}
 	return problems, true
+}
+
+// paragraphSiblingsParam returns the "&include_paragraph_siblings=.." suffix for db-service's problems query,
+// or "" when the request does not carry it. The value is escaped, so it cannot add parameters of its own.
+func paragraphSiblingsParam(urlValues url.Values) string {
+	const name = "include_paragraph_siblings"
+	if !urlValues.Has(name) {
+		return ""
+	}
+	return "&" + name + "=" + url.QueryEscape(urlValues.Get(name))
 }
 
 // chapterProblemsQuery builds db-service's problems query string. The chapter is required; the topic is an
