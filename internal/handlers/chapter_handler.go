@@ -388,6 +388,9 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 				return nil
 			}
 			return topicPtr
+		}, func(id int16) *models.Chapter {
+			chapterPtr, _, _ := handlerutils.GetChapterByID(strconv.Itoa(int(id)), h.chaptersService)
+			return chapterPtr
 		})
 	}
 	views.ExecuteTemplate(filename, responseWriter, data, template.FuncMap{
@@ -408,7 +411,9 @@ func parseTopicIDs(idsStr string) []int16 {
 
 // buildTopicChecklist ticks the selected topics among the chapter's own, and adds the selected ones that are
 // not listed there (other chapters, archived) so that a problem's topics are never hidden or dropped on save.
-func buildTopicChecklist(chapterTopics []*models.Topic, selectedIDs []int16, lookup func(int16) *models.Topic) dto.TopicChecklistData {
+// A topic of another chapter is noted with that chapter's "<code> - <name>".
+func buildTopicChecklist(chapterTopics []*models.Topic, selectedIDs []int16, lookup func(int16) *models.Topic,
+	chapterLookup func(int16) *models.Chapter) dto.TopicChecklistData {
 	data := dto.TopicChecklistData{Topics: chapterTopics, Selected: map[int16]bool{}}
 
 	listed := map[int16]bool{}
@@ -429,6 +434,9 @@ func buildTopicChecklist(chapterTopics []*models.Topic, selectedIDs []int16, loo
 			continue
 		}
 		note := "other chapter"
+		if chapterPtr := chapterLookup(topicPtr.ChapterID); chapterPtr != nil {
+			note = chapterPtr.Code + " - " + chapterPtr.GetNameByLang("en")
+		}
 		if topicPtr.StatusID == constants.StatusArchived {
 			note = "archived"
 		}

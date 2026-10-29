@@ -238,8 +238,11 @@ func TestBuildTopicChecklist(t *testing.T) {
 	archived.StatusID = constants.StatusArchived
 	known := map[int16]*models.Topic{7: archived, 90: topicNamed(90, "Optics")}
 	lookup := func(id int16) *models.Topic { return known[id] }
+	known[90].ChapterID = 12
+	chapters := map[int16]*models.Chapter{12: {ID: 12, Code: "PH12", Name: []models.ChapterLang{{LangCode: "en", ChapterName: "Optics"}}}}
+	chapterLookup := func(id int16) *models.Chapter { return chapters[id] }
 
-	data := buildTopicChecklist(chapterTopics, []int16{6, 90, 7, 90, 404}, lookup)
+	data := buildTopicChecklist(chapterTopics, []int16{6, 90, 7, 90, 404}, lookup, chapterLookup)
 
 	if !reflect.DeepEqual(data.Selected, map[int16]bool{6: true, 90: true, 7: true, 404: true}) {
 		t.Errorf("Selected = %v", data.Selected)
@@ -248,7 +251,7 @@ func TestBuildTopicChecklist(t *testing.T) {
 		t.Errorf("the chapter's own topics must be kept, got %d", len(data.Topics))
 	}
 	// 6 is listed already, 404 is unknown, and 90 is asked for twice: only 90 and 7 are extra, once each
-	if len(data.Other) != 2 || data.Other[0].Topic.ID != 90 || data.Other[0].Note != "other chapter" ||
+	if len(data.Other) != 2 || data.Other[0].Topic.ID != 90 || data.Other[0].Note != "PH12 - Optics" ||
 		data.Other[1].Topic.ID != 7 || data.Other[1].Note != "archived" {
 		t.Errorf("Other = %+v", data.Other)
 	}
@@ -648,6 +651,10 @@ func TestAddTopicModalReusesThePickedRow(t *testing.T) {
 
 	if !strings.Contains(html, `pickedBox.closest('label').cloneNode(true)`) {
 		t.Errorf("the picked topic row should be copied")
+	}
+	// the note names the picked chapter, as "<code> - <name>"
+	if !strings.Contains(html, "chapterDropdown.selectedOptions[0].textContent.trim()") || strings.Contains(html, "(other chapter)") {
+		t.Errorf("the note should be the picked chapter's code and name")
 	}
 	for _, unwanted := range []string{"ROW_CLASS", "createElement('label')", "createElement('input')"} {
 		if strings.Contains(html, unwanted) {

@@ -100,7 +100,8 @@
         const row = pickedBox.closest('label').cloneNode(true);
         const note = document.createElement('span');
         note.className = 'text-ink-muted';
-        note.textContent = '(other chapter)';
+        // the chapter the picker lists, as "<code> - <name>" like its own option
+        note.textContent = `(${chapterDropdown.selectedOptions[0].textContent.trim()})`;
         const name = row.querySelector('span');
         name.append(' ', note);
         targetList.appendChild(row);
