@@ -72,7 +72,7 @@ func NewProblemsHandler(problemsService *services.Service[models.Problem],
 }
 
 func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
+	selectedProblemPtr, code, err := h.getProblem(request.URL.Query(), true)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -107,7 +107,8 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	}, baseTemplate, problemTemplate)
 }
 
-func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int, error) {
+// withLinkedTests bypasses the problem cache, as only the by-id response carries Problem.Tests.
+func (h *ProblemsHandler) getProblem(urlValues url.Values, withLinkedTests bool) (*models.Problem, int, error) {
 	problemIdStr := urlValues.Get("id")
 	problemId := utils.StringToInt(problemIdStr)
 	endPointWithID := fmt.Sprintf(problemEndPoint, problemId)
@@ -116,7 +117,7 @@ func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int
 	selectedProblemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemId
-		}, problemsKey, endPointWithID, false)
+		}, problemsKey, endPointWithID, withLinkedTests)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching problem: %v", err)
 	}
@@ -334,7 +335,7 @@ func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, requ
 	var problem models.Problem
 	_ = json.Unmarshal(reqBodyBytes, &problem) // best-effort: an unparsable body just skips the similarity check
 
-	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), 0) {
+	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problem.ResolvedCurriculumID(), 0) {
 		return
 	}
 
@@ -359,10 +360,14 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 	_ = json.Unmarshal(reqBodyBytes, &batch) // best-effort: an unparsable body just skips the similarity check
 
 	var languages []dto.SimilarSearchLanguage
+	var curriculumID int16
 	for _, problem := range batch.Problems {
 		languages = append(languages, extractSimilarityLanguages(problem)...)
+		if curriculumID == 0 {
+			curriculumID = problem.ResolvedCurriculumID()
+		}
 	}
-	if h.duplicatesFound(responseWriter, request, languages, 0) {
+	if h.duplicatesFound(responseWriter, request, languages, curriculumID, 0) {
 		return
 	}
 
@@ -379,17 +384,21 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 // written a response — the caller should return without saving. Also writes an error response
 // and returns true if the check itself fails, so a flaky similarity check never masks the save.
 //
+// curriculumID restricts matches to that curriculum; pass a real id, as db-service treats 0 as
+// "curriculum 0" (matches nothing) and only skips the filter when it is absent.
+//
 // excludeProblemID drops a match against that problem's own id — needed on edit, where the
 // problem's own already-saved text otherwise self-matches at ~100%. Pass 0 on create, where
 // there's no id yet.
 func (h *ProblemsHandler) duplicatesFound(responseWriter http.ResponseWriter, request *http.Request,
-	languages []dto.SimilarSearchLanguage, excludeProblemID int) bool {
+	languages []dto.SimilarSearchLanguage, curriculumID int16, excludeProblemID int) bool {
 	if request.URL.Query().Get(confirmDuplicatesParam) == "true" || len(languages) == 0 {
 		return false
 	}
 
+	req := dto.SimilarSearchRequest{CurriculumID: curriculumID, Languages: languages}
 	var resp dto.SimilarSearchResponse
-	if err := h.problemsService.Post(similarSearchEndPoint, dto.SimilarSearchRequest{Languages: languages}, &resp); err != nil {
+	if err := h.problemsService.Post(similarSearchEndPoint, req, &resp); err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error checking similar problems: %v", err), http.StatusInternalServerError)
 		return true
 	}
@@ -445,7 +454,7 @@ func renderDuplicateProblemsModal(responseWriter http.ResponseWriter, matches []
 }
 
 func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
+	selectedProblemPtr, code, err := h.getProblem(request.URL.Query(), false)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -485,7 +494,7 @@ func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, requ
 	var problem models.Problem
 	_ = json.Unmarshal(reqBodyBytes, &problem) // best-effort: an unparsable body just skips the similarity check
 
-	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problemId) {
+	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problem.ResolvedCurriculumID(), problemId) {
 		return
 	}
 
@@ -630,7 +639,7 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 	problemQuery := url.Values{}
 	problemQuery.Set("id", urlValues.Get("id"))
 
-	selectedProblemPtr, code, err := h.getProblem(problemQuery)
+	selectedProblemPtr, code, err := h.getProblem(problemQuery, false)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
