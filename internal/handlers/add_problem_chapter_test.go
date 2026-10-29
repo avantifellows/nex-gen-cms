@@ -170,18 +170,26 @@ func topicNamed(id int16, name string) *models.Topic {
 	return &models.Topic{ID: id, Name: []models.TopicLang{{LangCode: "en", TopicName: name}}}
 }
 
+func topicCoded(id int16, code string, name string) *models.Topic {
+	topicPtr := topicNamed(id, name)
+	topicPtr.Code = code
+	return topicPtr
+}
+
 // Each topic is one labelled checkbox row, and a chapter without topics says so instead of staying blank.
 func TestTopicChecklistTemplate(t *testing.T) {
 	html := renderTopicChecklist(t, dto.TopicChecklistData{
-		Topics: []*models.Topic{topicNamed(5, "Kinematics"), topicNamed(6, "Dynamics")},
+		Topics: []*models.Topic{topicCoded(5, "T5", "Kinematics"), topicCoded(6, "T6", "Dynamics"), topicNamed(7, "Optics")},
 	})
 
-	if strings.Count(html, `type="checkbox"`) != 2 || strings.Contains(html, "checked") {
-		t.Errorf("expected two unticked checkboxes, got: %s", html)
+	if strings.Count(html, `type="checkbox"`) != 3 || strings.Contains(html, "checked") {
+		t.Errorf("expected three unticked checkboxes, got: %s", html)
 	}
 	for _, want := range []string{
-		`name="topic-ids" value="5"`, `<span>Kinematics</span>`,
-		`name="topic-ids" value="6"`, `<span>Dynamics</span>`,
+		// each name starts with the topic's code, when it has one
+		`name="topic-ids" value="5"`, `<span>T5 - Kinematics</span>`,
+		`name="topic-ids" value="6"`, `<span>T6 - Dynamics</span>`,
+		`name="topic-ids" value="7"`, `<span>Optics</span>`,
 	} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q: %s", want, html)
@@ -202,7 +210,7 @@ func TestTopicChecklistTemplateTicksSelectedTopics(t *testing.T) {
 	html := renderTopicChecklist(t, dto.TopicChecklistData{
 		Topics:   []*models.Topic{topicNamed(5, "Kinematics"), topicNamed(6, "Dynamics")},
 		Selected: map[int16]bool{6: true, 90: true},
-		Other:    []dto.TopicChecklistExtra{{Topic: topicNamed(90, "Optics"), Note: "other chapter"}},
+		Other:    []dto.TopicChecklistExtra{{Topic: topicCoded(90, "T90", "Optics"), Note: "other chapter"}},
 	})
 
 	if !strings.Contains(html, `value="6" class="accent-accent" checked>`) {
@@ -212,7 +220,7 @@ func TestTopicChecklistTemplateTicksSelectedTopics(t *testing.T) {
 		t.Errorf("a topic that is not selected must stay unticked: %s", html)
 	}
 	if !strings.Contains(html, `value="90" class="accent-accent" checked>`) ||
-		!strings.Contains(html, `Optics <span class="text-ink-muted">(other chapter)</span>`) {
+		!strings.Contains(html, `T90 - Optics <span class="text-ink-muted">(other chapter)</span>`) {
 		t.Errorf("a selected topic of another chapter should be listed ticked with its note: %s", html)
 	}
 }

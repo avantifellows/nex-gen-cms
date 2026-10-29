@@ -2,13 +2,13 @@
 {{ range .Topics }}
 <label class="flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-bg-hover cursor-pointer">
     <input type="checkbox" name="topic-ids" value="{{.ID}}" class="accent-accent" {{ if index $selected .ID }}checked{{ end }}>
-    <span>{{ getName . "en" }}</span>
+    <span>{{ if .Code }}{{ .Code }} - {{ end }}{{ getName . "en" }}</span>
 </label>
 {{ end }}
 {{ range .Other }}
 <label class="flex items-center gap-2 px-3 py-1.5 text-sm text-ink hover:bg-bg-hover cursor-pointer">
     <input type="checkbox" name="topic-ids" value="{{.Topic.ID}}" class="accent-accent" checked>
-    <span>{{ getName .Topic "en" }} <span class="text-ink-muted">({{ .Note }})</span></span>
+    <span>{{ if .Topic.Code }}{{ .Topic.Code }} - {{ end }}{{ getName .Topic "en" }} <span class="text-ink-muted">({{ .Note }})</span></span>
 </label>
 {{ end }}
 {{ if not (or .Topics .Other) }}
