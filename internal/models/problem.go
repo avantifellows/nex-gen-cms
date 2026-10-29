@@ -1,31 +1,37 @@
 package models
 
-import "html/template"
+import (
+	"html/template"
+	"slices"
+
+	"github.com/avantifellows/nex-gen-cms/internal/constants"
+)
 
 type Problem struct {
-	ID              int               `json:"id,omitempty"`
-	Code            string            `json:"code,omitempty"`
-	Type            string            `json:"type"`
-	Subtype         string            `json:"subtype"`
-	Paragraph       *ProblemParagraph `json:"paragraph,omitempty"`
-	TypeParams      ProbTypeParams    `json:"type_params"`
-	MetaData        ProbMetaData      `json:"meta_data"`
-	LangVersions    []LangVersion     `json:"lang_versions"`
-	SkillIDs        []int16           `json:"skill_ids"`
-	Skills          []Skill
-	CurriculumID    int16 `json:"curriculum_id"` // used with only get call
-	GradeID         int8  `json:"grade_id"`      // used with only get call
-	SubjectID       int8  `json:"subject_id"`
-	Subject         Subject
-	TopicID         int16         `json:"topic_id"`
-	ChapterID       int16         `json:"chapter_id"`
-	ChapterName     []ChapterLang `json:"chapter_name"` // used with only get call
-	Concepts        []Concept     `json:"concepts"`     // used with only get call
-	DifficultyLevel string        `json:"difficulty_level"`
-	TagIDs          []int         `json:"tag_ids"`
-	TagNames        []string
-	StatusID        int8         `json:"cms_status_id"`
-	Tests           []LinkedTest `json:"tests,omitempty"` // only in the by-id get call
+	ID               int               `json:"id,omitempty"`
+	Code             string            `json:"code,omitempty"`
+	Type             string            `json:"type"`
+	Subtype          string            `json:"subtype"`
+	Paragraph        *ProblemParagraph `json:"paragraph,omitempty"`
+	TypeParams       ProbTypeParams    `json:"type_params"`
+	MetaData         ProbMetaData      `json:"meta_data"`
+	LangVersions     []LangVersion     `json:"lang_versions"`
+	SkillIDs         []int16           `json:"skill_ids"`
+	Skills           []Skill
+	CurriculumID     int16             `json:"curriculum_id"`               // used with only get call
+	CurriculumGrades []CurriculumGrade `json:"curriculum_grades,omitempty"` // used with only create/update call
+	GradeID          int8              `json:"grade_id"`                    // used with only get call
+	SubjectID        int8              `json:"subject_id"`
+	Subject          Subject
+	TopicID          int16         `json:"topic_id"`
+	ChapterID        int16         `json:"chapter_id"`
+	ChapterName      []ChapterLang `json:"chapter_name"` // used with only get call
+	Concepts         []Concept     `json:"concepts"`     // used with only get call
+	DifficultyLevel  string        `json:"difficulty_level"`
+	TagIDs           []int         `json:"tag_ids"`
+	TagNames         []string
+	StatusID         int8         `json:"cms_status_id"`
+	Tests            []LinkedTest `json:"tests,omitempty"` // only in the by-id get call
 }
 
 type LinkedTest struct {
@@ -64,6 +70,19 @@ func (p *Problem) HasLinkedTestsInfo() bool {
 	return p.Tests != nil
 }
 
+// ResolvedCurriculumID returns the curriculum a problem belongs to, regardless of which shape
+// carried it: CurriculumID is what a GET response sets, while CurriculumGrades is what a
+// create/update request body sets (via the editor's curriculum_grades payload).
+func (p *Problem) ResolvedCurriculumID() int16 {
+	if p.CurriculumID != 0 {
+		return p.CurriculumID
+	}
+	if len(p.CurriculumGrades) > 0 {
+		return p.CurriculumGrades[0].CurriculumID
+	}
+	return 0
+}
+
 func (p *Problem) GetLangVersion(langCode string) *LangVersion {
 	for i := range p.LangVersions {
 		if p.LangVersions[i].LangCode == langCode {
@@ -71,6 +90,12 @@ func (p *Problem) GetLangVersion(langCode string) *LangVersion {
 		}
 	}
 	return nil
+}
+
+// NeedsVerification reports whether the problem carries the "needs verification" tag.
+// TagNames must already be filled in by the handler.
+func (p *Problem) NeedsVerification() bool {
+	return slices.Contains(p.TagNames, constants.TagNeedsVerification)
 }
 
 func (p Problem) DisplayDifficulty() int8 {

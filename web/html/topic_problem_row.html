@@ -10,7 +10,10 @@
             hx-get="/problem?id={{.ID}}" hx-params="none" hx-target="body"
             hx-push-url="true">{{.Code}}
         </a></td>
-    <td class="p-2 overflow-hidden text-ellipsis">{{(.GetLangVersion "en").MetaData.Question}}</td>
+    <td class="p-2 overflow-hidden text-ellipsis">
+        {{ if .NeedsVerification }}<span class="badge-warning mr-2" title="Topic assigned by AI: check it, then remove this tag on the edit screen">needs verification</span>{{ end }}
+        {{(.GetLangVersion "en").MetaData.Question}}
+    </td>
     <td class="p-2 text-center space-x-4 whitespace-nowrap">
         <button class="action-button" hx-get="/problems/edit-problem?id={{.ID}}"
             hx-params="none" hx-target="body" hx-push-url="true">
