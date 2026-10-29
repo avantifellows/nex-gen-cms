@@ -1,5 +1,7 @@
 {{ range . }}
-<tr class="border-b" data-topic-ids="{{range $i, $id := .TopicIDs}}{{if $i}},{{end}}{{$id}}{{end}}">
+<tr class="border-b" data-topic-ids="{{range $i, $id := .TopicIDs}}{{if $i}},{{end}}{{$id}}{{end}}"
+    data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
+    data-skill-ids="{{range $i, $id := .SkillIDs}}{{if $i}},{{end}}{{$id}}{{end}}" data-created="{{.CreatedDate}}">
     <td class="p-2 text-center">
         <input type="checkbox" name="select-problem" value="{{.ID}}">
     </td>

@@ -28,6 +28,7 @@ type Problem struct {
 	TagIDs          []int         `json:"tag_ids"`
 	TagNames        []string
 	StatusID        int8 `json:"cms_status_id"`
+	InsertedAt      string `json:"inserted_at,omitempty"` // creation time, as db-service sends it (read only)
 }
 
 type LangVersion struct {
@@ -74,6 +75,18 @@ func (p Problem) DisplayDifficulty() int8 {
 	default:
 		return 1
 	}
+}
+
+// dateLength is the length of a day written as YYYY-MM-DD, e.g. "2006-01-02"
+const dateLength = 10
+
+// CreatedDate returns the day the problem was created as YYYY-MM-DD (the start of InsertedAt), or "" when
+// db-service sent no creation time.
+func (p Problem) CreatedDate() string {
+	if len(p.InsertedAt) < dateLength {
+		return ""
+	}
+	return p.InsertedAt[:dateLength]
 }
 
 func (p *Problem) GetChapterNameByLang(langCode string) string {

@@ -44,7 +44,7 @@ func renderAddProblem(t *testing.T, data dto.ProblemData) string {
 }
 
 func TestChapterProblemsTabHasAddProblemButton(t *testing.T) {
-	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html", "../../web/html/problem_type_options.html"))
 	var out bytes.Buffer
 	if err := tmpl.Execute(&out, "12"); err != nil {
 		t.Fatalf("execute: %v", err)

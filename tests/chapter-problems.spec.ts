@@ -36,8 +36,8 @@ test('the chapter Problems tab lists all problems and narrows them locally by an
     await route.fulfill({
       status: 200,
       contentType: 'text/html',
-      body: `<tr data-topic-ids="7"><td><input type="checkbox" name="select-problem" value="1"></td><td>P1</td><td>First</td><td></td></tr>
-             <tr data-topic-ids=""><td><input type="checkbox" name="select-problem" value="2"></td><td>P2</td><td>Second</td><td></td></tr>`,
+      body: `<tr data-topic-ids="7" data-subtype="integer_type" data-difficulty="hard" data-skill-ids="3,4" data-created="2026-10-20"><td><input type="checkbox" name="select-problem" value="1"></td><td>P1</td><td>First</td><td></td></tr>
+             <tr data-topic-ids="" data-subtype="matrix_match" data-difficulty="easy" data-skill-ids="" data-created="2026-10-28"><td><input type="checkbox" name="select-problem" value="2"></td><td>P2</td><td>Second</td><td></td></tr>`,
     });
   });
 
@@ -65,6 +65,26 @@ test('the chapter Problems tab lists all problems and narrows them locally by an
   await expect(page.locator('#problemTableBody tr:not(.hidden)')).toHaveCount(1);
   await page.selectOption('#problems-topic-filter', '');
   await expect(page.locator('#problemTableBody tr:not(.hidden)')).toHaveCount(2);
+
+  // the other filters narrow the same loaded rows, and combine
+  const visibleRows = page.locator('#problemTableBody tr:not(.hidden)');
+  await page.selectOption('#problems-type-filter', 'matrix_match');
+  await expect(visibleRows).toHaveCount(1);
+  await page.selectOption('#problems-type-filter', '');
+  await page.selectOption('#problems-difficulty-filter', 'hard');
+  await expect(visibleRows).toHaveCount(1);
+  await page.selectOption('#problems-difficulty-filter', '');
+
+  // the start and end day are inclusive
+  await page.fill('#problems-start-date', '2026-10-21');
+  await expect(visibleRows).toHaveCount(1);
+  await page.fill('#problems-end-date', '2026-10-27');
+  await expect(visibleRows).toHaveCount(0);
+  await page.fill('#problems-end-date', '2026-10-28');
+  await expect(visibleRows).toHaveCount(1);
+  await page.fill('#problems-start-date', '');
+  await page.fill('#problems-end-date', '');
+  await expect(visibleRows).toHaveCount(2);
   expect(problemRequests.length).toBe(1);
 });
 

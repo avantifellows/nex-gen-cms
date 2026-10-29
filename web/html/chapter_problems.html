@@ -28,6 +28,35 @@
 
     </div>
 
+    <!-- More filters: like the topic filter they only hide rows of the loaded list, with no request. Blank = no
+         filter; the dates are inclusive and compare with the day a problem was created. -->
+    <div class="flex flex-wrap items-end gap-3 mb-4">
+        <select id="problems-type-filter" class="form-select w-auto" aria-label="Problem type">
+            <option value="" selected>All Types</option>
+            {{ template "problem_type_options" }}
+        </select>
+
+        <select id="problems-difficulty-filter" class="form-select w-auto" aria-label="Difficulty level">
+            <option value="" selected>All Levels</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+
+        <select id="problems-skill-filter" class="form-select w-auto" aria-label="Skill"
+            hx-get="/api/skills" hx-trigger="load[document.getElementById('problems-skill-filter').options.length < 2]"
+            hx-target="this" hx-swap="beforeend">
+            <option value="" selected>All Skills</option>
+        </select>
+
+        <label class="text-sm text-ink-muted">Start date
+            <input type="date" id="problems-start-date" class="form-input w-auto">
+        </label>
+        <label class="text-sm text-ink-muted">End date
+            <input type="date" id="problems-end-date" class="form-input w-auto">
+        </label>
+    </div>
+
     <div class="card overflow-hidden">
         <table class="app-table">
             <colgroup>
@@ -53,7 +82,7 @@
                 hx-indicator="#chapter-problems-loader" hx-disinherit="hx-indicator" hx-trigger="refreshProblems"
                 hx-get="/api/chapter/problems?chapter-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
                 hx-on::before-request="if (event.detail.elt === this) this.innerHTML=''"
-                hx-on::after-swap="if (event.detail.elt === this) applyTopicFilter()" data-mathjax="true">
+                hx-on::after-swap="if (event.detail.elt === this) applyFilters()" data-mathjax="true">
                 <!-- Rows will be dynamically inserted here -->
             </tbody>
         </table>
@@ -113,24 +142,47 @@
         }
     }
 
-    var topicFilter = document.getElementById("problems-topic-filter");
+    // every filter, by name: the topic one above the table, the others in the row below it
+    var filterEls = {
+        topic: document.getElementById("problems-topic-filter"),
+        type: document.getElementById("problems-type-filter"),
+        difficulty: document.getElementById("problems-difficulty-filter"),
+        skill: document.getElementById("problems-skill-filter"),
+        from: document.getElementById("problems-start-date"),
+        to: document.getElementById("problems-end-date"),
+    };
 
     var getRows = () => tbody.querySelectorAll('tr[data-topic-ids]');
 
-    // Only the rows of the chosen topic stay visible (no topic = all rows). A hidden row is unchecked, so that
-    // Move Problems can never carry a problem the user can no longer see.
-    function applyTopicFilter() {
-        const topicId = topicFilter.value;
-        tbody.setAttribute('data-topic-filter', topicId);
+    var currentFilters = () =>
+        Object.fromEntries(Object.entries(filterEls).map(([name, el]) => [name, el.value]));
+
+    // A row stays when it passes every filter that is set. A problem without a creation day does not pass a date.
+    function rowMatches(row, filters) {
+        const hasId = (ids, id) => ids.split(',').includes(id);
+        const created = row.dataset.created;
+        return (!filters.topic || hasId(row.dataset.topicIds, filters.topic))
+            && (!filters.type || row.dataset.subtype === filters.type)
+            && (!filters.difficulty || row.dataset.difficulty === filters.difficulty)
+            && (!filters.skill || hasId(row.dataset.skillIds, filters.skill))
+            && (!filters.from || (created && created >= filters.from))
+            && (!filters.to || (created && created <= filters.to));
+    }
+
+    // Only the rows that pass the filters stay visible. A hidden row is unchecked, so that Move Problems can
+    // never carry a problem the user can no longer see.
+    function applyFilters() {
+        const filters = currentFilters();
+        tbody.setAttribute('data-filters', JSON.stringify(filters));
         getRows().forEach(row => {
-            const show = !topicId || row.dataset.topicIds.split(',').includes(topicId);
+            const show = rowMatches(row, filters);
             row.classList.toggle('hidden', !show);
             if (!show) row.querySelector('input[name="select-problem"]').checked = false;
         });
         updateHeaderState();
     }
 
-    topicFilter.addEventListener('change', applyTopicFilter);
+    Object.values(filterEls).forEach(el => el.addEventListener('change', applyFilters));
 
     var getCheckboxes = () =>
         tbody.querySelectorAll('tr:not(.hidden) input[name="select-problem"]');
@@ -171,8 +223,9 @@
     // Back navigation rebuilds this page from saved HTML with its rows already loaded: only re-attach what
     // the HTML cannot keep, and reload just when a problem was added, edited or deleted meanwhile.
     function restoreChapterProblems() {
-        // the saved HTML does not keep the selected topic, but the tbody's attribute does
-        topicFilter.value = tbody.getAttribute('data-topic-filter') || '';
+        // the saved HTML does not keep the chosen filters, but the tbody's attribute does
+        const saved = JSON.parse(tbody.getAttribute('data-filters') || '{}');
+        Object.entries(filterEls).forEach(([name, el]) => el.value = saved[name] || '');
 
         if (sessionStorage.getItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY)) {
             sessionStorage.removeItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY);

@@ -46,7 +46,7 @@ func TestChapterProblemsQuery(t *testing.T) {
 }
 
 func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
-	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html", "../../web/html/problem_type_options.html"))
 	var out bytes.Buffer
 	if err := tmpl.Execute(&out, "12"); err != nil {
 		t.Fatalf("execute: %v", err)
@@ -83,7 +83,7 @@ func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
 // The chapter's problems load in one request and the topic filter works on the loaded rows, so the table
 // must not be paged: no limit, no offset, no infinite scroll, and no topic value sent to the server.
 func TestChapterProblemsTemplateIsNotPaged(t *testing.T) {
-	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html", "../../web/html/problem_type_options.html"))
 	var out bytes.Buffer
 	if err := tmpl.Execute(&out, "12"); err != nil {
 		t.Fatalf("execute: %v", err)
@@ -104,10 +104,10 @@ func TestChapterProblemsTemplateIsNotPaged(t *testing.T) {
 		// row buttons must not inherit it
 		`hx-indicator="#chapter-problems-loader" hx-disinherit="hx-indicator"`,
 		`<div id="chapter-problems-loader" class="justify-center `,
-		// a topic change and every (re)load narrow the rows locally
-		`topicFilter.addEventListener('change', applyTopicFilter);`,
-		`hx-on::after-swap="if (event.detail.elt === this) applyTopicFilter()"`,
-		`row.dataset.topicIds.split(',').includes(topicId)`,
+		// a filter change and every (re)load narrow the rows locally
+		`Object.values(filterEls).forEach(el => el.addEventListener('change', applyFilters));`,
+		`hx-on::after-swap="if (event.detail.elt === this) applyFilters()"`,
+		`hasId(row.dataset.topicIds, filters.topic)`,
 		// a hidden row is unchecked, so Move Problems cannot carry a problem the user cannot see
 		`row.querySelector('input[name="select-problem"]').checked = false`,
 		`tr:not(.hidden) input[name="select-problem"]`,
@@ -143,6 +143,76 @@ func TestChapterProblemRowCarriesTopicIDs(t *testing.T) {
 	}
 }
 
+// Besides the topic, each row carries what the other local filters read: type, difficulty, skills and the
+// day it was created (empty when db-service sent none).
+func TestChapterProblemRowCarriesFilterValues(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problem_row.html"))
+	problems := []*models.Problem{
+		{ID: 1, Code: "P1", Subtype: "integer_type", DifficultyLevel: "hard", SkillIDs: []int16{3, 4},
+			InsertedAt: "2026-10-28T09:30:00", LangVersions: []models.LangVersion{{LangCode: "en"}}},
+		{ID: 2, Code: "P2", LangVersions: []models.LangVersion{{LangCode: "en"}}},
+	}
+
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, problems); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	html := out.String()
+
+	for _, want := range []string{
+		`data-subtype="integer_type"`, `data-difficulty="hard"`, `data-skill-ids="3,4"`, `data-created="2026-10-28"`,
+		`data-subtype=""`, `data-difficulty=""`, `data-skill-ids=""`, `data-created=""`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("rendered rows are missing %q:\n%s", want, html)
+		}
+	}
+}
+
+func TestProblemCreatedDate(t *testing.T) {
+	tests := map[string]string{
+		"2026-10-28T09:30:00":    "2026-10-28",
+		"2026-10-28T09:30:00.12Z": "2026-10-28",
+		"2026-10-28":             "2026-10-28",
+		"":                       "",
+		"2026-10":                "",
+	}
+	for insertedAt, want := range tests {
+		if got := (models.Problem{InsertedAt: insertedAt}).CreatedDate(); got != want {
+			t.Errorf("CreatedDate(%q) = %q, want %q", insertedAt, got, want)
+		}
+	}
+}
+
+// The filters beside the topic one: type, difficulty, skill, and the start and end day. They only hide rows.
+func TestChapterProblemsTemplateHasTheOtherFilters(t *testing.T) {
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html", "../../web/html/problem_type_options.html"))
+	var out bytes.Buffer
+	if err := tmpl.Execute(&out, "12"); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	html := out.String()
+
+	for _, want := range []string{
+		`id="problems-type-filter"`, `<option value="" selected>All Types</option>`, `value="mcq_single_answer"`,
+		`id="problems-difficulty-filter"`, `<option value="easy">Easy</option>`, `<option value="hard">Hard</option>`,
+		// the skill options load once, and only when the page does not have them yet (Back restores them)
+		`id="problems-skill-filter"`,
+		`hx-get="/api/skills" hx-trigger="load[document.getElementById('problems-skill-filter').options.length < 2]"`,
+		`hx-swap="beforeend"`,
+		`<input type="date" id="problems-start-date"`, `<input type="date" id="problems-end-date"`,
+		// the date range is inclusive, on the day a problem was created
+		`created >= filters.from`, `created <= filters.to`,
+		// the chosen filters are kept on the table, so Back can put them back
+		`tbody.setAttribute('data-filters', JSON.stringify(filters));`,
+		`JSON.parse(tbody.getAttribute('data-filters') || '{}')`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("rendered tab is missing %q", want)
+		}
+	}
+}
+
 func TestTopicDropdownAllTemplate(t *testing.T) {
 	tmpl := template.Must(template.New("topic_dropdown_all.html").Funcs(template.FuncMap{"getName": getTopicName}).
 		ParseFiles("../../web/html/topic_dropdown_all.html"))
@@ -170,7 +240,7 @@ func TestTopicDropdownAllTemplate(t *testing.T) {
 
 // Back navigation restores the saved page, so nothing on it may re-fetch what it already has.
 func TestChapterProblemsTemplateRestoresFromHistory(t *testing.T) {
-	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html", "../../web/html/problem_type_options.html"))
 	var out bytes.Buffer
 	if err := tmpl.Execute(&out, "12"); err != nil {
 		t.Fatalf("execute: %v", err)
@@ -183,7 +253,7 @@ func TestChapterProblemsTemplateRestoresFromHistory(t *testing.T) {
 		// the script tells a fresh load from a restored one and restores the topic from the saved params
 		`if (tbody.children.length === 0) {`,
 		`function restoreChapterProblems() {`,
-		`topicFilter.value = tbody.getAttribute('data-topic-filter') || '';`,
+		`Object.entries(filterEls).forEach(([name, el]) => el.value = saved[name] || '');`,
 		// selected rows survive the history snapshot: every change is mirrored into the saved attribute
 		`var syncCheckedAttributes = () =>`,
 		`cb.toggleAttribute('checked', cb.checked)`,
@@ -304,7 +374,7 @@ func TestChapterScreenOpensTheRequestedTabOnce(t *testing.T) {
 
 // The toolbar reads left to right: the topic filter, then adding a problem, then moving the selected ones.
 func TestChapterProblemsToolbarOrder(t *testing.T) {
-	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html"))
+	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html", "../../web/html/problem_type_options.html"))
 	var out bytes.Buffer
 	if err := tmpl.Execute(&out, "12"); err != nil {
 		t.Fatalf("execute: %v", err)
