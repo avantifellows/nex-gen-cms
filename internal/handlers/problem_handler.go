@@ -379,9 +379,8 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 // written a response — the caller should return without saving. Also writes an error response
 // and returns true if the check itself fails, so a flaky similarity check never masks the save.
 //
-// curriculumID restricts matches to problems mapped to that curriculum, so a look-alike from an
-// unrelated curriculum no longer blocks a save; 0 falls back to db-service's cross-curriculum
-// matching.
+// curriculumID restricts matches to that curriculum; pass a real id, as db-service treats 0 as
+// "curriculum 0" (matches nothing) and only skips the filter when it is absent.
 //
 // excludeProblemID drops a match against that problem's own id — needed on edit, where the
 // problem's own already-saved text otherwise self-matches at ~100%. Pass 0 on create, where
