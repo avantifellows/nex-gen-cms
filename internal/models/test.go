@@ -132,6 +132,24 @@ type OptionLayout struct {
 	Cols int8 `json:"cols"`
 }
 
+// ProblemsBeforeSubject counts every listed problem (compulsory and optional) in the
+// subjects preceding the one at subjectIndex, to continue serial numbers across subjects.
+func (t Test) ProblemsBeforeSubject(subjectIndex int) int {
+	total := 0
+	for i, subject := range t.TypeParams.Subjects {
+		if i >= subjectIndex {
+			break
+		}
+		for _, section := range subject.Sections {
+			total += len(section.Compulsory.Problems)
+			if section.Optional != nil {
+				total += len(section.Optional.Problems)
+			}
+		}
+	}
+	return total
+}
+
 // Method to count total problems
 func (t Test) ProblemCount() int {
 	total := 0
