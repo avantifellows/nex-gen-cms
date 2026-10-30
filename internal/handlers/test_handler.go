@@ -583,9 +583,10 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 		return p.SubjectID == subjectId
 	}).([]*models.Problem)
 
-	// Passing custom function add to use in template for serial number by adding 1 to index
+	// start is the number of problems in the subjects before this one, so numbering continues across subjects
+	start, _ := strconv.Atoi(urlVals.Get("start"))
 	views.ExecuteTemplate(testProblemRowTemplate, responseWriter, problems, template.FuncMap{
-		"add": utils.Add,
+		"sno": func(index int) int { return start + index + 1 },
 	})
 }
 
