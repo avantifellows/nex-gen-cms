@@ -26,6 +26,11 @@
 
         </button>
 
+        <label class="inline-flex items-center gap-2 text-sm text-ink-secondary ml-auto cursor-pointer">
+            <input type="checkbox" id="problems-needs-verification" name="needs-verification" class="accent-accent">
+            Needs verification only
+        </label>
+
     </div>
 
     <!-- More filters: like the topic filter they only hide rows of the loaded list, with no request. Blank = no
@@ -150,12 +155,13 @@
         skill: document.getElementById("problems-skill-filter"),
         from: document.getElementById("problems-start-date"),
         to: document.getElementById("problems-end-date"),
+        needsVerification: document.getElementById("problems-needs-verification")
     };
 
     var getRows = () => tbody.querySelectorAll('tr[data-topic-ids]');
 
     var currentFilters = () =>
-        Object.fromEntries(Object.entries(filterEls).map(([name, el]) => [name, el.value]));
+        Object.fromEntries(Object.entries(filterEls).map(([name, el]) => [name, el.type === 'checkbox' ? el.checked : el.value]));
 
     // A row stays when it passes every filter that is set. A problem without a creation day does not pass a date.
     function rowMatches(row, filters) {
@@ -166,7 +172,8 @@
             && (!filters.difficulty || row.dataset.difficulty === filters.difficulty)
             && (!filters.skill || hasId(row.dataset.skillIds, filters.skill))
             && (!filters.from || (created && created >= filters.from))
-            && (!filters.to || (created && created <= filters.to));
+            && (!filters.to || (created && created <= filters.to))
+            && (!filters.needsVerification || row.dataset.needsVerification === 'true');
     }
 
     // Only the rows that pass the filters stay visible. A hidden row is unchecked, so that Move Problems can
@@ -225,7 +232,10 @@
     function restoreChapterProblems() {
         // the saved HTML does not keep the chosen filters, but the tbody's attribute does
         const saved = JSON.parse(tbody.getAttribute('data-filters') || '{}');
-        Object.entries(filterEls).forEach(([name, el]) => el.value = saved[name] || '');
+        Object.entries(filterEls).forEach(([name, el]) => {
+            if (el.type === 'checkbox') el.checked = !!saved[name];
+            else el.value = saved[name] || '';
+        });
 
         if (sessionStorage.getItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY)) {
             sessionStorage.removeItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY);

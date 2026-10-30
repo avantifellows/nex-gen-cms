@@ -262,7 +262,7 @@
                 <option value="" selected disabled hidden>Select Year</option>
                 {{ end }}
 
-                {{range $i := seq 16 currentYear}}
+                {{range $i := seq 25 (add currentYear 1)}}
                 <option {{if eq $year (printf "%d" $i)}}selected{{end}}>{{$i}}</option>
                 {{end}}
             </select>

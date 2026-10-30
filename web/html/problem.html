@@ -126,6 +126,18 @@
                 {{ end }}
             {{ end }}
         </div>
+        {{ if .ProblemPtr.HasLinkedTestsInfo }}
+        <h2 class="section-title mt-6">Problem is referred in following tests</h2>
+        <p class="mt-2 text-ink font-mono">
+            {{- range $i, $t := .ProblemPtr.Tests -}}
+                {{- if $i }}, {{ end -}}
+                <a href="/test?id={{ $t.TestID }}" target="_blank" rel="noopener"
+                   class="text-accent hover:text-accent-hover underline">{{ $t.TestCode }}</a>
+            {{- else -}}
+                <span class="text-ink-muted italic font-sans">Not referred in any test.</span>
+            {{- end -}}
+        </p>
+        {{ end }}
     </div>
 </div>
 <script>

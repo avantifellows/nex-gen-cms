@@ -253,7 +253,8 @@ func TestChapterProblemsTemplateRestoresFromHistory(t *testing.T) {
 		// the script tells a fresh load from a restored one and restores the topic from the saved params
 		`if (tbody.children.length === 0) {`,
 		`function restoreChapterProblems() {`,
-		`Object.entries(filterEls).forEach(([name, el]) => el.value = saved[name] || '');`,
+		`Object.entries(filterEls).forEach(([name, el]) => {`,
+		`if (el.type === 'checkbox') el.checked = !!saved[name];`,
 		// selected rows survive the history snapshot: every change is mirrored into the saved attribute
 		`var syncCheckedAttributes = () =>`,
 		`cb.toggleAttribute('checked', cb.checked)`,
