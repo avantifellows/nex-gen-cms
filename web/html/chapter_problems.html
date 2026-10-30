@@ -1,14 +1,5 @@
 <div>
     <div class="flex flex-wrap items-center gap-3 mb-4">
-        <!-- Optional single-topic filter: lists only this chapter's topics; the blank "All Topics" option shows
-             every problem of the chapter. It narrows the loaded rows in the browser, with no request. -->
-        <select id="problems-topic-filter" class="form-select w-auto"
-            hx-get="/api/topics?view=dropdown-all&id={{.}}" hx-include="#curriculum-dropdown"
-            hx-trigger="load[document.getElementById('problems-topic-filter').options.length < 2]"
-            hx-target="this" hx-swap="innerHTML">
-            <option value="" selected>All Topics</option>
-        </select>
-
         <button class="btn-primary btn-sm" hx-target="body"
             hx-get="/chapter/add-problem?chapter_id={{.}}" hx-push-url="true">+ Add New Problem
         </button>
@@ -25,6 +16,15 @@
             </span>
 
         </button>
+
+        <!-- Optional single-topic filter: lists only this chapter's topics; the blank "All Topics" option shows
+             every problem of the chapter. It narrows the loaded rows in the browser, with no request. -->
+        <select id="problems-topic-filter" class="form-select w-auto"
+            hx-get="/api/topics?view=dropdown-all&id={{.}}" hx-include="#curriculum-dropdown"
+            hx-trigger="load[document.getElementById('problems-topic-filter').options.length < 2]"
+            hx-target="this" hx-swap="innerHTML">
+            <option value="" selected>All Topics</option>
+        </select>
 
         <label class="inline-flex items-center gap-2 text-sm text-ink-secondary ml-auto cursor-pointer">
             <input type="checkbox" id="problems-needs-verification" name="needs-verification" class="accent-accent">

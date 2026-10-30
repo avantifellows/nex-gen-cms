@@ -51,9 +51,10 @@ test('the chapter Problems tab lists all problems and narrows them locally by an
   expect(problemRequests[0]).not.toContain('limit=');
   expect(problemRequests[0]).not.toContain('topic-dropdown');
 
-  // the first row of controls: the topic filter, then the add button
+  // the first row of controls: the buttons, then the topic filter
   const controls = page.locator('#problems-topic-filter, button:has-text("+ Add New Problem")');
-  await expect(controls.first()).toHaveAttribute('id', 'problems-topic-filter');
+  await expect(controls.first()).toHaveText(/\+ Add New Problem/);
+  await expect(controls.last()).toHaveAttribute('id', 'problems-topic-filter');
 
   // the Move button needs a selection
   await expect(page.locator('#move-problems-btn')).toBeDisabled();

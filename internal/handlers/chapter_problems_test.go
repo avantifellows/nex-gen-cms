@@ -373,7 +373,7 @@ func TestChapterScreenOpensTheRequestedTabOnce(t *testing.T) {
 	}
 }
 
-// The toolbar reads left to right: the topic filter, then adding a problem, then moving the selected ones.
+// The toolbar reads left to right: adding a problem, then moving the selected ones, then the topic filter.
 func TestChapterProblemsToolbarOrder(t *testing.T) {
 	tmpl := template.Must(template.ParseFiles("../../web/html/chapter_problems.html", "../../web/html/problem_type_options.html"))
 	var out bytes.Buffer
@@ -388,7 +388,7 @@ func TestChapterProblemsToolbarOrder(t *testing.T) {
 	if filterAt < 0 || addAt < 0 || moveAt < 0 {
 		t.Fatalf("the toolbar is missing a control: filter=%d add=%d move=%d", filterAt, addAt, moveAt)
 	}
-	if !(filterAt < addAt && addAt < moveAt) {
-		t.Errorf("expected the topic filter, then the add button, then the move button")
+	if !(addAt < moveAt && moveAt < filterAt) {
+		t.Errorf("expected the add button, then the move button, then the topic filter")
 	}
 }
