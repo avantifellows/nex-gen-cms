@@ -162,8 +162,21 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 	resourceSubtype := request.FormValue("subtype")
 	srcLink := request.FormValue("src_link")
 
-	dummyResourcePtr := &models.Resource{}
-	resourceMap := dummyResourcePtr.BuildMap(resourceCode, resourceName, resourceType, resourceSubtype, srcLink)
+	// Build the patch from the stored resource, not an empty one: type_params
+	// is replaced wholesale, so any key the form does not carry (sashakt_link)
+	// would otherwise be dropped on every edit. Read it from the API rather
+	// than the cached list, which can predate a write made elsewhere -- a
+	// merge onto a stale copy would drop the key just the same.
+	existingResourcePtr, err := h.service.GetObject(resourceIdStr,
+		func(resource *models.Resource) bool {
+			return resource.ID == int(resourceId)
+		}, resourcesKey, resourcesEndPoint, true)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching resource: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	resourceMap := existingResourcePtr.BuildMap(resourceCode, resourceName, resourceType, resourceSubtype, srcLink)
 
 	_, err = h.service.UpdateObject(resourceIdStr, resourcesEndPoint, resourceMap, resourcesKey,
 		func(resource *models.Resource) bool {
