@@ -1,6 +1,9 @@
 package models
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+)
 
 type Resource struct {
 	ID               int                `json:"id,omitempty"`
@@ -18,6 +21,38 @@ type Resource struct {
 
 type ResourceTypeParams struct {
 	SrcLink string `json:"src_link,omitempty"`
+	// Keys the CMS does not model, such as sashakt_link. They are carried
+	// through a round trip so that editing a resource here does not drop
+	// whatever else is stored in type_params.
+	Extra map[string]any `json:"-"`
+}
+
+func (p *ResourceTypeParams) UnmarshalJSON(data []byte) error {
+	var all map[string]any
+	if err := json.Unmarshal(data, &all); err != nil {
+		return err
+	}
+
+	if srcLink, ok := all["src_link"].(string); ok {
+		p.SrcLink = srcLink
+	}
+	delete(all, "src_link")
+
+	if len(all) > 0 {
+		p.Extra = all
+	}
+	return nil
+}
+
+func (p ResourceTypeParams) MarshalJSON() ([]byte, error) {
+	all := make(map[string]any, len(p.Extra)+1)
+	for key, value := range p.Extra {
+		all[key] = value
+	}
+	if strings.TrimSpace(p.SrcLink) != "" {
+		all["src_link"] = p.SrcLink
+	}
+	return json.Marshal(all)
 }
 
 func NewResource(code string, name string, resourceType string, subtype string, srcLink string, chapterID int16, curriculumID int16, gradeID int8, subjectID int8) *Resource {
@@ -60,9 +95,9 @@ func (resourcePtr *Resource) BuildMap(code string, name string, resourceType str
 	}
 
 	if strings.TrimSpace(srcLink) != "" {
-		resourceMap["type_params"] = ResourceTypeParams{
-			SrcLink: srcLink,
-		}
+		typeParams := resourcePtr.TypeParams
+		typeParams.SrcLink = srcLink
+		resourceMap["type_params"] = typeParams
 	}
 
 	return resourceMap
