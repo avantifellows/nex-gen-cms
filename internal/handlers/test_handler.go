@@ -581,15 +581,15 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 
 	// start is the number of problems returned for the subjects before this one, so numbering
 	// continues across subjects without gaps even if type_params and the returned rows disagree
-	prevSubjectIds := map[int8]bool{}
+	prevSubjectIDs := map[int8]bool{}
 	for _, idStr := range strings.Split(urlVals.Get("prev_subject_ids"), ",") {
 		if id, err := utils.StringToIntType[int8](idStr); err == nil {
-			prevSubjectIds[id] = true
+			prevSubjectIDs[id] = true
 		}
 	}
 	start := 0
 	for _, p := range *problems {
-		if prevSubjectIds[p.SubjectID] {
+		if prevSubjectIDs[p.SubjectID] {
 			start++
 		}
 	}
