@@ -2,6 +2,8 @@ package models
 
 import (
 	"html/template"
+	"strconv"
+	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 )
@@ -132,22 +134,17 @@ type OptionLayout struct {
 	Cols int8 `json:"cols"`
 }
 
-// ProblemsBeforeSubject counts every listed problem (compulsory and optional) in the
-// subjects preceding the one at subjectIndex, to continue serial numbers across subjects.
-func (t Test) ProblemsBeforeSubject(subjectIndex int) int {
-	total := 0
+// SubjectIDsBefore returns the ids of the subjects preceding the one at subjectIndex, comma
+// separated, so the problems actually returned for them can be counted to continue serial numbers.
+func (t Test) SubjectIDsBefore(subjectIndex int) string {
+	ids := []string{}
 	for i, subject := range t.TypeParams.Subjects {
 		if i >= subjectIndex {
 			break
 		}
-		for _, section := range subject.Sections {
-			total += len(section.Compulsory.Problems)
-			if section.Optional != nil {
-				total += len(section.Optional.Problems)
-			}
-		}
+		ids = append(ids, strconv.Itoa(int(subject.SubjectID)))
 	}
-	return total
+	return strings.Join(ids, ",")
 }
 
 // Method to count total problems
