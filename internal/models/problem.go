@@ -3,6 +3,7 @@ package models
 import (
 	"html/template"
 	"slices"
+	"time"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 )
@@ -110,16 +111,23 @@ func (p Problem) DisplayDifficulty() int8 {
 	}
 }
 
-// dateLength is the length of a day written as YYYY-MM-DD, e.g. "2006-01-02"
-const dateLength = 10
+// istZone is where the CMS users are, so a problem's created day is the day on their calendar.
+var istZone = time.FixedZone("IST", 5*60*60+30*60)
 
-// CreatedDate returns the day the problem was created as YYYY-MM-DD (the start of InsertedAt), or "" when
-// db-service sent no creation time.
+// naiveUTCLayout is how db-service sends inserted_at: a UTC time with no zone, e.g. 2026-10-28T09:30:00
+const naiveUTCLayout = "2006-01-02T15:04:05"
+
+// CreatedDate returns the IST day the problem was created as YYYY-MM-DD, or "" when InsertedAt is empty or unreadable.
+// A zone-less InsertedAt is read as UTC.
 func (p Problem) CreatedDate() string {
-	if len(p.InsertedAt) < dateLength {
+	t, err := time.Parse(time.RFC3339, p.InsertedAt)
+	if err != nil {
+		t, err = time.Parse(naiveUTCLayout, p.InsertedAt)
+	}
+	if err != nil {
 		return ""
 	}
-	return p.InsertedAt[:dateLength]
+	return t.In(istZone).Format(time.DateOnly)
 }
 
 func (p *Problem) GetChapterNameByLang(langCode string) string {

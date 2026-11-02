@@ -171,11 +171,16 @@ func TestChapterProblemRowCarriesFilterValues(t *testing.T) {
 
 func TestProblemCreatedDate(t *testing.T) {
 	tests := map[string]string{
-		"2026-10-28T09:30:00":    "2026-10-28",
-		"2026-10-28T09:30:00.12Z": "2026-10-28",
-		"2026-10-28":             "2026-10-28",
-		"":                       "",
-		"2026-10":                "",
+		"2026-10-28T09:30:00":       "2026-10-28",
+		"2026-10-28T09:30:00.12Z":   "2026-10-28",
+		"2026-10-28T18:29:59":       "2026-10-28", // 23:59:59 IST
+		"2026-10-28T18:30:00":       "2026-10-29", // midnight IST: the next day
+		"2026-10-28T18:30:00.5":     "2026-10-29",
+		"2026-10-28T20:00:00Z":      "2026-10-29",
+		"2026-10-28T20:00:00+05:30": "2026-10-28",
+		"2026-10-28":                "",
+		"":                          "",
+		"2026-10":                   "",
 	}
 	for insertedAt, want := range tests {
 		if got := (models.Problem{InsertedAt: insertedAt}).CreatedDate(); got != want {
