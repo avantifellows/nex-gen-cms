@@ -355,7 +355,7 @@ func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, _ *ht
 }
 
 func (h *ProblemsHandler) LoadChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterIDStr := request.URL.Query().Get("chapterID")
+	chapterIDStr := request.URL.Query().Get("chapterId")
 	views.ExecuteTemplates(responseWriter, chapterIDStr, nil, chapterProblemsTemplate, problemTypeOptionsTemplate)
 }
 
