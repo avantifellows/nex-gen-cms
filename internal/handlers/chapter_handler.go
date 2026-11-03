@@ -31,7 +31,7 @@ const topicDropdownOptionalTemplate = "topic_dropdown_optional.html"
 const topicDropdownAllTemplate = "topic_dropdown_all.html"
 const topicChecklistTemplate = "topic_checklist.html"
 
-const CHAPTER_DROPDOWN_NAME = "chapter-dropdown"
+const ChapterDropdownName = "chapter-dropdown"
 const chapterPriorityOptionsTemplate = "chapter_priority_options.html"
 
 type ChaptersHandler struct {
@@ -258,7 +258,7 @@ func (h *ChaptersHandler) getChapter(request *http.Request) (*models.Chapter, in
 	urlVals := request.URL.Query()
 	chapterIdStr := urlVals.Get("id")
 	if chapterIdStr == "" {
-		chapterIdStr = urlVals.Get(CHAPTER_DROPDOWN_NAME)
+		chapterIdStr = urlVals.Get(ChapterDropdownName)
 	}
 	return handlerutils.GetChapterByID(chapterIdStr, h.chaptersService)
 }
@@ -339,7 +339,7 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 
 	selectedChapterPtr, code, err := h.getChapter(request)
 	if err != nil {
-		chapterDropdownVal := urlVals.Get(CHAPTER_DROPDOWN_NAME)
+		chapterDropdownVal := urlVals.Get(ChapterDropdownName)
 		/**
 		 * if "Select Chapter" default option is selected or its value is blank (on coming back from
 		 * single problem to add test screen sometimes it is blank) in add test screen,

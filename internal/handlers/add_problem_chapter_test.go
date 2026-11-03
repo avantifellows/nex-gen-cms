@@ -140,7 +140,7 @@ func TestAddProblemScreenShowsTopicsField(t *testing.T) {
 		html := renderAddProblem(t, data)
 		for _, want := range []string{
 			`<p class="form-label" id="topics-label">Topics</p>`,
-			// a scrollable list of a fixed height of about 7.5 rows (h-60 = 15rem), labelled by the heading above it
+			// a scrollable list of a fixed height of about 7.5 rows (h-60 = 15rem), labeled by the heading above it
 			`id="topics-checklist" role="group" aria-labelledby="topics-label"`,
 			`class="h-60 overflow-y-auto`,
 			`Loading topics...`,
@@ -176,7 +176,7 @@ func topicCoded(id int16, code string, name string) *models.Topic {
 	return topicPtr
 }
 
-// Each topic is one labelled checkbox row, and a chapter without topics says so instead of staying blank.
+// Each topic is one labeled checkbox row, and a chapter without topics says so instead of staying blank.
 func TestTopicChecklistTemplate(t *testing.T) {
 	html := renderTopicChecklist(t, dto.TopicChecklistData{
 		Topics: []*models.Topic{topicCoded(5, "T5", "Kinematics"), topicCoded(6, "T6", "Dynamics"), topicNamed(7, "Optics")},
@@ -470,8 +470,8 @@ func TestAddProblemScreenLayoutPutsSkillsBelowTypeAndTopicsOnTheRight(t *testing
 	}
 
 	// a five column grid: the left column (Type, Skills, Difficulty) takes two, the right column (Topics) three
-	if !(gridAt < leftColumnAt && leftColumnAt < typeAt && typeAt < skillsAt && skillsAt < difficultyAt &&
-		difficultyAt < rightColumnAt && rightColumnAt < topicsAt) {
+	if gridAt >= leftColumnAt || leftColumnAt >= typeAt || typeAt >= skillsAt || skillsAt >= difficultyAt ||
+		difficultyAt >= rightColumnAt || rightColumnAt >= topicsAt {
 		t.Errorf("expected Type, Skills and Difficulty in the left column, then Topics in the right one")
 	}
 
@@ -604,8 +604,8 @@ func TestAdditionalProblemBlockLayoutMatchesTheMainBlock(t *testing.T) {
 		}
 	}
 
-	if !(gridAt < leftColumnAt && leftColumnAt < skillsAt && skillsAt < difficultyAt &&
-		difficultyAt < rightColumnAt && rightColumnAt < topicsAt) {
+	if gridAt >= leftColumnAt || leftColumnAt >= skillsAt || skillsAt >= difficultyAt ||
+		difficultyAt >= rightColumnAt || rightColumnAt >= topicsAt {
 		t.Errorf("expected Skills and Difficulty in the left column, then Topics in the right one")
 	}
 }

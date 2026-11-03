@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -174,12 +175,12 @@ func (h *ProblemsHandler) enrichProblemTagNames(problem *models.Problem) error {
 // one topic (blank = all topics). No chapter chosen yet gives an empty list.
 func (h *ProblemsHandler) GetQuestionBankProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	urlValues := request.URL.Query()
-	chapterIdStr := urlValues.Get(CHAPTER_DROPDOWN_NAME)
-	if chapterIdStr == "" || chapterIdStr == "Select Chapter" {
+	chapterIDStr := urlValues.Get(ChapterDropdownName)
+	if chapterIDStr == "" || chapterIDStr == "Select Chapter" {
 		return
 	}
 
-	queryParams, err := chapterProblemsQuery(chapterIdStr, urlValues.Get(TOPIC_DROPDOWN_NAME))
+	queryParams, err := chapterProblemsQuery(chapterIDStr, urlValues.Get(TopicDropdownName))
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
@@ -192,8 +193,8 @@ func (h *ProblemsHandler) GetQuestionBankProblems(responseWriter http.ResponseWr
 
 	levels := urlValues["level"]
 	ptype := urlValues.Get("ptype-dropdown")
-	selectedIds := urlValues.Get("selected-ids")
-	filterProblems(problems, levels, ptype, selectedIds)
+	selectedIDs := urlValues.Get("selected-ids")
+	filterProblems(problems, levels, ptype, selectedIDs)
 
 	views.ExecuteTemplates(responseWriter, problems, nil, srcProblemRowParentTemplate, srcProblemRowTemplate)
 }
@@ -202,7 +203,7 @@ func (h *ProblemsHandler) GetQuestionBankProblems(responseWriter http.ResponseWr
 // chapter screen narrows them by topic in the browser without another request.
 func (h *ProblemsHandler) GetChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	urlValues := request.URL.Query()
-	queryParams, err := chapterProblemsQuery(urlValues.Get(CHAPTER_DROPDOWN_NAME), "")
+	queryParams, err := chapterProblemsQuery(urlValues.Get(ChapterDropdownName), "")
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
@@ -266,22 +267,22 @@ func paragraphSiblingsParam(urlValues url.Values) string {
 
 // chapterProblemsQuery builds db-service's problems query string. The chapter is required; the topic is an
 // optional filter, where a blank value means all topics.
-func chapterProblemsQuery(chapterIdStr string, topicIdStr string) (string, error) {
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+func chapterProblemsQuery(chapterIDStr string, topicIDStr string) (string, error) {
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
-		return "", fmt.Errorf("Invalid Chapter ID")
+		return "", errors.New("invalid chapter ID")
 	}
 
-	queryParams := fmt.Sprintf("?chapter_id=%d", chapterId)
-	if topicIdStr == "" {
+	queryParams := fmt.Sprintf("?chapter_id=%d", chapterID)
+	if topicIDStr == "" {
 		return queryParams, nil
 	}
 
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
+	topicID, err := utils.StringToIntType[int16](topicIDStr)
 	if err != nil {
-		return "", fmt.Errorf("Invalid Topic ID")
+		return "", errors.New("invalid topic ID")
 	}
-	return queryParams + fmt.Sprintf("&topic_id=%d", topicId), nil
+	return queryParams + fmt.Sprintf("&topic_id=%d", topicID), nil
 }
 
 func (h *ProblemsHandler) getTagsMap() (map[int]string, error) {
@@ -354,12 +355,12 @@ func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, _ *ht
 }
 
 func (h *ProblemsHandler) LoadChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterIdStr := request.URL.Query().Get("chapterId")
-	views.ExecuteTemplates(responseWriter, chapterIdStr, nil, chapterProblemsTemplate, problemTypeOptionsTemplate)
+	chapterIDStr := request.URL.Query().Get("chapterID")
+	views.ExecuteTemplates(responseWriter, chapterIDStr, nil, chapterProblemsTemplate, problemTypeOptionsTemplate)
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	chapterIDStr := request.URL.Query().Get(QUERY_PARAM_CHAPTER_ID)
+	chapterIDStr := request.URL.Query().Get(QueryParamChapterID)
 	selectedChapterPtr, code, err := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
@@ -703,7 +704,7 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	chapterIDStr := urlValues.Get(CHAPTER_DROPDOWN_NAME)
+	chapterIDStr := urlValues.Get(ChapterDropdownName)
 	selectedChapterPtr, code, err := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
@@ -752,8 +753,8 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	chapterIdStr := request.Form.Get(CHAPTER_DROPDOWN_NAME)
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	chapterIDStr := request.Form.Get(ChapterDropdownName)
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Invalid Chapter ID: %v", err), http.StatusBadRequest)
 		return
@@ -771,7 +772,7 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 			},
 		},
 		SubjectID: subjectId,
-		ChapterID: chapterId,
+		ChapterID: chapterID,
 		LangCode:  "en",
 	}
 

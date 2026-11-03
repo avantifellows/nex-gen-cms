@@ -21,9 +21,9 @@ func TestChapterProblemsQuery(t *testing.T) {
 	}{
 		{"chapter only (all topics)", "12", "", "?chapter_id=12", ""},
 		{"chapter with topic filter", "12", "45", "?chapter_id=12&topic_id=45", ""},
-		{"missing chapter", "", "45", "", "Invalid Chapter ID"},
-		{"non-numeric chapter", "abc", "", "", "Invalid Chapter ID"},
-		{"non-numeric topic", "12", "abc", "", "Invalid Topic ID"},
+		{"missing chapter", "", "45", "", "invalid chapter ID"},
+		{"non-numeric chapter", "abc", "", "", "invalid chapter ID"},
+		{"non-numeric topic", "12", "abc", "", "invalid topic ID"},
 	}
 
 	for _, tt := range tests {
@@ -55,8 +55,8 @@ func TestChapterProblemsTemplateUsesChapterEndpoint(t *testing.T) {
 
 	for _, want := range []string{
 		`hx-get="/api/chapter/problems?chapter-dropdown=12"`, // tbody refresh
-		`var chapterId = '12';`, // initial load script
-		`id="problemTableBody"`, // the move modal refreshes this id
+		`var chapterId = '12';`,                              // initial load script
+		`id="problemTableBody"`,                              // the move modal refreshes this id
 		// topic filter: loads this chapter's topics; its changes only hide rows, so no request carries its value
 		`hx-get="/api/topics?view=dropdown-all&id=12"`,
 		`hx-trigger="refreshProblems"`,
@@ -116,9 +116,9 @@ func TestChapterProblemsTemplateIsNotPaged(t *testing.T) {
 			t.Errorf("rendered tab is missing %q", want)
 		}
 	}
-	// the spinner centres itself
+	// the spinner centers itself
 	if !strings.Contains(html, `w-6 h-6 mx-auto border-4`) {
-		t.Errorf("the spinner must centre itself with mx-auto:\n%s", html)
+		t.Errorf("the spinner must center itself with mx-auto:\n%s", html)
 	}
 }
 
@@ -301,14 +301,14 @@ func TestChapterScreenDoesNotRefetchRestoredProblemsTab(t *testing.T) {
 // These screens change what the chapter's list shows, so each must flag it for reload on Back.
 func TestScreensFlagChapterProblemsForReload(t *testing.T) {
 	files := map[string]string{
-		"nav-tracker.js defines the key":                  "../../web/static/js/nav-tracker.js",
-		"add/edit problem save sets it":                   "../../web/html/add_problem.html",
-		"deleting a problem from its screen sets it":      "../../web/html/problem.html",
+		"nav-tracker.js defines the key":             "../../web/static/js/nav-tracker.js",
+		"add/edit problem save sets it":              "../../web/html/add_problem.html",
+		"deleting a problem from its screen sets it": "../../web/html/problem.html",
 	}
 	wants := map[string]string{
-		"nav-tracker.js defines the key":                  `REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY = "refreshChapterProblemsOnBack"`,
-		"add/edit problem save sets it":                   `sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1')`,
-		"deleting a problem from its screen sets it":      `sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1')`,
+		"nav-tracker.js defines the key":             `REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY = "refreshChapterProblemsOnBack"`,
+		"add/edit problem save sets it":              `sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1')`,
+		"deleting a problem from its screen sets it": `sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1')`,
 	}
 
 	for name, path := range files {
@@ -393,7 +393,7 @@ func TestChapterProblemsToolbarOrder(t *testing.T) {
 	if filterAt < 0 || addAt < 0 || moveAt < 0 {
 		t.Fatalf("the toolbar is missing a control: filter=%d add=%d move=%d", filterAt, addAt, moveAt)
 	}
-	if !(addAt < moveAt && moveAt < filterAt) {
+	if addAt >= moveAt || moveAt >= filterAt {
 		t.Errorf("expected the add button, then the move button, then the topic filter")
 	}
 }
