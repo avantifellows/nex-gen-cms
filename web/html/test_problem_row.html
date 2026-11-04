@@ -1,7 +1,7 @@
 {{ range $index, $item := . }}
 <tr class="border-b hover:bg-bg-card-alt text-center">
-    <!-- add is a custom function registered in test_handler.go -->
-    <td class="w-16 py-2 px-4">{{ add $index 1 }}</td>
+    <!-- sno is a custom function registered in test_handler.go; it continues numbering across subjects -->
+    <td class="w-16 py-2 px-4">{{ sno $index }}</td>
     <td class="w-32 px-4 text-accent hover:text-accent-hover hover:underline font-medium"><a href="/problem?id={{.ID}}"
             hx-get="/problem?id={{.ID}}" hx-target="body"
             hx-push-url="true">{{.Code}}</a>

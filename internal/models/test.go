@@ -2,6 +2,8 @@ package models
 
 import (
 	"html/template"
+	"strconv"
+	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 )
@@ -130,6 +132,19 @@ type ResProblem struct {
 type OptionLayout struct {
 	Rows int8 `json:"rows"`
 	Cols int8 `json:"cols"`
+}
+
+// SubjectIDsBefore returns the ids of the subjects preceding the one at subjectIndex, comma
+// separated, so the problems actually returned for them can be counted to continue serial numbers.
+func (t Test) SubjectIDsBefore(subjectIndex int) string {
+	ids := []string{}
+	for i, subject := range t.TypeParams.Subjects {
+		if i >= subjectIndex {
+			break
+		}
+		ids = append(ids, strconv.Itoa(int(subject.SubjectID)))
+	}
+	return strings.Join(ids, ",")
 }
 
 // Method to count total problems
