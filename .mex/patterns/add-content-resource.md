@@ -18,7 +18,7 @@ edges:
     condition: when the new route mutates data and needs an editor/admin guard
   - target: patterns/debug-htmx-rendering.md
     condition: when the new route renders blank or the fragment doesn't swap
-last_updated: 2026-10-05
+last_updated: 2026-10-28
 ---
 
 # Add a Content Resource / Route
@@ -52,6 +52,9 @@ Read `context/conventions.md` (naming, archive, multi-lang, cache-pointer rules)
 7. **Tests** — add a Playwright spec under `tests/` for new user flows.
 
 ### Gotchas
+- A resource that lives in a chapter with optional topics (problems) must not send a topic key when it is
+  moved or copied unless it means to change it: absent leaves the topics alone, an explicit `null` clears
+  them. See `MoveProblemsRequest` vs `MoveResourcesRequest`.
 - Filter `StatusID != constants.StatusArchived` in list handlers; archive (PATCH `cms_status_id`) instead
   of hard delete.
 - The cache holds `*[]*T` shared across requests — copy a pointer before mutating it per request.
