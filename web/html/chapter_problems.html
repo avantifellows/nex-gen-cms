@@ -1,0 +1,256 @@
+<div>
+    <div class="flex flex-wrap items-center gap-3 mb-4">
+        <button class="btn-primary btn-sm" hx-target="body"
+            hx-get="/chapter/add-problem?chapter_id={{.}}" hx-push-url="true">+ Add New Problem
+        </button>
+
+        <button id="move-problems-btn" hx-include='input[name="select-problem"]:checked'
+            class="btn-primary btn-sm group min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-bg-card-alt disabled:text-ink-muted"
+            hx-post="/problems/test-associations" hx-target="body"
+            hx-swap="beforeend" disabled>
+
+            <span class="group-[.htmx-request]:hidden">Move Problems</span>
+
+            <span class="hidden group-[.htmx-request]:inline-flex">
+                <div class="w-4 h-4 border-2 border-text-on-accent border-t-transparent rounded-full animate-spin"></div>
+            </span>
+
+        </button>
+
+        <!-- Optional single-topic filter: lists only this chapter's topics; the blank "All Topics" option shows
+             every problem of the chapter. It narrows the loaded rows in the browser, with no request. -->
+        <select id="problems-topic-filter" class="form-select w-auto"
+            hx-get="/api/topics?view=dropdown-all&id={{.}}" hx-include="#curriculum-dropdown"
+            hx-trigger="load[document.getElementById('problems-topic-filter').options.length < 2]"
+            hx-target="this" hx-swap="innerHTML">
+            <option value="" selected>All Topics</option>
+        </select>
+
+        <label class="inline-flex items-center gap-2 text-sm text-ink-secondary ml-auto cursor-pointer">
+            <input type="checkbox" id="problems-needs-verification" name="needs-verification" class="accent-accent">
+            Needs verification only
+        </label>
+
+    </div>
+
+    <!-- More filters: like the topic filter they only hide rows of the loaded list, with no request. Blank = no
+         filter; the dates are inclusive and compare with the day a problem was created. -->
+    <div class="flex flex-wrap items-end gap-3 mb-4">
+        <select id="problems-type-filter" class="form-select w-auto" aria-label="Problem type">
+            <option value="" selected>All Types</option>
+            {{ template "problem_type_options" }}
+        </select>
+
+        <select id="problems-difficulty-filter" class="form-select w-auto" aria-label="Difficulty level">
+            <option value="" selected>All Levels</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+        </select>
+
+        <select id="problems-skill-filter" class="form-select w-auto" aria-label="Skill"
+            hx-get="/api/skills" hx-trigger="load[document.getElementById('problems-skill-filter').options.length < 2]"
+            hx-target="this" hx-swap="beforeend">
+            <option value="" selected>All Skills</option>
+        </select>
+
+        <label class="text-sm text-ink-muted">Start date
+            <input type="date" id="problems-start-date" class="form-input w-auto">
+        </label>
+        <label class="text-sm text-ink-muted">End date
+            <input type="date" id="problems-end-date" class="form-input w-auto">
+        </label>
+    </div>
+
+    <div class="card overflow-hidden">
+        <table class="app-table">
+            <colgroup>
+                <col class="w-8">   <!-- Checkbox -->
+                <col class="w-24">   <!-- Code -->
+                <col>                    <!-- Text (flexes) -->
+                <col class="w-24">   <!-- Actions -->
+            </colgroup>
+            <thead>
+                <tr>
+                    <th class="text-center">
+                        <input type="checkbox" id="select-all" class="accent-accent">
+                    </th>
+                    <th>Code</th>
+                    <th>Text</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <!-- The chapter's problems load in one request. In before-request, condition is added to only clear
+                 the tbody when the request comes from the tbody itself (its own refresh on load); otherwise
+                 it reloads even on just clicking copy problem button for any row -->
+            <tbody id="problemTableBody" class="text-ink-muted text-sm" hx-sync="this:replace"
+                hx-indicator="#chapter-problems-loader" hx-disinherit="hx-indicator" hx-trigger="refreshProblems"
+                hx-get="/api/chapter/problems?chapter-dropdown={{.}}" hx-include="#curriculum-dropdown, #subject-dropdown"
+                hx-on::before-request="if (event.detail.elt === this) this.innerHTML=''"
+                hx-on::after-swap="if (event.detail.elt === this) applyFilters()" data-mathjax="true">
+                <!-- Rows will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+    <div id="chapter-problems-loader" class="justify-center py-4">
+        <div class="w-6 h-6 mx-auto border-4 border-border border-t-accent rounded-full animate-spin"></div>
+    </div>
+</div>
+<script>
+    var selectAll = document.getElementById("select-all");
+    var tbody = document.getElementById("problemTableBody");
+    var moveBtn = document.getElementById("move-problems-btn");
+
+    var chapterId = '{{.}}';
+
+    // Initial load via script, because load hx-trigger on tbody is not working when this screen is 
+    // opened from javascript after copy-save navigation 
+    function loadChapterProblems() {
+        const curriculum = document.getElementById('curriculum-dropdown').value;
+        const subject = document.getElementById('subject-dropdown').value;
+        if (!curriculum || !subject) return false;
+        // The curriculum and subject values are not added to this URL: because the tbody is the request
+        // source, htmx adds them itself from the tbody's hx-include (adding them here sent them twice).
+        htmx.ajax('GET', `/api/chapter/problems?chapter-dropdown=${chapterId}`, {
+            source: '#problemTableBody',
+            target: '#problemTableBody',
+            swap: 'innerHTML',
+        });
+        return true;
+    }
+
+    function filtersLoading() {
+        const curriculumEl = document.getElementById('curriculum-dropdown');
+        const subjectEl = document.getElementById('subject-dropdown');
+        return !curriculumEl.options[0] || curriculumEl.options[0].disabled
+            || !subjectEl.options[0] || subjectEl.options[0].disabled;
+    }
+
+    function initChapterProblemsList() {
+        const curriculumEl = document.getElementById('curriculum-dropdown');
+        const subjectEl = document.getElementById('subject-dropdown');
+
+        function tryLoad() {
+            if (loadChapterProblems()) cleanup();
+        }
+
+        function cleanup() {
+            curriculumEl.removeEventListener('onLoaded', tryLoad);
+            subjectEl.removeEventListener('onLoaded', tryLoad);
+        }
+
+        if (filtersLoading()) {
+            curriculumEl.addEventListener('onLoaded', tryLoad);
+            subjectEl.addEventListener('onLoaded', tryLoad);
+        } else {
+            tryLoad();
+        }
+    }
+
+    // every filter, by name: the topic one above the table, the others in the row below it
+    var filterEls = {
+        topic: document.getElementById("problems-topic-filter"),
+        type: document.getElementById("problems-type-filter"),
+        difficulty: document.getElementById("problems-difficulty-filter"),
+        skill: document.getElementById("problems-skill-filter"),
+        from: document.getElementById("problems-start-date"),
+        to: document.getElementById("problems-end-date"),
+        needsVerification: document.getElementById("problems-needs-verification")
+    };
+
+    var getRows = () => tbody.querySelectorAll('tr[data-topic-ids]');
+
+    var currentFilters = () =>
+        Object.fromEntries(Object.entries(filterEls).map(([name, el]) => [name, el.type === 'checkbox' ? el.checked : el.value]));
+
+    // A row stays when it passes every filter that is set. A problem without a creation day does not pass a date.
+    function rowMatches(row, filters) {
+        const hasId = (ids, id) => ids.split(',').includes(id);
+        const created = row.dataset.created;
+        return (!filters.topic || hasId(row.dataset.topicIds, filters.topic))
+            && (!filters.type || row.dataset.subtype === filters.type)
+            && (!filters.difficulty || row.dataset.difficulty === filters.difficulty)
+            && (!filters.skill || hasId(row.dataset.skillIds, filters.skill))
+            && (!filters.from || (created && created >= filters.from))
+            && (!filters.to || (created && created <= filters.to))
+            && (!filters.needsVerification || row.dataset.needsVerification === 'true');
+    }
+
+    // Only the rows that pass the filters stay visible. A hidden row is unchecked, so that Move Problems can
+    // never carry a problem the user can no longer see.
+    function applyFilters() {
+        const filters = currentFilters();
+        tbody.setAttribute('data-filters', JSON.stringify(filters));
+        getRows().forEach(row => {
+            const show = rowMatches(row, filters);
+            row.classList.toggle('hidden', !show);
+            if (!show) row.querySelector('input[name="select-problem"]').checked = false;
+        });
+        updateHeaderState();
+    }
+
+    Object.values(filterEls).forEach(el => el.addEventListener('change', applyFilters));
+
+    var getCheckboxes = () =>
+        tbody.querySelectorAll('tr:not(.hidden) input[name="select-problem"]');
+
+    // The history snapshot keeps a checkbox's state only as an attribute, so mirror every change there.
+    var syncCheckedAttributes = () =>
+        [selectAll, ...getCheckboxes()].forEach(cb => cb.toggleAttribute('checked', cb.checked));
+
+    var updateHeaderState = () => {
+        const all = getCheckboxes();
+        const checked = tbody.querySelectorAll('tr:not(.hidden) input[name="select-problem"]:checked');
+
+        selectAll.checked = all.length > 0 && all.length === checked.length;
+        selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+
+        // Enable / disable Move Problems button
+        moveBtn.disabled = checked.length === 0;
+        syncCheckedAttributes();
+    };
+
+    // Select All
+    selectAll.addEventListener("change", function () {
+        const checked = this.checked;
+        getCheckboxes().forEach(cb => {
+            cb.checked = checked;
+        });
+        selectAll.indeterminate = false;
+        moveBtn.disabled = !checked;
+        syncCheckedAttributes();
+    });
+
+    // Individual checkbox
+    tbody.addEventListener("change", function (e) {
+        if (e.target.name !== "select-problem") return;
+        updateHeaderState();
+    });
+
+    // Back navigation rebuilds this page from saved HTML with its rows already loaded: only re-attach what
+    // the HTML cannot keep, and reload just when a problem was added, edited or deleted meanwhile.
+    function restoreChapterProblems() {
+        // the saved HTML does not keep the chosen filters, but the tbody's attribute does
+        const saved = JSON.parse(tbody.getAttribute('data-filters') || '{}');
+        Object.entries(filterEls).forEach(([name, el]) => {
+            if (el.type === 'checkbox') el.checked = !!saved[name];
+            else el.value = saved[name] || '';
+        });
+
+        if (sessionStorage.getItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY)) {
+            sessionStorage.removeItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY);
+            // deferred, because while htmx swaps the page in, the page's dropdowns exist twice
+            setTimeout(initChapterProblemsList, 0);
+        } else {
+            updateHeaderState();
+        }
+    }
+
+    if (tbody.children.length === 0) {
+        // a fresh load is up to date already
+        sessionStorage.removeItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY);
+        initChapterProblemsList();
+    } else {
+        restoreChapterProblems();
+    }
+</script>

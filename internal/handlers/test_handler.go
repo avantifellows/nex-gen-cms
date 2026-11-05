@@ -579,13 +579,27 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 		return
 	}
 
+	// start is the number of problems returned for the subjects before this one, so numbering
+	// continues across subjects without gaps even if type_params and the returned rows disagree
+	prevSubjectIDs := map[int8]bool{}
+	for _, idStr := range strings.Split(urlVals.Get("prev_subject_ids"), ",") {
+		if id, err := utils.StringToIntType[int8](idStr); err == nil {
+			prevSubjectIDs[id] = true
+		}
+	}
+	start := 0
+	for _, p := range *problems {
+		if prevSubjectIDs[p.SubjectID] {
+			start++
+		}
+	}
+
 	*problems = funk.Filter(*problems, func(p *models.Problem) bool {
 		return p.SubjectID == subjectId
 	}).([]*models.Problem)
 
-	// Passing custom function add to use in template for serial number by adding 1 to index
 	views.ExecuteTemplate(testProblemRowTemplate, responseWriter, problems, template.FuncMap{
-		"add": utils.Add,
+		"sno": func(index int) int { return start + index + 1 },
 	})
 }
 

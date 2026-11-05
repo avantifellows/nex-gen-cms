@@ -3,6 +3,7 @@ package models
 import (
 	"html/template"
 	"slices"
+	"time"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 )
@@ -23,7 +24,7 @@ type Problem struct {
 	GradeID          int8              `json:"grade_id"`                    // used with only get call
 	SubjectID        int8              `json:"subject_id"`
 	Subject          Subject
-	TopicID          int16         `json:"topic_id"`
+	TopicIDs         []int16       `json:"topic_ids"` // optional; may include topics of other chapters
 	ChapterID        int16         `json:"chapter_id"`
 	ChapterName      []ChapterLang `json:"chapter_name"` // used with only get call
 	Concepts         []Concept     `json:"concepts"`     // used with only get call
@@ -31,7 +32,8 @@ type Problem struct {
 	TagIDs           []int         `json:"tag_ids"`
 	TagNames         []string
 	StatusID         int8         `json:"cms_status_id"`
-	Tests            []LinkedTest `json:"tests,omitempty"` // only in the by-id get call
+	Tests            []LinkedTest `json:"tests,omitempty"`       // only in the by-id get call
+	InsertedAt       string       `json:"inserted_at,omitempty"` // creation time, as db-service sends it (read only)
 }
 
 type LinkedTest struct {
@@ -109,6 +111,25 @@ func (p Problem) DisplayDifficulty() int8 {
 	}
 }
 
+// istZone is where the CMS users are, so a problem's created day is the day on their calendar.
+var istZone = time.FixedZone("IST", 5*60*60+30*60)
+
+// naiveUTCLayout is how db-service sends inserted_at: a UTC time with no zone, e.g. 2026-10-28T09:30:00
+const naiveUTCLayout = "2006-01-02T15:04:05"
+
+// CreatedDate returns the IST day the problem was created as YYYY-MM-DD, or "" when InsertedAt is empty or unreadable.
+// A zone-less InsertedAt is read as UTC.
+func (p Problem) CreatedDate() string {
+	t, err := time.Parse(time.RFC3339, p.InsertedAt)
+	if err != nil {
+		t, err = time.Parse(naiveUTCLayout, p.InsertedAt)
+	}
+	if err != nil {
+		return ""
+	}
+	return t.In(istZone).Format(time.DateOnly)
+}
+
 func (p *Problem) GetChapterNameByLang(langCode string) string {
 	for _, chapterLang := range p.ChapterName {
 		if chapterLang.LangCode == langCode {
@@ -118,13 +139,14 @@ func (p *Problem) GetChapterNameByLang(langCode string) string {
 	return ""
 }
 
-// CopyTo returns a clone of p cleared for create in the destination topic.
-func (p *Problem) CopyTo(topic *Topic, curriculumID int16, gradeID int8, subjectID int8) Problem {
+// CopyTo returns a clone of p cleared for create in the destination chapter. Its topics are kept, because a
+// problem's topics need not belong to its chapter.
+func (p *Problem) CopyTo(chapter *Chapter, curriculumID int16, gradeID int8, subjectID int8) Problem {
 	copied := *p
 	copied.ID = 0
 	copied.Code = ""
-	copied.TopicID = topic.ID
-	copied.ChapterID = topic.ChapterID
+	copied.ChapterID = chapter.ID
+	copied.TopicIDs = slices.Clone(p.TopicIDs)
 	copied.CurriculumID = curriculumID
 	copied.GradeID = gradeID
 	copied.SubjectID = subjectID

@@ -11,8 +11,6 @@
     <div class="flex flex-wrap gap-3 py-2 border-b border-border">
         <button id="topic-concepts-tab" data-toggle="sub-tab" class="sub-tab active" onclick="onTopicTabClick(this)"
             hx-trigger="click, load" hx-get="/concepts" hx-target="#subContent">Concepts</button>
-        <button id="topic-problems-tab" data-toggle="sub-tab" class="sub-tab" onclick="onTopicTabClick(this)"
-            hx-get="/topic/problems?topic_id={{.TopicPtr.ID}}" hx-target="#subContent">Problems</button>
         <button id="resources-tab" data-toggle="sub-tab" class="sub-tab" onclick="onTopicTabClick(this)"
             hx-get="/topic/resources?topicId={{.TopicPtr.ID}}&chapterId={{.TopicPtr.ChapterID}}" hx-target="#subContent">Resources</button>
     </div>
@@ -29,19 +27,6 @@
         if (window.lastPushedScreen === PUSHED_SCREEN_TOPIC) {
             // clear session storage values stored earlier as this is new screen opened
             sessionStorage.removeItem(SESSION_KEY_TOPIC_TAB);
-        }
-        const tabOnce = sessionStorage.getItem('topicTabOnce');
-        if (tabOnce) {
-            sessionStorage.removeItem('topicTabOnce');
-            // Suppress the Concepts load trigger so it doesn't race with the tab we're about to load.
-            const conceptsBtn = document.getElementById('topic-concepts-tab');
-            if (conceptsBtn) conceptsBtn.setAttribute('hx-trigger', 'click');
-            setTimeout(() => {
-                const btn = document.getElementById(tabOnce);
-                if (!btn) return;
-                onTopicTabClick(btn);
-                htmx.ajax('GET', btn.getAttribute('hx-get'), { target: '#subContent', swap: 'innerHTML' });
-            }, 0);
         }
     })();
 

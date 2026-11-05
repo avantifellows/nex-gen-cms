@@ -17,6 +17,8 @@ import (
 )
 
 const QUERY_PARAM_TOPIC_ID = "topic_id"
+const QueryParamChapterID = "chapter_id"
+const TopicDropdownName = "topic-dropdown"
 
 const topicsTemplate = "topics.html"
 const topicRowTemplate = "topic_row.html"

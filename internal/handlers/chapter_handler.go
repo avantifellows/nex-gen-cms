@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -27,6 +28,10 @@ const chapterTemplate = "chapter.html"
 const chapterTestsTemplate = "chapter_tests.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
 const topicDropdownOptionalTemplate = "topic_dropdown_optional.html"
+const topicDropdownAllTemplate = "topic_dropdown_all.html"
+const topicChecklistTemplate = "topic_checklist.html"
+
+const ChapterDropdownName = "chapter-dropdown"
 const chapterPriorityOptionsTemplate = "chapter_priority_options.html"
 
 type ChaptersHandler struct {
@@ -253,7 +258,7 @@ func (h *ChaptersHandler) getChapter(request *http.Request) (*models.Chapter, in
 	urlVals := request.URL.Query()
 	chapterIdStr := urlVals.Get("id")
 	if chapterIdStr == "" {
-		chapterIdStr = urlVals.Get("chapter-dropdown")
+		chapterIdStr = urlVals.Get(ChapterDropdownName)
 	}
 	return handlerutils.GetChapterByID(chapterIdStr, h.chaptersService)
 }
@@ -324,20 +329,28 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 		filename = topicRowTemplate
 	case "dropdown-optional":
 		filename = topicDropdownOptionalTemplate
+	case "dropdown-all":
+		filename = topicDropdownAllTemplate
+	case "checklist":
+		filename = topicChecklistTemplate
 	default:
 		filename = topicDropdownTemplate
 	}
 
 	selectedChapterPtr, code, err := h.getChapter(request)
 	if err != nil {
-		chapterDropdownVal := urlVals.Get("chapter-dropdown")
+		chapterDropdownVal := urlVals.Get(ChapterDropdownName)
 		/**
 		 * if "Select Chapter" default option is selected or its value is blank (on coming back from
 		 * single problem to add test screen sometimes it is blank) in add test screen,
 		 * then just return empty response.
 		 */
 		if chapterDropdownVal == "Select Chapter" || chapterDropdownVal == "" {
-			views.ExecuteTemplate(filename, responseWriter, nil, template.FuncMap{
+			var emptyData any
+			if view == "checklist" {
+				emptyData = dto.TopicChecklistData{}
+			}
+			views.ExecuteTemplate(filename, responseWriter, emptyData, template.FuncMap{
 				"getName": getTopicName,
 			})
 		} else {
@@ -367,7 +380,67 @@ func (h *ChaptersHandler) GetTopics(responseWriter http.ResponseWriter, request 
 	sortOrder := urlVals.Get("sortOrder")
 	sortTopics(localChapter.Topics, sortColumn, sortOrder)
 
-	views.ExecuteTemplate(filename, responseWriter, localChapter.Topics, template.FuncMap{
+	var data any = localChapter.Topics
+	if view == "checklist" {
+		data = buildTopicChecklist(localChapter.Topics, parseTopicIDs(urlVals.Get("selected")), func(id int16) *models.Topic {
+			topicPtr, _, err := handlerutils.GetTopicByID(strconv.Itoa(int(id)), h.topicsService)
+			if err != nil {
+				return nil
+			}
+			return topicPtr
+		}, func(id int16) *models.Chapter {
+			chapterPtr, _, _ := handlerutils.GetChapterByID(strconv.Itoa(int(id)), h.chaptersService)
+			return chapterPtr
+		})
+	}
+	views.ExecuteTemplate(filename, responseWriter, data, template.FuncMap{
 		"getName": getTopicName,
 	})
+}
+
+// parseTopicIDs reads a comma separated list of topic ids, skipping anything that is not a valid id.
+func parseTopicIDs(idsStr string) []int16 {
+	var ids []int16
+	for _, idStr := range strings.Split(idsStr, ",") {
+		if id, err := utils.StringToIntType[int16](strings.TrimSpace(idStr)); err == nil {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+// buildTopicChecklist ticks the selected topics among the chapter's own, and adds the selected ones that are
+// not listed there (other chapters, archived) so that a problem's topics are never hidden or dropped on save.
+// A topic of another chapter is noted with that chapter's "<code> - <name>".
+func buildTopicChecklist(chapterTopics []*models.Topic, selectedIDs []int16, lookup func(int16) *models.Topic,
+	chapterLookup func(int16) *models.Chapter) dto.TopicChecklistData {
+	data := dto.TopicChecklistData{Topics: chapterTopics, Selected: map[int16]bool{}}
+
+	listed := map[int16]bool{}
+	for _, topicPtr := range chapterTopics {
+		listed[topicPtr.ID] = true
+	}
+
+	for _, id := range selectedIDs {
+		if data.Selected[id] {
+			continue
+		}
+		data.Selected[id] = true
+		if listed[id] {
+			continue
+		}
+		topicPtr := lookup(id)
+		if topicPtr == nil {
+			continue
+		}
+		note := "other chapter"
+		if chapterPtr := chapterLookup(topicPtr.ChapterID); chapterPtr != nil {
+			note = chapterPtr.Code + " - " + chapterPtr.GetNameByLang("en")
+		}
+		if topicPtr.StatusID == constants.StatusArchived {
+			note = "archived"
+		}
+		data.Other = append(data.Other, dto.TopicChecklistExtra{Topic: topicPtr, Note: note})
+	}
+	return data
 }

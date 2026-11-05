@@ -16,6 +16,14 @@
             Topics
         </div>
         <div class="sub-tab"
+            id="problems-sub-tab"
+            hx-get="/chapter/problems?chapterId={{.ChapterPtr.ID}}"
+            hx-trigger="load[document.getElementById('problems-sub-tab').classList.contains('active') && !document.getElementById('subContent').children.length], click"
+            hx-target="#subContent"
+            onclick="activateSubTab('problems-sub-tab')">
+            Problems
+        </div>
+        <div class="sub-tab"
             id="resources-sub-tab"
             hx-get="/chapter/resources?chapterId={{.ChapterPtr.ID}}"
             hx-trigger="load[document.getElementById('resources-sub-tab').classList.contains('active')], click"
@@ -38,14 +46,24 @@
     </div>
 </div>
 <script>
-    // Toggle the `active` class among the chapter sub-tabs (Topics / Resources / Tests).
+    // Toggle the `active` class among the chapter sub-tabs (Topics / Problems / Resources / Tests).
     function activateSubTab(activeId) {
-        ["topics-sub-tab", "resources-sub-tab", "tests-sub-tab"].forEach(function (id) {
+        ["topics-sub-tab", "problems-sub-tab", "resources-sub-tab", "tests-sub-tab"].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) {
                 el.classList.toggle("active", id === activeId);
             }
         });
     }
+
+    // Another screen can ask for a tab to open once on arrival (a saved copy opens Problems). The class is set
+    // here, before htmx checks the tabs' load triggers, so only that tab loads.
+    (function () {
+        const tabId = sessionStorage.getItem('chapterTabOnce');
+        sessionStorage.removeItem('chapterTabOnce');
+        if (tabId && document.getElementById(tabId)) {
+            activateSubTab(tabId);
+        }
+    })();
 </script>
 {{ end }}
