@@ -60,11 +60,11 @@
             </div>
 
             <!-- Tab: Question Bank -->
-            <div id="bank-view" class="mt-3">
+            <div id="bank-view">
                 <!-- Filters -->
-                <!-- Frozen while the left panel scrolls; negative offsets/margins cancel the panel's p-5 so rows
-                     don't show above or beside the dropdowns. -->
-                <div class="sticky -top-5 z-10 -mx-5 -mt-3 grid grid-cols-2 gap-4 bg-bg-card px-5 pt-5 pb-2">
+                <!-- Frozen while the left panel scrolls; -top-5/-mx-5 cancel the panel's p-5 so rows don't show
+                     above or beside it, and pt-3 is the gap below the tabs (bank-view has no margin). -->
+                <div class="sticky -top-5 z-10 -mx-5 grid grid-cols-2 gap-4 bg-bg-card px-5 pt-3 pb-4">
                     <!-- 1. name attribute is used, because query parameters passed via http request can be 
                          identified by element names only. It is used in chapter_handler.go
                          2. Reason of if (this.value) condition in onchange: Update session storage only if 
