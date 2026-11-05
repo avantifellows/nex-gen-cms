@@ -222,8 +222,8 @@ func TestTopicDropdownAllTemplate(t *testing.T) {
 	tmpl := template.Must(template.New("topic_dropdown_all.html").Funcs(template.FuncMap{"getName": getTopicName}).
 		ParseFiles("../../web/html/topic_dropdown_all.html"))
 	topics := []*models.Topic{
-		{ID: 5, Name: []models.TopicLang{{LangCode: "en", TopicName: "Kinematics"}}},
-		{ID: 6, Name: []models.TopicLang{{LangCode: "en", TopicName: "Dynamics"}}},
+		{ID: 5, Code: "PH01", Name: []models.TopicLang{{LangCode: "en", TopicName: "Kinematics"}}},
+		{ID: 6, Code: "PH02", Name: []models.TopicLang{{LangCode: "en", TopicName: "Dynamics"}}},
 	}
 
 	var out bytes.Buffer
@@ -236,7 +236,7 @@ func TestTopicDropdownAllTemplate(t *testing.T) {
 	if !strings.Contains(html, `<option value="" selected>All Topics</option>`) {
 		t.Errorf("missing the All Topics option:\n%s", html)
 	}
-	for _, want := range []string{`<option value="5">Kinematics</option>`, `<option value="6">Dynamics</option>`} {
+	for _, want := range []string{`<option value="5">PH01 - Kinematics</option>`, `<option value="6">PH02 - Dynamics</option>`} {
 		if !strings.Contains(html, want) {
 			t.Errorf("missing %q:\n%s", want, html)
 		}
