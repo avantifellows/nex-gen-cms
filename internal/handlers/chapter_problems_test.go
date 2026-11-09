@@ -14,21 +14,24 @@ import (
 func TestChapterProblemsQuery(t *testing.T) {
 	tests := []struct {
 		name      string
-		chapterID string
-		topicID   string
-		want      string
-		wantErr   string
+		chapterID    string
+		topicID      string
+		curriculumID int16
+		want         string
+		wantErr      string
 	}{
-		{"chapter only (all topics)", "12", "", "?chapter_id=12", ""},
-		{"chapter with topic filter", "12", "45", "?chapter_id=12&topic_id=45", ""},
-		{"missing chapter", "", "45", "", "invalid chapter ID"},
-		{"non-numeric chapter", "abc", "", "", "invalid chapter ID"},
-		{"non-numeric topic", "12", "abc", "", "invalid topic ID"},
+		{"chapter in a curriculum (all topics)", "12", "", 3, "?chapter_id=12&curriculum_id=3", ""},
+		{"chapter, curriculum and topic", "12", "45", 3, "?chapter_id=12&curriculum_id=3&topic_id=45", ""},
+		{"missing curriculum", "12", "", 0, "", "invalid curriculum ID"},
+		{"missing curriculum with topic", "12", "45", 0, "", "invalid curriculum ID"},
+		{"missing chapter", "", "45", 3, "", "invalid chapter ID"},
+		{"non-numeric chapter", "abc", "", 3, "", "invalid chapter ID"},
+		{"non-numeric topic", "12", "abc", 3, "", "invalid topic ID"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := chapterProblemsQuery(tt.chapterID, tt.topicID)
+			got, err := chapterProblemsQuery(tt.chapterID, tt.topicID, tt.curriculumID)
 			if tt.wantErr != "" {
 				if err == nil || err.Error() != tt.wantErr {
 					t.Fatalf("error = %v, want %q", err, tt.wantErr)

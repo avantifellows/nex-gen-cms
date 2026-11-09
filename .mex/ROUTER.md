@@ -18,7 +18,7 @@ edges:
     condition: when working on login, sessions, roles, route guards, or the Postgres user store
   - target: context/deployment.md
     condition: when deploying, changing AWS/Terraform infra, CI/CD, or release operations
-last_updated: 2026-10-28
+last_updated: 2026-11-09
 ---
 
 # Session Bootstrap
@@ -62,7 +62,9 @@ Then read this file fully before doing anything else in this session.
   `infinite-scroll` extension, optional single-topic filter). Add/edit/copy pick topics from a checklist
   (`/api/topics?view=checklist`) plus a picker for other chapters' topics; copy keeps the original's topics and
   lands on the destination chapter's Problems tab; move changes the chapter only and never touches topics;
-  the problem screen lists all of a problem's topics. Concepts still belong to topics only (topic screen
+  the problem screen lists all of a problem's topics. The Problems tab and the Question Bank both send the
+  selected `curriculum_id` to db-service, so a chapter shared by several curricula only lists problems of the
+  selected curriculum. Concepts still belong to topics only (topic screen
   Concepts tab). The topic screen has no Problems tab, and the legacy single `Problem.TopicID` is gone.
 - Question paper / answer sheet / combined PDF generation via headless Chrome (chromedp + MathJax).
 - Admin user management (`/admin/users`), move/copy of resources & problems.
