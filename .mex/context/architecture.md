@@ -20,7 +20,7 @@ edges:
     condition: when you need how the running server sits behind NGINX/EC2
   - target: patterns/debug-htmx-rendering.md
     condition: when an HTMX route in this request flow returns blank/500/redirect or doesn't swap
-last_updated: 2026-10-28
+last_updated: 2026-11-09
 ---
 
 # Architecture
@@ -79,8 +79,10 @@ all content data (chapters/topics/tests/problems/…) comes from the db-service 
   an optional filter for the question bank) for the chapter's Problems tab (`/api/chapter/problems`, all
   problems in one unpaged request, narrowed in the browser by topic, type, difficulty, skill and created day
   from each row's `data-*` values; the day needs `inserted_at` from db-service) and the
-  Add Test question bank (`/api/question-bank/problems`). db-service must support `chapter_id` and `topic_ids`
-  on its problems endpoint.
+  Add Test question bank (`/api/question-bank/problems`). Both handlers also pass the selected curriculum
+  (`curriculum_id`, read from the `curriculum-dropdown` request value; required, a missing one is a 400),
+  because the same chapter can belong to several curricula and only that curriculum's problems should be listed.
+  db-service must support `chapter_id`, `topic_ids` and `curriculum_id` on its problems endpoint.
 
 ## External Dependencies
 

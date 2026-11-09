@@ -70,7 +70,11 @@ func TestQuestionBankRequestWithoutAChapterIsEmpty(t *testing.T) {
 
 func TestQuestionBankRequestWithABadChapterOrTopicIsRejected(t *testing.T) {
 	handler := &ProblemsHandler{}
-	for _, query := range []string{"chapter-dropdown=abc", "chapter-dropdown=5&topic-dropdown=xyz"} {
+	for _, query := range []string{
+		"chapter-dropdown=abc&curriculum-dropdown=3",
+		"chapter-dropdown=5&curriculum-dropdown=3&topic-dropdown=xyz",
+		"chapter-dropdown=5", // no curriculum chosen
+	} {
 		recorder := httptest.NewRecorder()
 		handler.GetQuestionBankProblems(recorder, httptest.NewRequest(http.MethodGet, "/api/question-bank/problems?"+query, nil))
 		if recorder.Code != http.StatusBadRequest {
