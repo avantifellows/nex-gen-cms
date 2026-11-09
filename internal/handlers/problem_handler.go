@@ -180,8 +180,7 @@ func (h *ProblemsHandler) GetQuestionBankProblems(responseWriter http.ResponseWr
 		return
 	}
 
-	curriculumID, _, _ := getCurriculumGradeSubjectIds(urlValues)
-	queryParams, err := chapterProblemsQuery(chapterIDStr, urlValues.Get(TopicDropdownName), curriculumID)
+	queryParams, err := chapterProblemsQuery(urlValues, chapterIDStr, urlValues.Get(TopicDropdownName))
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
@@ -204,8 +203,7 @@ func (h *ProblemsHandler) GetQuestionBankProblems(responseWriter http.ResponseWr
 // chapter screen narrows them by topic in the browser without another request.
 func (h *ProblemsHandler) GetChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	urlValues := request.URL.Query()
-	curriculumID, _, _ := getCurriculumGradeSubjectIds(urlValues)
-	queryParams, err := chapterProblemsQuery(urlValues.Get(ChapterDropdownName), "", curriculumID)
+	queryParams, err := chapterProblemsQuery(urlValues, urlValues.Get(ChapterDropdownName), "")
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
@@ -267,14 +265,14 @@ func paragraphSiblingsParam(urlValues url.Values) string {
 	return "&" + name + "=" + url.QueryEscape(urlValues.Get(name))
 }
 
-// chapterProblemsQuery builds db-service's problems query string. The chapter is required; the topic is an
-// optional filter, where a blank value means all topics. The curriculum is required too: the same chapter can
-// belong to several curricula, and only the selected curriculum's problems must be listed (0 = none chosen).
-func chapterProblemsQuery(chapterIDStr string, topicIDStr string, curriculumID int16) (string, error) {
+// chapterProblemsQuery builds db-service's problems query: chapter and curriculum (from urlValues, as one chapter
+// can belong to several curricula) are required, topic is an optional filter where blank means all topics.
+func chapterProblemsQuery(urlValues url.Values, chapterIDStr string, topicIDStr string) (string, error) {
 	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		return "", errors.New("invalid chapter ID")
 	}
+	curriculumID, _, _ := getCurriculumGradeSubjectIds(urlValues)
 	if curriculumID == 0 {
 		return "", errors.New("invalid curriculum ID")
 	}

@@ -3,6 +3,9 @@ package handlers
 import (
 	"bytes"
 	"html/template"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -13,25 +16,31 @@ import (
 
 func TestChapterProblemsQuery(t *testing.T) {
 	tests := []struct {
-		name      string
+		name         string
 		chapterID    string
 		topicID      string
-		curriculumID int16
+		curriculumID string // value of the curriculum dropdown in the request; "" = not sent
 		want         string
 		wantErr      string
 	}{
-		{"chapter in a curriculum (all topics)", "12", "", 3, "?chapter_id=12&curriculum_id=3", ""},
-		{"chapter, curriculum and topic", "12", "45", 3, "?chapter_id=12&curriculum_id=3&topic_id=45", ""},
-		{"missing curriculum", "12", "", 0, "", "invalid curriculum ID"},
-		{"missing curriculum with topic", "12", "45", 0, "", "invalid curriculum ID"},
-		{"missing chapter", "", "45", 3, "", "invalid chapter ID"},
-		{"non-numeric chapter", "abc", "", 3, "", "invalid chapter ID"},
-		{"non-numeric topic", "12", "abc", 3, "", "invalid topic ID"},
+		{"chapter in a curriculum (all topics)", "12", "", "3", "?chapter_id=12&curriculum_id=3", ""},
+		{"chapter, curriculum and topic", "12", "45", "3", "?chapter_id=12&curriculum_id=3&topic_id=45", ""},
+		{"missing curriculum", "12", "", "", "", "invalid curriculum ID"},
+		{"missing curriculum with topic", "12", "45", "", "", "invalid curriculum ID"},
+		{"zero curriculum", "12", "", "0", "", "invalid curriculum ID"},
+		{"non-numeric curriculum", "12", "", "abc", "", "invalid curriculum ID"},
+		{"missing chapter", "", "45", "3", "", "invalid chapter ID"},
+		{"non-numeric chapter", "abc", "", "3", "", "invalid chapter ID"},
+		{"non-numeric topic", "12", "abc", "3", "", "invalid topic ID"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := chapterProblemsQuery(tt.chapterID, tt.topicID, tt.curriculumID)
+			urlValues := url.Values{}
+			if tt.curriculumID != "" {
+				urlValues.Set(CURRICULUM_DROPDOWN_NAME, tt.curriculumID)
+			}
+			got, err := chapterProblemsQuery(urlValues, tt.chapterID, tt.topicID)
 			if tt.wantErr != "" {
 				if err == nil || err.Error() != tt.wantErr {
 					t.Fatalf("error = %v, want %q", err, tt.wantErr)
@@ -45,6 +54,35 @@ func TestChapterProblemsQuery(t *testing.T) {
 				t.Errorf("query = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+// The chapter Problems tab must not list every curriculum's problems when the curriculum is missing: the
+// request is rejected before db-service is called (the handler here has no services).
+func TestChapterProblemsRequestWithoutACurriculumIsRejected(t *testing.T) {
+	handler := &ProblemsHandler{}
+	for _, query := range []string{
+		"chapter-dropdown=12",
+		"chapter-dropdown=12&curriculum-dropdown=",
+		"chapter-dropdown=12&curriculum-dropdown=abc",
+	} {
+		recorder := httptest.NewRecorder()
+		handler.GetChapterProblems(recorder, httptest.NewRequest(http.MethodGet, "/api/chapter/problems?"+query, nil))
+		if recorder.Code != http.StatusBadRequest {
+			t.Errorf("%s: got %d, want 400", query, recorder.Code)
+		}
+		if got := strings.TrimSpace(recorder.Body.String()); got != "invalid curriculum ID" {
+			t.Errorf("%s: body = %q, want %q", query, got, "invalid curriculum ID")
+		}
+	}
+}
+
+func TestChapterProblemsRequestWithABadChapterIsRejected(t *testing.T) {
+	handler := &ProblemsHandler{}
+	recorder := httptest.NewRecorder()
+	handler.GetChapterProblems(recorder, httptest.NewRequest(http.MethodGet, "/api/chapter/problems?chapter-dropdown=abc&curriculum-dropdown=3", nil))
+	if recorder.Code != http.StatusBadRequest {
+		t.Errorf("got %d, want 400", recorder.Code)
 	}
 }
 
