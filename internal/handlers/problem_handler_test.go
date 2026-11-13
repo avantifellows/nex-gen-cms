@@ -60,12 +60,12 @@ func TestSimilarSearchLanguageOmitsOptionsWhenEmpty(t *testing.T) {
 		},
 	}
 
-	body, err := json.Marshal(dto.SimilarSearchRequest{Languages: extractSimilarityLanguages(problem)})
+	body, err := json.Marshal(extractSimilarityLanguages(problem))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	want := `{"languages":[{"lang_code":"en","text":"Integer answer question"}]}`
+	want := `[{"lang_code":"en","text":"Integer answer question"}]`
 	if string(body) != want {
 		t.Fatalf("body = %s, want %s", body, want)
 	}
@@ -81,12 +81,12 @@ func TestSimilarSearchRequestSendsOptionsWhenPresent(t *testing.T) {
 		},
 	}
 
-	body, err := json.Marshal(dto.SimilarSearchRequest{Languages: extractSimilarityLanguages(problem)})
+	body, err := json.Marshal(extractSimilarityLanguages(problem))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	want := `{"languages":[{"lang_code":"en","text":"Q","options":["A","B"]}]}`
+	want := `[{"lang_code":"en","text":"Q","options":["A","B"]}]`
 	if string(body) != want {
 		t.Fatalf("body = %s, want %s", body, want)
 	}
