@@ -39,8 +39,8 @@ Then read this file fully before doing anything else in this session.
   surfaces are resizable, keep the preview size in sync, and stay within the page card; add/edit
   problem pages use full width.
 - `CreateProblem`/`CreateProblems`/`UpdateProblem` do the duplicate check themselves before saving: they
-  call db-service's `"problems/similar-search"` with each language's question text extracted from the same
-  payload, plus `curriculum_id` (via `Problem.ResolvedCurriculumID()`, read from the payload's
+  call db-service's `"problems/similar-search"` with each language's question text and options extracted from
+  the same payload, plus `curriculum_id` (via `Problem.ResolvedCurriculumID()`, read from the payload's
   `curriculum_grades[0]`) so a look-alike in an unrelated curriculum no longer blocks a save
   (`UpdateProblem` also excludes the problem's own id from the results, since its own saved text
   otherwise self-matches at ~100%). Matches → respond `409` + render `duplicate_problems_modal.html`
