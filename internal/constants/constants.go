@@ -15,6 +15,10 @@ const (
 
 	StatusArchived = 1
 	StatusLocked   = 2
+
+	// Tag on problems whose topic was assigned by AI and still needs a teacher to check it.
+	// Teachers clear it by removing the tag on the edit screen (see scripts/topic-remap).
+	TagNeedsVerification = "needs verification"
 )
 
 // runtime constant

@@ -4,7 +4,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 test('math templates insert an editable piecewise equation', async ({ page }) => {
   await page.request.post('http://localhost:8080/dev-login');
-  await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
+  await page.goto('http://localhost:8080/chapter/add-problem?chapter_id=3');
 
   // #questionDiv holds one editor per language (en/hi/gu/ta); only "en" is visible by default.
   const questionEn = page.locator('#questionDiv .lang-content[data-lang="en"]');

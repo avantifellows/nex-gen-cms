@@ -2,6 +2,8 @@ package models
 
 import (
 	"html/template"
+	"strconv"
+	"strings"
 
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
 )
@@ -132,6 +134,19 @@ type OptionLayout struct {
 	Cols int8 `json:"cols"`
 }
 
+// SubjectIDsBefore returns the ids of the subjects preceding the one at subjectIndex, comma
+// separated, so the problems actually returned for them can be counted to continue serial numbers.
+func (t Test) SubjectIDsBefore(subjectIndex int) string {
+	ids := []string{}
+	for i, subject := range t.TypeParams.Subjects {
+		if i >= subjectIndex {
+			break
+		}
+		ids = append(ids, strconv.Itoa(int(subject.SubjectID)))
+	}
+	return strings.Join(ids, ",")
+}
+
 // Method to count total problems
 func (t Test) ProblemCount() int {
 	total := 0
@@ -189,6 +204,16 @@ func (t *Test) DisplaySubtype() string {
 	default:
 		return "Unknown"
 	}
+}
+
+// ChapterTestSubjectID returns the subject id for a chapter_test, derived from
+// TypeParams.Subjects (a chapter_test's problems come from one chapter, which belongs to
+// exactly one subject). Returns nil for any other test type, or if that invariant doesn't hold.
+func (t *Test) ChapterTestSubjectID() *int8 {
+	if t.Subtype != "chapter_test" || len(t.TypeParams.Subjects) != 1 {
+		return nil
+	}
+	return &t.TypeParams.Subjects[0].SubjectID
 }
 
 func (t *Test) RecalculateTotalMarksFromSubjects() {

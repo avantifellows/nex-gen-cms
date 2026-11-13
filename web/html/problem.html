@@ -20,18 +20,23 @@
                 <i class="fa-solid fa-pen"></i>
             </button>
             <button class="action-button" hx-delete="/archive-problem?id={{.ProblemPtr.ID}}" hx-ext="goBackAfter"
+                hx-on::after-request="if (event.detail.successful) sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1')"
                 hx-confirm="Are you sure you want to delete problem?" title="Delete problem">
                 <i class="fa-solid fa-trash"></i>
             </button>
         </div>
     </div>
-    {{ if or .ChapterPtr .TopicPtr }}
+    {{ if or .ChapterPtr .TopicPtrs }}
     <div class="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-sm text-ink-muted">
         {{ if .ChapterPtr }}
         <span><span class="font-semibold text-ink">Chapter:</span> {{ .ChapterPtr.Code }} — {{ .ChapterPtr.GetNameByLang "en" }}</span>
         {{ end }}
-        {{ if .TopicPtr }}
-        <span><span class="font-semibold text-ink">Topic:</span> {{ .TopicPtr.Code }} — {{ .TopicPtr.GetNameByLang "en" }}</span>
+        {{ if .TopicPtrs }}
+        <span><span class="font-semibold text-ink">Topics:</span>
+            {{- range $index, $topic := .TopicPtrs -}}
+                {{- if $index }}, {{ else }} {{ end -}}{{ $topic.Code }} — {{ $topic.GetNameByLang "en" }}
+            {{- end -}}
+        </span>
         {{ end }}
     </div>
     {{ end }}
@@ -121,6 +126,18 @@
                 {{ end }}
             {{ end }}
         </div>
+        {{ if .ProblemPtr.HasLinkedTestsInfo }}
+        <h2 class="section-title mt-6">Problem is referred in following tests</h2>
+        <p class="mt-2 text-ink font-mono">
+            {{- range $i, $t := .ProblemPtr.Tests -}}
+                {{- if $i }}, {{ end -}}
+                <a href="/test?id={{ $t.TestID }}" target="_blank" rel="noopener"
+                   class="text-accent hover:text-accent-hover underline">{{ $t.TestCode }}</a>
+            {{- else -}}
+                <span class="text-ink-muted italic font-sans">Not referred in any test.</span>
+            {{- end -}}
+        </p>
+        {{ end }}
     </div>
 </div>
 <script>

@@ -1,7 +1,8 @@
 package dto
 
 type SimilarSearchRequest struct {
-	Languages []SimilarSearchLanguage `json:"languages"`
+	CurriculumID int16                   `json:"curriculum_id"`
+	Languages    []SimilarSearchLanguage `json:"languages"`
 }
 
 type SimilarSearchLanguage struct {

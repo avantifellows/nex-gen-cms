@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -33,12 +34,12 @@ const problemsTemplate = "problems.html"
 const problemTemplate = "problem.html"
 const srcProblemRowParentTemplate = "src_problem_row_parent.html"
 const srcProblemRowTemplate = "src_problem_row.html"
-const topicProblemsTemplate = "topic_problems.html"
-const topicProblemRowTemplate = "topic_problem_row.html"
+const chapterProblemRowTemplate = "chapter_problem_row.html"
+const chapterProblemsTemplate = "chapter_problems.html"
 const searchProblemRowTemplate = "search_problem_row.html"
 const addProblemTemplate = "add_problem.html"
 const problemTypeOptionsTemplate = "problem_type_options.html"
-const addConceptModalTemplate = "add_concept_modal.html"
+const addTopicModalTemplate = "add_topic_modal.html"
 const editorTemplate = "editor.html"
 const problemAnswerNumericalTemplate = "problem_answer_numerical.html"
 const inputTagsTemplate = "input_tags.html"
@@ -71,20 +72,15 @@ func NewProblemsHandler(problemsService *services.Service[models.Problem],
 }
 
 func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
+	selectedProblemPtr, code, err := h.getProblem(request.URL.Query(), true)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 
-	topicIDStr := strconv.Itoa(int(selectedProblemPtr.TopicID))
-	selectedTopicPtr, _, _ := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
-
-	var selectedChapterPtr *models.Chapter
-	if selectedTopicPtr != nil {
-		chapterIDStr := strconv.Itoa(int(selectedTopicPtr.ChapterID))
-		selectedChapterPtr, _, _ = handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
-	}
+	// the chapter comes from the problem itself: a problem may have no topic, or topics of other chapters
+	chapterIDStr := strconv.Itoa(int(selectedProblemPtr.ChapterID))
+	selectedChapterPtr, _, _ := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 
 	data := dto.ProblemData{
 		HomeData: dto.HomeData{
@@ -93,7 +89,10 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 			SubjectID:    selectedProblemPtr.SubjectID,
 		},
 		ProblemPtr: selectedProblemPtr,
-		TopicPtr:   selectedTopicPtr,
+		TopicPtrs: problemTopics(selectedProblemPtr.TopicIDs, func(id int16) *models.Topic {
+			topicPtr, _, _ := handlerutils.GetTopicByID(strconv.Itoa(int(id)), h.topicsService)
+			return topicPtr
+		}),
 		ChapterPtr: selectedChapterPtr,
 	}
 
@@ -106,7 +105,19 @@ func (h *ProblemsHandler) GetProblem(responseWriter http.ResponseWriter, request
 	}, baseTemplate, problemTemplate)
 }
 
-func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int, error) {
+// problemTopics looks up a problem's topics, leaving out any that cannot be found.
+func problemTopics(topicIDs []int16, lookup func(int16) *models.Topic) []*models.Topic {
+	var topics []*models.Topic
+	for _, id := range topicIDs {
+		if topicPtr := lookup(id); topicPtr != nil {
+			topics = append(topics, topicPtr)
+		}
+	}
+	return topics
+}
+
+// withLinkedTests bypasses the problem cache, as only the by-id response carries Problem.Tests.
+func (h *ProblemsHandler) getProblem(urlValues url.Values, withLinkedTests bool) (*models.Problem, int, error) {
 	problemIdStr := urlValues.Get("id")
 	problemId := utils.StringToInt(problemIdStr)
 	endPointWithID := fmt.Sprintf(problemEndPoint, problemId)
@@ -115,7 +126,7 @@ func (h *ProblemsHandler) getProblem(urlValues url.Values) (*models.Problem, int
 	selectedProblemPtr, err := h.problemsService.GetObject("",
 		func(problem *models.Problem) bool {
 			return problem.ID == problemId
-		}, problemsKey, endPointWithID, false)
+		}, problemsKey, endPointWithID, withLinkedTests)
 	if err != nil {
 		return nil, http.StatusInternalServerError, fmt.Errorf("error fetching problem: %v", err)
 	}
@@ -160,38 +171,76 @@ func (h *ProblemsHandler) enrichProblemTagNames(problem *models.Problem) error {
 	return nil
 }
 
-func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	const includeParagraphSiblingsParam = "include_paragraph_siblings"
-
+// GetQuestionBankProblems returns the Add Test question bank's problems of a chapter, optionally narrowed to
+// one topic (blank = all topics). No chapter chosen yet gives an empty list.
+func (h *ProblemsHandler) GetQuestionBankProblems(responseWriter http.ResponseWriter, request *http.Request) {
 	urlValues := request.URL.Query()
-	topicIdStr := urlValues.Get("topic-dropdown")
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
-	if err != nil {
-		http.Error(responseWriter, "Invalid Topic ID", http.StatusBadRequest)
+	chapterIDStr := urlValues.Get(ChapterDropdownName)
+	if chapterIDStr == "" || chapterIDStr == "Select Chapter" {
 		return
 	}
 
-	queryParams := fmt.Sprintf("?topic_id=%d", topicId)
-	if urlValues.Has(includeParagraphSiblingsParam) {
-		queryParams += "&" + includeParagraphSiblingsParam + "=" + urlValues.Get(includeParagraphSiblingsParam)
+	queryParams, err := chapterProblemsQuery(urlValues, chapterIDStr, urlValues.Get(TopicDropdownName))
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		return
 	}
+
+	problems, ok := h.fetchProblems(responseWriter, urlValues, queryParams)
+	if !ok {
+		return
+	}
+
+	levels := urlValues["level"]
+	ptype := urlValues.Get("ptype-dropdown")
+	selectedIDs := urlValues.Get("selected-ids")
+	filterProblems(problems, levels, ptype, selectedIDs)
+
+	views.ExecuteTemplates(responseWriter, problems, nil, srcProblemRowParentTemplate, srcProblemRowTemplate)
+}
+
+// GetChapterProblems returns all of a chapter's problems, unpaged. Each row carries its topic ids, so the
+// chapter screen narrows them by topic in the browser without another request.
+func (h *ProblemsHandler) GetChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	urlValues := request.URL.Query()
+	queryParams, err := chapterProblemsQuery(urlValues, urlValues.Get(ChapterDropdownName), "")
+	if err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	problems, ok := h.fetchProblems(responseWriter, urlValues, queryParams)
+	if !ok {
+		return
+	}
+
+	// only drops archived problems here: no level, type or already-selected filtering on this screen
+	filterProblems(problems, nil, "", "")
+	views.ExecuteTemplate(chapterProblemRowTemplate, responseWriter, problems, nil)
+}
+
+// fetchProblems loads the problems matching queryParams from db-service and sets the selected subject and
+// tag names on each of them. On failure it writes the error response itself and returns false.
+func (h *ProblemsHandler) fetchProblems(responseWriter http.ResponseWriter, urlValues url.Values,
+	queryParams string) (*[]*models.Problem, bool) {
+	queryParams += paragraphSiblingsParam(urlValues)
 	problems, err := h.problemsService.GetList(problemsEndPoint+queryParams, problemsKey, false, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching problems: %v", err), http.StatusInternalServerError)
-		return
+		return nil, false
 	}
 
 	subjectPtr, statusCode, err := handlerutils.FetchSelectedSubject(urlValues.Get(SUBJECT_DROPDOWN_NAME),
 		h.subjectsService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), statusCode)
-		return
+		return nil, false
 	}
 
 	tagsMap, err := h.getTagsMap()
 	if err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
-		return
+		return nil, false
 	}
 
 	// set subject & tag names on each problem
@@ -203,20 +252,41 @@ func (h *ProblemsHandler) GetTopicProblems(responseWriter http.ResponseWriter, r
 			problemPtr.TagNames = append(problemPtr.TagNames, tagsMap[tagId])
 		}
 	}
+	return problems, true
+}
 
-	levels := urlValues["level"]
-	ptype := urlValues.Get("ptype-dropdown")
-	selectedIds := urlValues.Get("selected-ids")
-	filterProblems(problems, levels, ptype, selectedIds)
-
-	if urlValues.Has("ptype-dropdown") {
-		// for add/edit test screen
-		views.ExecuteTemplates(responseWriter, problems, nil, srcProblemRowParentTemplate, srcProblemRowTemplate)
-
-	} else {
-		// for topic screen's Problems tab
-		views.ExecuteTemplate(topicProblemRowTemplate, responseWriter, problems, nil)
+// paragraphSiblingsParam returns the "&include_paragraph_siblings=.." suffix for db-service's problems query,
+// or "" when the request does not carry it. The value is escaped, so it cannot add parameters of its own.
+func paragraphSiblingsParam(urlValues url.Values) string {
+	const name = "include_paragraph_siblings"
+	if !urlValues.Has(name) {
+		return ""
 	}
+	return "&" + name + "=" + url.QueryEscape(urlValues.Get(name))
+}
+
+// chapterProblemsQuery builds db-service's problems query: chapter and curriculum (from urlValues, as one chapter
+// can belong to several curricula) are required, topic is an optional filter where blank means all topics.
+func chapterProblemsQuery(urlValues url.Values, chapterIDStr string, topicIDStr string) (string, error) {
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
+	if err != nil {
+		return "", errors.New("invalid chapter ID")
+	}
+	curriculumID, _, _ := getCurriculumGradeSubjectIds(urlValues)
+	if curriculumID == 0 {
+		return "", errors.New("invalid curriculum ID")
+	}
+
+	queryParams := fmt.Sprintf("?chapter_id=%d&%s=%d", chapterID, QUERY_PARAM_CURRICULUM_ID, curriculumID)
+	if topicIDStr == "" {
+		return queryParams, nil
+	}
+
+	topicID, err := utils.StringToIntType[int16](topicIDStr)
+	if err != nil {
+		return "", errors.New("invalid topic ID")
+	}
+	return queryParams + fmt.Sprintf("&topic_id=%d", topicID), nil
 }
 
 func (h *ProblemsHandler) getTagsMap() (map[int]string, error) {
@@ -288,36 +358,35 @@ func (h *ProblemsHandler) LoadProblems(responseWriter http.ResponseWriter, _ *ht
 	views.ExecuteTemplates(responseWriter, nil, nil, baseTemplate, problemsTemplate)
 }
 
-func (h *ProblemsHandler) LoadTopicProblems(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIdStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	views.ExecuteTemplate(topicProblemsTemplate, responseWriter, topicIdStr, nil)
+func (h *ProblemsHandler) LoadChapterProblems(responseWriter http.ResponseWriter, request *http.Request) {
+	chapterIDStr := request.URL.Query().Get("chapterId")
+	views.ExecuteTemplates(responseWriter, chapterIDStr, nil, chapterProblemsTemplate, problemTypeOptionsTemplate)
 }
 
 func (h *ProblemsHandler) AddProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	topicIDStr := request.URL.Query().Get(QUERY_PARAM_TOPIC_ID)
-	selectedTopicPtr, code, err := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
+	chapterIDStr := request.URL.Query().Get(QueryParamChapterID)
+	selectedChapterPtr, code, err := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 
 	data := dto.ProblemData{
-		TopicPtr: selectedTopicPtr,
+		ChapterPtr: selectedChapterPtr,
 	}
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"joinInt16":        utils.JoinInt16,
 		"add":              utils.Add,
 		"stringToInt":      utils.StringToInt,
 		"toJson":           utils.ToJson,
-		"getConceptName":   getConceptName,
 		"dict":             utils.Dict,
 		"emptyStringSlice": utils.EmptyStringSlice,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate,
 		editorTemplate, problemAnswerNumericalTemplate, inputTagsTemplate)
 }
 
-func (h *ProblemsHandler) AddConceptModal(responseWriter http.ResponseWriter, _ *http.Request) {
-	views.ExecuteTemplates(responseWriter, nil, nil, addConceptModalTemplate, curriculumGradeSelectsTemplate)
+func (h *ProblemsHandler) AddTopicModal(responseWriter http.ResponseWriter, _ *http.Request) {
+	views.ExecuteTemplate(addTopicModalTemplate, responseWriter, nil, nil)
 }
 
 func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, request *http.Request) {
@@ -330,7 +399,7 @@ func (h *ProblemsHandler) CreateProblem(responseWriter http.ResponseWriter, requ
 	var problem models.Problem
 	_ = json.Unmarshal(reqBodyBytes, &problem) // best-effort: an unparsable body just skips the similarity check
 
-	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), 0) {
+	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problem.ResolvedCurriculumID(), 0) {
 		return
 	}
 
@@ -355,10 +424,14 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 	_ = json.Unmarshal(reqBodyBytes, &batch) // best-effort: an unparsable body just skips the similarity check
 
 	var languages []dto.SimilarSearchLanguage
+	var curriculumID int16
 	for _, problem := range batch.Problems {
 		languages = append(languages, extractSimilarityLanguages(problem)...)
+		if curriculumID == 0 {
+			curriculumID = problem.ResolvedCurriculumID()
+		}
 	}
-	if h.duplicatesFound(responseWriter, request, languages, 0) {
+	if h.duplicatesFound(responseWriter, request, languages, curriculumID, 0) {
 		return
 	}
 
@@ -375,17 +448,21 @@ func (h *ProblemsHandler) CreateProblems(responseWriter http.ResponseWriter, req
 // written a response — the caller should return without saving. Also writes an error response
 // and returns true if the check itself fails, so a flaky similarity check never masks the save.
 //
+// curriculumID restricts matches to that curriculum; pass a real id, as db-service treats 0 as
+// "curriculum 0" (matches nothing) and only skips the filter when it is absent.
+//
 // excludeProblemID drops a match against that problem's own id — needed on edit, where the
 // problem's own already-saved text otherwise self-matches at ~100%. Pass 0 on create, where
 // there's no id yet.
 func (h *ProblemsHandler) duplicatesFound(responseWriter http.ResponseWriter, request *http.Request,
-	languages []dto.SimilarSearchLanguage, excludeProblemID int) bool {
+	languages []dto.SimilarSearchLanguage, curriculumID int16, excludeProblemID int) bool {
 	if request.URL.Query().Get(confirmDuplicatesParam) == "true" || len(languages) == 0 {
 		return false
 	}
 
+	req := dto.SimilarSearchRequest{CurriculumID: curriculumID, Languages: languages}
 	var resp dto.SimilarSearchResponse
-	if err := h.problemsService.Post(similarSearchEndPoint, dto.SimilarSearchRequest{Languages: languages}, &resp); err != nil {
+	if err := h.problemsService.Post(similarSearchEndPoint, req, &resp); err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error checking similar problems: %v", err), http.StatusInternalServerError)
 		return true
 	}
@@ -446,7 +523,7 @@ func renderDuplicateProblemsModal(responseWriter http.ResponseWriter, matches []
 }
 
 func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, request *http.Request) {
-	selectedProblemPtr, code, err := h.getProblem(request.URL.Query())
+	selectedProblemPtr, code, err := h.getProblem(request.URL.Query(), false)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -466,7 +543,6 @@ func (h *ProblemsHandler) EditProblem(responseWriter http.ResponseWriter, reques
 		"add":              utils.Add,
 		"stringToInt":      utils.StringToInt,
 		"toJson":           utils.ToJson,
-		"getConceptName":   getConceptName,
 		"dict":             utils.Dict,
 		"emptyStringSlice": utils.EmptyStringSlice,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate,
@@ -486,7 +562,7 @@ func (h *ProblemsHandler) UpdateProblem(responseWriter http.ResponseWriter, requ
 	var problem models.Problem
 	_ = json.Unmarshal(reqBodyBytes, &problem) // best-effort: an unparsable body just skips the similarity check
 
-	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problemId) {
+	if h.duplicatesFound(responseWriter, request, extractSimilarityLanguages(problem), problem.ResolvedCurriculumID(), problemId) {
 		return
 	}
 
@@ -631,14 +707,14 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 	problemQuery := url.Values{}
 	problemQuery.Set("id", urlValues.Get("id"))
 
-	selectedProblemPtr, code, err := h.getProblem(problemQuery)
+	selectedProblemPtr, code, err := h.getProblem(problemQuery, false)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
 	}
 
-	topicIDStr := urlValues.Get(QUERY_PARAM_TOPIC_ID)
-	selectedTopicPtr, code, err := handlerutils.GetTopicByID(topicIDStr, h.topicsService)
+	chapterIDStr := urlValues.Get(ChapterDropdownName)
+	selectedChapterPtr, code, err := handlerutils.GetChapterByID(chapterIDStr, h.chaptersService)
 	if err != nil {
 		http.Error(responseWriter, err.Error(), code)
 		return
@@ -650,7 +726,7 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 		return
 	}
 
-	copiedProblem := selectedProblemPtr.CopyTo(selectedTopicPtr, curriculumId, gradeId, subjectId)
+	copiedProblem := selectedProblemPtr.CopyTo(selectedChapterPtr, curriculumId, gradeId, subjectId)
 
 	data := dto.ProblemData{
 		HomeData: dto.HomeData{
@@ -659,7 +735,7 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 			SubjectID:    subjectId,
 		},
 		ProblemPtr: &copiedProblem,
-		TopicPtr:   selectedTopicPtr,
+		ChapterPtr: selectedChapterPtr,
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -667,7 +743,6 @@ func (h *ProblemsHandler) CopyProblem(responseWriter http.ResponseWriter, reques
 		"add":              utils.Add,
 		"stringToInt":      utils.StringToInt,
 		"toJson":           utils.ToJson,
-		"getConceptName":   getConceptName,
 		"dict":             utils.Dict,
 		"emptyStringSlice": utils.EmptyStringSlice,
 	}, baseTemplate, addProblemTemplate, problemTypeOptionsTemplate, editorTemplate,
@@ -687,25 +762,17 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 		return
 	}
 
-	chapterIdStr := request.Form.Get("chapter-dropdown")
-	chapterId, err := utils.StringToIntType[int16](chapterIdStr)
+	chapterIDStr := request.Form.Get(ChapterDropdownName)
+	chapterID, err := utils.StringToIntType[int16](chapterIDStr)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Invalid Chapter ID: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	topicIdStr := request.Form.Get("topic_id")
-	topicId, err := utils.StringToIntType[int16](topicIdStr)
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Invalid Topic ID: %v", err), http.StatusBadRequest)
-		return
-	}
-	topicIdPtr := &topicId
-
 	problemIdsStr := request.Form.Get("problem_ids")
 	problemIds := utils.StringSliceToIntSlice(strings.Split(problemIdsStr, ","))
 
-	reqBody := dto.MoveResourcesRequest{
+	reqBody := dto.MoveProblemsRequest{
 		ResourceIDs: problemIds,
 		CurriculumGrades: []models.CurriculumGrade{
 			{
@@ -714,8 +781,7 @@ func (h *ProblemsHandler) MoveProblems(responseWriter http.ResponseWriter, reque
 			},
 		},
 		SubjectID: subjectId,
-		ChapterID: chapterId,
-		TopicID:   topicIdPtr,
+		ChapterID: chapterID,
 		LangCode:  "en",
 	}
 

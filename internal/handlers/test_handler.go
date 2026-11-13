@@ -148,10 +148,12 @@ func (h *TestsHandler) GetTests(responseWriter http.ResponseWriter, request *htt
 		testRowTemplate, testActionsCellTemplate, testLockButtonTemplate, testEditButtonTemplate)
 }
 
-// listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the
-// HTMX row view (GetTests) and the service JSON API (GetTestsJSON).
-func (h *TestsHandler) listTests(curriculumId int16, gradeId int8, testtype, sortColumn, sortOrder string) (*[]*models.Test, error) {
-	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumId, gradeId, testtype)
+// listTests fetches active tests for a curriculum/grade/subtype, sorted. Shared by the HTMX
+// row view (GetTests) and the service JSON API (GetTestsJSON). The subject filter on the tests
+// list screen is applied client-side instead, so a subject change never round-trips here.
+func (h *TestsHandler) listTests(curriculumID int16, gradeID int8, testtype,
+	sortColumn, sortOrder string) (*[]*models.Test, error) {
+	queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&grade_id=%d&type=test&subtype=%s", curriculumID, gradeID, testtype)
 
 	tests, err := h.testsService.GetList(resourcesCurriculumEndPoint+queryParams, testsKey, false, true)
 	if err != nil {
@@ -577,13 +579,27 @@ func (h *TestsHandler) GetTestProblems(responseWriter http.ResponseWriter, reque
 		return
 	}
 
+	// start is the number of problems returned for the subjects before this one, so numbering
+	// continues across subjects without gaps even if type_params and the returned rows disagree
+	prevSubjectIDs := map[int8]bool{}
+	for _, idStr := range strings.Split(urlVals.Get("prev_subject_ids"), ",") {
+		if id, err := utils.StringToIntType[int8](idStr); err == nil {
+			prevSubjectIDs[id] = true
+		}
+	}
+	start := 0
+	for _, p := range *problems {
+		if prevSubjectIDs[p.SubjectID] {
+			start++
+		}
+	}
+
 	*problems = funk.Filter(*problems, func(p *models.Problem) bool {
 		return p.SubjectID == subjectId
 	}).([]*models.Problem)
 
-	// Passing custom function add to use in template for serial number by adding 1 to index
 	views.ExecuteTemplate(testProblemRowTemplate, responseWriter, problems, template.FuncMap{
-		"add": utils.Add,
+		"sno": func(index int) int { return start + index + 1 },
 	})
 }
 

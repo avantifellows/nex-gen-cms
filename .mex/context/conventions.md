@@ -17,7 +17,7 @@ edges:
     condition: when the convention involves role guards or session/role data
   - target: patterns/debug-htmx-rendering.md
     condition: when an HTMX route returns blank/500/redirects or doesn't swap
-last_updated: 2026-10-05
+last_updated: 2026-10-28
 ---
 
 # Conventions
@@ -87,6 +87,12 @@ ch.GetNameByLang("en")
 ```go
 localChapter := *selectedChapterPtr // shallow copy before per-request mutation
 localChapter.Topics = nil
+```
+
+**Choose the move request by what the move must not touch — problems keep their topics, resources reset theirs:**
+```go
+dto.MoveProblemsRequest{ResourceIDs: ids, ChapterID: chapterID} // no topic key: db-service leaves topics alone
+dto.MoveResourcesRequest{..., TopicID: nil}                     // sends topic_id: null: clears the old topic
 ```
 
 **Authorization is server-side at the route. The `cms_role` cookie / JS gating is cosmetic only:**

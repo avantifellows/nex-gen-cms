@@ -1,23 +1,29 @@
 {{ range . }}
-<tr class="border-b">
+<tr class="border-b" data-topic-ids="{{range $i, $id := .TopicIDs}}{{if $i}},{{end}}{{$id}}{{end}}"
+    data-subtype="{{.Subtype}}" data-difficulty="{{.DifficultyLevel}}"
+    data-skill-ids="{{range $i, $id := .SkillIDs}}{{if $i}},{{end}}{{$id}}{{end}}" data-created="{{.CreatedDate}}"
+    data-needs-verification="{{if .NeedsVerification}}true{{end}}">
     <td class="p-2 text-center">
         <input type="checkbox" name="select-problem" value="{{.ID}}">
     </td>
 
     <!-- hx-params="none" is added to prevent extra query parameters (curriculum-dropdown
-         and subject-dropdown) going from its parent topic_problems.html file's problemTableBody -->
+         and subject-dropdown) going from its parent chapter_problems.html file's problemTableBody -->
     <td class="p-2 text-center whitespace-nowrap text-accent hover:text-accent-hover hover:underline font-medium"><a href="/problem?id={{.ID}}"
             hx-get="/problem?id={{.ID}}" hx-params="none" hx-target="body"
             hx-push-url="true">{{.Code}}
         </a></td>
-    <td class="p-2 overflow-hidden text-ellipsis">{{(.GetLangVersion "en").MetaData.Question}}</td>
+    <td class="p-2 overflow-hidden text-ellipsis">
+        {{ if .NeedsVerification }}<span class="badge-warning mr-2" title="Topic assigned by AI: check it, then remove this tag on the edit screen">needs verification</span>{{ end }}
+        {{(.GetLangVersion "en").MetaData.Question}}
+    </td>
     <td class="p-2 text-center space-x-4 whitespace-nowrap">
         <button class="action-button" hx-get="/problems/edit-problem?id={{.ID}}"
             hx-params="none" hx-target="body" hx-push-url="true">
             <i class="fa-solid fa-pen"></i>
         </button>
         <button class="action-button"
-            hx-get="/topic/copy-problem-dialog?id={{.ID}}"
+            hx-get="/chapter/copy-problem-dialog?id={{.ID}}"
             hx-params="none" hx-target="body" hx-swap="beforeend" hx-push-url="true" title="Copy Problem">
             <i class="fa-solid fa-copy"></i>
         </button>

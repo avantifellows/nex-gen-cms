@@ -18,7 +18,7 @@ edges:
     condition: when working on login, sessions, roles, route guards, or the Postgres user store
   - target: context/deployment.md
     condition: when deploying, changing AWS/Terraform infra, CI/CD, or release operations
-last_updated: 2026-10-05
+last_updated: 2026-11-09
 ---
 
 # Session Bootstrap
@@ -40,17 +40,32 @@ Then read this file fully before doing anything else in this session.
   problem pages use full width.
 - `CreateProblem`/`CreateProblems`/`UpdateProblem` do the duplicate check themselves before saving: they
   call db-service's `"problems/similar-search"` with each language's question text and options extracted from
-  the same payload (`UpdateProblem` excludes the problem's own id from the results, since its own saved text
+  the same payload, plus `curriculum_id` (via `Problem.ResolvedCurriculumID()`, read from the payload's
+  `curriculum_grades[0]`) so a look-alike in an unrelated curriculum no longer blocks a save
+  (`UpdateProblem` also excludes the problem's own id from the results, since its own saved text
   otherwise self-matches at ~100%). Matches → respond `409` + render `duplicate_problems_modal.html`
   instead of saving. The frontend injects that modal; "Save Anyway" re-POSTs/PATCHes the same payload
   with `?confirmDuplicates=true`, which skips the check. No matches → saves directly, same as before.
 - Server-rendered HTML + HTMX UI; Tailwind v4 styling (built from `input.css`; generated CSS not committed).
+- Tests list screen: a Subject filter for Chapter Tests (`Test.ChapterTestSubjectID`, applied client-side
+  via each row's `data-subject-id` - never round-trips to the server).
 - The add/edit-test Sequence dropdown marks sequence numbers already used for the chosen
   Program/Type Code/Year (a checkmark suffix, sourced from db-service's `resources/test-sequences`
   endpoint via a new `GetTestSequenceOptions` fragment handler) and stays disabled until all three
   are chosen.
 - Add/Edit Test screen's chapter dropdown (Question Bank tab) shows `<code> - <name>` per chapter, not
-  just the name, so users who know the chapter code can find it directly.
+  just the name, so users who know the chapter code can find it directly. The Question Bank loads a
+  chapter's problems on its own (`/api/question-bank/problems`); its topic dropdown is an optional filter
+  that starts at "All Topics".
+- Problems are scoped to a **chapter** (required) with zero or more **topics** (optional, may belong to other
+  chapters). The Problems tab lives on the chapter screen (2nd tab, 10 rows at a time via the
+  `infinite-scroll` extension, optional single-topic filter). Add/edit/copy pick topics from a checklist
+  (`/api/topics?view=checklist`) plus a picker for other chapters' topics; copy keeps the original's topics and
+  lands on the destination chapter's Problems tab; move changes the chapter only and never touches topics;
+  the problem screen lists all of a problem's topics. The Problems tab and the Question Bank both send the
+  selected `curriculum_id` to db-service, so a chapter shared by several curricula only lists problems of the
+  selected curriculum. Concepts still belong to topics only (topic screen
+  Concepts tab). The topic screen has no Problems tab, and the legacy single `Problem.TopicID` is gone.
 - Question paper / answer sheet / combined PDF generation via headless Chrome (chromedp + MathJax).
 - Admin user management (`/admin/users`), move/copy of resources & problems.
 - Generated test PDFs are cached in S3 by content hash (`TestsHandler.DownloadPdf` + the `storage.PdfStore`
