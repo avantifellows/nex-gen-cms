@@ -109,6 +109,10 @@
         const curriculum = document.getElementById('curriculum-dropdown').value;
         const subject = document.getElementById('subject-dropdown').value;
         if (!curriculum || !subject) return false;
+        // The saved page HTML does not keep which dropdown option was selected, so remember the pair here
+        // for restoreChapterProblems.
+        tbody.setAttribute('data-curriculum', curriculum);
+        tbody.setAttribute('data-subject', subject);
         // The curriculum and subject values are not added to this URL: because the tbody is the request
         // source, htmx adds them itself from the tbody's hx-include (adding them here sent them twice).
         htmx.ajax('GET', `/api/chapter/problems?chapter-dropdown=${chapterId}`, {
@@ -239,8 +243,16 @@
 
         if (sessionStorage.getItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY)) {
             sessionStorage.removeItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY);
-            // deferred, because while htmx swaps the page in, the page's dropdowns exist twice
-            setTimeout(initChapterProblemsList, 0);
+            // The restored dropdowns fall back to their first option until their own reload re-selects the
+            // right one, which would reload the list of the first curriculum. Put the loaded pair back first.
+            // Deferred, because while htmx swaps the page in, the page's dropdowns exist twice.
+            setTimeout(function () {
+                const savedCurriculum = tbody.getAttribute('data-curriculum');
+                const savedSubject = tbody.getAttribute('data-subject');
+                if (savedCurriculum) document.getElementById('curriculum-dropdown').value = savedCurriculum;
+                if (savedSubject) document.getElementById('subject-dropdown').value = savedSubject;
+                initChapterProblemsList();
+            }, 0);
         } else {
             updateHeaderState();
         }
