@@ -176,10 +176,7 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 		return
 	}
 
-	// The edit form carries no is_active control, so an edit must leave the
-	// stored value alone rather than reset it.
-	resourceMap := existingResourcePtr.BuildMap(resourceCode, resourceName, resourceType, resourceSubtype, srcLink,
-		existingResourcePtr.Active())
+	resourceMap := existingResourcePtr.BuildMap(resourceCode, resourceName, resourceType, resourceSubtype, srcLink)
 
 	_, err = h.service.UpdateObject(resourceIdStr, resourcesEndPoint, resourceMap, resourcesKey,
 		func(resource *models.Resource) bool {
@@ -196,6 +193,9 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 // ToggleResourceActive retires a resource or brings one back. Retiring keeps
 // the row, so a quiz id referenced by older BigQuery rows still resolves; only
 // what students see changes.
+//
+// The button sends the state it wants rather than a flip, so a double-click or
+// two admins acting at once cannot cancel each other out.
 func (h *ResourcesHandler) ToggleResourceActive(responseWriter http.ResponseWriter, request *http.Request) {
 	resourceIDStr := request.FormValue("id")
 	resourceID, err := utils.StringToIntType[int32](resourceIDStr)
@@ -204,21 +204,14 @@ func (h *ResourcesHandler) ToggleResourceActive(responseWriter http.ResponseWrit
 		return
 	}
 
+	active := request.FormValue("active") == "true"
+
 	findResource := func(resource *models.Resource) bool {
 		return resource.ID == int(resourceID)
 	}
 
-	// Read through to the API: a cached copy can predate a change made
-	// elsewhere, and flipping a stale value would undo it.
-	existingResourcePtr, err := h.service.GetObject(resourceIDStr, findResource, resourcesKey,
-		resourcesEndPoint, true)
-	if err != nil {
-		http.Error(responseWriter, fmt.Sprintf("Error fetching resource: %v", err), http.StatusInternalServerError)
-		return
-	}
-
 	updatedPtr, err := h.service.UpdateObject(resourceIDStr, resourcesEndPoint,
-		map[string]any{"is_active": !existingResourcePtr.Active()}, resourcesKey, findResource)
+		map[string]any{"is_active": active}, resourcesKey, findResource)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating resource: %v", err), http.StatusInternalServerError)
 		return

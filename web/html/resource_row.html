@@ -12,7 +12,7 @@
         {{ end }}
     </td>
     <td class="px-6 text-center">
-        <button class="action-button" hx-post="/toggle-resource-active" hx-vals='{"id":"{{.ID}}"}'
+        <button class="action-button" hx-post="/toggle-resource-active" hx-vals='{"id":"{{.ID}}","active":"{{ if .Active }}false{{ else }}true{{ end }}"}'
             hx-target="closest tr" hx-swap="outerHTML"
             {{ if .Active }}
             hx-confirm="Retire {{ getName . "en" }}? Students stop seeing it; the row stays so existing reports still resolve."

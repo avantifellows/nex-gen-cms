@@ -20,7 +20,7 @@ func TestBuildMapPreservesUnknownTypeParams(t *testing.T) {
 	assert.Equal(t, "https://quiz.avantifellows.org/quiz/old", resource.TypeParams.SrcLink)
 
 	patch := resource.BuildMap("", "Mathematical Tools", "quiz", "Assessment",
-		"https://quiz.avantifellows.org/quiz/new", resource.Active())
+		"https://quiz.avantifellows.org/quiz/new")
 
 	encoded, err := json.Marshal(patch["type_params"])
 	assert.NoError(t, err)
@@ -38,7 +38,7 @@ func TestBuildMapWithoutUnknownTypeParams(t *testing.T) {
 		&resource))
 
 	patch := resource.BuildMap("", "Mathematical Tools", "document", "Module",
-		"https://drive.example/b", resource.Active())
+		"https://drive.example/b")
 
 	encoded, err := json.Marshal(patch["type_params"])
 	assert.NoError(t, err)
@@ -66,16 +66,18 @@ func TestActiveDefaultsTrue(t *testing.T) {
 	assert.False(t, resource.Active())
 }
 
-// A retired resource stays retired when someone edits its name or link, and
-// "false" has to survive into the patch body rather than being omitted.
-func TestBuildMapCarriesIsActive(t *testing.T) {
+// A retired resource stays retired when someone edits its name or link,
+// because the edit patch leaves is_active out entirely. Sending the stored
+// value instead would undo a toggle made between the GET and the PATCH.
+func TestBuildMapOmitsIsActive(t *testing.T) {
 	var resource Resource
 	assert.NoError(t, json.Unmarshal(
 		[]byte(`{"id":276,"type":"quiz","is_active":false,"type_params":{"src_link":"https://quiz.example/a"}}`),
 		&resource))
 
 	patch := resource.BuildMap("", "Mathematical Tools", "quiz", "Assessment",
-		"https://quiz.example/b", resource.Active())
+		"https://quiz.example/b")
 
-	assert.Equal(t, false, patch["is_active"])
+	_, present := patch["is_active"]
+	assert.False(t, present, "edit patch must not carry is_active")
 }

@@ -87,12 +87,15 @@ func NewResource(code string, name string, resourceType string, subtype string, 
 	return resource
 }
 
-func (resourcePtr *Resource) BuildMap(code string, name string, resourceType string, subtype string, srcLink string, isActive bool) map[string]any {
+// BuildMap is the body of the edit PATCH. is_active is deliberately absent:
+// the edit form has no control for it, and PATCH leaves an omitted field
+// alone. Sending the stored value instead would make every edit a
+// read-modify-write that can undo a toggle made in between.
+func (resourcePtr *Resource) BuildMap(code string, name string, resourceType string, subtype string, srcLink string) map[string]any {
 	resourceMap := map[string]any{
-		"code":      code,
-		"name":      []ResName{{Resource: name, LangCode: "en"}},
-		"type":      resourceType,
-		"is_active": isActive,
+		"code": code,
+		"name": []ResName{{Resource: name, LangCode: "en"}},
+		"type": resourceType,
 	}
 
 	if strings.TrimSpace(subtype) != "" {
