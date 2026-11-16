@@ -176,7 +176,10 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 		return
 	}
 
-	resourceMap := existingResourcePtr.BuildMap(resourceCode, resourceName, resourceType, resourceSubtype, srcLink)
+	// The edit form carries no is_active control, so an edit must leave the
+	// stored value alone rather than reset it.
+	resourceMap := existingResourcePtr.BuildMap(resourceCode, resourceName, resourceType, resourceSubtype, srcLink,
+		existingResourcePtr.Active())
 
 	_, err = h.service.UpdateObject(resourceIdStr, resourcesEndPoint, resourceMap, resourcesKey,
 		func(resource *models.Resource) bool {
@@ -188,6 +191,42 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 	}
 
 	views.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Resource", nil)
+}
+
+// ToggleResourceActive retires a resource or brings one back. Retiring keeps
+// the row, so a quiz id referenced by older BigQuery rows still resolves; only
+// what students see changes.
+func (h *ResourcesHandler) ToggleResourceActive(responseWriter http.ResponseWriter, request *http.Request) {
+	resourceIdStr := request.FormValue("id")
+	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Resource ID", http.StatusBadRequest)
+		return
+	}
+
+	findResource := func(resource *models.Resource) bool {
+		return resource.ID == int(resourceId)
+	}
+
+	// Read through to the API: a cached copy can predate a change made
+	// elsewhere, and flipping a stale value would undo it.
+	existingResourcePtr, err := h.service.GetObject(resourceIdStr, findResource, resourcesKey,
+		resourcesEndPoint, true)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error fetching resource: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	updatedPtr, err := h.service.UpdateObject(resourceIdStr, resourcesEndPoint,
+		map[string]any{"is_active": !existingResourcePtr.Active()}, resourcesKey, findResource)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error updating resource: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	views.ExecuteTemplate(resourceRowTemplate, responseWriter, []*models.Resource{updatedPtr}, template.FuncMap{
+		"getName": getResourceName,
+	})
 }
 
 func (h *ResourcesHandler) DeleteResource(responseWriter http.ResponseWriter, request *http.Request) {

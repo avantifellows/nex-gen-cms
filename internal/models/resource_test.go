@@ -20,7 +20,7 @@ func TestBuildMapPreservesUnknownTypeParams(t *testing.T) {
 	assert.Equal(t, "https://quiz.avantifellows.org/quiz/old", resource.TypeParams.SrcLink)
 
 	patch := resource.BuildMap("", "Mathematical Tools", "quiz", "Assessment",
-		"https://quiz.avantifellows.org/quiz/new")
+		"https://quiz.avantifellows.org/quiz/new", resource.Active())
 
 	encoded, err := json.Marshal(patch["type_params"])
 	assert.NoError(t, err)
@@ -38,7 +38,7 @@ func TestBuildMapWithoutUnknownTypeParams(t *testing.T) {
 		&resource))
 
 	patch := resource.BuildMap("", "Mathematical Tools", "document", "Module",
-		"https://drive.example/b")
+		"https://drive.example/b", resource.Active())
 
 	encoded, err := json.Marshal(patch["type_params"])
 	assert.NoError(t, err)
@@ -53,4 +53,29 @@ func TestNewResourceTypeParams(t *testing.T) {
 	encoded, err := json.Marshal(resource.TypeParams)
 	assert.NoError(t, err)
 	assert.JSONEq(t, `{"src_link":"https://quiz.avantifellows.org/quiz/new"}`, string(encoded))
+}
+
+// A resource from a db-service without the column has no value, and must not
+// be treated as retired.
+func TestActiveDefaultsTrue(t *testing.T) {
+	var resource Resource
+	assert.NoError(t, json.Unmarshal([]byte(`{"id":1,"type":"quiz"}`), &resource))
+	assert.True(t, resource.Active())
+
+	assert.NoError(t, json.Unmarshal([]byte(`{"id":1,"type":"quiz","is_active":false}`), &resource))
+	assert.False(t, resource.Active())
+}
+
+// A retired resource stays retired when someone edits its name or link, and
+// "false" has to survive into the patch body rather than being omitted.
+func TestBuildMapCarriesIsActive(t *testing.T) {
+	var resource Resource
+	assert.NoError(t, json.Unmarshal(
+		[]byte(`{"id":276,"type":"quiz","is_active":false,"type_params":{"src_link":"https://quiz.example/a"}}`),
+		&resource))
+
+	patch := resource.BuildMap("", "Mathematical Tools", "quiz", "Assessment",
+		"https://quiz.example/b", resource.Active())
+
+	assert.Equal(t, false, patch["is_active"])
 }

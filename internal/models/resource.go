@@ -17,6 +17,10 @@ type Resource struct {
 	SubjectID        int8               `json:"subject_id,omitempty"`
 	CurriculumGrades []CurriculumGrade  `json:"curriculum_grades,omitempty"`
 	TypeParams       ResourceTypeParams `json:"type_params,omitempty"`
+	// Retired resources stay in the table so that older BigQuery rows keep
+	// resolving. A pointer, because a plain bool would drop "false" from the
+	// patch body and make deactivating impossible.
+	IsActive *bool `json:"is_active,omitempty"`
 }
 
 type ResourceTypeParams struct {
@@ -83,11 +87,12 @@ func NewResource(code string, name string, resourceType string, subtype string, 
 	return resource
 }
 
-func (resourcePtr *Resource) BuildMap(code string, name string, resourceType string, subtype string, srcLink string) map[string]any {
+func (resourcePtr *Resource) BuildMap(code string, name string, resourceType string, subtype string, srcLink string, isActive bool) map[string]any {
 	resourceMap := map[string]any{
-		"code": code,
-		"name": []ResName{{Resource: name, LangCode: "en"}},
-		"type": resourceType,
+		"code":      code,
+		"name":      []ResName{{Resource: name, LangCode: "en"}},
+		"type":      resourceType,
+		"is_active": isActive,
 	}
 
 	if strings.TrimSpace(subtype) != "" {
@@ -110,4 +115,10 @@ func (r *Resource) GetNameByLang(langCode string) string {
 		}
 	}
 	return ""
+}
+
+// Active reports whether the resource is shown to students. A resource from a
+// db-service that predates the column has no value, and is treated as active.
+func (r *Resource) Active() bool {
+	return r.IsActive == nil || *r.IsActive
 }
