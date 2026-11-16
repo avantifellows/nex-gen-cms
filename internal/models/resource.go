@@ -17,6 +17,10 @@ type Resource struct {
 	SubjectID        int8               `json:"subject_id,omitempty"`
 	CurriculumGrades []CurriculumGrade  `json:"curriculum_grades,omitempty"`
 	TypeParams       ResourceTypeParams `json:"type_params,omitempty"`
+	// Retired resources stay in the table so that older BigQuery rows keep
+	// resolving. A pointer, because a plain bool would drop "false" from the
+	// patch body and make deactivating impossible.
+	IsActive *bool `json:"is_active,omitempty"`
 }
 
 type ResourceTypeParams struct {
@@ -83,6 +87,10 @@ func NewResource(code string, name string, resourceType string, subtype string, 
 	return resource
 }
 
+// BuildMap is the body of the edit PATCH. is_active is deliberately absent:
+// the edit form has no control for it, and PATCH leaves an omitted field
+// alone. Sending the stored value instead would make every edit a
+// read-modify-write that can undo a toggle made in between.
 func (resourcePtr *Resource) BuildMap(code string, name string, resourceType string, subtype string, srcLink string) map[string]any {
 	resourceMap := map[string]any{
 		"code": code,
@@ -110,4 +118,10 @@ func (r *Resource) GetNameByLang(langCode string) string {
 		}
 	}
 	return ""
+}
+
+// Active reports whether the resource is shown to students. A resource from a
+// db-service that predates the column has no value, and is treated as active.
+func (resourcePtr *Resource) Active() bool {
+	return resourcePtr.IsActive == nil || *resourcePtr.IsActive
 }

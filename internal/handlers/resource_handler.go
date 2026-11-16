@@ -190,6 +190,38 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 	views.ExecuteTemplate(updateSuccessTemplate, responseWriter, "Resource", nil)
 }
 
+// ToggleResourceActive retires a resource or brings one back. Retiring keeps
+// the row, so a quiz id referenced by older BigQuery rows still resolves; only
+// what students see changes.
+//
+// The button sends the state it wants rather than a flip, so a double-click or
+// two admins acting at once cannot cancel each other out.
+func (h *ResourcesHandler) ToggleResourceActive(responseWriter http.ResponseWriter, request *http.Request) {
+	resourceIDStr := request.FormValue("id")
+	resourceID, err := utils.StringToIntType[int32](resourceIDStr)
+	if err != nil {
+		http.Error(responseWriter, "Invalid Resource ID", http.StatusBadRequest)
+		return
+	}
+
+	active := request.FormValue("active") == "true"
+
+	findResource := func(resource *models.Resource) bool {
+		return resource.ID == int(resourceID)
+	}
+
+	updatedPtr, err := h.service.UpdateObject(resourceIDStr, resourcesEndPoint,
+		map[string]any{"is_active": active}, resourcesKey, findResource)
+	if err != nil {
+		http.Error(responseWriter, fmt.Sprintf("Error updating resource: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	views.ExecuteTemplate(resourceRowTemplate, responseWriter, []*models.Resource{updatedPtr}, template.FuncMap{
+		"getName": getResourceName,
+	})
+}
+
 func (h *ResourcesHandler) DeleteResource(responseWriter http.ResponseWriter, request *http.Request) {
 	resourceIdStr := request.URL.Query().Get("id")
 	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
