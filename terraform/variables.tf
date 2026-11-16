@@ -23,13 +23,8 @@ variable "ssh_cidr" {
 }
 
 # Cloudflare DNS variables
-variable "cloudflare_email" {
-  description = "Cloudflare account email"
-  type        = string
-}
-
-variable "cloudflare_api_key" {
-  description = "Cloudflare Global API key"
+variable "cloudflare_api_token" {
+  description = "Cloudflare API token scoped to DNS edit on the zone"
   type        = string
   sensitive   = true
 }
