@@ -119,6 +119,6 @@ func (r *Resource) GetNameByLang(langCode string) string {
 
 // Active reports whether the resource is shown to students. A resource from a
 // db-service that predates the column has no value, and is treated as active.
-func (r *Resource) Active() bool {
-	return r.IsActive == nil || *r.IsActive
+func (resourcePtr *Resource) Active() bool {
+	return resourcePtr.IsActive == nil || *resourcePtr.IsActive
 }

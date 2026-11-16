@@ -197,27 +197,27 @@ func (h *ResourcesHandler) UpdateResource(responseWriter http.ResponseWriter, re
 // the row, so a quiz id referenced by older BigQuery rows still resolves; only
 // what students see changes.
 func (h *ResourcesHandler) ToggleResourceActive(responseWriter http.ResponseWriter, request *http.Request) {
-	resourceIdStr := request.FormValue("id")
-	resourceId, err := utils.StringToIntType[int32](resourceIdStr)
+	resourceIDStr := request.FormValue("id")
+	resourceID, err := utils.StringToIntType[int32](resourceIDStr)
 	if err != nil {
 		http.Error(responseWriter, "Invalid Resource ID", http.StatusBadRequest)
 		return
 	}
 
 	findResource := func(resource *models.Resource) bool {
-		return resource.ID == int(resourceId)
+		return resource.ID == int(resourceID)
 	}
 
 	// Read through to the API: a cached copy can predate a change made
 	// elsewhere, and flipping a stale value would undo it.
-	existingResourcePtr, err := h.service.GetObject(resourceIdStr, findResource, resourcesKey,
+	existingResourcePtr, err := h.service.GetObject(resourceIDStr, findResource, resourcesKey,
 		resourcesEndPoint, true)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error fetching resource: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	updatedPtr, err := h.service.UpdateObject(resourceIdStr, resourcesEndPoint,
+	updatedPtr, err := h.service.UpdateObject(resourceIDStr, resourcesEndPoint,
 		map[string]any{"is_active": !existingResourcePtr.Active()}, resourcesKey, findResource)
 	if err != nil {
 		http.Error(responseWriter, fmt.Sprintf("Error updating resource: %v", err), http.StatusInternalServerError)
