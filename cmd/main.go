@@ -8,7 +8,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/di"
 	"github.com/avantifellows/nex-gen-cms/internal/auth"
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
-	"github.com/avantifellows/nex-gen-cms/internal/handlers"
 	"github.com/avantifellows/nex-gen-cms/internal/middleware"
 )
 
@@ -95,7 +94,10 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	// Dev-only bypass — guarded inside the handler by DEV_LOGIN_EMAIL being unset.
 	muxHandler.HandleFunc("/dev-login", loginHandler.DevLogin)
 
-	muxHandler.HandleFunc("/home", handlers.GenericHandler)
+	// Landing page after login: open the Chapters tab by default
+	muxHandler.HandleFunc("/home", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/chapters", http.StatusSeeOther)
+	})
 
 	// Admin user management
 	adminUsers := appComponentPtr.AdminUsersHandler
