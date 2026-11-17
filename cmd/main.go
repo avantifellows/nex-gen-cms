@@ -94,11 +94,6 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	// Dev-only bypass — guarded inside the handler by DEV_LOGIN_EMAIL being unset.
 	muxHandler.HandleFunc("/dev-login", loginHandler.DevLogin)
 
-	// Landing page after login: open the Chapters tab by default
-	muxHandler.HandleFunc("/home", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/chapters", http.StatusSeeOther)
-	})
-
 	// Admin user management
 	adminUsers := appComponentPtr.AdminUsersHandler
 	muxHandler.HandleFunc("/admin/users", admin(adminUsers.List))

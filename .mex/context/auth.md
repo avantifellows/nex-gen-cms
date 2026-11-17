@@ -57,7 +57,7 @@ identity and roles live in the Postgres `cms_user_permission` table — the only
    with 401 for HTMX). Valid → attach claims to context, continue.
 3. **Login:** `/auth/google/start` → Google consent → `/auth/google/callback`. The callback verifies the
    token, looks up the email in `cms_user_permission`, rejects unknown (`not authorized`) or inactive
-   (`access revoked`) users, then `IssueSession` and redirect to `/home`.
+   (`access revoked`) users, then `IssueSession` and redirect to `/chapters`.
 4. **Authorization:** mutating routes are wrapped in `cmd/main.go` with `editor(...)` or `admin(...)`
    (aliases for `RequireRoleFunc(RoleEditor|RoleAdmin, ...)`). `RequireRole` checks `AtLeast(claims.Role, need)`;
    too-low → 403 (`HX-Reswap: none` + 403 for HTMX).
