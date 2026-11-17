@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { dropdowns, HOME_PAGE_URL } from "./utils";
+import { dropdowns, HOME_PAGE_URL, preselectDropdowns } from "./utils";
 import * as mock from "./mock";
 
 test('verify that all table headers, add new chapter link are available and form is hidden', async ({ page }) => {
@@ -37,6 +37,13 @@ test('verify that all table headers, add new chapter link are available and form
 });
 
 test('clicking add new chapter opens form and clicking it again hides it', async ({ page }) => {
+
+    // the form opens only when curriculum, grade and subject are selected, so mock the dropdown options
+    // and start with the first option of each one selected
+    dropdowns.forEach(async function ({ urlPattern, content }) {
+        await mock.mockDropdownApi(page, urlPattern, content);
+    });
+    await preselectDropdowns(page);
 
     await page.goto(HOME_PAGE_URL);
 
@@ -114,6 +121,8 @@ test.describe('Chapter list Row', () => {
         });
         // mock chapter list api
         await mock.mockChaptersApiUsingHtml(page, 'web/html/chapter_row.html', chapterObj);
+        // chapters load only when every dropdown has a value
+        await preselectDropdowns(page);
 
         await page.goto(HOME_PAGE_URL);
 
