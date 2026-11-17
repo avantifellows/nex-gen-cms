@@ -54,3 +54,30 @@ func TestNewResourceTypeParams(t *testing.T) {
 	assert.NoError(t, err)
 	assert.JSONEq(t, `{"src_link":"https://quiz.avantifellows.org/quiz/new"}`, string(encoded))
 }
+
+// A resource from a db-service without the column has no value, and must not
+// be treated as retired.
+func TestActiveDefaultsTrue(t *testing.T) {
+	var resource Resource
+	assert.NoError(t, json.Unmarshal([]byte(`{"id":1,"type":"quiz"}`), &resource))
+	assert.True(t, resource.Active())
+
+	assert.NoError(t, json.Unmarshal([]byte(`{"id":1,"type":"quiz","is_active":false}`), &resource))
+	assert.False(t, resource.Active())
+}
+
+// A retired resource stays retired when someone edits its name or link,
+// because the edit patch leaves is_active out entirely. Sending the stored
+// value instead would undo a toggle made between the GET and the PATCH.
+func TestBuildMapOmitsIsActive(t *testing.T) {
+	var resource Resource
+	assert.NoError(t, json.Unmarshal(
+		[]byte(`{"id":276,"type":"quiz","is_active":false,"type_params":{"src_link":"https://quiz.example/a"}}`),
+		&resource))
+
+	patch := resource.BuildMap("", "Mathematical Tools", "quiz", "Assessment",
+		"https://quiz.example/b")
+
+	_, present := patch["is_active"]
+	assert.False(t, present, "edit patch must not carry is_active")
+}

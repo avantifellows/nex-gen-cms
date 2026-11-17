@@ -139,6 +139,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.Handle("/edit-resource", middleware.RequireHTMX(middleware.RequireRole(auth.RoleAdmin, http.HandlerFunc(resourcesHandler.EditResource))))
 	muxHandler.HandleFunc("/update-resource", admin(resourcesHandler.UpdateResource))
 	muxHandler.HandleFunc("/delete-resource", admin(resourcesHandler.DeleteResource))
+	muxHandler.HandleFunc("/toggle-resource-active", admin(resourcesHandler.ToggleResourceActive))
 	muxHandler.HandleFunc("/resources/move-resource", editor(resourcesHandler.LoadMoveResources))
 	muxHandler.HandleFunc("/move-resource", editor(resourcesHandler.MoveResource))
 
