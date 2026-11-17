@@ -54,7 +54,7 @@ last_updated: 2026-10-28
 - **DTOs** (`internal/dto`) are view-models passed to templates. Screen DTOs embed `dto.HomeData`
   (curriculum/grade/subject ids shared across screens).
 - **Template rendering only via `views.ExecuteTemplate` / `ExecuteTemplates`** — never call
-  `template.ParseFiles` directly except inside `views` / `GenericHandler`.
+  `template.ParseFiles` directly except inside `views`.
 
 ## Patterns
 

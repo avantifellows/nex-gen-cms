@@ -11,7 +11,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/config"
 	"github.com/avantifellows/nex-gen-cms/di"
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
-	"github.com/avantifellows/nex-gen-cms/internal/handlers"
 	"github.com/avantifellows/nex-gen-cms/internal/middleware"
 )
 
@@ -69,8 +68,6 @@ func TestSetup(t *testing.T) {
 		handler http.Handler
 	}{
 		{"/web/", appComponentPtr.CssPathHandler},
-		{"/", http.HandlerFunc(handlers.GenericHandler)},
-		{"/tests", http.HandlerFunc(handlers.GenericHandler)},
 		{"/chapters", http.HandlerFunc(chaptersHandler.LoadChapters)},
 		{"/api/curriculums", http.HandlerFunc(appComponentPtr.CurriculumsHandler.GetCurriculums)},
 		{"/api/grades", http.HandlerFunc(appComponentPtr.GradesHandler.GetGrades)},

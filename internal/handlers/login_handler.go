@@ -25,7 +25,7 @@ func NewLoginHandler(google *auth.GoogleAuth, users *db.CmsUserRepo) *LoginHandl
 // Login renders the login page (GET) or shows an error message after a failed OAuth callback.
 func (h *LoginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	if auth.ReadSession(r) != nil {
-		http.Redirect(w, r, "/home", http.StatusSeeOther)
+		http.Redirect(w, r, "/chapters", http.StatusSeeOther)
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
@@ -93,7 +93,7 @@ func (h *LoginHandler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = h.users.UpdateLastLogin(r.Context(), user.ID)
 
-	http.Redirect(w, r, "/home", http.StatusSeeOther)
+	http.Redirect(w, r, "/chapters", http.StatusSeeOther)
 }
 
 // DevLogin is a non-production bypass: POST /dev-login signs in as the email named in DEV_LOGIN_EMAIL.
@@ -119,7 +119,7 @@ func (h *LoginHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = h.users.UpdateLastLogin(r.Context(), user.ID)
 
-	w.Header().Set("HX-Redirect", "/home")
+	w.Header().Set("HX-Redirect", "/chapters")
 	w.WriteHeader(http.StatusOK)
 }
 
