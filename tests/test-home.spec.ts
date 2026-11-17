@@ -189,19 +189,20 @@ dropdowns.forEach(function ({ name, key, selectedVal }) {
             }
             return false;
         });
-        // Navigate to the page with the dropdown
-        await page.goto(HOME_PAGE_URL);
-
-        // Click on the "Chapters" tab
-        await page.click('#chapters-tab');
         /**
          * wait for api is required here; otherwise even before finishing api call it changes dropdown value, resetting
-         * session storage CHAPTERS_LOADED_KEY to false. But after this first /api/chapters call due to chapters tab click 
-         * finishes resetting flag again to true, hence preventing actual call required on changing dropdown value
+         * session storage CHAPTERS_LOADED_KEY to false. But after this first /api/chapters call finishes resetting
+         * flag again to true, hence preventing actual call required on changing dropdown value.
+         * HOME_PAGE_URL is the chapters screen itself, so this first call is made on page load (not by clicking
+         * the Chapters tab), and the wait is registered before navigating so that the response can't be missed.
          */
-        await page.waitForResponse(resp =>
+        const initialChaptersResponse = page.waitForResponse(resp =>
             resp.url().includes('/api/chapters') && resp.status() === 200
         );
+
+        // Navigate to the page with the dropdown
+        await page.goto(HOME_PAGE_URL);
+        await initialChaptersResponse;
 
         const dropdown = page.locator(`#${name}`);
         // Select a specific option by value
