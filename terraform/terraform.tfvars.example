@@ -8,8 +8,7 @@ aws_region  = "ap-south-1"
 ssh_cidr    = "0.0.0.0/0"  # Restrict this to your IP range for security
 
 # Cloudflare DNS settings
-cloudflare_email     = "your-email@example.com"
-cloudflare_api_key   = "your-cloudflare-global-api-key"
+cloudflare_api_token = "your-cloudflare-api-token" # scoped: DNS edit on the zone only
 cloudflare_zone_name = "your-domain.com"
 subdomain           = "your-app-name"  # Will create staging-your-app-name.your-domain.com (staging) or your-app-name.your-domain.com (prod)
 
