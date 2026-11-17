@@ -115,6 +115,13 @@
             if (form != null) {
                 form.remove()
 
+            } else if (!document.getElementById("curriculum-dropdown").value
+                || !document.getElementById("grade-dropdown").value
+                || !document.getElementById("subject-dropdown").value) {
+                // The new chapter is created under the selected curriculum, grade and subject, so all
+                // three are needed (they show "Select ..." placeholders until chosen)
+                showToast("Select curriculum, grade and subject first");
+
             } else {
                 // Otherwise, use HTMX to load the form
                 htmx.ajax('GET', '/add-chapter', {
