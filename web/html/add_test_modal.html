@@ -1,3 +1,4 @@
+<script src="/web/static/js/curriculum-grade-rows.js"></script>
 <div id="addTestModal" class="fixed inset-0 bg-ink/40 flex justify-center items-center z-50 p-4">
     <div class="card shadow-xl rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <h2 class="page-title mb-6">
@@ -105,15 +106,6 @@
         if (evt.detail.successful) {
             // Make all delete buttons visible, because now there are at least two rows
             makeAllDeleteButtonsVisible();
-        }
-    }
-
-    function selectPreloadedOption(selectEl) {
-        const selectedValue = selectEl.dataset.selected;
-        if (!selectedValue) return;
-        const option = selectEl.querySelector(`option[value='${selectedValue}']`);
-        if (option) {
-            option.selected = true;
         }
     }
 

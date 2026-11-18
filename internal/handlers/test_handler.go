@@ -665,7 +665,7 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
-		testInstructionsModalTemplate, testSetupModalTemplate, editorTemplate)
+		testInstructionsModalTemplate, testSetupModalTemplate, curriculumGradeSelectsTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) buildTestData(request *http.Request) (dto.TestData, error) {
@@ -884,7 +884,7 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
-		testInstructionsModalTemplate, testSetupModalTemplate, editorTemplate)
+		testInstructionsModalTemplate, testSetupModalTemplate, curriculumGradeSelectsTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -1583,7 +1583,7 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
-		testInstructionsModalTemplate, testSetupModalTemplate, editorTemplate)
+		testInstructionsModalTemplate, testSetupModalTemplate, curriculumGradeSelectsTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request *http.Request) {

@@ -285,7 +285,6 @@
         <input type="hidden" id="test-instructions-default-store"
             value='{{ defaultInstructionsMap .TestRule | toJson }}'>
         {{ template "test_instructions_modal" }}
-        {{ if eq $mode "edit" }}{{ template "test_setup_modal" }}{{ end }}
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="form-input flex-1"
@@ -443,6 +442,8 @@
                 Save</button>
         {{ end }}
     </form>
+    {{/* Rendered outside the form so its curriculum[]/grade[] selects are not submitted with it. */}}
+    {{ if eq $mode "edit" }}{{ template "test_setup_modal" . }}{{ end }}
 </div>
 <script type="application/json" id="test-context-json">
   {{ dict "testId" $id "testRule" .TestRule "examId" (examIdFromTest .TestPtr) "jeeAdvancedExamId" .JeeAdvancedExamID | toJson }}
