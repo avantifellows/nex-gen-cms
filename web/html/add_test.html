@@ -204,11 +204,20 @@
 
         <div class="flex items-center justify-between">
             <label class="font-semibold">Select Test Code</label>
-            <button type="button" id="test-instructions-link"
-                class="text-accent hover:text-accent-hover hover:underline"
-                onclick="openInstructionsModal()">
-                Test Instructions
-            </button>
+            <div class="flex items-center gap-4">
+                {{ if eq $mode "edit" }}
+                <button type="button" id="test-setup-link"
+                    class="cursor-pointer text-accent hover:text-accent-hover hover:underline"
+                    onclick="openTestSetupModal()">
+                    Test Setup
+                </button>
+                {{ end }}
+                <button type="button" id="test-instructions-link"
+                    class="cursor-pointer text-accent hover:text-accent-hover hover:underline"
+                    onclick="openInstructionsModal()">
+                    Test Instructions
+                </button>
+            </div>
         </div>
         <div class="flex items-center gap-2 mt-2 mb-2">
             {{/* Define variables with empty values first so as to access them out of if-end block */}}
@@ -276,6 +285,7 @@
         <input type="hidden" id="test-instructions-default-store"
             value='{{ defaultInstructionsMap .TestRule | toJson }}'>
         {{ template "test_instructions_modal" }}
+        {{ if eq $mode "edit" }}{{ template "test_setup_modal" }}{{ end }}
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="form-input flex-1"

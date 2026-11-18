@@ -1,0 +1,37 @@
+{{ define "test_setup_modal" }}
+<!-- Lets the user correct the classification (curriculum-grade, exam, test type) chosen while
+     creating a test. Only rendered on the edit screen. -->
+<div id="test-setup-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+    onclick="if (event.target === this) closeTestSetupModal()">
+    <div class="card shadow-xl rounded-xl w-full max-w-2xl p-6 max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-border pb-3 mb-3">
+            <h2 class="page-title">Test Setup</h2>
+            <button type="button" class="action-button p-2" aria-label="Close"
+                onclick="closeTestSetupModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="test-setup-body" class="flex-1 overflow-y-auto">
+        </div>
+
+        <div class="mt-4 flex justify-end gap-3">
+            <button type="button" class="btn-secondary" onclick="closeTestSetupModal()">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+    (function () {
+        window.openTestSetupModal = function () {
+            document.getElementById("test-setup-modal").classList.remove("hidden");
+        };
+
+        window.closeTestSetupModal = function () {
+            document.getElementById("test-setup-modal").classList.add("hidden");
+        };
+    })();
+</script>
+{{ end }}
