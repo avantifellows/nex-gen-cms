@@ -1,8 +1,7 @@
-<script src="/web/static/js/curriculum-grade-rows.js"></script>
 <div id="addTestModal" class="fixed inset-0 bg-ink/40 flex justify-center items-center z-50 p-4">
     <div class="card shadow-xl rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <h2 class="page-title mb-6">
-            {{ if .Subtype }}Copy Test{{ else }}Create New Test{{ end }}
+            {{ if eq .Mode "setup" }}Test Setup{{ else if eq .Mode "copy" }}Copy Test{{ else }}Create New Test{{ end }}
         </h2>
         <form id="addTestForm">
             <div id="curriculum-grade-container" class="space-y-4 mb-6">
@@ -59,11 +58,11 @@
                 <!-- Continue (normal new test flow) -->
                 <button type="button" hx-post="/tests/add-test" hx-target="body" hx-push-url="true"
                     hx-on::before-request="if (!validateSelectedOptions()) event.preventDefault()"
-                    class="btn-primary {{ if .Subtype }}hidden{{ end }}">Continue</button>
+                    class="btn-primary {{ if ne .Mode "new" }}hidden{{ end }}">Continue</button>
 
                 <!-- Validate (copy mode) -->
                 <button type="button" hx-post="/tests/validate-test" hx-swap="none"
-                    class="btn-primary {{ if not .Subtype }}hidden{{ end }}"
+                    class="btn-primary {{ if ne .Mode "copy" }}hidden{{ end }}"
                     hx-on::before-request="if (!validateSelectedOptions()) event.preventDefault()"
                     hx-on::after-request="handleValidateTestResponse(event)">
                     Validate &amp; Save
@@ -106,6 +105,15 @@
         if (evt.detail.successful) {
             // Make all delete buttons visible, because now there are at least two rows
             makeAllDeleteButtonsVisible();
+        }
+    }
+
+    function selectPreloadedOption(selectEl) {
+        const selectedValue = selectEl.dataset.selected;
+        if (!selectedValue) return;
+        const option = selectEl.querySelector(`option[value='${selectedValue}']`);
+        if (option) {
+            option.selected = true;
         }
     }
 

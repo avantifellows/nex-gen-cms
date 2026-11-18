@@ -58,7 +58,6 @@ const addTestDestProblemRowTemplate = "dest_problem_row.html"
 const addTestDestSubtypeRowTemplate = "dest_subtype_row.html"
 const addTestDestSubjectRowTemplate = "dest_subject_row.html"
 const testInstructionsModalTemplate = "test_instructions_modal.html"
-const testSetupModalTemplate = "test_setup_modal.html"
 const addTestSearchedTemplate = "add_test_searched.html"
 const testSequenceOptionsTemplate = "test_sequence_options.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
@@ -665,7 +664,7 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
-		testInstructionsModalTemplate, testSetupModalTemplate, curriculumGradeSelectsTemplate, editorTemplate)
+		testInstructionsModalTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) buildTestData(request *http.Request) (dto.TestData, error) {
@@ -884,7 +883,7 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
-		testInstructionsModalTemplate, testSetupModalTemplate, curriculumGradeSelectsTemplate, editorTemplate)
+		testInstructionsModalTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) UpdateTest(responseWriter http.ResponseWriter, request *http.Request) {
@@ -1137,7 +1136,14 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 			log.Println("Error decoding curriculum_grades:", err)
 		}
 
+		// Both copy and setup prefill the dialog; only the explicit "setup" value switches modes.
+		mode := dto.AddTestDialogModeCopy
+		if query.Get("mode") == dto.AddTestDialogModeSetup {
+			mode = dto.AddTestDialogModeSetup
+		}
+
 		data = dto.AddTestDialogData{
+			Mode:             mode,
 			Subtype:          subtype,
 			CurriculumGrades: curriculumGrades,
 			ExamID:           examId,
@@ -1145,7 +1151,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 
 	} else {
 		// new test creation scenario
-		data = dto.AddTestDialogData{}
+		data = dto.AddTestDialogData{Mode: dto.AddTestDialogModeNew}
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
@@ -1583,7 +1589,7 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		"currentInstructionsMap":   currentInstructionsMap,
 	}, baseTemplate, addTestTemplate, problemTypeOptionsTemplate, testTypeOptionsTemplate, testChipEditorTemplate,
 		addTestDestSubjectRowTemplate, addTestDestSubtypeRowTemplate, addTestDestProblemRowTemplate, chipBoxCellTemplate,
-		testInstructionsModalTemplate, testSetupModalTemplate, curriculumGradeSelectsTemplate, editorTemplate)
+		testInstructionsModalTemplate, editorTemplate)
 }
 
 func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request *http.Request) {

@@ -206,9 +206,19 @@
             <label class="font-semibold">Select Test Code</label>
             <div class="flex items-center gap-4">
                 {{ if eq $mode "edit" }}
+                {{/* Add/Copy Test dialog prefilled with saved values; curriculum_grades is double-encoded as in copy.
+                     The pushed URL must avoid "/edit-test", else nav-tracker clears the saved name on Back. */}}
+                {{ $setupCurriculumGrades := .TestPtr.CurriculumGrades | toJson }}
                 <button type="button" id="test-setup-link"
                     class="cursor-pointer text-accent hover:text-accent-hover hover:underline"
-                    onclick="openTestSetupModal()">
+                    hx-get="/tests/add-test-dialog" hx-target="body" hx-swap="beforeend"
+                    hx-push-url="#test-setup"
+                    hx-vals='{
+                        "mode": "setup",
+                        "subtype": "{{ .TestPtr.Subtype }}",
+                        "curriculum_grades": {{ $setupCurriculumGrades | toJson }},
+                        "exam_id": {{ index .TestPtr.ExamIDs 0 }}
+                    }'>
                     Test Setup
                 </button>
                 {{ end }}
@@ -442,8 +452,6 @@
                 Save</button>
         {{ end }}
     </form>
-    {{/* Rendered outside the form so its curriculum[]/grade[] selects are not submitted with it. */}}
-    {{ if eq $mode "edit" }}{{ template "test_setup_modal" . }}{{ end }}
 </div>
 <script type="application/json" id="test-context-json">
   {{ dict "testId" $id "testRule" .TestRule "examId" (examIdFromTest .TestPtr) "jeeAdvancedExamId" .JeeAdvancedExamID | toJson }}
@@ -465,6 +473,13 @@
     var SESSION_KEY_LAST_SEARCHED_TEST = "lastSearchedTest";
 
     (function () {        
+        // A refresh loads the "#test-setup" entry (pushed by the Test Setup link) without its dialog; step back over it.
+        // history.state.htmx limits this to entries htmx pushed, so a hand-typed URL cannot navigate away.
+        if (mode === "edit" && location.hash === "#test-setup" && history.state?.htmx) {
+            history.back();
+            return;
+        }
+
         if (window.lastPushedScreen === PUSHED_SCREEN_ADD_TEST) {
             // clear session storage values stored earlier as this is new screen opened
             sessionStorage.removeItem(SESSION_KEY_PROGRAM);
