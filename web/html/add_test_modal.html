@@ -1,9 +1,11 @@
 <div id="addTestModal" class="fixed inset-0 bg-ink/40 flex justify-center items-center z-50 p-4">
-    <div class="card shadow-xl rounded-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+    <div class="card shadow-xl rounded-xl w-full max-w-md p-6 max-h-[90vh] flex flex-col">
         <h2 class="page-title mb-6">
-            {{ if eq .Mode "setup" }}Test Setup{{ else if eq .Mode "copy" }}Copy Test{{ else }}Create New Test{{ end }}
+            {{ if eq .Mode "configuration" }}Test Configuration{{ else if eq .Mode "copy" }}Copy Test{{ else }}Create New Test{{ end }}
         </h2>
-        <form id="addTestForm">
+        <form id="addTestForm" class="flex flex-col flex-1 min-h-0">
+            <!-- Only the fields scroll, so the buttons below stay visible however long the content gets -->
+            <div class="flex-1 overflow-y-auto">
             <div id="curriculum-grade-container" class="space-y-4 mb-6">
                 <div class="curriculum-grade-set">
                     <div class="grid grid-cols-[1fr_1fr_auto] gap-3 items-center">
@@ -51,6 +53,12 @@
                 </select>
             </div>
 
+            {{ if eq .Mode "configuration" }}
+            <!-- Outcome of checking the test's problems against the chosen exam/type rule -->
+            <div id="configuration-rule-status" class="mb-6 text-sm" aria-live="polite"></div>
+            {{ end }}
+            </div>
+
             <!-- Buttons -->
             <div class="flex gap-3 justify-end pt-2 border-t border-border">
                 <button type="button" onclick="closeAddTestModal()" class="btn-secondary">Cancel</button>
@@ -67,11 +75,179 @@
                     hx-on::after-request="handleValidateTestResponse(event)">
                     Validate &amp; Save
                 </button>
+
+                {{ if eq .Mode "configuration" }}
+                <!-- Saving is not wired up yet; this only reflects the rule check -->
+                <button type="button" id="configuration-confirm-btn" class="btn-primary" disabled>Confirm</button>
+                {{ end }}
             </div>
 
         </form>
     </div>
 </div>
+{{ if eq .Mode "configuration" }}
+<script>
+    (function () {
+        const form = document.getElementById('addTestForm');
+        const statusEl = document.getElementById('configuration-rule-status');
+        const confirmBtn = document.getElementById('configuration-confirm-btn');
+        const testTypeSelect = document.getElementById('modal-testType');
+        const examSelect = document.getElementById('modal-examType');
+        const rowsContainer = document.getElementById('curriculum-grade-set');
+        const savedTestType = {{ .Subtype }};
+        const savedExamId = String({{ .ExamID }});
+        // The saved test always has a type, so the blank placeholder is not a valid choice here.
+        testTypeSelect.querySelector('option[value=""]')?.remove();
+
+        function rowKey(curriculum, grade) {
+            return `${curriculum}__${grade}`;
+        }
+
+        // Rows as they were saved, read before the selects' options load and change anything.
+        const savedPairs = Array.from(rowsContainer.querySelectorAll('.curriculum-grade-row')).map(row =>
+            rowKey(row.querySelector("select[name='curriculum[]']").dataset.selected,
+                row.querySelector("select[name='grade[]']").dataset.selected));
+
+        let latestCheck = 0;  // lets a slow earlier response be ignored once a newer check started
+        let ruleOk = true;    // false while a rule check is pending or has found conflicts
+        // Only the user's own picks move these. The selects' values also change while their options load.
+        let selectedTestType = savedTestType;
+        let selectedExamId = savedExamId;
+
+        // Current rows as keys, or null while any select still has no real value (loading, new row).
+        function currentPairs() {
+            const keys = [];
+            for (const row of rowsContainer.querySelectorAll('.curriculum-grade-row')) {
+                const curriculum = row.querySelector("select[name='curriculum[]']").value;
+                const grade = row.querySelector("select[name='grade[]']").value;
+                if (!/^\d+$/.test(curriculum) || !/^\d+$/.test(grade)) return null;
+                keys.push(rowKey(curriculum, grade));
+            }
+            return keys;
+        }
+
+        function sameSet(a, b) {
+            return a.length === b.length && [...a].sort().join('|') === [...b].sort().join('|');
+        }
+
+        function ruleSelectionChanged() {
+            return selectedExamId !== savedExamId || selectedTestType !== savedTestType;
+        }
+
+        // Confirm needs a complete, changed configuration, and a passing rule check if exam or type changed.
+        function refreshConfirm() {
+            const pairs = currentPairs();
+            const pairsChanged = pairs !== null && !sameSet(pairs, savedPairs);
+            confirmBtn.disabled = !(pairs !== null && (pairsChanged || ruleSelectionChanged()) && ruleOk);
+        }
+
+        function showStatus(message, tone, conflicts) {
+            statusEl.replaceChildren();
+            const line = document.createElement('p');
+            line.className = tone === 'error' ? 'text-danger' : 'text-ink-muted';
+            line.textContent = message;
+            statusEl.appendChild(line);
+
+            if (conflicts && conflicts.length) {
+                const list = document.createElement('ul');
+                list.className = 'list-disc pl-5 mt-1 text-danger';
+                conflicts.forEach(text => {
+                    const item = document.createElement('li');
+                    item.textContent = text;
+                    list.appendChild(item);
+                });
+                statusEl.appendChild(list);
+            }
+        }
+
+        // Where a problem row sits (subject and section names as shown on screen) and its code.
+        function describeRow(row) {
+            const subjectId = row.dataset.subject.replace('subject-', '');
+            const type = row.dataset.subtype.replace('subtype-', '');
+            const subject = document.getElementById(`subject-${subjectId}`)?.querySelector('td')?.textContent.trim()
+                || `Subject ${subjectId}`;
+            const section = document.getElementById(`subtype-${subjectId}-${type}`)
+                ?.querySelector("input[name='section-name']")?.value.trim() || type;
+            const code = row.querySelector("a[href^='/problem?id=']")?.textContent.trim();
+            return { place: `${subject} › ${section}`, code };
+        }
+
+        // One line per subject, section and reason, naming the first few questions it hits.
+        function summarizeConflicts(results) {
+            const groups = new Map();
+            results.filter(r => !r.result.isValid).forEach(({ row, result }) => {
+                const { place, code } = describeRow(row);
+                const key = `${place}|${result.reason}`;
+                const group = groups.get(key) || { place, reason: result.reason, count: 0, codes: [] };
+                group.count++;
+                if (code) group.codes.push(code);
+                groups.set(key, group);
+            });
+            return Array.from(groups.values(), g => {
+                const more = g.codes.length > 5 ? ` +${g.codes.length - 5} more` : '';
+                return `${g.place}: ${g.count} question(s) - ${g.reason} (${g.codes.slice(0, 5).join(', ')}${more})`;
+            });
+        }
+
+        async function checkRule() {
+            const checkId = ++latestCheck;
+
+            if (!ruleSelectionChanged()) {
+                // Back on the saved exam and type, so there is no new rule to check against.
+                ruleOk = true;
+                statusEl.replaceChildren();
+                refreshConfirm();
+                return;
+            }
+
+            ruleOk = false;
+            refreshConfirm();
+            showStatus('Checking the test against this exam and test type...', 'info');
+
+            try {
+                const res = await fetch('/tests/validate-test', {
+                    method: 'POST',
+                    body: new URLSearchParams(new FormData(form)),
+                    headers: { 'HX-Request': 'true' }
+                });
+                const text = await readResponseOrThrow(res);
+                if (checkId !== latestCheck) return;
+
+                const data = JSON.parse(text);
+                if (!data.TestRule) {
+                    showStatus('No rule is configured for this exam and test type, so nothing restricts the test.', 'info');
+                    ruleOk = true;
+                } else {
+                    const conflicts = summarizeConflicts(validateProblemRows(data.TestRule));
+                    ruleOk = conflicts.length === 0;
+                    if (ruleOk) {
+                        showStatus('The test fits this exam and test type.', 'info');
+                    } else {
+                        showStatus('The test cannot move to this configuration until these are fixed:', 'error', conflicts);
+                    }
+                }
+            } catch (err) {
+                if (checkId !== latestCheck) return;
+                showStatus(err.message || 'Could not check this exam and test type.', 'error');
+            }
+            refreshConfirm();
+        }
+
+        testTypeSelect.addEventListener('change', () => {
+            selectedTestType = testTypeSelect.value;
+            checkRule();
+        });
+        examSelect.addEventListener('change', () => {
+            selectedExamId = examSelect.value;
+            checkRule();
+        });
+        rowsContainer.addEventListener('change', refreshConfirm);
+        // Adding or removing a row fires no change event, and a new row only gets values once its options load.
+        new MutationObserver(() => refreshConfirm('rows added/removed')).observe(rowsContainer, { childList: true });
+        rowsContainer.addEventListener('htmx:afterRequest', refreshConfirm);
+    })();
+</script>
+{{ end }}
 <script>
     function validateSelectedOptions() {
         // 1. Test type validation

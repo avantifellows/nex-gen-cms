@@ -1136,10 +1136,10 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 			log.Println("Error decoding curriculum_grades:", err)
 		}
 
-		// Both copy and setup prefill the dialog; only the explicit "setup" value switches modes.
+		// Both copy and configuration prefill the dialog; only the explicit "configuration" value switches modes.
 		mode := dto.AddTestDialogModeCopy
-		if query.Get("mode") == dto.AddTestDialogModeSetup {
-			mode = dto.AddTestDialogModeSetup
+		if query.Get("mode") == dto.AddTestDialogModeConfiguration {
+			mode = dto.AddTestDialogModeConfiguration
 		}
 
 		data = dto.AddTestDialogData{

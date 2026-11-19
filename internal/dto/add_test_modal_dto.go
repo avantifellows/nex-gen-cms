@@ -2,12 +2,12 @@ package dto
 
 import "github.com/avantifellows/nex-gen-cms/internal/models"
 
-// Modes of the add-test dialog, which also serves copying a test and changing the setup
+// Modes of the add-test dialog, which also serves copying a test and changing the configuration
 // (curriculum-grade, test type, exam) of an existing one.
 const (
-	AddTestDialogModeNew   = "new"
-	AddTestDialogModeCopy  = "copy"
-	AddTestDialogModeSetup = "setup"
+	AddTestDialogModeNew           = "new"
+	AddTestDialogModeCopy          = "copy"
+	AddTestDialogModeConfiguration = "configuration"
 )
 
 type AddTestDialogData struct {

@@ -180,14 +180,13 @@
     </div>
 
     {{ $id := "null" }}
-    {{ $subtype := "null" }}
+    {{ $subtype := printf "\"%s\"" .TestPtr.Subtype }}
     {{ $curriculumGrades := "null" }}
 
     {{ if eq $mode "edit" }}
         {{ $id = printf "%d" .TestPtr.ID }}
     {{ else }}
         <!-- add/copy test -->
-        {{ $subtype = printf "\"%s\"" .TestPtr.Subtype }}
         {{ $curriculumGrades = .TestPtr.CurriculumGrades | toJson }}
     {{ end }}
 
@@ -208,18 +207,18 @@
                 {{ if eq $mode "edit" }}
                 {{/* Add/Copy Test dialog prefilled with saved values; curriculum_grades is double-encoded as in copy.
                      The pushed URL must avoid "/edit-test", else nav-tracker clears the saved name on Back. */}}
-                {{ $setupCurriculumGrades := .TestPtr.CurriculumGrades | toJson }}
-                <button type="button" id="test-setup-link"
+                {{ $configCurriculumGrades := .TestPtr.CurriculumGrades | toJson }}
+                <button type="button" id="test-configuration-link"
                     class="cursor-pointer text-accent hover:text-accent-hover hover:underline"
                     hx-get="/tests/add-test-dialog" hx-target="body" hx-swap="beforeend"
-                    hx-push-url="#test-setup"
+                    hx-push-url="#test-configuration"
                     hx-vals='{
-                        "mode": "setup",
+                        "mode": "configuration",
                         "subtype": "{{ .TestPtr.Subtype }}",
-                        "curriculum_grades": {{ $setupCurriculumGrades | toJson }},
+                        "curriculum_grades": {{ $configCurriculumGrades | toJson }},
                         "exam_id": {{ index .TestPtr.ExamIDs 0 }}
                     }'>
-                    Test Setup
+                    Test Configuration
                 </button>
                 {{ end }}
                 <button type="button" id="test-instructions-link"
@@ -300,11 +299,6 @@
             <input id="test-name" type="text" placeholder="Test Name" class="form-input flex-1"
                 value='{{ if eq $mode "edit" }}{{.TestPtr.GetNameByLang "en"}}{{end}}' 
                 onchange="sessionStorage.setItem('selectedName', this.value);">
-            {{ if eq $mode "edit" }}
-            <select id="test-type-dropdown" class="form-input flex-1">
-                {{ template "test_type_options" .TestPtr }}
-            </select>
-            {{end}}
         </div>
 
         {{ $hasTestRule := (ne .TestRule nil) }}
@@ -473,9 +467,9 @@
     var SESSION_KEY_LAST_SEARCHED_TEST = "lastSearchedTest";
 
     (function () {        
-        // A refresh loads the "#test-setup" entry (pushed by the Test Setup link) without its dialog; step back over it.
+        // A refresh loads the "#test-configuration" entry (pushed by the Test Configuration link) without its dialog; step back over it.
         // history.state.htmx limits this to entries htmx pushed, so a hand-typed URL cannot navigate away.
-        if (mode === "edit" && location.hash === "#test-setup" && history.state?.htmx) {
+        if (mode === "edit" && location.hash === "#test-configuration" && history.state?.htmx) {
             history.back();
             return;
         }
@@ -1077,11 +1071,6 @@
 
         const code = `${program}-${testTypeCode}-${testSequence}-${year}`;
 
-        if (mode === "edit") {
-            // for edit test scenario, get subtype from dropdown
-            subtype = document.getElementById('test-type-dropdown')?.value;
-        }
-
         const markingSchemeDiv = document.getElementById('marking-scheme-div');
         const posChips = markingSchemeDiv.querySelectorAll(`${chipEditorPosId} .chip`);
         const negChips = markingSchemeDiv.querySelectorAll(`${chipEditorNegId} .chip`);
@@ -1341,16 +1330,13 @@
         }
     }
 
-    async function validateAndCreateTest(data) {
-        const testRule = data.TestRule || {};
-
+    // Checks every problem row on screen against testRule, without touching the UI.
+    // Returns [{ row, result }] in row order, where result is { isValid, reason }.
+    function validateProblemRows(testRule) {
         const questionsTableBody = document.getElementById("questions-table-body");
         const questionRows = questionsTableBody.querySelectorAll("tr[id^='problem-']");
 
-        let invalidCount = 0;
-
-        for (let i = 0; i < questionRows.length; i++) {
-            const row = questionRows[i];
+        return Array.from(questionRows).map((row, i) => {
             const subjectId = parseInt(row.dataset.subject.replace("subject-", ""), 10);
             const subtype = row.dataset.subtype.replace("subtype-", "");
 
@@ -1369,9 +1355,18 @@
                 existingSubtypeProblemCount++;
             }
 
-            const result = validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemCount, 
+            const result = validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemCount,
                 questionsTableBody, false);
+            return { row, result };
+        });
+    }
 
+    async function validateAndCreateTest(data) {
+        const testRule = data.TestRule || {};
+
+        let invalidCount = 0;
+
+        for (const { row, result } of validateProblemRows(testRule)) {
             // Visually mark valid/invalid questions
             if (!result.isValid) {
                 addValidationErrorUI(row, result.reason);
