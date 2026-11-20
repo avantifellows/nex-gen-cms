@@ -77,7 +77,7 @@
                 </button>
 
                 {{ if eq .Mode "configuration" }}
-                <!-- Saving is not wired up yet; this only reflects the rule check -->
+                <!-- Applies the choice to the edit screen; the test is saved from there -->
                 <button type="button" id="configuration-confirm-btn" class="btn-primary" disabled>Confirm</button>
                 {{ end }}
             </div>
@@ -110,6 +110,7 @@
 
         let latestCheck = 0;  // lets a slow earlier response be ignored once a newer check started
         let ruleOk = true;    // false while a rule check is pending or has found conflicts
+        let ruleResult = null;  // the rule the latest passing check fetched, for Confirm to apply
         // Only the user's own picks move these. The selects' values also change while their options load.
         let selectedTestType = savedTestType;
         let selectedExamId = savedExamId;
@@ -138,8 +139,7 @@
         function refreshConfirm() {
             const pairs = currentPairs();
             const pairsChanged = pairs !== null && !sameSet(pairs, savedPairs);
-            confirmBtn.disabled = !(pairs !== null && (pairsChanged || ruleSelectionChanged()) && ruleOk);
-        }
+            confirmBtn.disabled = !(pairs !== null && (pairsChanged || ruleSelectionChanged()) && ruleOk);        }
 
         function showStatus(message, tone, conflicts) {
             statusEl.replaceChildren();
@@ -191,6 +191,7 @@
 
         async function checkRule() {
             const checkId = ++latestCheck;
+            ruleResult = null;
 
             if (!ruleSelectionChanged()) {
                 // Back on the saved exam and type, so there is no new rule to check against.
@@ -214,11 +215,12 @@
                 if (checkId !== latestCheck) return;
 
                 const data = JSON.parse(text);
-                if (!data.TestRule) {
+                const rule = data.TestRule || null;
+                if (!rule) {
                     showStatus('No rule is configured for this exam and test type, so nothing restricts the test.', 'info');
                     ruleOk = true;
                 } else {
-                    const conflicts = summarizeConflicts(validateProblemRows(data.TestRule));
+                    const conflicts = summarizeConflicts(validateProblemRows(rule));
                     ruleOk = conflicts.length === 0;
                     if (ruleOk) {
                         showStatus('The test fits this exam and test type.', 'info');
@@ -226,12 +228,29 @@
                         showStatus('The test cannot move to this configuration until these are fixed:', 'error', conflicts);
                     }
                 }
+                if (ruleOk) {
+                    ruleResult = { rule, jeeAdvancedExamId: data.jee_advanced_exam_id || 0 };
+                }
             } catch (err) {
                 if (checkId !== latestCheck) return;
                 showStatus(err.message || 'Could not check this exam and test type.', 'error');
             }
             refreshConfirm();
         }
+
+        confirmBtn.addEventListener('click', () => {
+            const ruleChanged = ruleSelectionChanged();
+            if (!validateSelectedOptions() || (ruleChanged && !ruleResult)) return;
+
+            const curriculumGrades = Array.from(rowsContainer.querySelectorAll('.curriculum-grade-row')).map(row => ({
+                curriculum_id: Number(row.querySelector("select[name='curriculum[]']").value),
+                grade_id: Number(row.querySelector("select[name='grade[]']").value)
+            }));
+            applyTestConfiguration(
+                { subtype: testTypeSelect.value, examId: Number(examSelect.value), curriculumGrades },
+                ruleChanged ? ruleResult : null);
+            closeAddTestModal();
+        });
 
         testTypeSelect.addEventListener('change', () => {
             selectedTestType = testTypeSelect.value;
@@ -243,8 +262,9 @@
         });
         rowsContainer.addEventListener('change', refreshConfirm);
         // Adding or removing a row fires no change event, and a new row only gets values once its options load.
-        new MutationObserver(() => refreshConfirm('rows added/removed')).observe(rowsContainer, { childList: true });
-        rowsContainer.addEventListener('htmx:afterRequest', refreshConfirm);
+        new MutationObserver(() => refreshConfirm()).observe(rowsContainer, { childList: true });
+        // The kebab-case name fires after htmx:afterRequest, once each select has picked its saved option.
+        rowsContainer.addEventListener('htmx:after-request', refreshConfirm);
     })();
 </script>
 {{ end }}
@@ -287,8 +307,7 @@
     function selectPreloadedOption(selectEl) {
         const selectedValue = selectEl.dataset.selected;
         if (!selectedValue) return;
-        const option = selectEl.querySelector(`option[value='${selectedValue}']`);
-        if (option) {
+        const option = selectEl.querySelector(`option[value='${selectedValue}']`);        if (option) {
             option.selected = true;
         }
     }
@@ -333,6 +352,11 @@
     }
 
     function closeAddTestModal() {
+        {{ if eq .Mode "configuration" }}
+        // Opened in place over the edit screen with no history entry, so just drop the dialog.
+        document.getElementById('addTestModal').remove();
+        {{ else }}
         goBackAfterDelay(0);
+        {{ end }}
     }
 </script>
