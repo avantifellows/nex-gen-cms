@@ -16,7 +16,7 @@ edges:
     condition: when a decision relates to login, roles, or the user store
   - target: context/deployment.md
     condition: when a decision affects build-at-deploy, infra, or release flow
-last_updated: 2026-10-28
+last_updated: 2026-11-20
 ---
 
 # Decisions
@@ -141,3 +141,19 @@ truth); moving concepts to chapters (rejected, concepts are topic-level knowledg
 **Consequences:** Moves send a request without topic keys so topics survive; copies keep topics; db-service
 lists problems by `chapter_id` and filters by `topic_id`, with opt-in paging. The legacy `topic_id` on a
 problem is no longer read or sent by the CMS.
+
+### Test configuration is changed in place on the edit screen, and saved with the normal update
+**Date:** 2026-11-20
+**Status:** Active
+**Decision:** A test's curriculum-grades, test type and exam are changed from a "Test Configuration" dialog on
+the edit screen. The dialog is the Add Test dialog in `configuration` mode, opened in place with no history
+entry. Confirm only changes the page; the existing update PATCH saves it when Save is clicked.
+**Reasoning:** Mistakes made while creating a test could not be fixed. Reusing the dialog and the update call
+avoids a second endpoint and a second copy of the rule check.
+**Alternatives considered:** A separate move/reclassify endpoint (rejected, the update PATCH already carries
+these fields); remapping problems into the new exam's sections automatically (rejected, an incompatible exam or
+test type is blocked instead); opening the dialog with a history entry (rejected, going Back restores the page
+from an htmx HTML snapshot and discards what Confirm applied).
+**Consequences:** The check of problems against the new rule runs in the browser, so the server does not refuse
+an incompatible update. A changed exam or type resets instructions, duration and marks to the new rule. The
+pending choice lives in a hidden input so it survives htmx restoring the page.

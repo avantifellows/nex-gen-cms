@@ -18,7 +18,7 @@ edges:
     condition: when working on login, sessions, roles, route guards, or the Postgres user store
   - target: context/deployment.md
     condition: when deploying, changing AWS/Terraform infra, CI/CD, or release operations
-last_updated: 2026-11-09
+last_updated: 2026-11-20
 ---
 
 # Session Bootstrap
@@ -66,6 +66,14 @@ Then read this file fully before doing anything else in this session.
   selected `curriculum_id` to db-service, so a chapter shared by several curricula only lists problems of the
   selected curriculum. Concepts still belong to topics only (topic screen
   Concepts tab). The topic screen has no Problems tab, and the legacy single `Problem.TopicID` is gone.
+- Edit Test has a "Test Configuration" link that changes a test's curriculum-grades, test type and exam. It
+  opens the Add Test dialog (`add_test_modal.html`; `AddTestDialogData.Mode` is `configuration`, with `new` and
+  `copy` the other modes) in place over the edit screen, with no history entry. A different exam or test type
+  checks the problems on screen against the new rule (`POST /tests/validate-test`, then `validateProblemRows`)
+  and blocks Confirm on conflicts. Confirm only changes the page (`applyTestConfiguration`): the pending choice
+  sits in the hidden `test-configuration-store` input beside the saved one, and a changed exam or type resets
+  instructions, duration and marks to the new rule. Nothing is sent until Save, whose PATCH carries the held type
+  and exam, and `curriculum_grades` only when they changed. The edit screen has no test type dropdown any more.
 - Question paper / answer sheet / combined PDF generation via headless Chrome (chromedp + MathJax).
 - Admin user management (`/admin/users`), move/copy of resources & problems.
 - Generated test PDFs are cached in S3 by content hash (`TestsHandler.DownloadPdf` + the `storage.PdfStore`
