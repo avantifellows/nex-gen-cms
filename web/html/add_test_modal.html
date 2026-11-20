@@ -139,7 +139,8 @@
         function refreshConfirm() {
             const pairs = currentPairs();
             const pairsChanged = pairs !== null && !sameSet(pairs, savedPairs);
-            confirmBtn.disabled = !(pairs !== null && (pairsChanged || ruleSelectionChanged()) && ruleOk);        }
+            confirmBtn.disabled = !(pairs !== null && (pairsChanged || ruleSelectionChanged()) && ruleOk);
+        }
 
         function showStatus(message, tone, conflicts) {
             statusEl.replaceChildren();
@@ -307,7 +308,8 @@
     function selectPreloadedOption(selectEl) {
         const selectedValue = selectEl.dataset.selected;
         if (!selectedValue) return;
-        const option = selectEl.querySelector(`option[value='${selectedValue}']`);        if (option) {
+        const option = selectEl.querySelector(`option[value='${selectedValue}']`);
+        if (option) {
             option.selected = true;
         }
     }
