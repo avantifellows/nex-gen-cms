@@ -197,8 +197,8 @@ func (t *Test) DisplaySubtype() string {
 		return "Evaluation Test"
 	case "mock_test":
 		return "Mock Test"
-	case "nta_test":
-		return "NTA Test"
+	case "previous_year_test":
+		return "Previous Year Test"
 	case "homework_assignment":
 		return "Homework Assignment"
 	default:
