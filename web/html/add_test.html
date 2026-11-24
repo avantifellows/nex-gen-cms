@@ -204,11 +204,18 @@
 
         <div class="flex items-center justify-between">
             <label class="font-semibold">Select Test Code</label>
-            <button type="button" id="test-instructions-link"
-                class="text-accent hover:text-accent-hover hover:underline"
-                onclick="openInstructionsModal()">
-                Test Instructions
-            </button>
+            <div class="flex items-center gap-4">
+                <button type="button" id="test-syllabus-link"
+                    class="text-accent hover:text-accent-hover hover:underline cursor-pointer"
+                    onclick="openSyllabusModal()">
+                    Test Syllabus
+                </button>
+                <button type="button" id="test-instructions-link"
+                    class="text-accent hover:text-accent-hover hover:underline cursor-pointer"
+                    onclick="openInstructionsModal()">
+                    Test Instructions
+                </button>
+            </div>
         </div>
         <div class="flex items-center gap-2 mt-2 mb-2">
             {{/* Define variables with empty values first so as to access them out of if-end block */}}
@@ -276,6 +283,7 @@
         <input type="hidden" id="test-instructions-default-store"
             value='{{ defaultInstructionsMap .TestRule | toJson }}'>
         {{ template "test_instructions_modal" }}
+        {{ template "test_syllabus_modal" }}
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="form-input flex-1"
@@ -660,6 +668,11 @@
     // Close with ESC
     addTestDiv.onkeydown = function (e) {
         if (e.key === "Escape") {
+            const syllabusModal = document.getElementById("test-syllabus-modal");
+            if (syllabusModal && !syllabusModal.classList.contains("hidden")) {
+                closeSyllabusModal();
+                return;
+            }
             const modal = document.getElementById("test-instructions-modal");
             if (modal && !modal.classList.contains("hidden")) {
                 closeInstructionsModal();

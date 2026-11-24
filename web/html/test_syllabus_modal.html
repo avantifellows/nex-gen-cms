@@ -1,0 +1,36 @@
+{{ define "test_syllabus_modal" }}
+<div id="test-syllabus-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+    onclick="if (event.target === this) closeSyllabusModal()">
+    <div class="card shadow-xl rounded-xl w-full max-w-3xl p-6 max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between border-b border-border pb-3 mb-3">
+            <h2 class="page-title">Test Syllabus</h2>
+            <button type="button" class="action-button p-2" aria-label="Close"
+                onclick="closeSyllabusModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="test-syllabus-body" class="flex-1 overflow-y-auto">
+            <p class="text-ink-muted">Syllabus selection coming soon.</p>
+        </div>
+
+        <div class="mt-4 flex justify-end gap-3">
+            <button type="button" class="btn-secondary" onclick="closeSyllabusModal()">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+<script>
+    (function () {
+        window.openSyllabusModal = function () {
+            document.getElementById("test-syllabus-modal").classList.remove("hidden");
+        };
+
+        window.closeSyllabusModal = function () {
+            document.getElementById("test-syllabus-modal").classList.add("hidden");
+        };
+    })();
+</script>
+{{ end }}
