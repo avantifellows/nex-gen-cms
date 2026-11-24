@@ -11,8 +11,12 @@
             </button>
         </div>
 
-        <div id="test-syllabus-body" class="flex-1 overflow-y-auto">
-            <p class="text-ink-muted">Syllabus selection coming soon.</p>
+        <div class="flex-1 overflow-y-auto">
+            <div class="nav nav-tabs" id="syllabus-subject-tabs"></div>
+            <div id="syllabus-subject-panel" class="pt-3"></div>
+            <p id="syllabus-empty-hint" class="text-ink-muted">
+                Click a subject tab to choose its chapters. Untick a subject to leave it out of the syllabus.
+            </p>
         </div>
 
         <div class="mt-4 flex justify-end gap-3">
@@ -24,7 +28,141 @@
 </div>
 <script>
     (function () {
+        // Placeholder data for the UI-only step; replaced by API-loaded subjects/chapters.
+        const SUBJECTS = [
+            { id: 1, name: "Physics" },
+            { id: 2, name: "Chemistry" },
+            { id: 3, name: "Mathematics" },
+        ];
+        const CHAPTERS_BY_SUBJECT = {
+            1: [{ id: 11, name: "Kinematics" }, { id: 12, name: "Laws of Motion" }, { id: 13, name: "Work, Energy and Power" }],
+            2: [{ id: 21, name: "Atomic Structure" }, { id: 22, name: "Chemical Bonding" }],
+            3: [{ id: 31, name: "Sets and Relations" }, { id: 32, name: "Limits" }, { id: 33, name: "Matrices" }, { id: 34, name: "Probability" }],
+        };
+
+        // subject id -> Set of selected chapter ids. A subject is part of the syllabus
+        // only while it has an entry here.
+        const selection = new Map();
+        let activeSubjectId = null;
+
+        function selectSubject(subjectId) {
+            if (!selection.has(subjectId)) selection.set(subjectId, new Set());
+            activeSubjectId = subjectId;
+            render();
+        }
+
+        function excludeSubject(subjectId) {
+            selection.delete(subjectId);
+            if (activeSubjectId === subjectId) {
+                activeSubjectId = SUBJECTS.find(s => selection.has(s.id))?.id ?? null;
+            }
+            render();
+        }
+
+        function toggleChapter(subjectId, chapterId, checked) {
+            const set = selection.get(subjectId);
+            if (!set) return;
+            if (checked) set.add(chapterId); else set.delete(chapterId);
+            renderTabs();
+            updateCount(subjectId);
+        }
+
+        function toggleAllChapters(subjectId, checked) {
+            const set = selection.get(subjectId);
+            if (!set) return;
+            set.clear();
+            if (checked) (CHAPTERS_BY_SUBJECT[subjectId] || []).forEach(c => set.add(c.id));
+            render();
+        }
+
+        function updateCount(subjectId) {
+            const total = (CHAPTERS_BY_SUBJECT[subjectId] || []).length;
+            const count = selection.get(subjectId)?.size || 0;
+            const countEl = document.getElementById("syllabus-count");
+            if (countEl) countEl.textContent = count + " of " + total + " selected";
+            const all = document.getElementById("syllabus-all");
+            if (all) all.checked = total > 0 && count === total;
+        }
+
+        function renderTabs() {
+            const tabs = document.getElementById("syllabus-subject-tabs");
+            tabs.innerHTML = "";
+            SUBJECTS.forEach(subject => {
+                const included = selection.has(subject.id);
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "nav-link" + (subject.id === activeSubjectId ? " active" : "");
+                btn.addEventListener("click", () => {
+                    if (subject.id === activeSubjectId) return;
+                    selectSubject(subject.id);
+                });
+
+                const checkbox = document.createElement("input");
+                checkbox.type = "checkbox";
+                checkbox.checked = included;
+                checkbox.title = "Include " + subject.name;
+                checkbox.className = "accent-accent";
+                checkbox.style.marginRight = "6px";
+                checkbox.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    if (checkbox.checked) selectSubject(subject.id); else excludeSubject(subject.id);
+                });
+
+                const count = selection.get(subject.id)?.size || 0;
+                btn.append(checkbox, document.createTextNode(subject.name + (count ? " (" + count + ")" : "")));
+                tabs.appendChild(btn);
+            });
+        }
+
+        function renderPanel() {
+            const panel = document.getElementById("syllabus-subject-panel");
+            panel.innerHTML = "";
+            const subjectId = activeSubjectId;
+            const chapterSet = selection.get(subjectId);
+            if (!chapterSet) return;
+            const chapters = CHAPTERS_BY_SUBJECT[subjectId] || [];
+
+            const toolbar = document.createElement("div");
+            toolbar.className = "flex items-center justify-between mb-2";
+            const allLabel = document.createElement("label");
+            allLabel.className = "flex items-center gap-2 cursor-pointer font-medium";
+            const all = document.createElement("input");
+            all.type = "checkbox";
+            all.id = "syllabus-all";
+            all.className = "accent-accent";
+            all.addEventListener("change", () => toggleAllChapters(subjectId, all.checked));
+            allLabel.append(all, document.createTextNode("Select all chapters"));
+            const count = document.createElement("span");
+            count.id = "syllabus-count";
+            count.className = "text-sm text-ink-muted";
+            toolbar.append(allLabel, count);
+
+            const list = document.createElement("div");
+            list.className = "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1";
+            chapters.forEach(chapter => {
+                const row = document.createElement("label");
+                row.className = "flex items-center gap-2 cursor-pointer py-1";
+                const input = document.createElement("input");
+                input.type = "checkbox";
+                input.className = "accent-accent";
+                input.checked = chapterSet.has(chapter.id);
+                input.addEventListener("change", () => toggleChapter(subjectId, chapter.id, input.checked));
+                row.append(input, document.createTextNode(chapter.name));
+                list.appendChild(row);
+            });
+
+            panel.append(toolbar, list);
+            updateCount(subjectId);
+        }
+
+        function render() {
+            document.getElementById("syllabus-empty-hint").classList.toggle("hidden", activeSubjectId !== null);
+            renderTabs();
+            renderPanel();
+        }
+
         window.openSyllabusModal = function () {
+            render();
             document.getElementById("test-syllabus-modal").classList.remove("hidden");
         };
 
