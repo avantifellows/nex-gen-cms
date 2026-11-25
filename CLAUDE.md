@@ -1,1 +1,1 @@
-AGENTS.md
+See [AGENTS.md](AGENTS.md) for project identity, non-negotiables, and the `.mex/` scaffold entry point.

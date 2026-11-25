@@ -1,6 +1,9 @@
 package models
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+)
 
 type Resource struct {
 	ID               int                `json:"id,omitempty"`
@@ -14,10 +17,46 @@ type Resource struct {
 	SubjectID        int8               `json:"subject_id,omitempty"`
 	CurriculumGrades []CurriculumGrade  `json:"curriculum_grades,omitempty"`
 	TypeParams       ResourceTypeParams `json:"type_params,omitempty"`
+	// Retired resources stay in the table so that older BigQuery rows keep
+	// resolving. A pointer, because a plain bool would drop "false" from the
+	// patch body and make deactivating impossible.
+	IsActive *bool `json:"is_active,omitempty"`
 }
 
 type ResourceTypeParams struct {
 	SrcLink string `json:"src_link,omitempty"`
+	// Keys the CMS does not model, such as sashakt_link. They are carried
+	// through a round trip so that editing a resource here does not drop
+	// whatever else is stored in type_params.
+	Extra map[string]any `json:"-"`
+}
+
+func (p *ResourceTypeParams) UnmarshalJSON(data []byte) error {
+	var all map[string]any
+	if err := json.Unmarshal(data, &all); err != nil {
+		return err
+	}
+
+	if srcLink, ok := all["src_link"].(string); ok {
+		p.SrcLink = srcLink
+	}
+	delete(all, "src_link")
+
+	if len(all) > 0 {
+		p.Extra = all
+	}
+	return nil
+}
+
+func (p ResourceTypeParams) MarshalJSON() ([]byte, error) {
+	all := make(map[string]any, len(p.Extra)+1)
+	for key, value := range p.Extra {
+		all[key] = value
+	}
+	if strings.TrimSpace(p.SrcLink) != "" {
+		all["src_link"] = p.SrcLink
+	}
+	return json.Marshal(all)
 }
 
 func NewResource(code string, name string, resourceType string, subtype string, srcLink string, chapterID int16, curriculumID int16, gradeID int8, subjectID int8) *Resource {
@@ -48,6 +87,10 @@ func NewResource(code string, name string, resourceType string, subtype string, 
 	return resource
 }
 
+// BuildMap is the body of the edit PATCH. is_active is deliberately absent:
+// the edit form has no control for it, and PATCH leaves an omitted field
+// alone. Sending the stored value instead would make every edit a
+// read-modify-write that can undo a toggle made in between.
 func (resourcePtr *Resource) BuildMap(code string, name string, resourceType string, subtype string, srcLink string) map[string]any {
 	resourceMap := map[string]any{
 		"code": code,
@@ -60,9 +103,9 @@ func (resourcePtr *Resource) BuildMap(code string, name string, resourceType str
 	}
 
 	if strings.TrimSpace(srcLink) != "" {
-		resourceMap["type_params"] = ResourceTypeParams{
-			SrcLink: srcLink,
-		}
+		typeParams := resourcePtr.TypeParams
+		typeParams.SrcLink = srcLink
+		resourceMap["type_params"] = typeParams
 	}
 
 	return resourceMap
@@ -75,4 +118,10 @@ func (r *Resource) GetNameByLang(langCode string) string {
 		}
 	}
 	return ""
+}
+
+// Active reports whether the resource is shown to students. A resource from a
+// db-service that predates the column has no value, and is treated as active.
+func (resourcePtr *Resource) Active() bool {
+	return resourcePtr.IsActive == nil || *resourcePtr.IsActive
 }

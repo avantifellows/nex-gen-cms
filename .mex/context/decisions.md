@@ -16,7 +16,7 @@ edges:
     condition: when a decision relates to login, roles, or the user store
   - target: context/deployment.md
     condition: when a decision affects build-at-deploy, infra, or release flow
-last_updated: 2026-06-26
+last_updated: 2026-10-28
 ---
 
 # Decisions
@@ -105,3 +105,39 @@ merge conflicts.
 **Alternatives considered:** Committing the built CSS (rejected — noisy diffs/merges).
 **Consequences:** A fresh clone has no styles until `npm run build:css` runs (`make run` does it for you).
 The Tailwind v4 build needs Node 22.
+
+### Cache generated test PDFs in S3, keyed by content hash
+**Date:** 2026-09-18
+**Status:** Active
+**Decision:** `TestsHandler.DownloadPdf` hashes the post-injection HTML + header (SHA-256, plus a
+`pdfCacheVersion` const covering PrintToPDF settings that never appear in that HTML) and checks it
+against `Test.TypeParams.PdfUrls[pdfCacheKey].Hash`. A match with the S3 object still present redirects
+(302) to a presigned GET URL instead of re-rendering. A miss renders via chromedp as before, serves the
+PDF immediately, then uploads to S3 and PATCHes the cache entry onto the test in a detached background
+goroutine (`context.WithoutCancel`) so a closed download tab can't abort the upload.
+**Reasoning:** Chromedp rendering is the slowest part of a download (up to the 60s context timeout) and
+most downloads of the same test/language are byte-identical — cache them instead of re-rendering every
+time. `AWS_S3_BUCKET` being unset makes `storage.NewPdfStore` return a nil `*PdfStore`, so local dev
+without AWS credentials is unaffected; every cache check/write is a no-op in that case.
+**Alternatives considered:** Caching in Postgres/go-cache (rejected — PDFs are large binary blobs, wrong
+fit for either); invalidating on test-edit events (rejected — content hash is simpler and also covers
+CSS/header/render-setting changes that aren't "edits" to the test itself).
+**Consequences:** The background cache write re-fetches the test with `onlyRemote=true` right before
+PATCHing (`GetObject`'s new param) rather than reusing the copy from before the render, so it can't revert
+a concurrent edit made during the (up to 60s) render. Bumping `pdfCacheVersion` is required whenever
+`buildPdfTasks`'s `PrintToPDF` options change, since those aren't part of the hashed content. See
+`patterns/generate-pdf.md` and `terraform/s3.tf`/`terraform/iam.tf`.
+
+### Problems belong to a chapter, with optional topics
+**Date:** 2026-10-28
+**Status:** Active
+**Decision:** A problem's scope is a required chapter plus zero or more topics (which may be of other
+chapters), replacing the old single required topic. The Problems tab moved from the topic screen to the
+chapter screen; concepts stay on topics.
+**Reasoning:** Problems were forced under one topic although many span topics or have none; the chapter
+is the level at which teachers browse and build tests.
+**Alternatives considered:** Keeping the topic scope and adding a chapter view (rejected, two sources of
+truth); moving concepts to chapters (rejected, concepts are topic-level knowledge).
+**Consequences:** Moves send a request without topic keys so topics survive; copies keep topics; db-service
+lists problems by `chapter_id` and filters by `topic_id`, with opt-in paging. The legacy `topic_id` on a
+problem is no longer read or sent by the CMS.

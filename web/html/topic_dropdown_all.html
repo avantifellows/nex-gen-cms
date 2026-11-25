@@ -1,0 +1,4 @@
+<option value="" selected>All Topics</option>
+{{ range . }}
+    <option value="{{.ID}}">{{.Code}} - {{ getName . "en" }}</option>
+{{ end }}

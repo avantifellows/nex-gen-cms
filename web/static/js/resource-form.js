@@ -1,9 +1,11 @@
 /**
  * Client-side type → subtype options for resource add/edit (no server-side validation).
+ * An option is either a plain string (label === stored value) or {value, label}
+ * when the stored value differs from what the dropdown shows.
  */
 window.ResourceForm = {
     subtypesByType: {
-        document: ["Module", "Previous Year Questions"],
+        document: ["Module", "Previous Year Questions", { value: "DPP", label: "Daily Practice Problem (DPP)" }],
         quiz: ["Assessment"],
         quiz_template: ["Quiz Template"],
         video: ["Video Lectures"],
@@ -12,7 +14,7 @@ window.ResourceForm = {
     /**
      * @param {HTMLSelectElement} subtypeEl
      * @param {string} typeValue raw type value (e.g. "document")
-     * @param {string} [selectedSubtype] pre-selected label, or "" to only show placeholder
+     * @param {string} [selectedSubtype] pre-selected stored value, or "" to only show placeholder
      */
     fillSubtypeSelect: function (subtypeEl, typeValue, selectedSubtype) {
         var t = (typeValue || "").toLowerCase();
@@ -26,15 +28,18 @@ window.ResourceForm = {
         placeholder.hidden = true;
         placeholder.textContent = subs.length ? "Select Subtype" : "Select type first";
 
-        var matched = selectedSubtype && subs.indexOf(selectedSubtype) !== -1;
+        var options = subs.map(function (s) {
+            return typeof s === "string" ? { value: s, label: s } : s;
+        });
+        var matched = selectedSubtype && options.some(function (o) { return o.value === selectedSubtype; });
         placeholder.selected = !matched;
         subtypeEl.appendChild(placeholder);
 
-        subs.forEach(function (label) {
+        options.forEach(function (o) {
             var opt = document.createElement("option");
-            opt.value = label;
-            opt.textContent = label;
-            if (matched && selectedSubtype === label) {
+            opt.value = o.value;
+            opt.textContent = o.label;
+            if (matched && selectedSubtype === o.value) {
                 opt.selected = true;
                 placeholder.selected = false;
             }

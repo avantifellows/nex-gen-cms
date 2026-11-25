@@ -4,7 +4,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 test('image toolbar can keep a diagram inline with its label', async ({ page }) => {
   await page.request.post('http://localhost:8080/dev-login');
-  await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
+  await page.goto('http://localhost:8080/chapter/add-problem?chapter_id=3');
 
   // #questionDiv holds one editor per language (en/hi/gu/ta); only "en" is visible by default.
   const questionEn = page.locator('#questionDiv .lang-content[data-lang="en"]');
@@ -52,7 +52,7 @@ test('image toolbar can keep a diagram inline with its label', async ({ page }) 
 test('resizing the editor keeps the preview matched', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.request.post('http://localhost:8080/dev-login');
-  await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
+  await page.goto('http://localhost:8080/chapter/add-problem?chapter_id=3');
 
   // #questionDiv holds one editor per language (en/hi/gu/ta); only "en" is visible by default.
   const questionEn = page.locator('#questionDiv .lang-content[data-lang="en"]');
@@ -92,7 +92,7 @@ test('resizing the editor keeps the preview matched', async ({ page }) => {
 test('resizing the editor cannot push the preview outside the problem card', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.request.post('http://localhost:8080/dev-login');
-  await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
+  await page.goto('http://localhost:8080/chapter/add-problem?chapter_id=3');
 
   // #questionDiv holds one editor per language (en/hi/gu/ta); only "en" is visible by default.
   const questionEn = page.locator('#questionDiv .lang-content[data-lang="en"]');
@@ -123,7 +123,7 @@ test('resizing the editor cannot push the preview outside the problem card', asy
 test('problem editor page uses the available horizontal space', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await page.request.post('http://localhost:8080/dev-login');
-  await page.goto('http://localhost:8080/topic/add-problem?topic_id=3');
+  await page.goto('http://localhost:8080/chapter/add-problem?chapter_id=3');
 
   const content = page.locator('#content');
   const form = page.locator('#content > form');

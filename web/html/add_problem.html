@@ -1,5 +1,5 @@
 {{ define "content" }}
-{{ $isCopy := and .TopicPtr .ProblemPtr }}
+{{ $isCopy := and .ChapterPtr .ProblemPtr }}
 {{ $isEdit := and .ProblemPtr (not $isCopy) }}
 {{ $prefill := or $isEdit $isCopy }}
 {{ $enLang := false }}
@@ -13,56 +13,72 @@
     {{ $taLang = .ProblemPtr.GetLangVersion "ta" }}
 {{ end }}
 <form class="card card-pad w-full" onsubmit="createProblem(event,
-        {{if .TopicPtr}}
+        {{if .ChapterPtr}}
         <!-- add or copy problem -->
-            {{.TopicPtr.ID}}, {{.TopicPtr.ChapterID}}, null
+            {{.ChapterPtr.ID}}, null
         {{else}}
         <!-- edit problem -->
-            {{.ProblemPtr.TopicID}}, {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
+            {{.ProblemPtr.ChapterID}}, {{ .ProblemPtr.ID }}
         {{end}}
 );">
-    <h2 class="page-title mb-6">{{if $isCopy}}Copy{{else if .TopicPtr}}Add New{{else}}Edit{{end}} Problem</h2>
+    <h2 class="page-title mb-6">{{if $isCopy}}Copy{{else if .ChapterPtr}}Add New{{else}}Edit{{end}} Problem</h2>
 
-    <!-- type, skills, concepts -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div>
-            <label class="form-label" for="problem-type-dropdown">Type</label>
-            <select id="problem-type-dropdown" name="problem-type-dropdown"
-                {{if $isEdit}}disabled title="Problem type cannot be changed in edit mode"{{end}}
-                class="form-select {{if $isEdit}}bg-bg-card-alt text-ink-muted cursor-not-allowed{{end}}">
-                {{if $prefill}}
-                {{template "problem_type_options" .ProblemPtr.Subtype}}
-                {{else}}
-                {{template "problem_type_options"}}
-                {{end}}
-            </select>
+    <!-- left 40%: type, skills and difficulty stacked; right 60%: topics -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+        <div class="space-y-6 md:col-span-2">
+            <div>
+                <label class="form-label" for="problem-type-dropdown">Type</label>
+                <select id="problem-type-dropdown" name="problem-type-dropdown"
+                    {{if $isEdit}}disabled title="Problem type cannot be changed in edit mode"{{end}}
+                    class="form-select {{if $isEdit}}bg-bg-card-alt text-ink-muted cursor-not-allowed{{end}}">
+                    {{if $prefill}}
+                    {{template "problem_type_options" .ProblemPtr.Subtype}}
+                    {{else}}
+                    {{template "problem_type_options"}}
+                    {{end}}
+                </select>
+            </div>
+            <div>
+                <label class="form-label" for="skills-dropdown">Skills</label>
+                <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
+                    class="form-select h-24 overflow-y-auto"
+                    hx-get='/api/skills{{if $prefill}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
+                    <option disabled>Loading skills...</option>
+                </select>
+            </div>
+            <!-- difficulty -->
+            <div>
+                <p class="form-label mb-2">Difficulty Rating</p>
+                <div class="flex gap-2 flex-wrap">
+                    <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                        <input type="radio" name="difficulty" value="easy" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}>
+                        <span class="font-bold">1 — Easy</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                        <input type="radio" name="difficulty" value="medium" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}>
+                        <span class="font-bold">2 — Medium</span>
+                    </label>
+                    <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                        <input type="radio" name="difficulty" value="hard" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}>
+                        <span class="font-bold">3 — Hard</span>
+                    </label>
+                </div>
+            </div>
         </div>
-        <div>
-            <label class="form-label" for="skills-dropdown">Skills</label>
-            <select id="skills-dropdown" name="skills-dropdown" multiple hx-trigger="load"
-                class="form-select h-24 overflow-y-auto"
-                hx-get='/api/skills{{if $prefill}}?selected_skill_ids={{joinInt16 .ProblemPtr.SkillIDs ","}}{{end}}'>
-                <option disabled>Loading skills...</option>
-            </select>
-        </div>
-        <div>
-            <label class="form-label" for="concepts-dropdown">Concepts</label>
-            <select id="concepts-dropdown" name="concepts-dropdown" multiple hx-trigger="load"
-                class="form-select h-24 overflow-y-auto"
-                hx-swap="{{if $prefill}}beforeend{{else}}innerHTML{{end}}"
-                hx-get="/api/concepts?topic_id={{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}{{if $prefill}}&exclude={{range $i, $c := .ProblemPtr.Concepts}}{{if $i}},{{end}}{{$c.ID}}{{end}}{{end}}">
-                    {{ if $prefill }}
-                        {{ range .ProblemPtr.Concepts }}
-                            <!-- These are already mapped concepts -->
-                            <option value="{{.ID}}" selected>{{ getConceptName . "en" }}</option>
-                        {{ end }}
-                    {{ else }}
-                        <option disabled>Loading concepts...</option>
-                    {{ end }}
-            </select>
-            <a href="#" class="add-new-link mt-1 inline-block" hx-get="/topic/add-problem/add-concept-dialog"
+        <div class="md:col-span-3">
+            <p class="form-label" id="topics-label">Topics</p>
+            <!-- h-60 (15rem) is 7.5 rows of 2rem: 7 to 8 topics show, the rest scroll. The topics are
+                 filtered by curriculum, so the list loads once the curriculum dropdown has a value -->
+            <div id="topics-checklist" role="group" aria-labelledby="topics-label"
+                hx-trigger="load[document.getElementById('curriculum-dropdown').value], onLoaded from:#curriculum-dropdown"
+                hx-include="#curriculum-dropdown"
+                hx-get="/api/topics?view=checklist&id={{if .ChapterPtr}}{{.ChapterPtr.ID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}{{if $prefill}}&selected={{joinInt16 .ProblemPtr.TopicIDs ","}}{{end}}"
+                class="h-60 overflow-y-auto rounded-lg border border-border bg-bg-input">
+                <p class="px-3 py-1.5 text-sm text-ink-muted">Loading topics...</p>
+            </div>
+            <a href="#" class="add-new-link mt-1 inline-block" hx-get="/chapter/add-problem/add-topic-dialog"
                 hx-target="body" hx-swap="beforeend"
-                onclick="window._conceptModalTargetDropdown = document.getElementById('concepts-dropdown')">+ Add concept from other topic</a>
+                onclick="window._topicModalTargetChecklist = document.getElementById('topics-checklist')">+ Add topic from other chapter</a>
         </div>
     </div>
 
@@ -74,25 +90,6 @@
         {{ else }}
         {{ template "editor" }}
         {{ end }}
-    </div>
-
-    <!-- difficulty -->
-    <div class="mb-6">
-        <p class="form-label mb-2">Difficulty Rating</p>
-        <div class="flex gap-2 flex-wrap">
-            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                <input type="radio" name="difficulty" value="easy" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "easy" )}}checked{{end}}>
-                <span class="font-bold">1 — Easy</span>
-            </label>
-            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                <input type="radio" name="difficulty" value="medium" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "medium" )}}checked{{end}}>
-                <span class="font-bold">2 — Medium</span>
-            </label>
-            <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                <input type="radio" name="difficulty" value="hard" class="accent-accent" {{if and $prefill (eq .ProblemPtr.DifficultyLevel "hard" )}}checked{{end}}>
-                <span class="font-bold">3 — Hard</span>
-            </label>
-        </div>
     </div>
 
     <!-- Language Tabs -->
@@ -211,50 +208,44 @@
             </button>
         </div>
 
-        <!-- topic, skills, concepts -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div>
-                <p class="form-label mb-2">Topic</p>
-                <select name="additional-topic-dropdown"
-                    class="additional-topic-dropdown form-select">
-                    <option disabled selected>Loading topics...</option>
-                </select>
+        <!-- left 40%: skills and difficulty; right 60%: topics -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
+            <div class="space-y-6 md:col-span-2">
+                <div>
+                    <p class="form-label mb-2">Skills</p>
+                    <select name="additional-skills-dropdown" multiple
+                        class="additional-skills-dropdown form-select h-24 overflow-y-auto">
+                        <option disabled>Loading skills...</option>
+                    </select>
+                </div>
+                <!-- difficulty -->
+                <div>
+                    <p class="form-label mb-2">Difficulty Rating</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                            <input type="radio" data-name="difficulty" value="easy" class="accent-accent">
+                            <span class="font-bold">1 — Easy</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                            <input type="radio" data-name="difficulty" value="medium" class="accent-accent">
+                            <span class="font-bold">2 — Medium</span>
+                        </label>
+                        <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
+                            <input type="radio" data-name="difficulty" value="hard" class="accent-accent">
+                            <span class="font-bold">3 — Hard</span>
+                        </label>
+                    </div>
+                </div>
             </div>
-            <div>
-                <p class="form-label mb-2">Skills</p>
-                <select name="additional-skills-dropdown" multiple
-                    class="additional-skills-dropdown form-select h-24 overflow-y-auto">
-                    <option disabled>Loading skills...</option>
-                </select>
-            </div>
-            <div>
-                <p class="form-label mb-2">Concepts</p>
-                <select name="additional-concepts-dropdown" multiple
-                    class="additional-concepts-dropdown form-select h-24 overflow-y-auto">
-                    <option disabled>Select a topic first</option>
-                </select>
-                <a href="#" class="add-new-link mt-1 inline-block" hx-get="/topic/add-problem/add-concept-dialog"
+            <div class="md:col-span-3">
+                <p class="form-label mb-2">Topics</p>
+                <div role="group" aria-label="Topics"
+                    class="additional-topics-checklist h-60 overflow-y-auto rounded-lg border border-border bg-bg-input">
+                    <p class="px-3 py-1.5 text-sm text-ink-muted">Loading topics...</p>
+                </div>
+                <a href="#" class="add-new-link mt-1 inline-block" hx-get="/chapter/add-problem/add-topic-dialog"
                     hx-target="body" hx-swap="beforeend"
-                    onclick="window._conceptModalTargetDropdown = this.closest('.additional-problem').querySelector('.additional-concepts-dropdown')">+ Add concept from other topic</a>
-            </div>
-        </div>
-
-        <!-- difficulty -->
-        <div class="mb-6">
-            <p class="form-label mb-2">Difficulty Rating</p>
-            <div class="flex gap-2 flex-wrap">
-                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                    <input type="radio" data-name="difficulty" value="easy" class="accent-accent">
-                    <span class="font-bold">1 — Easy</span>
-                </label>
-                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                    <input type="radio" data-name="difficulty" value="medium" class="accent-accent">
-                    <span class="font-bold">2 — Medium</span>
-                </label>
-                <label class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-bg-card cursor-pointer hover:bg-bg-hover has-checked:border-accent has-checked:bg-accent has-checked:text-text-on-accent transition-colors">
-                    <input type="radio" data-name="difficulty" value="hard" class="accent-accent">
-                    <span class="font-bold">3 — Hard</span>
-                </label>
+                    onclick="window._topicModalTargetChecklist = this.closest('.additional-problem').querySelector('.additional-topics-checklist')">+ Add topic from other chapter</a>
             </div>
         </div>
 
@@ -308,9 +299,7 @@
         const additionalProblemsContainer = document.getElementById('additionalProblemsContainer');
         const additionalProblemTemplate = document.getElementById('tmplAdditionalProblem');
         const mainSkillsDropdown = document.getElementById('skills-dropdown');
-        const mainConceptsDropdown = document.getElementById('concepts-dropdown');
-        const currentTopicId = '{{if .TopicPtr}}{{.TopicPtr.ID}}{{else}}{{.ProblemPtr.TopicID}}{{end}}';
-        const currentChapterId = '{{if .TopicPtr}}{{.TopicPtr.ChapterID}}{{else}}{{.ProblemPtr.ChapterID}}{{end}}';
+        const topicsChecklist = document.getElementById('topics-checklist');
         const isEditPage = {{ $isEdit }};
         const isCopyPage = {{ $isCopy }};
         const hasPrefill = {{ $prefill }};
@@ -417,8 +406,6 @@
         // --- End language tabs ---
 
         let skillsOptionsHtml = '';
-        let topicsOptionsHtml = '';
-        const conceptsOptionsByTopic = new Map();
         let additionalProblemCount = 0;
 
         // Determine tab count
@@ -515,29 +502,23 @@
             });
         }
 
+        // topic_ids is the full set to save, so saving before the list has loaded would wipe the problem's topics
+        topicsChecklist.addEventListener('htmx:afterSwap', () => {
+            topicsChecklist.dataset.loaded = 'true';
+        });
+
         mainSkillsDropdown.addEventListener('htmx:afterSwap', () => {
             skillsOptionsHtml = getUnselectedOptionsHtml(mainSkillsDropdown.innerHTML);
         });
 
-        mainConceptsDropdown.addEventListener('htmx:afterSwap', () => {
-            conceptsOptionsByTopic.set(currentTopicId, getUnselectedOptionsHtml(mainConceptsDropdown.innerHTML));
-        });
-
         function initializeAdditionalDropdowns(problemBlock) {
-            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
             const skillsDropdown = problemBlock.querySelector('.additional-skills-dropdown');
-
-            topicDropdown.addEventListener('change', () => loadAdditionalConcepts(problemBlock));
 
             loadSkillsOptions().then(html => {
                 skillsDropdown.innerHTML = html;
             });
 
-            loadTopicOptions().then(html => {
-                topicDropdown.innerHTML = html;
-                topicDropdown.value = currentTopicId;
-                loadAdditionalConcepts(problemBlock);
-            });
+            fillAdditionalTopics(problemBlock);
         }
 
         function loadSkillsOptions() {
@@ -548,31 +529,6 @@
             return fetchText('/api/skills').then(html => {
                 skillsOptionsHtml = getUnselectedOptionsHtml(html);
                 return skillsOptionsHtml;
-            });
-        }
-
-        function loadTopicOptions() {
-            if (topicsOptionsHtml) {
-                return Promise.resolve(topicsOptionsHtml);
-            }
-
-            const curriculumId = document.getElementById('curriculum-dropdown')?.value || '';
-            return fetchText(`/api/topics?view=dropdown&chapter-dropdown=${encodeURIComponent(currentChapterId)}&curriculum-dropdown=${encodeURIComponent(curriculumId)}`)
-                .then(html => {
-                    topicsOptionsHtml = getUnselectedOptionsHtml(html);
-                    return topicsOptionsHtml;
-                });
-        }
-
-        function loadConceptOptions(topicId) {
-            if (conceptsOptionsByTopic.has(topicId)) {
-                return Promise.resolve(conceptsOptionsByTopic.get(topicId));
-            }
-
-            return fetchText(`/api/concepts?topic_id=${encodeURIComponent(topicId)}`).then(html => {
-                const optionsHtml = getUnselectedOptionsHtml(html);
-                conceptsOptionsByTopic.set(topicId, optionsHtml);
-                return optionsHtml;
             });
         }
 
@@ -595,25 +551,19 @@
             return select.innerHTML;
         }
 
-        function loadAdditionalConcepts(problemBlock) {
-            const topicDropdown = problemBlock.querySelector('.additional-topic-dropdown');
-            const conceptsDropdown = problemBlock.querySelector('.additional-concepts-dropdown');
-            const topicId = topicDropdown.value;
+        // A new block copies the main problem's topics list: the same rows, with the same ones ticked.
+        function fillAdditionalTopics(problemBlock) {
+            const checklist = problemBlock.querySelector('.additional-topics-checklist');
+            const copy = () => {
+                checklist.replaceChildren(...Array.from(topicsChecklist.children, row => row.cloneNode(true)));
+                checklist.dataset.loaded = 'true';
+            };
 
-            if (!topicId) {
-                conceptsDropdown.innerHTML = '<option disabled>Select a topic first</option>';
-                return;
+            if (topicsChecklist.dataset.loaded === 'true') {
+                copy();
+            } else {
+                topicsChecklist.addEventListener('htmx:afterSwap', copy, { once: true });
             }
-
-            conceptsDropdown.innerHTML = '<option disabled>Loading concepts...</option>';
-            loadConceptOptions(topicId)
-                .then(html => {
-                    conceptsDropdown.innerHTML = html;
-                })
-                .catch(err => {
-                    console.error("Error loading concepts:", err);
-                    conceptsDropdown.innerHTML = '<option disabled>Error loading concepts</option>';
-                });
         }
 
         addMoreProblemButton.addEventListener('click', addAdditionalProblem);
@@ -921,7 +871,7 @@
 
         addTabButton.addEventListener('click', addTab);
 
-        window.createProblem = function (event, topicId, chapterId, problemId) {
+        window.createProblem = function (event, chapterId, problemId) {
             event.preventDefault();  // Cancel the default form request
 
             // save latest option value visible; otherwise if save is pressed directly after entering value
@@ -937,8 +887,8 @@
             const isComprehensionCreate = !isEditPage && subtype === 'comprehension';
 
             let payload = isComprehensionCreate
-                ? buildComprehensionProblemsPayload(topicId, chapterId)
-                : buildProblemJson(topicId, chapterId);
+                ? buildComprehensionProblemsPayload(chapterId)
+                : buildProblemJson(chapterId);
 
             // Edit comprehension: same PATCH body as other types, plus paragraph for the API.
             if (isEditPage && subtype === 'comprehension') {
@@ -989,10 +939,11 @@
                 return res.text().then(() => { // if OK, ignore body
 
                     if (isCopyPage) {
-                        sessionStorage.setItem('topicTabOnce', 'topic-problems-tab');
-                        const topicUrl = '/topic?id={{if .TopicPtr}}{{.TopicPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
-                        history.replaceState(null, '', topicUrl);
-                        htmx.ajax('GET', topicUrl, { target: 'body', swap: 'innerHTML' });
+                        // the destination chapter opens on its Problems tab, where the copy now is
+                        sessionStorage.setItem('chapterTabOnce', 'problems-sub-tab');
+                        const chapterUrl = '/chapter?id={{if .ChapterPtr}}{{.ChapterPtr.ID}}{{end}}&curriculum-dropdown={{.CurriculumID}}&grade-dropdown={{.GradeID}}&subject-dropdown={{.SubjectID}}';
+                        history.replaceState(null, '', chapterUrl);
+                        htmx.ajax('GET', chapterUrl, { target: 'body', swap: 'innerHTML' });
 
                     } else {
                         if (isEditPage && sessionStorage.getItem(REFRESH_PROBLEM_ON_BACK_KEY)) {
@@ -1002,6 +953,8 @@
                             );
                             sessionStorage.removeItem(REFRESH_PROBLEM_ON_BACK_KEY);
                         }
+                        // the chapter's problems list is stale now, so reload it when going back to it
+                        sessionStorage.setItem(REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY, '1');
                         // go back to remove add/edit problem screen
                         goBackAfterDelay(0);
                     }
@@ -1106,6 +1059,10 @@
                 return fail('Curriculum, grade, and subject are still loading. Please wait a moment and try again.');
             }
 
+            if (topicsChecklist.dataset.loaded !== 'true') {
+                return fail('Topics are still loading. Please wait a moment and try again.');
+            }
+
             const difficulty = document.querySelector('input[name="difficulty"]:checked');
             if (!difficulty) {
                 return fail('Please select a difficulty level.');
@@ -1129,6 +1086,10 @@
 
                     const qEditor = block.querySelector('.additional-question .editor');
                     if (!validateEditorNotEmpty(qEditor, 'Please enter the question for each additional problem.')) return false;
+
+                    if (block.querySelector('.additional-topics-checklist').dataset.loaded !== 'true') {
+                        return fail('Topics are still loading. Please wait a moment and try again.');
+                    }
 
                     if (!validateNumericalAnswer(block, `additional-numType-${idx}`, 'For each additional problem, ')) {
                         return false;
@@ -1168,12 +1129,12 @@
             return true;
         }
 
-        function buildComprehensionProblemsPayload(topicId, chapterId) {
+        function buildComprehensionProblemsPayload(chapterId) {
             const paragraphEditor = paragraphDiv.querySelector('.editor');
             const paragraph = paragraphEditor ? getEditorHtml(paragraphEditor) : '';
 
             const problems = [];
-            problems.push(buildProblemJson(topicId, chapterId));
+            problems.push(buildProblemJson(chapterId));
 
             additionalProblemsContainer.querySelectorAll('.additional-problem').forEach(block => {
                 problems.push(buildAdditionalProblemJson(block, chapterId));
@@ -1188,11 +1149,6 @@
 
             const skillsDropdown = problemBlock.querySelector('.additional-skills-dropdown');
             const selectedSkillIds = Array.from(skillsDropdown?.selectedOptions ?? []).map(opt => parseInt(opt.value, 10));
-
-            const conceptsDropdown = problemBlock.querySelector('.additional-concepts-dropdown');
-            const selectedConceptIds = Array.from(conceptsDropdown?.selectedOptions ?? []).map(opt => parseInt(opt.value, 10));
-
-            const topicId = parseInt(problemBlock.querySelector('.additional-topic-dropdown')?.value ?? '0', 10);
 
             const curriculumId = parseInt(document.getElementById("curriculum-dropdown").value);
             const gradeId = parseInt(document.getElementById("grade-dropdown").value);
@@ -1225,12 +1181,11 @@
                 curriculumId,
                 gradeId,
                 subjectId,
-                topicId,
+                topicIds: getCheckedTopicIds(problemBlock.querySelector('.additional-topics-checklist')),
                 chapterId,
                 difficulty,
                 langVersions: [{ lang_code: 'en', question, options: null, solution }],
                 answers,
-                conceptIds: selectedConceptIds,
                 tags,
             });
         }
@@ -1258,12 +1213,11 @@
             curriculumId,
             gradeId,
             subjectId,
-            topicId,
+            topicIds,
             chapterId,
             difficulty,
             langVersions,
             answers,
-            conceptIds,
             tags
         }) {
             return {
@@ -1280,7 +1234,7 @@
                     }
                 ],
                 subject_id: subjectId,
-                topic_id: topicId,
+                topic_ids: topicIds,
                 chapter_id: chapterId,
                 difficulty_level: difficulty,
                 lang_versions: langVersions.map(({ lang_code, question, options, solution }) => ({
@@ -1292,12 +1246,16 @@
                         solutions: [{ type: "text", value: solution }]
                     }
                 })),
-                concept_ids: conceptIds,
                 tags: tags
             };
         }
 
-        function buildProblemJson(topicId, chapterId) {
+        function getCheckedTopicIds(checklist) {
+            return Array.from(checklist.querySelectorAll('input[name="topic-ids"]:checked'))
+                .map(box => parseInt(box.value, 10));
+        }
+
+        function buildProblemJson(chapterId) {
             const subtype = document.getElementById('problem-type-dropdown').value;
 
             const skillsDropdown = document.getElementById("skills-dropdown");
@@ -1336,21 +1294,17 @@
 
             const langVersions = getLangVersionsForMain(subtype);
 
-            const conceptsDropdown = document.getElementById("concepts-dropdown");
-            const selectedConceptIds = Array.from(conceptsDropdown.selectedOptions).map(opt => parseInt(opt.value, 10));
-
             return buildProblemPayload({
                 subtype,
                 skillIds: selectedSkillIds,
                 curriculumId,
                 gradeId,
                 subjectId,
-                topicId,
+                topicIds: getCheckedTopicIds(topicsChecklist),
                 chapterId,
                 difficulty,
                 langVersions,
                 answers,
-                conceptIds: selectedConceptIds,
                 tags: getTagsForSection(mainTagsRoot),
             });
         }

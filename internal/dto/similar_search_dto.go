@@ -1,12 +1,16 @@
 package dto
 
 type SimilarSearchRequest struct {
-	Languages []SimilarSearchLanguage `json:"languages"`
+	CurriculumID int16                   `json:"curriculum_id"`
+	Languages    []SimilarSearchLanguage `json:"languages"`
 }
 
 type SimilarSearchLanguage struct {
 	LangCode string `json:"lang_code"`
 	Text     string `json:"text"`
+	// Options is the language version's answer options, so db-service can tell apart problems
+	// that share a question stem but differ in their choices. Omitted for option-less problems.
+	Options []string `json:"options,omitempty"`
 }
 
 type SimilarSearchResponse struct {

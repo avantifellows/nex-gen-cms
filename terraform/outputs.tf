@@ -43,3 +43,8 @@ output "security_group_id" {
   description = "ID of the security group"
   value       = aws_security_group.web.id
 }
+
+output "test_pdfs_bucket_name" {
+  description = "Name of the S3 bucket that caches generated test PDFs"
+  value       = aws_s3_bucket.test_pdfs.id
+}

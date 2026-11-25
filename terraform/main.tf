@@ -126,6 +126,8 @@ ${templatefile("${path.module}/user-data.sh", {
   oauth_redirect_url   = var.oauth_redirect_url
   app_env              = var.app_env
   letsencrypt_email    = var.letsencrypt_email
+  aws_region           = var.aws_region
+  test_pdfs_bucket     = aws_s3_bucket.test_pdfs.id
 })}
 --//
 EOF
@@ -139,7 +141,8 @@ resource "aws_instance" "web" {
   vpc_security_group_ids = [aws_security_group.web.id]
   availability_zone      = data.aws_availability_zones.available.names[0]
 
-  user_data = local.user_data
+  user_data            = local.user_data
+  iam_instance_profile = aws_iam_instance_profile.web.name
 
   root_block_device {
     volume_type           = "gp3"

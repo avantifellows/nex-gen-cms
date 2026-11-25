@@ -48,8 +48,7 @@ vim terraform.tfvars
 ```
 
 Required variables:
-- `cloudflare_email`: Your Cloudflare account email
-- `cloudflare_api_key`: Get from Cloudflare Dashboard → My Profile → API Tokens → Global API Key
+- `cloudflare_api_token`: A scoped API token. Create it in Cloudflare Dashboard → My Profile → API Tokens with the "Edit zone DNS" template, limited to this zone
 - `cloudflare_zone_name`: Your domain name (e.g., `example.com`)
 - `subdomain`: Your domain (e.g., `example.com` creates `staging.example.com`)
 - `letsencrypt_email`: Email for Let's Encrypt notifications
@@ -106,8 +105,7 @@ For CI/CD deployment, add these secrets to your GitHub repository:
 - `AWS_SECRET_ACCESS_KEY`: AWS secret key
 
 #### Required TF_VAR Secrets:
-- `TF_VAR_cloudflare_email`: Cloudflare account email
-- `TF_VAR_cloudflare_api_key`: Cloudflare Global API key
+- `TF_VAR_cloudflare_api_token`: Cloudflare API token (DNS edit on the zone only)
 - `TF_VAR_cloudflare_zone_name`: Your domain name (e.g., `avantifellows.org`)
 - `TF_VAR_subdomain`: Your app subdomain (e.g., `new-cms`)
 - `TF_VAR_letsencrypt_email`: Email for Let's Encrypt certificates

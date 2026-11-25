@@ -13,6 +13,7 @@ import (
 	local_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/local"
 	remote_repo "github.com/avantifellows/nex-gen-cms/internal/repositories/remote"
 	"github.com/avantifellows/nex-gen-cms/internal/services"
+	"github.com/avantifellows/nex-gen-cms/internal/storage"
 )
 
 type AppComponent struct {
@@ -54,6 +55,13 @@ func NewAppComponent() (*AppComponent, error) {
 	cacheRepo := local_repo.NewCacheRepository(5*time.Minute, 10*time.Minute)
 	apiRepo := remote_repo.NewAPIRepository()
 
+	// nil when AWS_S3_BUCKET isn't configured (e.g. local dev) — PDFs are then
+	// always regenerated instead of cached. See internal/storage/pdf_store.go.
+	pdfStore, err := storage.NewPdfStore(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
 	chaptersService := services.NewService[models.Chapter](cacheRepo, apiRepo)
 	resourcesService := services.NewService[models.Resource](cacheRepo, apiRepo)
 	topicsService := services.NewService[models.Topic](cacheRepo, apiRepo)
@@ -80,7 +88,7 @@ func NewAppComponent() (*AppComponent, error) {
 	subjectsHandler := handlers.NewSubjectsHandler(subjectsService)
 	skillsHandler := handlers.NewSkillsHandler(skillsService)
 	testsHandler := handlers.NewTestsHandler(testsService, subjectsService, problemsService, testRulesService,
-		curriculumsService, gradesService, examsService)
+		curriculumsService, gradesService, examsService, pdfStore)
 	problemsHandler := handlers.NewProblemsHandler(problemsService, skillsService, subjectsService, topicsService,
 		chaptersService, tagsService)
 	tagsHandler := handlers.NewTagsHandler(tagsService)

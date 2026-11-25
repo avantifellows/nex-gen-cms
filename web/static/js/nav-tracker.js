@@ -3,6 +3,7 @@ var BACK_TO_TOPIC_EVT = "back-to-topic";
 var BACK_TO_PROBLEM_EVT = "back-to-problem";
 var REFRESH_PROBLEM_ON_BACK_KEY = "refreshProblemOnBack";
 var REFRESH_PROBLEM_URL_KEY = "refreshProblemUrl";
+var REFRESH_CHAPTER_PROBLEMS_ON_BACK_KEY = "refreshChapterProblemsOnBack";
 
 var ADD_TEST_DIV_SELECTOR = "#add-test-right-div";
 var TOPIC_DIV_SELECTOR = "#topic-div";

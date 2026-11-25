@@ -14,7 +14,7 @@ edges:
     condition: when understanding how to use a technology in this codebase
   - target: context/setup.md
     condition: when installing toolchains or building CSS
-last_updated: 2026-06-26
+last_updated: 2026-10-05
 ---
 
 # Stack
@@ -34,6 +34,10 @@ last_updated: 2026-06-26
 - **`github.com/thoas/go-funk`** — `Find` / `Filter` over slices (e.g. predicate lookups in `Service[T]`,
   filtering archived items). Used instead of hand-rolled loops in service/handler code.
 - **`github.com/chromedp/chromedp`** (+ `cdproto`) — headless-Chrome HTML→PDF. Not wkhtmltopdf.
+- **`github.com/aws/aws-sdk-go-v2`** (`config`, `service/s3`) — S3 client backing the test-PDF cache,
+  the `storage.PdfStore` type in `internal/storage/pdf_store.go`. Credentials via the default chain
+  (IAM instance profile on EC2, local AWS config/env locally); no SDK dependency if `AWS_S3_BUCKET`
+  is unset.
 - **`github.com/coreos/go-oidc/v3`** + **`golang.org/x/oauth2`** — Google OIDC login + token verify.
 - **`github.com/golang-jwt/jwt/v5`** — signs/verifies the `cms_session` cookie (HS256, `SESSION_SECRET`).
 - **`github.com/lib/pq`** — Postgres driver for the auth queries (raw parameterized SQL, no ORM).
@@ -55,5 +59,5 @@ last_updated: 2026-06-26
 - **Go >= 1.25** — `Service[T]` and `utils.StringToIntType[T]` rely on generics.
 - **Tailwind v4** (upgraded 2026-05) — its CLI build requires **Node 22**; older Node breaks the build.
 - Handlers import **`text/template`** for building `FuncMap`s while `internal/views` uses
-  **`html/template`**; they interoperate because `html/template.FuncMap` is an alias of
-  `text/template.FuncMap`. Output HTML escaping is governed by `html/template` in `views`.
+  **`html/template`**; they interoperate because `html/template`'s `FuncMap` type is an alias of
+  `text/template`'s `FuncMap` type. Output HTML escaping is governed by `html/template` in `views`.
