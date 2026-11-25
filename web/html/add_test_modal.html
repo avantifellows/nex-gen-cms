@@ -6,29 +6,19 @@
         <form id="addTestForm">
             <div id="curriculum-grade-container" class="space-y-4 mb-6">
                 <div class="curriculum-grade-set">
-                    <div class="grid grid-cols-[1fr_1fr_auto] gap-3 items-center">
+                    <div class="grid grid-cols-2 gap-3 items-center">
                         <label class="form-label mb-0">Curriculum</label>
                         <label class="form-label mb-0">Grade</label>
-                        <div class="w-6"><!-- empty header space for ✕ button --></div>
                     </div>
                     <div id="curriculum-grade-set" name="curriculum-grade-set" class="grid gap-3 mt-1">
                         {{ if .CurriculumGrades }}
-                            {{ $count := len .CurriculumGrades }}
-                            {{ range .CurriculumGrades }}
-                                {{ template "curriculum_grade_selects" dict "Item" . "Count" $count }}
-                            {{ end }}
+                            {{/* A test has exactly one curriculum-grade pair; a copy source with more shows its first. */}}
+                            {{ template "curriculum_grade_selects" dict "Item" (index .CurriculumGrades 0) }}
                         {{ else }}
                             {{ template "curriculum_grade_selects" }}
                         {{ end }}
                     </div>
                 </div>
-            </div>
-
-            <!-- Link to add more Curriculum-Grade sets -->
-            <div class="mb-6">
-                <a href="#" class="add-new-link" hx-get="/add-curriculum-grade-selects"
-                    hx-target="#curriculum-grade-set" hx-swap="beforeend"
-                    hx-on::after-request="handleAddCurriculumGradeResponse(event)">+ Add one more set</a>
             </div>
 
             <!-- Test Type Dropdown -->
@@ -81,31 +71,7 @@
             return false;
         }
 
-        // 2. Duplicate curriculum–grade validation
-        const rows = document.querySelectorAll('.curriculum-grade-row');
-        const seen = new Set();
-
-        for (const row of rows) {
-            const curriculum = row.querySelector("select[name='curriculum[]']").value;
-            const grade = row.querySelector("select[name='grade[]']").value;
-
-            const key = `${curriculum}__${grade}`;
-            if (seen.has(key)) {
-                alert("Duplicate Curriculum–Grade combination selected. Please remove duplicates.");
-                return false;
-            }
-            seen.add(key);
-        }
-
         return true; // allow request
-    }
-
-    function handleAddCurriculumGradeResponse(evt) {
-        // Only run if the request succeeded
-        if (evt.detail.successful) {
-            // Make all delete buttons visible, because now there are at least two rows
-            makeAllDeleteButtonsVisible();
-        }
     }
 
     function selectPreloadedOption(selectEl) {
@@ -114,23 +80,6 @@
         const option = selectEl.querySelector(`option[value='${selectedValue}']`);
         if (option) {
             option.selected = true;
-        }
-    }
-
-    function makeAllDeleteButtonsVisible() {
-        const buttons = document.querySelectorAll('.curriculum-grade-row button');
-        buttons.forEach(btn => btn.classList.remove('invisible'));
-    }
-
-    function removeCurriculumGradeRow(button) {
-        const row = button.closest('.curriculum-grade-row');
-        row.remove();
-
-        // After removal, check how many rows remain
-        const rows = document.querySelectorAll('.curriculum-grade-row');
-        if (rows.length === 1) {
-            // Hide the only remaining remove button
-            rows[0].querySelector('button').classList.add('invisible');
         }
     }
 

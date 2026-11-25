@@ -64,7 +64,6 @@ const testSequenceOptionsTemplate = "test_sequence_options.html"
 const chipBoxCellTemplate = "chip_box_cells.html"
 const addTestModalTemplate = "add_test_modal.html"
 const curriculumGradeSelectsTemplate = "curriculum_grade_selects.html"
-const addCurriculumGradeSelectsTemplate = "add_curriculum_grade_selects.html"
 const questionPaperTemplate = "question_paper.html"
 const questionPaperWithAnswersTemplate = "question_paper_with_answers.html"
 const answerSolutionSheetTemplate = "answer_sheet.html"
@@ -677,23 +676,22 @@ func (h *TestsHandler) buildTestData(request *http.Request) (dto.TestData, error
 	grades := request.Form["grade[]"]
 	testType := request.FormValue("modal-testType")
 
-	var curriculumGrades []models.CurriculumGrade
-	for i := range curriculums {
-		curriculumId, err := utils.StringToIntType[int16](curriculums[i])
-		if err != nil {
-			return dto.TestData{}, fmt.Errorf("invalid curriculum id at index %d", i)
-		}
-
-		gradeId, err := utils.StringToIntType[int8](grades[i])
-		if err != nil {
-			return dto.TestData{}, fmt.Errorf("invalid grade id at index %d", i)
-		}
-
-		curriculumGrades = append(curriculumGrades, models.CurriculumGrade{
-			CurriculumID: curriculumId,
-			GradeID:      gradeId,
-		})
+	// A test has exactly one curriculum-grade pair.
+	if len(curriculums) != 1 || len(grades) != 1 {
+		return dto.TestData{}, fmt.Errorf("exactly one curriculum and grade must be selected")
 	}
+
+	curriculumId, err := utils.StringToIntType[int16](curriculums[0])
+	if err != nil {
+		return dto.TestData{}, fmt.Errorf("invalid curriculum id")
+	}
+
+	gradeId, err := utils.StringToIntType[int8](grades[0])
+	if err != nil {
+		return dto.TestData{}, fmt.Errorf("invalid grade id")
+	}
+
+	curriculumGrades := []models.CurriculumGrade{{CurriculumID: curriculumId, GradeID: gradeId}}
 
 	examId, err := utils.StringToIntType[int8](request.FormValue("modal-examType"))
 	if err != nil {
@@ -1153,10 +1151,6 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 		"add":   utils.Add,
 		"dict":  utils.Dict,
 	}, addTestModalTemplate, testTypeOptionsTemplate, curriculumGradeSelectsTemplate)
-}
-
-func (h *TestsHandler) AddCurriculumGradeDropdowns(responseWriter http.ResponseWriter, _ *http.Request) {
-	views.ExecuteTemplates(responseWriter, nil, nil, addCurriculumGradeSelectsTemplate, curriculumGradeSelectsTemplate)
 }
 
 func (h *TestsHandler) getTestRule(testType string, examId int8) (*models.TestRule, error) {
