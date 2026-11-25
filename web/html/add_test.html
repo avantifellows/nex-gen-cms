@@ -38,11 +38,19 @@
 {{ else }}
   {{ $mode = "new" }}
 {{ end }}
-<h1 class="page-title mb-4">
-    {{ if eq $mode "edit" }}Edit
-    {{ else if eq $mode "copy" }}Copy
-    {{ else }}New{{ end }} Test
-</h1>
+<div class="flex items-center justify-between mb-4">
+    <h1 class="page-title">
+        {{ if eq $mode "edit" }}Edit
+        {{ else if eq $mode "copy" }}Copy
+        {{ else }}New{{ end }} Test
+    </h1>
+    {{ if eq $mode "edit" }}
+    {{/* Shown while the Test Configuration dialog's choice is not saved yet */}}
+    <p id="test-configuration-pending" class="hidden text-sm text-ink-muted">
+        Test Configuration changed, save to apply
+    </p>
+    {{ end }}
+</div>
 <div id="add-test-div" class="flex h-screen gap-4">
     <!-- Left Panel -->
     <div class="w-1/3 p-5 card overflow-auto">
@@ -180,14 +188,13 @@
     </div>
 
     {{ $id := "null" }}
-    {{ $subtype := "null" }}
+    {{ $subtype := printf "\"%s\"" .TestPtr.Subtype }}
     {{ $curriculumGrades := "null" }}
 
     {{ if eq $mode "edit" }}
         {{ $id = printf "%d" .TestPtr.ID }}
     {{ else }}
         <!-- add/copy test -->
-        {{ $subtype = printf "\"%s\"" .TestPtr.Subtype }}
         {{ $curriculumGrades = .TestPtr.CurriculumGrades | toJson }}
     {{ end }}
 
@@ -204,11 +211,23 @@
 
         <div class="flex items-center justify-between">
             <label class="font-semibold">Select Test Code</label>
-            <button type="button" id="test-instructions-link"
-                class="text-accent hover:text-accent-hover hover:underline"
-                onclick="openInstructionsModal()">
-                Test Instructions
-            </button>
+            <div class="flex items-center gap-4">
+                {{ if eq $mode "edit" }}
+                {{/* Opens the Add/Copy Test dialog in place (no history entry, so the page is never swapped
+                     out from under it), prefilled with the configuration the page currently holds. */}}
+                <button type="button" id="test-configuration-link"
+                    class="cursor-pointer text-accent hover:text-accent-hover hover:underline"
+                    hx-get="/tests/add-test-dialog" hx-target="#test-configuration-container" hx-swap="innerHTML"
+                    hx-vals="js:...testConfigurationDialogVals()">
+                    Test Configuration
+                </button>
+                {{ end }}
+                <button type="button" id="test-instructions-link"
+                    class="cursor-pointer text-accent hover:text-accent-hover hover:underline"
+                    onclick="openInstructionsModal()">
+                    Test Instructions
+                </button>
+            </div>
         </div>
         <div class="flex items-center gap-2 mt-2 mb-2">
             {{/* Define variables with empty values first so as to access them out of if-end block */}}
@@ -275,17 +294,18 @@
             value='{{ currentInstructionsMap .TestPtr .TestRule | toJson }}'>
         <input type="hidden" id="test-instructions-default-store"
             value='{{ defaultInstructionsMap .TestRule | toJson }}'>
+        {{ if eq $mode "edit" }}
+        {{/* The configuration Save will send ("current") next to what is stored ("saved"). A hidden input's
+             value is kept in the page's HTML, so it survives htmx restoring the page, like the stores above. */}}
+        <input type="hidden" id="test-configuration-store"
+            value='{{ dict "saved" (dict "subtype" .TestPtr.Subtype "examId" (index .TestPtr.ExamIDs 0) "curriculumGrades" .TestPtr.CurriculumGrades) "current" (dict "subtype" .TestPtr.Subtype "examId" (index .TestPtr.ExamIDs 0) "curriculumGrades" .TestPtr.CurriculumGrades) | toJson }}'>
+        {{ end }}
         {{ template "test_instructions_modal" }}
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="form-input flex-1"
                 value='{{ if eq $mode "edit" }}{{.TestPtr.GetNameByLang "en"}}{{end}}' 
                 onchange="sessionStorage.setItem('selectedName', this.value);">
-            {{ if eq $mode "edit" }}
-            <select id="test-type-dropdown" class="form-input flex-1">
-                {{ template "test_type_options" .TestPtr }}
-            </select>
-            {{end}}
         </div>
 
         {{ $hasTestRule := (ne .TestRule nil) }}
@@ -433,6 +453,8 @@
                 Save</button>
         {{ end }}
     </form>
+    {{/* Receives the Test Configuration dialog; outside the form because the dialog has its own form. */}}
+    {{ if eq $mode "edit" }}<div id="test-configuration-container"></div>{{ end }}
 </div>
 <script type="application/json" id="test-context-json">
   {{ dict "testId" $id "testRule" .TestRule "examId" (examIdFromTest .TestPtr) "jeeAdvancedExamId" .JeeAdvancedExamID | toJson }}
@@ -453,7 +475,7 @@
 
     var SESSION_KEY_LAST_SEARCHED_TEST = "lastSearchedTest";
 
-    (function () {        
+    (function () {
         if (window.lastPushedScreen === PUSHED_SCREEN_ADD_TEST) {
             // clear session storage values stored earlier as this is new screen opened
             sessionStorage.removeItem(SESSION_KEY_PROGRAM);
@@ -1043,18 +1065,118 @@
         return true;
     }
 
+    // Edit screen only: the configuration Save sends ("current") next to what is stored ("saved").
+    function getTestConfigurationStore() {
+        return JSON.parse(document.getElementById('test-configuration-store').value);
+    }
+
+    function setTestConfigurationStore(store) {
+        document.getElementById('test-configuration-store').value = JSON.stringify(store);
+    }
+
+    function curriculumGradeKeys(curriculumGrades) {
+        return (curriculumGrades || []).map(cg => `${cg.curriculum_id}__${cg.grade_id ?? 0}`).sort().join('|');
+    }
+
+    function isTestConfigurationChanged(store) {
+        const { saved, current } = store;
+        return saved.subtype !== current.subtype || saved.examId !== current.examId ||
+            curriculumGradeKeys(saved.curriculumGrades) !== curriculumGradeKeys(current.curriculumGrades);
+    }
+
+    // Values the Test Configuration dialog is opened with: what the page holds now, not what is stored.
+    function testConfigurationDialogVals() {
+        const { current } = getTestConfigurationStore();
+        return {
+            mode: 'configuration',
+            subtype: current.subtype,
+            exam_id: current.examId,
+            curriculum_grades: JSON.stringify(current.curriculumGrades || [])
+        };
+    }
+
+    function chipsHtml(marks) {
+        return marks.map(mark => `&nbsp;<span class="chip">${mark}</span>`).join('') + '&nbsp;';
+    }
+
+    // Called by the Test Configuration dialog's Confirm. Changes only this page; Save sends it.
+    // ruleChange ({ rule, jeeAdvancedExamId }) is set when the exam or test type changed.
+    function applyTestConfiguration(configuration, ruleChange) {
+        if (ruleChange) {
+            applyRuleToPage(configuration.examId, ruleChange.rule, ruleChange.jeeAdvancedExamId);
+        }
+
+        const store = getTestConfigurationStore();
+        store.current = configuration;
+        setTestConfigurationStore(store);
+        document.getElementById('test-configuration-pending')
+            .classList.toggle('hidden', !isTestConfigurationChanged(store));
+    }
+
+    // Resets everything the new exam's rule drives: instructions, duration and marking scheme.
+    // Problems stay in their sections (the dialog already checked that they fit the rule).
+    function applyRuleToPage(examId, rule, jeeAdvancedExamId) {
+        // Read when problems are added later
+        const ctxEl = document.getElementById('test-context-json');
+        const ctx = JSON.parse(ctxEl.textContent);
+        ctx.testRule = rule;
+        ctx.examId = examId;
+        ctx.jeeAdvancedExamId = jeeAdvancedExamId;
+        ctxEl.textContent = JSON.stringify(ctx);
+
+        const instructions = buildInstructionsLangMap(rule?.config);
+        setCurrentInstructionsMap(instructions);
+        setDefaultInstructionsMap(instructions);
+        if (rule?.config?.single_subject) {
+            const subjectRow = document.querySelector('#questions-table-body tr[id^="subject-"]');
+            const subjectId = subjectRow ? parseInt(subjectRow.id.replace('subject-', ''), 10) : null;
+            const subjectInstructions = buildInstructionsLangMap(rule.config.subjects?.find(s => s.subject_id === subjectId));
+            if (Object.keys(subjectInstructions).length > 0) {
+                applySubjectInstructions(subjectInstructions);
+            }
+        }
+
+        const durationInput = document.getElementById('duration');
+        const duration = rule?.config?.duration;
+        if (duration) {
+            durationInput.value = duration;
+            sessionStorage.setItem(SESSION_KEY_DURATION, duration);
+        }
+        durationInput.readOnly = !!duration;
+
+        // With a scheme, every level takes it and is read-only; without one, marks stay and become editable.
+        const scheme = rule?.config?.marking_scheme;
+        const hasScheme = !!scheme?.pos_marks?.length;
+        document.querySelectorAll('#marking-scheme-div, #questions-table-body').forEach(container => {
+            container.querySelectorAll(`${chipEditorPosId}, ${chipEditorNegId}`).forEach(editor => {
+                if (hasScheme) {
+                    editor.innerHTML = chipsHtml((editor.id === 'chip-editor-pos' ? scheme.pos_marks : scheme.neg_marks) || []);
+                }
+                editor.setAttribute('contenteditable', hasScheme ? 'false' : 'true');
+            });
+        });
+        updateTotalMarks();
+    }
+
     function buildTestJson(subtype, curriculumGrades, examId) {
+        let curriculumGradesToSend = null;
+        if (mode === "edit") {
+            // Test type, exam and curriculum-grades come from the Test Configuration dialog's choices;
+            // curriculum-grades are sent only when they differ from what is stored.
+            const { saved, current } = getTestConfigurationStore();
+            subtype = current.subtype;
+            examId = current.examId;
+            if (curriculumGradeKeys(current.curriculumGrades) !== curriculumGradeKeys(saved.curriculumGrades)) {
+                curriculumGradesToSend = current.curriculumGrades;
+            }
+        }
+
         const program = document.getElementById('program-dropdown').value;
         const testTypeCode = document.getElementById('test-type-code-dropdown').value;
         const testSequence = document.getElementById('test-sequence-dropdown').value;
         const year = document.getElementById('year-dropdown').value;
 
         const code = `${program}-${testTypeCode}-${testSequence}-${year}`;
-
-        if (mode === "edit") {
-            // for edit test scenario, get subtype from dropdown
-            subtype = document.getElementById('test-type-dropdown')?.value;
-        }
 
         const markingSchemeDiv = document.getElementById('marking-scheme-div');
         const posChips = markingSchemeDiv.querySelectorAll(`${chipEditorPosId} .chip`);
@@ -1124,8 +1246,8 @@
             exam_ids: [examId],
             skill_ids: Array.from(skillIdSet),
             type_params: typeParams,
-            // Used spread operator to add curriculum_grades node only for add/copy test scenario; otherwise it won't add this node
-            ...(mode !== "edit" ? { curriculum_grades: curriculumGrades } : {})
+            // curriculum_grades is sent for add/copy, and for edit only when the dialog changed it
+            ...(mode !== "edit" ? { curriculum_grades: curriculumGrades } : (curriculumGradesToSend ? { curriculum_grades: curriculumGradesToSend } : {}))
         };
     }
 
@@ -1315,16 +1437,13 @@
         }
     }
 
-    async function validateAndCreateTest(data) {
-        const testRule = data.TestRule || {};
-
+    // Checks every problem row on screen against testRule, without touching the UI.
+    // Returns [{ row, result }] in row order, where result is { isValid, reason }.
+    function validateProblemRows(testRule) {
         const questionsTableBody = document.getElementById("questions-table-body");
         const questionRows = questionsTableBody.querySelectorAll("tr[id^='problem-']");
 
-        let invalidCount = 0;
-
-        for (let i = 0; i < questionRows.length; i++) {
-            const row = questionRows[i];
+        return Array.from(questionRows).map((row, i) => {
             const subjectId = parseInt(row.dataset.subject.replace("subject-", ""), 10);
             const subtype = row.dataset.subtype.replace("subtype-", "");
 
@@ -1343,9 +1462,18 @@
                 existingSubtypeProblemCount++;
             }
 
-            const result = validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemCount, 
+            const result = validateQuestionAgainstTestRule(testRule, subjectId, subtype, existingSubtypeProblemCount,
                 questionsTableBody, false);
+            return { row, result };
+        });
+    }
 
+    async function validateAndCreateTest(data) {
+        const testRule = data.TestRule || {};
+
+        let invalidCount = 0;
+
+        for (const { row, result } of validateProblemRows(testRule)) {
             // Visually mark valid/invalid questions
             if (!result.isValid) {
                 addValidationErrorUI(row, result.reason);

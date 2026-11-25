@@ -1136,7 +1136,14 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 			log.Println("Error decoding curriculum_grades:", err)
 		}
 
+		// Both copy and configuration prefill the dialog; only the explicit "configuration" value switches modes.
+		mode := dto.AddTestDialogModeCopy
+		if query.Get("mode") == dto.AddTestDialogModeConfiguration {
+			mode = dto.AddTestDialogModeConfiguration
+		}
+
 		data = dto.AddTestDialogData{
+			Mode:             mode,
 			Subtype:          subtype,
 			CurriculumGrades: curriculumGrades,
 			ExamID:           examId,
@@ -1144,7 +1151,7 @@ func (h *TestsHandler) AddTestModal(responseWriter http.ResponseWriter, request 
 
 	} else {
 		// new test creation scenario
-		data = dto.AddTestDialogData{}
+		data = dto.AddTestDialogData{Mode: dto.AddTestDialogModeNew}
 	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
