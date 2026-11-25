@@ -8,7 +8,6 @@ import (
 	"github.com/avantifellows/nex-gen-cms/di"
 	"github.com/avantifellows/nex-gen-cms/internal/auth"
 	"github.com/avantifellows/nex-gen-cms/internal/constants"
-	"github.com/avantifellows/nex-gen-cms/internal/handlers"
 	"github.com/avantifellows/nex-gen-cms/internal/middleware"
 )
 
@@ -94,8 +93,6 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/auth/google/callback", loginHandler.GoogleCallback)
 	// Dev-only bypass — guarded inside the handler by DEV_LOGIN_EMAIL being unset.
 	muxHandler.HandleFunc("/dev-login", loginHandler.DevLogin)
-
-	muxHandler.HandleFunc("/home", handlers.GenericHandler)
 
 	// Admin user management
 	adminUsers := appComponentPtr.AdminUsersHandler

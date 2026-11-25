@@ -77,8 +77,11 @@
                             const grade = params["grade-dropdown"];
                             const subject = params["subject-dropdown"];
 
-                            // if dropdown values are showing default value like "Loading...", then don't execute request
-                            if (!isInt(curriculum) || !isInt(grade) || !isInt(subject)) {
+                            // if dropdown values are showing default value like "Loading..." or the empty "Select ..."
+                            // placeholder, then don't execute request. Empty strings are checked explicitly because
+                            // isInt('') is true (Number('') is 0)
+                            if (!curriculum || !grade || !subject
+                                || !isInt(curriculum) || !isInt(grade) || !isInt(subject)) {
                                 console.log("Skipping /api/chapters request because dropdowns are not loaded yet.");
                                 event.preventDefault();
 
@@ -111,6 +114,13 @@
             // If the form is already visible, remove it
             if (form != null) {
                 form.remove()
+
+            } else if (!document.getElementById("curriculum-dropdown").value
+                || !document.getElementById("grade-dropdown").value
+                || !document.getElementById("subject-dropdown").value) {
+                // The new chapter is created under the selected curriculum, grade and subject, so all
+                // three are needed (they show "Select ..." placeholders until chosen)
+                showToast("Select curriculum, grade and subject first");
 
             } else {
                 // Otherwise, use HTMX to load the form

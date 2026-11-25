@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { dropdowns, HOME_PAGE_URL } from "./utils";
+import { dropdowns, HOME_PAGE_URL, preselectDropdowns } from "./utils";
 import { mockChaptersApi, mockCreateChapterApi, mockDropdownApi } from './mock';
 
 test.describe('Add Chapter', () => {
@@ -13,6 +13,8 @@ test.describe('Add Chapter', () => {
 
         // mock get chapters api response
         await mockChaptersApi(page);
+        // the form can be opened only after curriculum, grade and subject are selected
+        await preselectDropdowns(page);
 
         await page.goto(HOME_PAGE_URL);
         await page.click('#chapters-tab');
@@ -72,4 +74,19 @@ test.describe('Add Chapter', () => {
         await expect(inputCode).toBeEmpty();
         await expect(inputName).toBeEmpty();
     });
+});
+
+test('Add New Chapter asks to select curriculum, grade and subject first when none is selected', async ({ page }) => {
+    dropdowns.forEach(async function ({ urlPattern, content }) {
+        await mockDropdownApi(page, urlPattern, content);
+    });
+
+    await page.goto(HOME_PAGE_URL);
+    await page.click('#chapters-tab');
+    await page.waitForLoadState('networkidle');
+
+    await page.locator('#addChapterLink').click();
+
+    await expect(page.getByText('Select curriculum, grade and subject first')).toBeVisible();
+    await expect(page.locator('#addChapterForm')).toBeHidden();
 });

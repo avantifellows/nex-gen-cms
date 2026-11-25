@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { dropdowns, HOME_PAGE_URL } from './utils';
+import { dropdowns, HOME_PAGE_URL, preselectDropdowns } from './utils';
 import { mockDropdownApi, mockTabContentApi } from './mock';
 
 test.describe('Homepage Load', () => {
@@ -23,13 +23,25 @@ test.describe('Homepage Load', () => {
             const dropdown = page.locator(`#${name}`);
             const options = dropdown.locator('option');
 
-            // grade-dropdown gets an extra "Common" option (value -1) appended after load.
-            const expectedCount = name === 'grade-dropdown' ? 3 : 2;
+            // Each dropdown has a "Select ..." placeholder as its first option, and grade-dropdown gets an
+            // extra "Common" option (value -1) appended after load.
+            const expectedCount = name === 'grade-dropdown' ? 4 : 3;
             await expect(options).toHaveCount(expectedCount);
 
             for (let index = 0; index < content.length; index++) {
-                await expect(options.nth(index)).toContainText(content[index]);
+                await expect(options.nth(index + 1)).toContainText(content[index]);
             }
+        });
+    }
+
+    for (const { name, placeholder } of dropdowns) {
+        test(`${name} shows "${placeholder}" as its first option and no loading option once loaded`, async ({ page }) => {
+            const dropdown = page.locator(`#${name}`);
+
+            await expect(dropdown.locator('option[data-loading]')).toHaveCount(0);
+            await expect(dropdown.locator('option').first()).toHaveText(placeholder);
+            // nothing is selected by default
+            await expect(dropdown).toHaveValue('');
         });
     }
 
@@ -93,6 +105,27 @@ test.describe('Homepage Load', () => {
     }
 });
 
+test.describe('Placeholders', () => {
+
+    test('chapters are not requested until a value is selected in every dropdown', async ({ page }) => {
+        dropdowns.forEach(async function ({ urlPattern, content }) {
+            await mockDropdownApi(page, urlPattern, content);
+        });
+
+        const chapterRequests: string[] = [];
+        page.on('request', request => {
+            if (request.url().includes('/api/chapters')) chapterRequests.push(request.url());
+        });
+
+        await page.goto(HOME_PAGE_URL);
+        await page.waitForLoadState('networkidle');
+        // dropdowns fire their onLoaded event 100ms after loading, give it time to (wrongly) trigger a request
+        await page.waitForTimeout(500);
+
+        expect(chapterRequests).toEqual([]);
+    });
+});
+
 test.describe('Tabs', () => {
 
     test('Clicking Chapters tab makes GET api call to /chapters', async ({ page }) => {
@@ -120,10 +153,11 @@ test.describe('Tabs', () => {
 
     tabs.forEach(function ({ name, urlPattern, content }) {
         test(`Clicking ${name} tab loads ${urlPattern} api response in div having id content`, async ({ page }) => {
-            // Intercept the HTMX GET request to mock response
-            await mockTabContentApi(page, urlPattern, content);
-
             await page.goto(HOME_PAGE_URL);
+
+            // Intercept the HTMX GET request to mock response. This is done after loading the page, because
+            // HOME_PAGE_URL (/chapters) matches the chapters urlPattern and would otherwise be mocked too.
+            await mockTabContentApi(page, urlPattern, content);
 
             // Click on the tab
             await page.click(`#${name}-tab`);
@@ -142,6 +176,9 @@ dropdowns.forEach(function ({ name, key, selectedVal }) {
             await mockDropdownApi(page, urlPattern, content);
         });
 
+        // chapters load only when every dropdown has a value, so start with the first option of each one
+        await preselectDropdowns(page);
+
         // Set up the network interceptor to capture the request to /api/chapters after changing the dropdown
         const apiRequestPromise = page.waitForRequest(request => {
             if (request.url().includes('/api/chapters') && request.method() === 'GET') {
@@ -152,19 +189,20 @@ dropdowns.forEach(function ({ name, key, selectedVal }) {
             }
             return false;
         });
-        // Navigate to the page with the dropdown
-        await page.goto(HOME_PAGE_URL);
-
-        // Click on the "Chapters" tab
-        await page.click('#chapters-tab');
         /**
          * wait for api is required here; otherwise even before finishing api call it changes dropdown value, resetting
-         * session storage CHAPTERS_LOADED_KEY to false. But after this first /api/chapters call due to chapters tab click 
-         * finishes resetting flag again to true, hence preventing actual call required on changing dropdown value
+         * session storage CHAPTERS_LOADED_KEY to false. But after this first /api/chapters call finishes resetting
+         * flag again to true, hence preventing actual call required on changing dropdown value.
+         * HOME_PAGE_URL is the chapters screen itself, so this first call is made on page load (not by clicking
+         * the Chapters tab), and the wait is registered before navigating so that the response can't be missed.
          */
-        await page.waitForResponse(resp =>
+        const initialChaptersResponse = page.waitForResponse(resp =>
             resp.url().includes('/api/chapters') && resp.status() === 200
         );
+
+        // Navigate to the page with the dropdown
+        await page.goto(HOME_PAGE_URL);
+        await initialChaptersResponse;
 
         const dropdown = page.locator(`#${name}`);
         // Select a specific option by value
