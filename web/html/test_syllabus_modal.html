@@ -1,7 +1,6 @@
 {{ define "test_syllabus_modal" }}
 <div id="test-syllabus-modal"
     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
-    data-subjects='{{ toJson . }}'
     onclick="if (event.target === this) closeSyllabusModal()">
     <div class="card shadow-xl rounded-xl w-full max-w-3xl p-6 max-h-[90vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-border pb-3 mb-3">
@@ -12,13 +11,53 @@
             </button>
         </div>
 
-        <div class="flex-1 overflow-y-auto">
-            <p id="syllabus-status" class="text-ink-muted hidden"></p>
-            <div class="nav nav-tabs" id="syllabus-subject-tabs"></div>
-            <div id="syllabus-subject-panel" class="pt-3"></div>
-            <p id="syllabus-empty-hint" class="text-ink-muted">
+        <div class="flex-1 min-h-0 flex flex-col">
+            {{ if not .Subjects }}
+            <p class="text-ink-muted">No syllabus subjects are available for this test's curriculum.</p>
+            {{ else }}
+            <div id="syllabus-grades" class="flex flex-wrap items-center gap-4 mb-3">
+                <span class="font-medium">Grades:</span>
+                {{ range .Grades }}
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" class="accent-accent shrink-0" value="{{ .ID }}"
+                        {{ if eq .ID $.TestGradeID }}checked{{ end }}>
+                    {{ .Number }}
+                </label>
+                {{ end }}
+            </div>
+
+            <div class="nav nav-tabs" id="syllabus-subject-tabs">
+                {{ range .Subjects }}
+                <button type="button" class="nav-link" data-subject-id="{{ .ID }}">
+                    <input type="checkbox" class="accent-accent shrink-0" style="margin-right: 6px"
+                        title="Include {{ .GetNameByLang "en" }}">
+                    <span>{{ .GetNameByLang "en" }}</span>
+                    <span class="syllabus-subject-count"></span>
+                </button>
+                {{ end }}
+            </div>
+
+            <p id="syllabus-empty-hint" class="text-ink-muted pt-3">
                 Click a subject tab to choose its chapters. Untick a subject to leave it out of the syllabus.
             </p>
+            <p id="syllabus-message" class="text-ink-muted pt-3 hidden"></p>
+            <div id="syllabus-panel" class="pt-3 hidden flex flex-col min-h-0">
+                <div class="flex items-center justify-between mb-2 px-1">
+                    <label class="flex items-center gap-2 cursor-pointer font-medium">
+                        <input type="checkbox" id="syllabus-all" class="accent-accent shrink-0">
+                        Select all chapters
+                    </label>
+                    <span id="syllabus-count" class="text-sm text-ink-muted"></span>
+                </div>
+                <!-- Filled by htmx with the chapters of all subjects and grades. The first click on the
+                     Test Syllabus link loads them (a failed load is retried on the next click); after
+                     that they are only filtered locally. -->
+                <div id="syllabus-chapters" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto min-h-0 px-1"
+                    hx-get="/api/syllabus-chapters?curriculum-dropdown={{ .CurriculumID }}&subject-ids={{ range $i, $subject := .Subjects }}{{ if $i }},{{ end }}{{ $subject.ID }}{{ end }}"
+                    hx-trigger="click[!document.querySelector('#syllabus-chapters label')] from:#test-syllabus-link"
+                    hx-sync="this:drop"></div>
+            </div>
+            {{ end }}
         </div>
 
         <div class="mt-4 flex justify-end gap-3">
@@ -30,149 +69,108 @@
 </div>
 <script>
     (function () {
-        // Subjects the syllabus can contain, derived from the test's curriculum by the server.
-        const subjects = JSON.parse(document.getElementById("test-syllabus-modal").dataset.subjects)
-            .map(s => ({ id: s.id, name: s.name.find(n => n.lang_code === "en")?.subject || "" }));
-
-        // TEMPORARY until chapters are loaded from the API: a few placeholder chapters per subject.
-        function chaptersFor(subjectId) {
-            const subject = subjects.find(s => s.id === subjectId);
-            return [1, 2, 3, 4].map(n => ({ id: subjectId * 100 + n, name: (subject?.name || "Subject") + " chapter " + n }));
-        }
-
-        // subject id -> Set of selected chapter ids. A subject is part of the syllabus
-        // only while it has an entry here.
-        const selection = new Map();
+        const root = document.getElementById("test-syllabus-modal");
+        const tabs = [...root.querySelectorAll("#syllabus-subject-tabs .nav-link")];
+        const gradeInputs = [...root.querySelectorAll("#syllabus-grades input")];
+        const chaptersEl = root.querySelector("#syllabus-chapters");
+        let chapterState = "idle"; // idle | loading | loaded | error
         let activeSubjectId = null;
 
+        // The layout is all in the template above and in the chapters fragment from the server; the
+        // state lives in the checkboxes: a ticked subject tab means the subject is part of the
+        // syllabus, a ticked chapter row means the chapter is.
+        const tabInput = tab => tab.querySelector("input");
+        const chapterRows = () => [...chaptersEl.querySelectorAll("label")];
+        const rowsOfSubject = subjectId => chapterRows().filter(row => row.dataset.subjectId === String(subjectId));
+        const selectedGradeIds = () => new Set(gradeInputs.filter(input => input.checked).map(input => input.value));
+        const visibleRowsOfSubject = subjectId =>
+            rowsOfSubject(subjectId).filter(row => selectedGradeIds().has(row.dataset.gradeId));
+        const rowInput = row => row.querySelector("input");
+
         function selectSubject(subjectId) {
-            if (!selection.has(subjectId)) selection.set(subjectId, new Set());
+            tabs.forEach(tab => { if (tab.dataset.subjectId === String(subjectId)) tabInput(tab).checked = true; });
             activeSubjectId = subjectId;
             render();
         }
 
         function excludeSubject(subjectId) {
-            selection.delete(subjectId);
+            rowsOfSubject(subjectId).forEach(row => { rowInput(row).checked = false; });
             if (activeSubjectId === subjectId) {
-                activeSubjectId = subjects.find(s => selection.has(s.id))?.id ?? null;
+                const next = tabs.find(tab => tabInput(tab).checked);
+                activeSubjectId = next ? next.dataset.subjectId : null;
             }
             render();
         }
 
-        function toggleChapter(subjectId, chapterId, checked) {
-            const set = selection.get(subjectId);
-            if (!set) return;
-            if (checked) set.add(chapterId); else set.delete(chapterId);
-            renderTabs();
-            updateCount(subjectId);
-        }
-
-        function toggleAllChapters(subjectId, checked) {
-            const set = selection.get(subjectId);
-            if (!set) return;
-            set.clear();
-            if (checked) chaptersFor(subjectId).forEach(c => set.add(c.id));
-            render();
-        }
-
-        function updateCount(subjectId) {
-            const total = chaptersFor(subjectId).length;
-            const count = selection.get(subjectId)?.size || 0;
-            const countEl = document.getElementById("syllabus-count");
-            if (countEl) countEl.textContent = count + " of " + total + " selected";
-            const all = document.getElementById("syllabus-all");
-            if (all) all.checked = total > 0 && count === total;
-        }
-
-        function renderTabs() {
-            const tabs = document.getElementById("syllabus-subject-tabs");
-            tabs.innerHTML = "";
-            subjects.forEach(subject => {
-                const included = selection.has(subject.id);
-                const btn = document.createElement("button");
-                btn.type = "button";
-                btn.className = "nav-link" + (subject.id === activeSubjectId ? " active" : "");
-                btn.addEventListener("click", () => {
-                    if (subject.id === activeSubjectId) return;
-                    selectSubject(subject.id);
-                });
-
-                const checkbox = document.createElement("input");
-                checkbox.type = "checkbox";
-                checkbox.checked = included;
-                checkbox.title = "Include " + subject.name;
-                checkbox.className = "accent-accent";
-                checkbox.style.marginRight = "6px";
-                checkbox.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    if (checkbox.checked) selectSubject(subject.id); else excludeSubject(subject.id);
-                });
-
-                const count = selection.get(subject.id)?.size || 0;
-                btn.append(checkbox, document.createTextNode(subject.name + (count ? " (" + count + ")" : "")));
-                tabs.appendChild(btn);
-            });
-        }
-
-        function renderPanel() {
-            const panel = document.getElementById("syllabus-subject-panel");
-            panel.innerHTML = "";
-            const subjectId = activeSubjectId;
-            const chapterSet = selection.get(subjectId);
-            if (!chapterSet) return;
-            const chapters = chaptersFor(subjectId);
-
-            const toolbar = document.createElement("div");
-            toolbar.className = "flex items-center justify-between mb-2";
-            const allLabel = document.createElement("label");
-            allLabel.className = "flex items-center gap-2 cursor-pointer font-medium";
-            const all = document.createElement("input");
-            all.type = "checkbox";
-            all.id = "syllabus-all";
-            all.className = "accent-accent";
-            all.addEventListener("change", () => toggleAllChapters(subjectId, all.checked));
-            allLabel.append(all, document.createTextNode("Select all chapters"));
-            const count = document.createElement("span");
-            count.id = "syllabus-count";
-            count.className = "text-sm text-ink-muted";
-            toolbar.append(allLabel, count);
-
-            const list = document.createElement("div");
-            list.className = "grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1";
-            chapters.forEach(chapter => {
-                const row = document.createElement("label");
-                row.className = "flex items-center gap-2 cursor-pointer py-1";
-                const input = document.createElement("input");
-                input.type = "checkbox";
-                input.className = "accent-accent";
-                input.checked = chapterSet.has(chapter.id);
-                input.addEventListener("change", () => toggleChapter(subjectId, chapter.id, input.checked));
-                row.append(input, document.createTextNode(chapter.name));
-                list.appendChild(row);
-            });
-
-            panel.append(toolbar, list);
-            updateCount(subjectId);
+        function panelMessage(subjectId) {
+            if (chapterState === "loading" || chapterState === "idle") return "Loading chapters...";
+            if (chapterState === "error") return "Could not load chapters. Close and reopen this dialog to retry.";
+            if (selectedGradeIds().size === 0) return "Select at least one grade to see chapters.";
+            if (visibleRowsOfSubject(subjectId).length === 0) return "No chapters for this subject in the selected grades.";
+            return "";
         }
 
         function render() {
-            const status = document.getElementById("syllabus-status");
-            const noSubjects = subjects.length === 0;
-            status.textContent = noSubjects ? "No syllabus subjects are available for this test's curriculum." : "";
-            status.classList.toggle("hidden", !noSubjects);
+            tabs.forEach(tab => {
+                tab.classList.toggle("active", tab.dataset.subjectId === String(activeSubjectId));
+                const count = rowsOfSubject(tab.dataset.subjectId).filter(row => rowInput(row).checked).length;
+                tab.querySelector(".syllabus-subject-count").textContent = count ? "(" + count + ")" : "";
+            });
+            root.querySelector("#syllabus-empty-hint").classList.toggle("hidden", activeSubjectId !== null);
 
-            document.getElementById("syllabus-empty-hint").classList.toggle("hidden", noSubjects || activeSubjectId !== null);
-            renderTabs();
-            renderPanel();
+            const message = activeSubjectId === null ? "" : panelMessage(activeSubjectId);
+            const messageEl = root.querySelector("#syllabus-message");
+            messageEl.textContent = message;
+            messageEl.classList.toggle("hidden", message === "");
+            root.querySelector("#syllabus-panel").classList.toggle("hidden", activeSubjectId === null || message !== "");
+            if (activeSubjectId === null || message !== "") return;
+
+            const grades = selectedGradeIds();
+            chapterRows().forEach(row => row.classList.toggle("hidden",
+                row.dataset.subjectId !== String(activeSubjectId) || !grades.has(row.dataset.gradeId)));
+            const visible = visibleRowsOfSubject(activeSubjectId);
+            const count = visible.filter(row => rowInput(row).checked).length;
+            root.querySelector("#syllabus-count").textContent = count + " of " + visible.length + " selected";
+            root.querySelector("#syllabus-all").checked = visible.length > 0 && count === visible.length;
         }
 
-        window.openSyllabusModal = function () {
-            document.getElementById("test-syllabus-modal").classList.remove("hidden");
+        tabs.forEach(tab => {
+            tab.addEventListener("click", () => {
+                if (tab.dataset.subjectId !== String(activeSubjectId)) selectSubject(tab.dataset.subjectId);
+            });
+            tabInput(tab).addEventListener("click", event => {
+                event.stopPropagation();
+                if (event.target.checked) selectSubject(tab.dataset.subjectId); else excludeSubject(tab.dataset.subjectId);
+            });
+        });
+
+        gradeInputs.forEach(input => input.addEventListener("change", () => {
+            // chapters of an unticked grade leave the syllabus
+            if (!input.checked) chapterRows().filter(row => row.dataset.gradeId === input.value)
+                .forEach(row => { rowInput(row).checked = false; });
             render();
+        }));
+
+        chaptersEl.addEventListener("change", render);
+        root.querySelector("#syllabus-all")?.addEventListener("change", event => {
+            visibleRowsOfSubject(activeSubjectId).forEach(row => { rowInput(row).checked = event.target.checked; });
+            render();
+        });
+
+        // htmx does the loading (see hx-get above); these only keep the dialog's state in step with it.
+        chaptersEl.addEventListener("htmx:beforeRequest", () => { chapterState = "loading"; render(); });
+        chaptersEl.addEventListener("htmx:afterSwap", () => { chapterState = "loaded"; render(); });
+        ["htmx:responseError", "htmx:sendError"].forEach(name => chaptersEl.addEventListener(name, () => {
+            chapterState = "error";
+            render();
+        }));
+
+        window.openSyllabusModal = function () {
+            root.classList.remove("hidden");
         };
 
         window.closeSyllabusModal = function () {
-            document.getElementById("test-syllabus-modal").classList.add("hidden");
+            root.classList.add("hidden");
         };
     })();
 </script>

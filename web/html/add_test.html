@@ -283,7 +283,7 @@
         <input type="hidden" id="test-instructions-default-store"
             value='{{ defaultInstructionsMap .TestRule | toJson }}'>
         {{ template "test_instructions_modal" }}
-        {{ template "test_syllabus_modal" .SyllabusSubjects }}
+        {{ template "test_syllabus_modal" .Syllabus }}
 
         <div class="flex items-center gap-2">
             <input id="test-name" type="text" placeholder="Test Name" class="form-input flex-1"

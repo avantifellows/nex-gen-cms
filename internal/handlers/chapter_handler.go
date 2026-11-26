@@ -27,11 +27,13 @@ const updateSuccessTemplate = "update_success.html"
 const chapterTemplate = "chapter.html"
 const chapterTestsTemplate = "chapter_tests.html"
 const chapterDropdownTemplate = "chapter_dropdown.html"
+const testSyllabusChaptersTemplate = "test_syllabus_chapters.html"
 const topicDropdownOptionalTemplate = "topic_dropdown_optional.html"
 const topicDropdownAllTemplate = "topic_dropdown_all.html"
 const topicChecklistTemplate = "topic_checklist.html"
 
 const ChapterDropdownName = "chapter-dropdown"
+const SUBJECT_IDS_PARAM = "subject-ids"
 const chapterPriorityOptionsTemplate = "chapter_priority_options.html"
 
 type ChaptersHandler struct {
@@ -94,6 +96,56 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 		"getName":    getChapterName,
 		"capitalize": utils.Capitalize,
 	})
+}
+
+// GetSyllabusChapters returns, as checkbox rows, the non-archived chapters of the given subjects in
+// one curriculum, across all grades, so the Test Syllabus dialog can filter them locally.
+// Query params: curriculum-dropdown, subject-ids (comma-separated).
+// TODO: replace the per-subject calls with a single call once db-service accepts subject_ids
+// (avantifellows/db-service#879).
+func (h *ChaptersHandler) GetSyllabusChapters(responseWriter http.ResponseWriter, request *http.Request) {
+	urlVals := request.URL.Query()
+	curriculumId, _, _ := getCurriculumGradeSubjectIds(urlVals)
+	subjectIds, err := parseSubjectIds(urlVals.Get(SUBJECT_IDS_PARAM))
+	if curriculumId == 0 || err != nil {
+		http.Error(responseWriter, CURRICULUM_DROPDOWN_NAME+" and "+SUBJECT_IDS_PARAM+" are required and must be valid ids",
+			http.StatusBadRequest)
+		return
+	}
+
+	chapters := []*models.Chapter{}
+	for _, subjectId := range subjectIds {
+		queryParams := fmt.Sprintf("?"+QUERY_PARAM_CURRICULUM_ID+"=%d&subject_id=%d", curriculumId, subjectId)
+		// empty cache key: these lists are partial, so they must not replace the shared chapters cache
+		subjectChapters, err := h.chaptersService.GetList(handlerutils.ChaptersEndPoint+queryParams, "", false, true)
+		if err != nil {
+			http.Error(responseWriter, fmt.Sprintf("Error fetching chapters: %v", err), http.StatusInternalServerError)
+			return
+		}
+		for _, chapter := range *subjectChapters {
+			if chapter.StatusID != constants.StatusArchived {
+				chapters = append(chapters, chapter)
+			}
+		}
+	}
+
+	views.ExecuteTemplate(testSyllabusChaptersTemplate, responseWriter, chapters, nil)
+}
+
+// parseSubjectIds parses a comma-separated list of subject ids, ignoring repeats. An empty list
+// or any invalid id is an error.
+func parseSubjectIds(csv string) ([]int8, error) {
+	var ids []int8
+	for _, part := range strings.Split(csv, ",") {
+		id, err := utils.StringToIntType[int8](strings.TrimSpace(part))
+		if err != nil || id <= 0 {
+			return nil, fmt.Errorf("invalid subject id %q", part)
+		}
+		if !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	return ids, nil
 }
 
 func getChapterName(ch models.Chapter, lang string) string {

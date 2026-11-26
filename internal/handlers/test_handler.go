@@ -645,7 +645,7 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if err := h.fillSyllabusSubjects(&data); err != nil {
+	if err := h.fillSyllabusOptions(&data); err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -867,7 +867,7 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		TestRule: testRule,
 	}
 	data.JeeAdvancedExamID = h.resolveJeeAdvancedExamID()
-	if err := h.fillSyllabusSubjects(&data); err != nil {
+	if err := h.fillSyllabusOptions(&data); err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1566,7 +1566,7 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		Problems: problemsMap,
 	}
 	data.JeeAdvancedExamID = h.resolveJeeAdvancedExamID()
-	if err := h.fillSyllabusSubjects(&data); err != nil {
+	if err := h.fillSyllabusOptions(&data); err != nil {
 		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1609,13 +1609,16 @@ func getProblemChapterName(p models.Problem, lang string) string {
 	return p.GetChapterNameByLang(lang)
 }
 
-// fillSyllabusSubjects sets the subjects the test's syllabus can contain, from the test's curriculum.
-func (h *TestsHandler) fillSyllabusSubjects(data *dto.TestData) error {
-	data.SyllabusSubjects = []*models.Subject{}
+// fillSyllabusOptions sets what the Test Syllabus dialog is built from: the subjects of the test's
+// curriculum and all grades. A curriculum with no subject mapping leaves both lists empty.
+func (h *TestsHandler) fillSyllabusOptions(data *dto.TestData) error {
+	data.Syllabus = dto.SyllabusOptions{Subjects: []*models.Subject{}, Grades: []*models.Grade{}}
 	curriculumGrades := data.TestPtr.CurriculumGrades
 	if len(curriculumGrades) == 0 {
 		return nil
 	}
+	data.Syllabus.CurriculumID = curriculumGrades[0].CurriculumID
+	data.Syllabus.TestGradeID = curriculumGrades[0].GradeID
 
 	curriculums, err := h.curriculumsService.GetList(getCurriculumsEndPoint, curriculumsKey, false, false)
 	if err != nil {
@@ -1623,7 +1626,7 @@ func (h *TestsHandler) fillSyllabusSubjects(data *dto.TestData) error {
 	}
 	var names []string
 	for _, curriculum := range *curriculums {
-		if curriculum.ID == curriculumGrades[0].CurriculumID {
+		if curriculum.ID == data.Syllabus.CurriculumID {
 			names = curriculum.SyllabusSubjectNames()
 			break
 		}
@@ -1636,6 +1639,13 @@ func (h *TestsHandler) fillSyllabusSubjects(data *dto.TestData) error {
 	if err != nil {
 		return fmt.Errorf("error fetching subjects: %w", err)
 	}
-	data.SyllabusSubjects = models.MatchSubjectsByName(*subjects, names)
+	data.Syllabus.Subjects = models.MatchSubjectsByName(*subjects, names)
+
+	grades, err := h.gradesService.GetList(getGradesEndPoint, gradesKey, false, false)
+	if err != nil {
+		return fmt.Errorf("error fetching grades: %w", err)
+	}
+	data.Syllabus.Grades = slices.Clone(*grades)
+	slices.SortFunc(data.Syllabus.Grades, func(g1, g2 *models.Grade) int { return int(g1.Number) - int(g2.Number) })
 	return nil
 }

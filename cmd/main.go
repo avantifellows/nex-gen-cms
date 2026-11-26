@@ -112,6 +112,7 @@ func setup(configLoader ConfigLoader, muxHandler MuxHandler, appComponentPtr *di
 	muxHandler.HandleFunc("/api/skills", appComponentPtr.SkillsHandler.GetSkills)
 
 	muxHandler.HandleFunc("/api/chapters", chaptersHandler.GetChapters)
+	muxHandler.HandleFunc("/api/syllabus-chapters", editor(chaptersHandler.GetSyllabusChapters))
 	muxHandler.HandleFunc("/add-chapter", admin(chaptersHandler.OpenAddChapter))
 	muxHandler.Handle("/edit-chapter", middleware.RequireHTMX(middleware.RequireRole(auth.RoleAdmin, http.HandlerFunc(chaptersHandler.EditChapter))))
 	muxHandler.HandleFunc("/update-chapter", admin(chaptersHandler.UpdateChapter))
