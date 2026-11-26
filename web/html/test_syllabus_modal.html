@@ -1,6 +1,7 @@
 {{ define "test_syllabus_modal" }}
 <div id="test-syllabus-modal"
     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+    data-subjects='{{ toJson . }}'
     onclick="if (event.target === this) closeSyllabusModal()">
     <div class="card shadow-xl rounded-xl w-full max-w-3xl p-6 max-h-[90vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-border pb-3 mb-3">
@@ -12,6 +13,7 @@
         </div>
 
         <div class="flex-1 overflow-y-auto">
+            <p id="syllabus-status" class="text-ink-muted hidden"></p>
             <div class="nav nav-tabs" id="syllabus-subject-tabs"></div>
             <div id="syllabus-subject-panel" class="pt-3"></div>
             <p id="syllabus-empty-hint" class="text-ink-muted">
@@ -28,17 +30,15 @@
 </div>
 <script>
     (function () {
-        // Placeholder data for the UI-only step; replaced by API-loaded subjects/chapters.
-        const SUBJECTS = [
-            { id: 1, name: "Physics" },
-            { id: 2, name: "Chemistry" },
-            { id: 3, name: "Mathematics" },
-        ];
-        const CHAPTERS_BY_SUBJECT = {
-            1: [{ id: 11, name: "Kinematics" }, { id: 12, name: "Laws of Motion" }, { id: 13, name: "Work, Energy and Power" }],
-            2: [{ id: 21, name: "Atomic Structure" }, { id: 22, name: "Chemical Bonding" }],
-            3: [{ id: 31, name: "Sets and Relations" }, { id: 32, name: "Limits" }, { id: 33, name: "Matrices" }, { id: 34, name: "Probability" }],
-        };
+        // Subjects the syllabus can contain, derived from the test's curriculum by the server.
+        const subjects = JSON.parse(document.getElementById("test-syllabus-modal").dataset.subjects)
+            .map(s => ({ id: s.id, name: s.name.find(n => n.lang_code === "en")?.subject || "" }));
+
+        // TEMPORARY until chapters are loaded from the API: a few placeholder chapters per subject.
+        function chaptersFor(subjectId) {
+            const subject = subjects.find(s => s.id === subjectId);
+            return [1, 2, 3, 4].map(n => ({ id: subjectId * 100 + n, name: (subject?.name || "Subject") + " chapter " + n }));
+        }
 
         // subject id -> Set of selected chapter ids. A subject is part of the syllabus
         // only while it has an entry here.
@@ -54,7 +54,7 @@
         function excludeSubject(subjectId) {
             selection.delete(subjectId);
             if (activeSubjectId === subjectId) {
-                activeSubjectId = SUBJECTS.find(s => selection.has(s.id))?.id ?? null;
+                activeSubjectId = subjects.find(s => selection.has(s.id))?.id ?? null;
             }
             render();
         }
@@ -71,12 +71,12 @@
             const set = selection.get(subjectId);
             if (!set) return;
             set.clear();
-            if (checked) (CHAPTERS_BY_SUBJECT[subjectId] || []).forEach(c => set.add(c.id));
+            if (checked) chaptersFor(subjectId).forEach(c => set.add(c.id));
             render();
         }
 
         function updateCount(subjectId) {
-            const total = (CHAPTERS_BY_SUBJECT[subjectId] || []).length;
+            const total = chaptersFor(subjectId).length;
             const count = selection.get(subjectId)?.size || 0;
             const countEl = document.getElementById("syllabus-count");
             if (countEl) countEl.textContent = count + " of " + total + " selected";
@@ -87,7 +87,7 @@
         function renderTabs() {
             const tabs = document.getElementById("syllabus-subject-tabs");
             tabs.innerHTML = "";
-            SUBJECTS.forEach(subject => {
+            subjects.forEach(subject => {
                 const included = selection.has(subject.id);
                 const btn = document.createElement("button");
                 btn.type = "button";
@@ -120,7 +120,7 @@
             const subjectId = activeSubjectId;
             const chapterSet = selection.get(subjectId);
             if (!chapterSet) return;
-            const chapters = CHAPTERS_BY_SUBJECT[subjectId] || [];
+            const chapters = chaptersFor(subjectId);
 
             const toolbar = document.createElement("div");
             toolbar.className = "flex items-center justify-between mb-2";
@@ -156,14 +156,19 @@
         }
 
         function render() {
-            document.getElementById("syllabus-empty-hint").classList.toggle("hidden", activeSubjectId !== null);
+            const status = document.getElementById("syllabus-status");
+            const noSubjects = subjects.length === 0;
+            status.textContent = noSubjects ? "No syllabus subjects are available for this test's curriculum." : "";
+            status.classList.toggle("hidden", !noSubjects);
+
+            document.getElementById("syllabus-empty-hint").classList.toggle("hidden", noSubjects || activeSubjectId !== null);
             renderTabs();
             renderPanel();
         }
 
         window.openSyllabusModal = function () {
-            render();
             document.getElementById("test-syllabus-modal").classList.remove("hidden");
+            render();
         };
 
         window.closeSyllabusModal = function () {

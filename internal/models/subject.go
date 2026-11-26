@@ -1,5 +1,7 @@
 package models
 
+import "strings"
+
 type Subject struct {
 	ID         int8          `json:"id"`
 	Name       []SubjectLang `json:"name"`
@@ -29,4 +31,19 @@ func (s *Subject) GetParentNameByLang(langCode string) string {
 		}
 	}
 	return ""
+}
+
+// MatchSubjectsByName returns the subjects whose English name is in names (case-insensitive), in
+// the order of names. A name with no matching subject is skipped.
+func MatchSubjectsByName(subjects []*Subject, names []string) []*Subject {
+	matched := make([]*Subject, 0, len(names))
+	for _, name := range names {
+		for _, subject := range subjects {
+			if strings.EqualFold(subject.GetNameByLang("en"), name) {
+				matched = append(matched, subject)
+				break
+			}
+		}
+	}
+	return matched
 }

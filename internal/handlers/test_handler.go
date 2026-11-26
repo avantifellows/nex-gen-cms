@@ -645,6 +645,10 @@ func (h *TestsHandler) AddTest(responseWriter http.ResponseWriter, request *http
 		http.Error(responseWriter, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if err := h.fillSyllabusSubjects(&data); err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"split":                    strings.Split,
@@ -863,6 +867,10 @@ func (h *TestsHandler) EditTest(responseWriter http.ResponseWriter, request *htt
 		TestRule: testRule,
 	}
 	data.JeeAdvancedExamID = h.resolveJeeAdvancedExamID()
+	if err := h.fillSyllabusSubjects(&data); err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"split":                    strings.Split,
@@ -1558,6 +1566,10 @@ func (h *TestsHandler) CopyTest(responseWriter http.ResponseWriter, request *htt
 		Problems: problemsMap,
 	}
 	data.JeeAdvancedExamID = h.resolveJeeAdvancedExamID()
+	if err := h.fillSyllabusSubjects(&data); err != nil {
+		http.Error(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	views.ExecuteTemplates(responseWriter, data, template.FuncMap{
 		"split":                    strings.Split,
@@ -1595,4 +1607,35 @@ func (h *TestsHandler) ValidateTest(responseWriter http.ResponseWriter, request 
 
 func getProblemChapterName(p models.Problem, lang string) string {
 	return p.GetChapterNameByLang(lang)
+}
+
+// fillSyllabusSubjects sets the subjects the test's syllabus can contain, from the test's curriculum.
+func (h *TestsHandler) fillSyllabusSubjects(data *dto.TestData) error {
+	data.SyllabusSubjects = []*models.Subject{}
+	curriculumGrades := data.TestPtr.CurriculumGrades
+	if len(curriculumGrades) == 0 {
+		return nil
+	}
+
+	curriculums, err := h.curriculumsService.GetList(getCurriculumsEndPoint, curriculumsKey, false, false)
+	if err != nil {
+		return fmt.Errorf("error fetching curriculums: %w", err)
+	}
+	var names []string
+	for _, curriculum := range *curriculums {
+		if curriculum.ID == curriculumGrades[0].CurriculumID {
+			names = curriculum.SyllabusSubjectNames()
+			break
+		}
+	}
+	if len(names) == 0 {
+		return nil
+	}
+
+	subjects, err := h.subjectsService.GetList(handlerutils.SubjectsEndPoint, handlerutils.SubjectsKey, false, false)
+	if err != nil {
+		return fmt.Errorf("error fetching subjects: %w", err)
+	}
+	data.SyllabusSubjects = models.MatchSubjectsByName(*subjects, names)
+	return nil
 }
