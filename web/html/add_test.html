@@ -1124,6 +1124,12 @@
                 .map(([lang_code, instructions]) => ({ lang_code, instructions }));
         }
 
+        // Persist the syllabus only when one is set. type_params is replaced on update, so leaving it out removes it.
+        const syllabus = window.getSyllabusPayload?.();
+        if (syllabus) {
+            typeParams.syllabus = syllabus;
+        }
+
         return {
             code: code,
             name: [

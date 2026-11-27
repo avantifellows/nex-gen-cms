@@ -17,3 +17,13 @@ func TestParseSubjectIds(t *testing.T) {
 		}
 	}
 }
+
+func TestParseChapterIdSetSkipsInvalidIds(t *testing.T) {
+	got := parseChapterIdSet("5, 6,x,,0,-3,5,99999")
+	if !reflect.DeepEqual(got, map[int16]bool{5: true, 6: true}) {
+		t.Fatalf("got %v", got)
+	}
+	if got := parseChapterIdSet(""); len(got) != 0 {
+		t.Fatalf("empty input should give an empty set, got %v", got)
+	}
+}

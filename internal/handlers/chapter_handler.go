@@ -34,6 +34,7 @@ const topicChecklistTemplate = "topic_checklist.html"
 
 const ChapterDropdownName = "chapter-dropdown"
 const SUBJECT_IDS_PARAM = "subject-ids"
+const SELECTED_CHAPTER_IDS_PARAM = "selected-chapter-ids"
 const chapterPriorityOptionsTemplate = "chapter_priority_options.html"
 
 type ChaptersHandler struct {
@@ -100,7 +101,8 @@ func (h *ChaptersHandler) GetChapters(responseWriter http.ResponseWriter, reques
 
 // GetSyllabusChapters returns, as checkbox rows, the non-archived chapters of the given subjects in
 // one curriculum, across all grades, so the Test Syllabus dialog can filter them locally.
-// Query params: curriculum-dropdown, subject-ids (comma-separated).
+// Query params: curriculum-dropdown, subject-ids (comma-separated), and optionally
+// selected-chapter-ids (comma-separated), the chapters to start ticked.
 // TODO: replace the per-subject calls with a single call once db-service accepts subject_ids
 // (avantifellows/db-service#879).
 func (h *ChaptersHandler) GetSyllabusChapters(responseWriter http.ResponseWriter, request *http.Request) {
@@ -129,7 +131,23 @@ func (h *ChaptersHandler) GetSyllabusChapters(responseWriter http.ResponseWriter
 		}
 	}
 
-	views.ExecuteTemplate(testSyllabusChaptersTemplate, responseWriter, chapters, nil)
+	data := dto.SyllabusChapters{
+		Chapters:    chapters,
+		SelectedIDs: parseChapterIdSet(urlVals.Get(SELECTED_CHAPTER_IDS_PARAM)),
+	}
+	views.ExecuteTemplate(testSyllabusChaptersTemplate, responseWriter, data, nil)
+}
+
+// parseChapterIdSet parses a comma-separated list of chapter ids into a set. It only decides which
+// chapters start ticked, so anything that is not a valid id is skipped.
+func parseChapterIdSet(csv string) map[int16]bool {
+	ids := map[int16]bool{}
+	for _, part := range strings.Split(csv, ",") {
+		if id, err := utils.StringToIntType[int16](strings.TrimSpace(part)); err == nil && id > 0 {
+			ids[id] = true
+		}
+	}
+	return ids
 }
 
 // parseSubjectIds parses a comma-separated list of subject ids, ignoring repeats. An empty list

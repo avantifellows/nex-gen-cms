@@ -1,6 +1,7 @@
 {{ define "test_syllabus_modal" }}
 <div id="test-syllabus-modal"
     class="hidden fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+    data-saved='{{ toJson .Saved }}'
     onclick="if (event.target === this) closeSyllabusModal()">
     <div class="card shadow-xl rounded-xl w-full max-w-3xl p-6 max-h-[90vh] flex flex-col">
         <div class="flex items-center justify-between border-b border-border pb-3 mb-3">
@@ -20,7 +21,7 @@
                 {{ range .Grades }}
                 <label class="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" class="accent-accent shrink-0" value="{{ .ID }}"
-                        {{ if eq .ID $.TestGradeID }}checked{{ end }}>
+                        {{ if $.GradeTicked .ID }}checked{{ end }}>
                     {{ .Number }}
                 </label>
                 {{ end }}
@@ -30,7 +31,7 @@
                 {{ range .Subjects }}
                 <button type="button" class="nav-link" data-subject-id="{{ .ID }}">
                     <input type="checkbox" class="accent-accent shrink-0" style="margin-right: 6px"
-                        title="Include {{ .GetNameByLang "en" }}">
+                        title="Include {{ .GetNameByLang "en" }}" {{ if $.SubjectTicked .ID }}checked{{ end }}>
                     <span>{{ .GetNameByLang "en" }}</span>
                     <span class="syllabus-subject-count"></span>
                 </button>
@@ -53,7 +54,7 @@
                      Test Syllabus link loads them (a failed load is retried on the next click); after
                      that they are only filtered locally. -->
                 <div id="syllabus-chapters" class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 overflow-y-auto min-h-0 px-1"
-                    hx-get="/api/syllabus-chapters?curriculum-dropdown={{ .CurriculumID }}&subject-ids={{ range $i, $subject := .Subjects }}{{ if $i }},{{ end }}{{ $subject.ID }}{{ end }}"
+                    hx-get="/api/syllabus-chapters?curriculum-dropdown={{ .CurriculumID }}&subject-ids={{ range $i, $subject := .Subjects }}{{ if $i }},{{ end }}{{ $subject.ID }}{{ end }}&selected-chapter-ids={{ range $i, $id := .SavedChapterIDs }}{{ if $i }},{{ end }}{{ $id }}{{ end }}"
                     hx-trigger="click[!document.querySelector('#syllabus-chapters label')] from:#test-syllabus-link"
                     hx-sync="this:drop"></div>
             </div>
@@ -63,6 +64,9 @@
         <div class="mt-4 flex justify-end gap-3">
             <button type="button" class="btn-secondary" onclick="closeSyllabusModal()">
                 Cancel
+            </button>
+            <button type="button" class="btn-primary" onclick="confirmSyllabusModal()">
+                Confirm
             </button>
         </div>
     </div>
@@ -74,7 +78,6 @@
         const gradeInputs = [...root.querySelectorAll("#syllabus-grades input")];
         const chaptersEl = root.querySelector("#syllabus-chapters");
         let chapterState = "idle"; // idle | loading | loaded | error
-        let activeSubjectId = null;
 
         // The layout is all in the template above and in the chapters fragment from the server; the
         // state lives in the checkboxes: a ticked subject tab means the subject is part of the
@@ -86,6 +89,9 @@
         const visibleRowsOfSubject = subjectId =>
             rowsOfSubject(subjectId).filter(row => selectedGradeIds().has(row.dataset.gradeId));
         const rowInput = row => row.querySelector("input");
+
+        // A syllabus saved with the test starts with its first subject open, so its chapters show.
+        let activeSubjectId = tabs.find(tab => tabInput(tab).checked)?.dataset.subjectId ?? null;
 
         function selectSubject(subjectId) {
             tabs.forEach(tab => { if (tab.dataset.subjectId === String(subjectId)) tabInput(tab).checked = true; });
@@ -165,11 +171,57 @@
             render();
         }));
 
+        // The syllabus to save with the test, or null for none (saving without one removes it). Until
+        // the chapters are loaded the dialog cannot have changed anything, so the saved syllabus is kept
+        // as it is. A subject with no chapters ticked is left out.
+        const saved = JSON.parse(root.dataset.saved);
+        window.getSyllabusPayload = function () {
+            if (chapterState !== "loaded") return saved;
+            const subjects = tabs.filter(tab => tabInput(tab).checked).map(tab => ({
+                subject_id: Number(tab.dataset.subjectId),
+                chapter_ids: rowsOfSubject(tab.dataset.subjectId)
+                    .filter(row => rowInput(row).checked).map(row => Number(rowInput(row).value)),
+            })).filter(subject => subject.chapter_ids.length > 0);
+            if (subjects.length === 0) return null;
+            return { grade_ids: gradeInputs.filter(input => input.checked).map(input => Number(input.value)), subjects };
+        };
+
+        // The dialog edits the checkboxes in place, so opening it remembers what was confirmed before:
+        // Cancel (also the X, a click outside and Escape) puts that back, Confirm keeps the changes.
+        let snapshot = null;
+        function takeSnapshot() {
+            snapshot = {
+                grades: gradeInputs.filter(input => input.checked).map(input => input.value),
+                subjects: tabs.filter(tab => tabInput(tab).checked).map(tab => tab.dataset.subjectId),
+                // chapters that are not loaded yet are still as saved
+                chapters: new Set(chapterState === "loaded"
+                    ? chapterRows().filter(row => rowInput(row).checked).map(row => Number(rowInput(row).value))
+                    : (saved?.subjects || []).flatMap(subject => subject.chapter_ids)),
+                active: activeSubjectId,
+            };
+        }
+        function restoreSnapshot() {
+            if (!snapshot) return;
+            gradeInputs.forEach(input => { input.checked = snapshot.grades.includes(input.value); });
+            tabs.forEach(tab => { tabInput(tab).checked = snapshot.subjects.includes(tab.dataset.subjectId); });
+            chapterRows().forEach(row => { rowInput(row).checked = snapshot.chapters.has(Number(rowInput(row).value)); });
+            activeSubjectId = snapshot.active;
+            render();
+        }
+
         window.openSyllabusModal = function () {
+            takeSnapshot();
             root.classList.remove("hidden");
+            render();
         };
 
         window.closeSyllabusModal = function () {
+            restoreSnapshot();
+            root.classList.add("hidden");
+        };
+
+        window.confirmSyllabusModal = function () {
+            snapshot = null;
             root.classList.add("hidden");
         };
     })();

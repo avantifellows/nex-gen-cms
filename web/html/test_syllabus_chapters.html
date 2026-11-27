@@ -1,6 +1,7 @@
-{{ range . }}{{ if .GradeID }}
+{{ range .Chapters }}{{ if .GradeID }}
 <label class="flex items-center gap-2 cursor-pointer py-1 hidden" data-subject-id="{{ .SubjectID }}" data-grade-id="{{ .GradeID }}">
-    <input type="checkbox" class="accent-accent shrink-0" value="{{ .ID }}">
+    <input type="checkbox" class="accent-accent shrink-0" value="{{ .ID }}"
+        {{ if index $.SelectedIDs .ID }}checked{{ end }}>
     {{ .GetNameByLang "en" }}
 </label>
 {{ end }}{{ end }}

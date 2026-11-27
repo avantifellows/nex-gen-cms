@@ -1612,7 +1612,8 @@ func getProblemChapterName(p models.Problem, lang string) string {
 // fillSyllabusOptions sets what the Test Syllabus dialog is built from: the subjects of the test's
 // curriculum and all grades. A curriculum with no subject mapping leaves both lists empty.
 func (h *TestsHandler) fillSyllabusOptions(data *dto.TestData) error {
-	data.Syllabus = dto.SyllabusOptions{Subjects: []*models.Subject{}, Grades: []*models.Grade{}}
+	data.Syllabus = dto.SyllabusOptions{Subjects: []*models.Subject{}, Grades: []*models.Grade{},
+		Saved: data.TestPtr.TypeParams.Syllabus}
 	curriculumGrades := data.TestPtr.CurriculumGrades
 	if len(curriculumGrades) == 0 {
 		return nil

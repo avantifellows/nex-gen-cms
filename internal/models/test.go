@@ -52,6 +52,22 @@ type ResTypeParams struct {
 	// regional variants. Stored in type_params rather than a dedicated db-service column, same
 	// rationale as ChapterID above. A missing entry means "not cached yet, generate fresh."
 	PdfUrls map[string]PdfCacheEntry `json:"pdf_urls,omitempty"`
+	// Syllabus lists the grades, subjects and chapters the test's problems must belong to.
+	// Nil means the test has no syllabus. It must stay declared here: a typed read-modify-write
+	// of the test (e.g. caching a PDF) would otherwise silently drop it.
+	Syllabus *TestSyllabus `json:"syllabus,omitempty"`
+}
+
+// TestSyllabus is the syllabus chosen in the Test Syllabus dialog. GradeIDs are the grades the
+// chapter lists were limited to, and Subjects hold the chosen chapters per subject.
+type TestSyllabus struct {
+	GradeIDs []int8            `json:"grade_ids"`
+	Subjects []SyllabusSubject `json:"subjects"`
+}
+
+type SyllabusSubject struct {
+	SubjectID  int8    `json:"subject_id"`
+	ChapterIDs []int16 `json:"chapter_ids"`
 }
 
 // PdfCacheEntry records where a generated PDF lives in S3 (Key) and a content hash of the
