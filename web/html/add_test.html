@@ -971,10 +971,12 @@
         });
     }
 
-    function createTest(event, testId, subtype, curriculumGrades, examId) {
+    // skipValidation is for the copy flow, which has already checked the fields (Continue button) and the
+    // syllabus (validateAndCreateTest) by the time it saves.
+    function createTest(event, testId, subtype, curriculumGrades, examId, skipValidation = false) {
         event?.preventDefault();  // Cancel the request
 
-        if (!validateFields()) {
+        if (!skipValidation && (!validateFields() || !validateSyllabus())) {
             return false;
         }
 
@@ -1027,6 +1029,41 @@
               });
         }
 
+        return false;
+    }
+
+    // A test with a syllabus may only have problems of the syllabus chapters. Problems of other
+    // chapters are marked in the table and block the save. Without a syllabus nothing is checked.
+    function validateSyllabus() {
+        const reason = "This problem's chapter is not in the test syllabus.";
+        const rows = [...document.querySelectorAll("#questions-table-body tr[id^='problem-']")];
+
+        const syllabus = window.getSyllabusPayload?.();
+        if (!syllabus) {
+            // the syllabus was removed after a failed save: take back the marks it left
+            rows.filter(row => row.dataset.validationError === reason).forEach(clearValidationErrorUI);
+            return true;
+        }
+        const chapterIds = new Set(syllabus.subjects.flatMap(subject => subject.chapter_ids));
+        const offending = [];
+        rows.forEach(row => {
+            if (chapterIds.has(parseInt(row.dataset.chapterId, 10))) {
+                clearValidationErrorUI(row);
+            } else {
+                addValidationErrorUI(row, reason);
+                offending.push(row);
+            }
+        });
+        if (offending.length === 0) {
+            return true;
+        }
+
+        offending[0].scrollIntoView({ behavior: "smooth", block: "center" });
+        const maxListed = 10;
+        const codes = offending.slice(0, maxListed).map(row => row.querySelector("a")?.textContent.trim());
+        alert(`${offending.length} problem(s) are not in the chapters of the test syllabus, so the test was not saved:\n`
+            + codes.join(", ") + (offending.length > maxListed ? ` and ${offending.length - maxListed} more` : "")
+            + "\n\nRemove them, or change the syllabus.");
         return false;
     }
 
@@ -1383,7 +1420,7 @@
         // summary alert
         if (invalidCount > 0) {
             alert(`${invalidCount} question(s) failed validation.`);
-        } else {
+        } else if (validateSyllabus()) {  // alerts by itself when problems are outside the test syllabus
             alert("All questions are valid. Creating test...");
 
             const testPtr = data.TestPtr || {};
@@ -1400,7 +1437,7 @@
                     continueBtn.classList.add('opacity-50', 'cursor-not-allowed');
                     continueBtn.textContent = 'Creating...';
                 }
-                createTest(null, null, subtype, curriculumGrades, examIds[0]);
+                createTest(null, null, subtype, curriculumGrades, examIds[0], true);
             }
         }
     }
